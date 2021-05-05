@@ -6,16 +6,19 @@ import logging
 
 from mysqlprovider import MySQLProvider
 from mysqlserver import MySQL
-from oci_image import OCIImageResource, OCIImageResourceError
+from oci_image import OCIImageResource
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import (
     ActiveStatus,
-    BlockedStatus,
+    MaintenanceStatus,
+    ModelError,
     WaitingStatus,
 )
+from ops.pebble import ConnectionError
 from ops.framework import StoredState
 from typing import Union
+
 
 logger = logging.getLogger(__name__)
 PEER = "mysql"
@@ -31,6 +34,9 @@ class MySQLCharm(CharmBase):
         self._stored.set_default(mysql_setup={})
         self._stored.set_default(mysql_initialized=False)
         self.image = OCIImageResource(self, "mysql-image")
+        self.framework.observe(
+            self.on.mysql_pebble_ready, self._setup_pebble_layers
+        )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
@@ -41,6 +47,43 @@ class MySQLCharm(CharmBase):
         )
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._provide_mysql()
+
+    def _setup_pebble_layers(self, event):
+        """Setup a new Prometheus pod specification"""
+        logger.debug("Configuring Pod...")
+
+        if not self.unit.is_leader():
+            self.unit.status = ActiveStatus()
+            return
+
+        self.unit.status = MaintenanceStatus("Setting up containers.")
+        container = event.workload
+        layer = self._mysql_layer()
+        container.add_layer("mysql", layer, combine=True)
+        container.autostart()
+        self.app.status = ActiveStatus()
+        self.unit.status = ActiveStatus()
+
+    def _mysql_layer(self):
+        """Construct the pebble layer"""
+        logger.debug("Building pebble layer")
+        layer = {
+            "summary": "MySQL layer",
+            "description": "Pebble layer configuration for MySQL",
+            "services": {
+                "mysql": {
+                    "override": "replace",
+                    "summary": "mysql daemon",
+                    "command": "docker-entrypoint.sh mysqld",
+                    "startup": "enabled",
+                    "environment": {
+                        "MYSQL_ROOT_PASSWORD": self.mysql_root_password,
+                    },
+                },
+            },
+        }
+
+        return layer
 
     def _on_peer_relation_joined(self, event):
         if not self.unit.is_leader():
@@ -58,9 +101,25 @@ class MySQLCharm(CharmBase):
             ] = event.relation.data[event.app]["MYSQL_ROOT_PASSWORD"]
             logger.info("Storing MYSQL_ROOT_PASSWORD in StoredState")
 
-    def _on_config_changed(self, _):
-        """This method handles the .on.config_changed() event"""
-        self._configure_pod()
+    def _on_config_changed(self, event):
+        """Set a new Juju pod specification"""
+        logger.info("Handling config changed")
+        container = self.unit.get_container("mysql")
+
+        try:
+            service = container.get_service("mysql")
+        except ConnectionError:
+            logger.info("Pebble API is not yet ready")
+            return
+        except ModelError:
+            logger.info("MySQL service is not yet ready")
+            return
+
+        if service.is_running():
+            container.stop("mysql")
+
+        container.start("mysql")
+        logger.info("Restarted MySQL service")
 
     # Handles start event
     def _on_start(self, event):
@@ -125,9 +184,7 @@ class MySQLCharm(CharmBase):
             "host": self.hostname,
             "port": self.model.config["port"],
             "user_name": "root",
-            "mysql_root_password": self._stored.mysql_setup[
-                "MYSQL_ROOT_PASSWORD"
-            ],
+            "mysql_root_password": self.mysql_root_password,
         }
         return MySQL(mysql_config)
 
@@ -176,82 +233,6 @@ class MySQLCharm(CharmBase):
             env_config["MYSQL_DATABASE"] = config["MYSQL_DATABASE"]
 
         return env_config
-
-    def _configure_pod(self):
-        """Configure the K8s pod spec for MySQL."""
-        if not self.unit.is_leader():
-            self.unit.status = ActiveStatus()
-            return
-
-        spec = self._build_pod_spec()
-        if not spec:
-            return
-        self.model.pod.set_spec(spec)
-        self.unit.status = ActiveStatus()
-
-    def _build_pod_spec(self) -> dict:
-        """This method builds the pod_spec"""
-        if not self.unit.is_leader():
-            return {}
-
-        try:
-            self.unit.status = WaitingStatus("Fetching image information")
-            image_info = self.image.fetch()
-        except OCIImageResourceError:
-            logging.exception(
-                "An error occurred while fetching the image info"
-            )
-            self.unit.status = BlockedStatus(
-                "Error fetching image information"
-            )
-            return {}
-
-        config = self.model.config
-        self.unit.status = WaitingStatus("Assembling pod spec")
-
-        pod_spec = {
-            "version": 3,
-            "containers": [
-                {
-                    "name": self.app.name,
-                    "imageDetails": image_info,
-                    "ports": [
-                        {"containerPort": config["port"], "protocol": "TCP"}
-                    ],
-                    "envConfig": self.env_config,
-                    "kubernetes": {
-                        "readinessProbe": {
-                            "exec": {
-                                "command": [
-                                    "mysqladmin",
-                                    "ping",
-                                    "-u",
-                                    "root",
-                                    "-p$(echo $MYSQL_ROOT_PASSWORD)",
-                                ]
-                            },
-                            "initialDelaySeconds": 20,
-                            "periodSeconds": 5,
-                        },
-                        "livenessProbe": {
-                            "exec": {
-                                "command": [
-                                    "mysqladmin",
-                                    "ping",
-                                    "-u",
-                                    "root",
-                                    "-p$(echo $MYSQL_ROOT_PASSWORD)",
-                                ]
-                            },
-                            "initialDelaySeconds": 30,
-                            "periodSeconds": 10,
-                        },
-                    },
-                }
-            ],
-        }
-
-        return pod_spec
 
 
 if __name__ == "__main__":
