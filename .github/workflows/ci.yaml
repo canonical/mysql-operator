@@ -27,7 +27,7 @@ jobs:
       - name: Run tests
         run: tox -e unit
   integration-test-microk8s:
-    name: Integration tests (microk8s)
+    name: Integration tests (lxd)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,14 +35,12 @@ jobs:
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
-          provider: microk8s
+          provider: lxd
       - name: Run integration tests
-        # set a predictable model name so it can be consumed by charm-logdump-action
         run: tox -e integration -- --model testing
       - name: Dump logs
         uses: canonical/charm-logdump-action@main
         if: failure()
         with:
-          # TEMPLATE-TODO: Replace the application name
-          app: operator-template
+          app: mysql
           model: testing
