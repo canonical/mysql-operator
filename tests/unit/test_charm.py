@@ -2,8 +2,83 @@
 # See LICENSE file for licensing details.
 
 import unittest
+from unittest.mock import MagicMock, patch
+
+from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v1 import snap
+from ops.model import BlockedStatus, WaitingStatus
+from ops.testing import Harness
+
+from charm import MySQLOperatorCharm
 
 
 class TestCharm(unittest.TestCase):
-    def test_mock_pass(self):
-        self.assertTrue(True)
+    def setUp(self):
+        self.harness = Harness(MySQLOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+
+    @patch("charms.operator_libs_linux.v0.apt.update")
+    @patch("charms.operator_libs_linux.v0.apt.add_package")
+    @patch("charms.operator_libs_linux.v1.snap.SnapCache")
+    def test_on_install(self, _snap_cache, _apt_add_package, _apt_update):
+        mock_cache = MagicMock()
+        _snap_cache.return_value = mock_cache
+
+        mock_mysql_shell = MagicMock()
+        mock_cache.__getitem__.return_value = mock_mysql_shell
+
+        mock_mysql_shell.present = False
+
+        mock_ensure = MagicMock()
+        mock_mysql_shell.ensure = mock_ensure
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_with("mysql-server-8.0")
+
+        mock_ensure.assert_called_with(snap.SnapState.Latest, channel="stable")
+
+        self.assertEqual(self.harness.model.unit.status, WaitingStatus("Waiting to start MySQL"))
+
+    @patch("charms.operator_libs_linux.v0.apt.update")
+    def test_on_install_apt_update_error(self, _apt_update):
+        import subprocess
+
+        _apt_update.side_effect = subprocess.CalledProcessError(cmd="apt update", returncode=127)
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        self.assertEqual(self.harness.model.unit.status, BlockedStatus("Failed to update apt"))
+
+    @patch("charms.operator_libs_linux.v0.apt.update")
+    @patch("charms.operator_libs_linux.v0.apt.add_package")
+    def test_on_install_apt_add_package_error(self, _apt_add_package, _apt_update):
+        _apt_add_package.side_effect = apt.PackageNotFoundError
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_once()
+
+        self.assertEqual(
+            self.harness.model.unit.status, BlockedStatus("Failed to install 'mysql-server-8.0'")
+        )
+
+    @patch("charms.operator_libs_linux.v0.apt.update")
+    @patch("charms.operator_libs_linux.v0.apt.add_package")
+    @patch("charms.operator_libs_linux.v1.snap.SnapCache")
+    def test_on_install_snap_error(self, _snap_cache, _apt_add_package, _apt_update):
+        _snap_cache.side_effect = snap.SnapError
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_with("mysql-server-8.0")
+
+        self.assertEqual(
+            self.harness.model.unit.status, BlockedStatus("Failed to install 'mysql-shell'")
+        )
