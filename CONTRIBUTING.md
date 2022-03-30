@@ -48,8 +48,6 @@ charmcraft pack
 
 ### Deploy
 
-<!-- TEMPLATE-TODO: Update the deploy command for name of charm-->
-
 ```bash
 # Create a model
 juju add-model dev
@@ -61,4 +59,6 @@ juju deploy ./mysql_ubuntu-20.04-amd64.charm
 
 ## Canonical Contributor Agreement
 
-Canonical welcomes contributions to the MySQL Operator. Please check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.
+Canonical welcomes contributions to the MySQL Operator. Please check out our
+[contributor agreement](https://ubuntu.com/legal/contributors)if you're
+interested in contributing to the solution.

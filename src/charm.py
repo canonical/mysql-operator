@@ -11,7 +11,7 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,9 @@ class MySQLOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        self.mysqlsh_snap_name = "mysql-shell"
+        self.mysql_apt_package_name = "mysql-server-8.0"
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -45,41 +48,48 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         try:
-            logger.debug("Installing 'mysql-server-8.0' apt package")
-            apt.add_package("mysql-server-8.0")
+            logger.debug(f"Installing '{self.mysql_apt_package_name}' apt package")
+            apt.add_package(self.mysql_apt_package_name)
         except apt.PackageNotFoundError as e:
             logger.exception(
-                "'mysql-server-8.0' apt package not found in package cache or on system",
+                f"'{self.mysql_apt_package_name}' apt package not found in package cache or on system",
                 exc_info=e,
             )
-            self.unit.status = BlockedStatus("Failed to find 'mysql-server-8.0'")
+            self.unit.status = BlockedStatus(f"Failed to find '{self.mysql_apt_package_name}'")
             return
         except apt.PackageError as e:
             logger.exception(
-                "could not install package 'mysql-server-8.0'",
+                f"could not install package '{self.mysql_apt_package_name}'",
                 exc_info=e,
             )
-            self.unit.status = BlockedStatus("Failed to install 'mysql-server-8.0'")
+            self.unit.status = BlockedStatus(f"Failed to install '{self.mysql_apt_package_name}'")
             return
 
         # Install 'mysql-shell' snap
         try:
             cache = snap.SnapCache()
-            mysql_shell = cache["mysql-shell"]
+            mysql_shell = cache[self.mysqlsh_snap_name]
 
             if not mysql_shell.present:
-                logger.debug("Installing 'mysql-shell' snap")
+                logger.debug(f"Installing '{self.mysqlsh_snap_name}' snap")
                 mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
+        except snap.SnapNotFoundError as e:
+            logger.exception(f"Failed to find the '{self.mysqlsh_snap_name}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to find '{self.mysqlsh_snap_name}'")
+            return
         except snap.SnapError as e:
-            logger.exception("Failed to install the 'mysql-shell' snap", exc_info=e)
-            self.unit.status = BlockedStatus("Failed to install 'mysql-shell'")
+            logger.exception(f"Failed to install the '{self.mysqlsh_snap_name}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to install '{self.mysqlsh_snap_name}'")
             return
 
-        self.unit.status = WaitingStatus("Waiting to start MySQL")
+        # TODO: Set status to WaitingStatus once _on_start is implemented
+        # Temporarily set the unit status to ActiveStatus
+        # self.unit.status = WaitingStatus("Waiting to start MySQL")
+        self.unit.status = ActiveStatus()
 
     def _on_start(self, _) -> None:
         """Ensure that required software is running."""
-        self.unit.status = ActiveStatus()
+        pass
 
 
 if __name__ == "__main__":

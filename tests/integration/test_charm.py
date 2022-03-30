@@ -46,7 +46,8 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_database_pacakage_installation(ops_test: OpsTest):
+async def test_database_package_installation(ops_test: OpsTest):
+    """Confirm that the charm units contain installed software."""
     # Test each MySQL unit
     for unit in ops_test.model.applications[APP_NAME].units:
         # Ensure that mysql-server is installed correctly
