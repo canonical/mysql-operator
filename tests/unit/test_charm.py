@@ -57,7 +57,24 @@ class TestCharm(unittest.TestCase):
     @patch("charms.operator_libs_linux.v0.apt.update")
     @patch("charms.operator_libs_linux.v0.apt.add_package")
     def test_on_install_apt_add_package_error(self, _apt_add_package, _apt_update):
+        # Test PackageNotFoundError
         _apt_add_package.side_effect = apt.PackageNotFoundError
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_once()
+
+        self.assertEqual(
+            self.harness.model.unit.status, BlockedStatus("Failed to find 'mysql-server-8.0'")
+        )
+
+        # Reset the mocks
+        _apt_update.reset_mock()
+        _apt_add_package.reset_mock()
+
+        # Test PackageError
+        _apt_add_package.side_effect = apt.PackageError
 
         self.charm.on.install.emit()
 

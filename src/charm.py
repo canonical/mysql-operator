@@ -52,6 +52,13 @@ class MySQLOperatorCharm(CharmBase):
                 "'mysql-server-8.0' apt package not found in package cache or on system",
                 exc_info=e,
             )
+            self.unit.status = BlockedStatus("Failed to find 'mysql-server-8.0'")
+            return
+        except apt.PackageError as e:
+            logger.exception(
+                "could not install package 'mysql-server-8.0'",
+                exc_info=e,
+            )
             self.unit.status = BlockedStatus("Failed to install 'mysql-server-8.0'")
             return
 
