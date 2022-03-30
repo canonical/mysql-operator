@@ -11,7 +11,7 @@ This charm is currently in development, with High Availability via Group Replica
 To deploy this charm using Juju 2.9.0 or later, run:
 
 ```shell
-juju add-model mysql-k8s
+juju add-model gs
 charmcraft pack
 juju deploy ./mysql_ubuntu-20.04-amd64.charm mysql
 ```
