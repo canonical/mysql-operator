@@ -37,10 +37,4 @@ jobs:
         with:
           provider: lxd
       - name: Run integration tests
-        run: tox -e integration -- --model testing
-      - name: Dump logs
-        uses: canonical/charm-logdump-action@main
-        if: failure()
-        with:
-          app: mysql
-          model: testing
+        run: tox -e integration
