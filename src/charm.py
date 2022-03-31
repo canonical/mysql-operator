@@ -15,6 +15,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 logger = logging.getLogger(__name__)
 
+# TODO: determine if version locking is needed for both mysql-shell and mysql-server
 MYSQL_SHELL_SNAP_NAME = "mysql-shell"
 MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 
