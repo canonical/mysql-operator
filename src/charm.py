@@ -15,15 +15,15 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 logger = logging.getLogger(__name__)
 
+MYSQL_SHELL_SNAP_NAME = "mysql-shell"
+MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
+
 
 class MySQLOperatorCharm(CharmBase):
     """Operator framework charm for MySQL."""
 
     def __init__(self, *args):
         super().__init__(*args)
-
-        self.mysqlsh_snap_name = "mysql-shell"
-        self.mysql_apt_package_name = "mysql-server-8.0"
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -48,38 +48,38 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         try:
-            logger.debug(f"Installing '{self.mysql_apt_package_name}' apt package")
-            apt.add_package(self.mysql_apt_package_name)
+            logger.debug(f"Installing '{MYSQL_APT_PACKAGE_NAME}' apt package")
+            apt.add_package(MYSQL_APT_PACKAGE_NAME)
         except apt.PackageNotFoundError as e:
             logger.exception(
-                f"'{self.mysql_apt_package_name}' apt package not found in package cache or on system",
+                f"'{MYSQL_APT_PACKAGE_NAME}' apt package not found in package cache or on system",
                 exc_info=e,
             )
-            self.unit.status = BlockedStatus(f"Failed to find '{self.mysql_apt_package_name}'")
+            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_APT_PACKAGE_NAME}'")
             return
         except apt.PackageError as e:
             logger.exception(
-                f"could not install package '{self.mysql_apt_package_name}'",
+                f"could not install package '{MYSQL_APT_PACKAGE_NAME}'",
                 exc_info=e,
             )
-            self.unit.status = BlockedStatus(f"Failed to install '{self.mysql_apt_package_name}'")
+            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_APT_PACKAGE_NAME}'")
             return
 
         # Install 'mysql-shell' snap
         try:
             cache = snap.SnapCache()
-            mysql_shell = cache[self.mysqlsh_snap_name]
+            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
 
             if not mysql_shell.present:
-                logger.debug(f"Installing '{self.mysqlsh_snap_name}' snap")
+                logger.debug(f"Installing '{MYSQL_SHELL_SNAP_NAME}' snap")
                 mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
         except snap.SnapNotFoundError as e:
-            logger.exception(f"Failed to find the '{self.mysqlsh_snap_name}' snap", exc_info=e)
-            self.unit.status = BlockedStatus(f"Failed to find '{self.mysqlsh_snap_name}'")
+            logger.exception(f"Failed to find the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_SHELL_SNAP_NAME}'")
             return
         except snap.SnapError as e:
-            logger.exception(f"Failed to install the '{self.mysqlsh_snap_name}' snap", exc_info=e)
-            self.unit.status = BlockedStatus(f"Failed to install '{self.mysqlsh_snap_name}'")
+            logger.exception(f"Failed to install the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_SHELL_SNAP_NAME}'")
             return
 
         # TODO: Set status to WaitingStatus once _on_start is implemented

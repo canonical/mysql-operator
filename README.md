@@ -11,10 +11,12 @@ This charm is currently in development, with High Availability via Group Replica
 To deploy this charm using Juju 2.9.0 or later, run:
 
 ```shell
-juju add-model gs
+juju add-model mysql
 charmcraft pack
 juju deploy ./mysql_ubuntu-20.04-amd64.charm mysql
 ```
+
+Note: the above model must exist outside of a k8s environment (you could bootstrap an lxd environment).
 
 To confirm the deployment, you can run:
 
