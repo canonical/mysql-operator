@@ -1,104 +1,97 @@
 #!/usr/bin/env python3
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# Learn more at: https://juju.is/docs/sdk
 
-"""Charm the service.
-
-Refer to the following post for a quick-start guide that will help you
-develop a new k8s charm using the Operator Framework:
-
-    https://discourse.charmhub.io/t/4208
-"""
+"""Charmed Machine Operator for MySQL."""
 
 import logging
+import subprocess
 
+from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v1 import snap
 from ops.charm import CharmBase
-from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 logger = logging.getLogger(__name__)
 
+# TODO: determine if version locking is needed for both mysql-shell and mysql-server
+MYSQL_SHELL_SNAP_NAME = "mysql-shell"
+MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 
-class OperatorTemplateCharm(CharmBase):
-    """Charm the service."""
 
-    _stored = StoredState()
+class MySQLOperatorCharm(CharmBase):
+    """Operator framework charm for MySQL."""
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(self.on.httpbin_pebble_ready, self._on_httpbin_pebble_ready)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.fortune_action, self._on_fortune_action)
-        self._stored.set_default(things=[])
 
-    def _on_httpbin_pebble_ready(self, event):
-        """Define and start a workload using the Pebble API.
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.start, self._on_start)
 
-        TEMPLATE-TODO: change this example to suit your needs.
-        You'll need to specify the right entrypoint and environment
-        configuration for your specific workload. Tip: you can see the
-        standard entrypoint of an existing container using docker inspect
+    # =======================
+    #  Charm Lifecycle Hooks
+    # =======================
 
-        Learn more about Pebble layers at https://github.com/canonical/pebble
-        """
-        # Get a reference the container attribute on the PebbleReadyEvent
-        container = event.workload
-        # Define an initial Pebble layer configuration
-        pebble_layer = {
-            "summary": "httpbin layer",
-            "description": "pebble config layer for httpbin",
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"thing": self.model.config["thing"]},
-                }
-            },
-        }
-        # Add initial Pebble config layer using the Pebble API
-        container.add_layer("httpbin", pebble_layer, combine=True)
-        # Autostart any services that were defined with startup: enabled
-        container.autostart()
-        # Learn more about statuses in the SDK docs:
-        # https://juju.is/docs/sdk/constructs#heading--statuses
+    def _on_install(self, _) -> None:
+        """Initial setup operations like installing dependencies, and creating users and groups."""
+        self.unit.status = MaintenanceStatus("Installing MySQL")
+
+        # Install 'mysql-server-8.0' apt package
+        # Note: installing mysql-server will create the 'mysql' user and 'mysql' group,
+        # and run mysql with the 'mysql' user
+        try:
+            logger.debug("Updating apt cache")
+            apt.update()
+        except subprocess.CalledProcessError as e:
+            logger.exception("Failed to update apt cache", exc_info=e)
+            self.unit.status = BlockedStatus("Failed to update apt")
+            return
+
+        try:
+            logger.debug(f"Installing '{MYSQL_APT_PACKAGE_NAME}' apt package")
+            apt.add_package(MYSQL_APT_PACKAGE_NAME)
+        except apt.PackageNotFoundError as e:
+            logger.exception(
+                f"'{MYSQL_APT_PACKAGE_NAME}' apt package not found in package cache or on system",
+                exc_info=e,
+            )
+            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_APT_PACKAGE_NAME}'")
+            return
+        except apt.PackageError as e:
+            logger.exception(
+                f"could not install package '{MYSQL_APT_PACKAGE_NAME}'",
+                exc_info=e,
+            )
+            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_APT_PACKAGE_NAME}'")
+            return
+
+        # Install 'mysql-shell' snap
+        try:
+            cache = snap.SnapCache()
+            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
+
+            if not mysql_shell.present:
+                logger.debug(f"Installing '{MYSQL_SHELL_SNAP_NAME}' snap")
+                mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
+        except snap.SnapNotFoundError as e:
+            logger.exception(f"Failed to find the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_SHELL_SNAP_NAME}'")
+            return
+        except snap.SnapError as e:
+            logger.exception(f"Failed to install the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
+            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_SHELL_SNAP_NAME}'")
+            return
+
+        # TODO: Set status to WaitingStatus once _on_start is implemented
+        # Temporarily set the unit status to ActiveStatus
+        # self.unit.status = WaitingStatus("Waiting to start MySQL")
         self.unit.status = ActiveStatus()
 
-    def _on_config_changed(self, _):
-        """Just an example to show how to deal with changed configuration.
-
-        TEMPLATE-TODO: change this example to suit your needs.
-        If you don't need to handle config, you can remove this method,
-        the hook created in __init__.py for it, the corresponding test,
-        and the config.py file.
-
-        Learn more about config at https://juju.is/docs/sdk/config
-        """
-        current = self.config["thing"]
-        if current not in self._stored.things:
-            logger.debug("found a new thing: %r", current)
-            self._stored.things.append(current)
-
-    def _on_fortune_action(self, event):
-        """Just an example to show how to receive actions.
-
-        TEMPLATE-TODO: change this example to suit your needs.
-        If you don't need to handle actions, you can remove this method,
-        the hook created in __init__.py for it, the corresponding test,
-        and the actions.py file.
-
-        Learn more about actions at https://juju.is/docs/sdk/actions
-        """
-        fail = event.params["fail"]
-        if fail:
-            event.fail(fail)
-        else:
-            event.set_results({"fortune": "A bug in the code is worth two in the documentation."})
+    def _on_start(self, _) -> None:
+        """Ensure that required software is running."""
+        pass
 
 
 if __name__ == "__main__":
-    main(OperatorTemplateCharm)
+    main(MySQLOperatorCharm)

@@ -5,10 +5,8 @@
 This documents explains the processes and practices recommended for contributing enhancements to
 this operator.
 
-<!-- TEMPLATE-TODO: Update the URL for issue creation -->
-
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
-  ](https://github.com/canonical/operator-template/issues) explaining your use case.
+  ](https://github.com/canonical/mysql-operator/issues) explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach
   us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/charm-dev)
   or [Discourse](https://discourse.charmhub.io/).
@@ -50,20 +48,17 @@ charmcraft pack
 
 ### Deploy
 
-<!-- TEMPLATE-TODO: Update the deploy command for name of charm-->
-
 ```bash
 # Create a model
 juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy the charm
-juju deploy ./template-operator_ubuntu-20.04-amd64.charm \
-    --resource httpbin-image=kennethreitz/httpbin \
+juju deploy ./mysql_ubuntu-20.04-amd64.charm
 ```
 
 ## Canonical Contributor Agreement
 
-<!-- TEMPLATE-TODO: Update the description with the name of charm-->
-
-Canonical welcomes contributions to the Charmed Template Operator. Please check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.
+Canonical welcomes contributions to the MySQL Operator. Please check out our
+[contributor agreement](https://ubuntu.com/legal/contributors)if you're
+interested in contributing to the solution.
