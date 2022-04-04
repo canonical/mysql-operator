@@ -13,6 +13,12 @@ from typing import AnyStr
 logger = logging.getLogger(__name__)
 
 
+class MySQLCreateUserError(Exception):
+    """Exception raised when creating a user fails."""
+
+    pass
+
+
 class MySQL:
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -20,8 +26,18 @@ class MySQL:
     creation and configuration of MySQL InnoDB clusters via Group Replication.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, root_password: str, cluster_admin_user: str, cluster_admin_password: str):
+        """Initialize the MySQL class.
+
+        Args:
+            root_password: Password for the 'root' user
+            cluster_admin_user: User name for the cluster admin user
+            cluster_admin_password: Password for the cluster admin user
+        """
+        self.root_password = root_password
+        self.cluster_admin_user = cluster_admin_user
+        self.cluster_admin_password = cluster_admin_password
+        self.instance_address = None
 
     @property
     def mysqlsh_bin(self) -> str:
@@ -32,6 +48,8 @@ class MySQL:
         """
         # Allow for various versions of the mysql-shell snap
         # When we get the alias use /snap/bin/mysqlsh
+        if os.path.exists("/usr/bin/mysqlsh"):
+            return "/usr/bin/mysqlsh"
         if os.path.exists("/snap/bin/mysqlsh"):
             return "/snap/bin/mysqlsh"
         if os.path.exists("/snap/bin/mysql-shell.mysqlsh"):
@@ -46,7 +64,10 @@ class MySQL:
         Returns:
             Path to common dir
         """
-        return "/root/snap/mysql-shell/common"
+        if os.path.exists("/root/snap/mysql-shell/common"):
+            return "/root/snap/mysql-shell/common"
+        else:
+            return "/tmp"
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -54,7 +75,19 @@ class MySQL:
         Creates a 'clusteradmin' user with the appropriate privileges and
         revokes certain privileges from the 'root' user.
         """
-        pass
+        _script = (
+            f'shell.connect("orchestrator:{self.root_password}@localhost")',
+            f"dba.session.run_sql(\"CREATE USER '{self.cluster_admin_user}'@'localhost' IDENTIFIED BY '{self.cluster_admin_password}' ;\")",
+            f"dba.session.run_sql(\"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'localhost' WITH GRANT OPTION ;\")",
+            'dba.session.run_sql("REVOKE SYSTEM_USER ON *.* FROM root ;")',
+        )
+
+        try:
+            output = self.run_mysqlsh_script("\n".join(_script))
+            return output.decode("utf-8")
+        except subprocess.CalledProcessError as e:
+            logger.exception(f"Failed to configure instance: {self.instance_address}", exc_info=e)
+            raise MySQLCreateUserError(e.stdout)
 
     def configure_instance(self):
         """Configure the instance to be used in an InnoDB cluster."""
