@@ -40,7 +40,7 @@ class MySQL:
 
     @property
     def mysqlsh_common_dir(self):
-        """Determine snap common dir for mysqlsh
+        """Determine snap common dir for mysqlsh.
 
         :returns: Path to common dir
         :rtype: str
@@ -68,7 +68,7 @@ class MySQL:
         pass
 
     def run_mysqlsh_script(self, script, mode="python"):
-        """Execute a MySQL shell script
+        """Execute a MySQL shell script.
 
         :param script: Mysqlsh script
         :type script: str
@@ -87,7 +87,6 @@ class MySQL:
             # ambiguous error message. This will only ever execute once.
             cmd = [self.mysqlsh_bin, "--help"]
             subprocess.check_call(cmd, stderr=subprocess.PIPE)
-
 
         # Use the self.mysqlsh_common_dir dir for the confined
         # mysql-shell snap.
