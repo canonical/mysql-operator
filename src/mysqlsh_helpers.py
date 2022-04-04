@@ -8,6 +8,7 @@ import logging
 import os
 import subprocess
 import tempfile
+from typing import AnyStr
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,10 @@ class MySQL:
         pass
 
     @property
-    def mysqlsh_bin(self):
+    def mysqlsh_bin(self) -> str:
         """Determine binary path for MySQL Shell.
 
         :returns: Path to binary mysqlsh
-        :rtype: str
         """
         # Allow for various versions of the mysql-shell snap
         # When we get the alias use /snap/bin/mysqlsh
@@ -39,11 +39,10 @@ class MySQL:
         return "/snap/bin/mysql-shell"
 
     @property
-    def mysqlsh_common_dir(self):
+    def mysqlsh_common_dir(self) -> str:
         """Determine snap common dir for mysqlsh.
 
         :returns: Path to common dir
-        :rtype: str
         """
         return "/root/snap/mysql-shell/common"
 
@@ -67,19 +66,14 @@ class MySQL:
         """Add an instance to the InnoDB cluster."""
         pass
 
-    def run_mysqlsh_script(self, script, mode="python"):
+    def run_mysqlsh_script(self, script: str) -> AnyStr:
         """Execute a MySQL shell script.
 
         :param script: Mysqlsh script
-        :type script: str
-        :param mode: Script type (python, or sql)
-        :type mode: str
-        :side effect: Calls subprocess.check_output
         :raises subprocess.CalledProcessError: Raises CalledProcessError if the
                                                script gets a non-zero return
                                                code.
         :returns: subprocess output
-        :rtype: UTF-8 byte string
         """
         if not os.path.exists(self.mysqlsh_common_dir):
             # Pre-execute mysqlsh to create self.mysqlsh_common_dir
@@ -90,13 +84,11 @@ class MySQL:
 
         # Use the self.mysqlsh_common_dir dir for the confined
         # mysql-shell snap.
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", dir=self.mysqlsh_common_dir
-        ) as _file:
+        with tempfile.NamedTemporaryFile(mode="w", dir=self.mysqlsh_common_dir) as _file:
             _file.write(script)
             _file.flush()
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            cmd = [self.mysqlsh_bin, "--no-wizard", f"--{mode}", "-f", _file.name]
+            cmd = [self.mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(cmd, stderr=subprocess.PIPE)
