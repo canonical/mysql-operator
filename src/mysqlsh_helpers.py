@@ -27,7 +27,8 @@ class MySQL:
     def mysqlsh_bin(self) -> str:
         """Determine binary path for MySQL Shell.
 
-        :returns: Path to binary mysqlsh
+        Returns:
+            Path to binary mysqlsh
         """
         # Allow for various versions of the mysql-shell snap
         # When we get the alias use /snap/bin/mysqlsh
@@ -42,7 +43,8 @@ class MySQL:
     def mysqlsh_common_dir(self) -> str:
         """Determine snap common dir for mysqlsh.
 
-        :returns: Path to common dir
+        Returns:
+            Path to common dir
         """
         return "/root/snap/mysql-shell/common"
 
@@ -69,11 +71,13 @@ class MySQL:
     def run_mysqlsh_script(self, script: str) -> AnyStr:
         """Execute a MySQL shell script.
 
-        :param script: Mysqlsh script
-        :raises subprocess.CalledProcessError: Raises CalledProcessError if the
-                                               script gets a non-zero return
-                                               code.
-        :returns: subprocess output
+        Raises CalledProcessError if the script gets a non-zero return code.
+
+        Args:
+            script: Mysqlsh script string
+
+        Returns:
+            Byte string subprocess output
         """
         if not os.path.exists(self.mysqlsh_common_dir):
             # Pre-execute mysqlsh to create self.mysqlsh_common_dir
