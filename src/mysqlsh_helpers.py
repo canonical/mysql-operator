@@ -5,6 +5,9 @@
 """Helper class to manage the MySQL InnoDB cluster lifecycle with MySQL Shell."""
 
 import logging
+import os
+import subprocess
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,31 @@ class MySQL:
 
     def __init__(self):
         pass
+
+    @property
+    def mysqlsh_bin(self):
+        """Determine binary path for MySQL Shell.
+
+        :returns: Path to binary mysqlsh
+        :rtype: str
+        """
+        # Allow for various versions of the mysql-shell snap
+        # When we get the alias use /snap/bin/mysqlsh
+        if os.path.exists("/snap/bin/mysqlsh"):
+            return "/snap/bin/mysqlsh"
+        if os.path.exists("/snap/bin/mysql-shell.mysqlsh"):
+            return "/snap/bin/mysql-shell.mysqlsh"
+        # Default to the full path version
+        return "/snap/bin/mysql-shell"
+
+    @property
+    def mysqlsh_common_dir(self):
+        """Determine snap common dir for mysqlsh
+
+        :returns: Path to common dir
+        :rtype: str
+        """
+        return "/root/snap/mysql-shell/common"
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -38,3 +66,38 @@ class MySQL:
     def add_instance_to_cluster(self):
         """Add an instance to the InnoDB cluster."""
         pass
+
+    def run_mysqlsh_script(self, script, mode="python"):
+        """Execute a MySQL shell script
+
+        :param script: Mysqlsh script
+        :type script: str
+        :param mode: Script type (python, or sql)
+        :type mode: str
+        :side effect: Calls subprocess.check_output
+        :raises subprocess.CalledProcessError: Raises CalledProcessError if the
+                                               script gets a non-zero return
+                                               code.
+        :returns: subprocess output
+        :rtype: UTF-8 byte string
+        """
+        if not os.path.exists(self.mysqlsh_common_dir):
+            # Pre-execute mysqlsh to create self.mysqlsh_common_dir
+            # If we don't do this the real execution will fail with an
+            # ambiguous error message. This will only ever execute once.
+            cmd = [self.mysqlsh_bin, "--help"]
+            subprocess.check_call(cmd, stderr=subprocess.PIPE)
+
+
+        # Use the self.mysqlsh_common_dir dir for the confined
+        # mysql-shell snap.
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", dir=self.mysqlsh_common_dir
+        ) as _file:
+            _file.write(script)
+            _file.flush()
+
+            # Specify python as this is not the default in the deb version
+            # of the mysql-shell snap
+            cmd = [self.mysqlsh_bin, "--no-wizard", f"--{mode}", "-f", _file.name]
+            return subprocess.check_output(cmd, stderr=subprocess.PIPE)
