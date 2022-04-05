@@ -13,7 +13,7 @@ from typing import AnyStr
 logger = logging.getLogger(__name__)
 
 
-class MySQLCreateUserError(Exception):
+class MySQLConfigureMySQLUsersError(Exception):
     """Exception raised when creating a user fails."""
 
     pass
@@ -73,8 +73,7 @@ class MySQL:
         """
         if os.path.exists("/root/snap/mysql-shell/common"):
             return "/root/snap/mysql-shell/common"
-        else:
-            return "/tmp"
+        return "/tmp"
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -96,11 +95,10 @@ class MySQL:
         )
 
         try:
-            output = self._run_mysqlcli_script(" ".join(_script))
-            return output.decode("utf-8")
+            self._run_mysqlcli_script(" ".join(_script))
         except subprocess.CalledProcessError as e:
             logger.exception(f"Failed to configure users for: {self.instance_address}", exc_info=e)
-            raise MySQLCreateUserError(e.stdout)
+            raise MySQLConfigureMySQLUsersError(e.stdout)
 
     def configure_instance(self):
         """Configure the instance to be used in an InnoDB cluster."""

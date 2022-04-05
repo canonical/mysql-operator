@@ -5,7 +5,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from mysqlsh_helpers import MySQL, MySQLCreateUserError
+from mysqlsh_helpers import MySQL, MySQLConfigureMySQLUsersError
 
 
 class TestMySQL(unittest.TestCase):
@@ -30,7 +30,7 @@ class TestMySQL(unittest.TestCase):
 
         _m = MySQL("test", "cadmin", "test", "10.1.1.1")
 
-        self.assertEqual(_m.configure_mysql_users(), "")
+        _m.configure_mysql_users()
         _run_mysqlcli_script.assert_called_once_with(_expected_script)
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
@@ -41,7 +41,7 @@ class TestMySQL(unittest.TestCase):
         )
 
         _m = MySQL("test", "test", "test", "10.1.1.1")
-        with self.assertRaises(MySQLCreateUserError):
+        with self.assertRaises(MySQLConfigureMySQLUsersError):
             _m.configure_mysql_users()
 
     @patch("os.path.exists")
