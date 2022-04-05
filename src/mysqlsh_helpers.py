@@ -10,7 +10,15 @@ import subprocess
 import tempfile
 from typing import AnyStr
 
+from tenacity import retry, stop_after_delay, wait_fixed
+
 logger = logging.getLogger(__name__)
+
+
+class MySQLInstanceConfigureError(Exception):
+    """Exception raised when there is an issue configuring a MySQL instance."""
+
+    pass
 
 
 class MySQL:
@@ -20,8 +28,17 @@ class MySQL:
     creation and configuration of MySQL InnoDB clusters via Group Replication.
     """
 
-    def __init__(self):
-        pass
+    def __init__(
+        self,
+        root_password: str,
+        cluster_admin_user: str,
+        cluster_admin_password: str,
+        instance_address: str,
+    ):
+        self.root_password = root_password
+        self.cluster_admin_user = cluster_admin_user
+        self.cluster_admin_password = cluster_admin_password
+        self.instance_address = instance_address
 
     @property
     def mysqlsh_bin(self) -> str:
@@ -56,19 +73,45 @@ class MySQL:
         """
         pass
 
-    def configure_instance(self):
+    def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster."""
-        pass
+        _script = f"""
+dba.configure_instance('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
+my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
+my_shell.run_sql("RESTART;");
+        """
 
-    def create_cluster(self):
+        try:
+            logger.debug("Configuring instance for InnoDB")
+            self._run_mysqlsh_script(_script)
+
+            logger.debug("Waiting until MySQL is restarted")
+            self._wait_until_mysql_connection()
+        except subprocess.CalledProcessError as e:
+            logger.exception(f"Failed to configure instance: {self.instance_address}", exc_info=e)
+            raise MySQLInstanceConfigureError(e.stderr)
+
+    def create_cluster(self) -> None:
         """Create an InnoDB cluster with Group Replication enabled."""
         pass
 
-    def add_instance_to_cluster(self):
+    def add_instance_to_cluster(self) -> None:
         """Add an instance to the InnoDB cluster."""
         pass
 
-    def run_mysqlsh_script(self, script: str) -> AnyStr:
+    @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
+    def _wait_until_mysql_connection(self) -> None:
+        """Wait until a connection to MySQL has been obtained.
+
+        Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
+        """
+        _script = f"""
+my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
+        """
+
+        return self._run_mysqlsh_script(_script)
+
+    def _run_mysqlsh_script(self, script: str) -> AnyStr:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
