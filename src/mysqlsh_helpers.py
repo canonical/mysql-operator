@@ -26,18 +26,25 @@ class MySQL:
     creation and configuration of MySQL InnoDB clusters via Group Replication.
     """
 
-    def __init__(self, root_password: str, cluster_admin_user: str, cluster_admin_password: str):
+    def __init__(
+        self,
+        root_password: str,
+        cluster_admin_user: str,
+        cluster_admin_password: str,
+        instance_address: str,
+    ):
         """Initialize the MySQL class.
 
         Args:
             root_password: Password for the 'root' user
             cluster_admin_user: User name for the cluster admin user
             cluster_admin_password: Password for the cluster admin user
+            instance_address: Address of the targeted instance
         """
         self.root_password = root_password
         self.cluster_admin_user = cluster_admin_user
         self.cluster_admin_password = cluster_admin_password
-        self.instance_address = None
+        self.instance_address = instance_address
 
     @property
     def mysqlsh_bin(self) -> str:
@@ -72,21 +79,27 @@ class MySQL:
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
 
-        Creates a 'clusteradmin' user with the appropriate privileges and
-        revokes certain privileges from the 'root' user.
+        Creates base `root@%` and `clusteradmin@instance_address` user with the
+        appropriate privileges, and reconfigure `root@localhost` user password.
         """
         _script = (
-            f'shell.connect("root:{self.root_password}@localhost")',
-            f"dba.session.run_sql(\"CREATE USER '{self.cluster_admin_user}'@'%' IDENTIFIED BY '{self.cluster_admin_password}' ;\")",
-            f"dba.session.run_sql(\"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'%' WITH GRANT OPTION ;\")",
-            'dba.session.run_sql("REVOKE SYSTEM_USER ON *.* FROM root ;")',
+            "SET @@SESSION.SQL_LOG_BIN=0;",
+            f"CREATE USER '{self.cluster_admin_user}'@'{self.instance_address}' IDENTIFIED BY '{self.cluster_admin_password}';",
+            f"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'{self.instance_address}' WITH GRANT OPTION;",
+            f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}';",
+            "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
+            f"ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{self.root_password}';",
+            "REVOKE SYSTEM_USER ON *.* FROM root@'%';",
+            "REVOKE SYSTEM_USER ON *.* FROM root@localhost;",
+            "FLUSH PRIVILEGES;",
         )
 
         try:
-            output = self.run_mysqlsh_script("\n".join(_script))
+            output = self._run_mysqlcli_script(" ".join(_script))
             return output.decode("utf-8")
         except subprocess.CalledProcessError as e:
-            logger.exception(f"Failed to configure instance: {self.instance_address}", exc_info=e)
+            logger.exception(f"Failed to configure users for: {self.instance_address}", exc_info=e)
             raise MySQLCreateUserError(e.stdout)
 
     def configure_instance(self):
@@ -101,7 +114,7 @@ class MySQL:
         """Add an instance to the InnoDB cluster."""
         pass
 
-    def run_mysqlsh_script(self, script: str) -> AnyStr:
+    def _run_mysqlsh_script(self, script: str) -> AnyStr:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
@@ -129,3 +142,27 @@ class MySQL:
             # of the mysql-shell snap
             cmd = [self.mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(cmd, stderr=subprocess.PIPE)
+
+    def _run_mysqlcli_script(self, script: str) -> AnyStr:
+        """Execute a MySQL CLI script.
+
+        Execute SQL script as instance root user.
+        Raises CalledProcessError if the script gets a non-zero return code.
+
+        Args:
+            script: raw SQL script string
+
+        Returns:
+            Byte string subprocess output
+        """
+        cmd = [
+            "mysql",
+            "-u",
+            "root",
+            "--protocol=SOCKET",
+            "--socket=/var/run/mysqld/mysqld.sock",
+            "-e",
+            script,
+        ]
+        return subprocess.check_output(cmd, stderr=subprocess.PIPE)
+
