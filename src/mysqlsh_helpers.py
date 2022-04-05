@@ -76,9 +76,9 @@ class MySQL:
         revokes certain privileges from the 'root' user.
         """
         _script = (
-            f'shell.connect("orchestrator:{self.root_password}@localhost")',
-            f"dba.session.run_sql(\"CREATE USER '{self.cluster_admin_user}'@'localhost' IDENTIFIED BY '{self.cluster_admin_password}' ;\")",
-            f"dba.session.run_sql(\"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'localhost' WITH GRANT OPTION ;\")",
+            f'shell.connect("root:{self.root_password}@localhost")',
+            f"dba.session.run_sql(\"CREATE USER '{self.cluster_admin_user}'@'%' IDENTIFIED BY '{self.cluster_admin_password}' ;\")",
+            f"dba.session.run_sql(\"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'%' WITH GRANT OPTION ;\")",
             'dba.session.run_sql("REVOKE SYSTEM_USER ON *.* FROM root ;")',
         )
 
