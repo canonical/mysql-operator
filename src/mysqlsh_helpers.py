@@ -165,4 +165,3 @@ class MySQL:
             script,
         ]
         return subprocess.check_output(cmd, stderr=subprocess.PIPE)
-
