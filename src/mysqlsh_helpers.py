@@ -34,14 +34,14 @@ class MySQL:
         cluster_admin_password: str,
         instance_address: str,
     ):
-    """Initialize the MySQL class.
+        """Initialize the MySQL class.
 
-    Args:
-        root_password: password for the 'root' user
-        cluster_admin_user: user name for the cluster admin user
-        cluster_admin_password: password for the cluster admin user
-        instance_address: address of the targeted instance
-    """
+        Args:
+            root_password: password for the 'root' user
+            cluster_admin_user: user name for the cluster admin user
+            cluster_admin_password: password for the cluster admin user
+            instance_address: address of the targeted instance
+        """
         self.root_password = root_password
         self.cluster_admin_user = cluster_admin_user
         self.cluster_admin_password = cluster_admin_password
