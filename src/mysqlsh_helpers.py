@@ -8,7 +8,6 @@ import logging
 import os
 import subprocess
 import tempfile
-from typing import AnyStr
 
 from tenacity import retry, stop_after_delay, wait_fixed
 
@@ -75,15 +74,15 @@ class MySQL:
 
     def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster."""
-        _script = f"""
-dba.configure_instance('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
-my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
-my_shell.run_sql("RESTART;");
-        """
+        commands = [
+            f"dba.configure_instance('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            'my_shell.run_sql("RESTART;");',
+        ]
 
         try:
             logger.debug("Configuring instance for InnoDB")
-            self._run_mysqlsh_script(_script)
+            self._run_mysqlsh_script("\n".join(commands))
 
             logger.debug("Waiting until MySQL is restarted")
             self._wait_until_mysql_connection()
@@ -105,13 +104,13 @@ my_shell.run_sql("RESTART;");
 
         Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
         """
-        _script = f"""
-my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')
-        """
+        commands = [
+            f"my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+        ]
 
-        return self._run_mysqlsh_script(_script)
+        self._run_mysqlsh_script("\n".join(commands))
 
-    def _run_mysqlsh_script(self, script: str) -> AnyStr:
+    def _run_mysqlsh_script(self, script: str) -> None:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
@@ -138,4 +137,4 @@ my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
             cmd = [self.mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
-            return subprocess.check_output(cmd, stderr=subprocess.PIPE)
+            subprocess.check_output(cmd, stderr=subprocess.PIPE)
