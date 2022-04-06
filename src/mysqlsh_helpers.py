@@ -34,6 +34,14 @@ class MySQL:
         cluster_admin_password: str,
         instance_address: str,
     ):
+    """Initialize the MySQL class.
+
+    Args:
+        root_password: password for the 'root' user
+        cluster_admin_user: user name for the cluster admin user
+        cluster_admin_password: password for the cluster admin user
+        instance_address: address of the targeted instance
+    """
         self.root_password = root_password
         self.cluster_admin_user = cluster_admin_user
         self.cluster_admin_password = cluster_admin_password
@@ -74,11 +82,11 @@ class MySQL:
 
     def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster."""
-        commands = [
+        commands = (
             f"dba.configure_instance('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             'my_shell.run_sql("RESTART;");',
-        ]
+        )
 
         try:
             logger.debug("Configuring instance for InnoDB")
@@ -104,9 +112,9 @@ class MySQL:
 
         Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
         """
-        commands = [
+        commands = (
             f"my_shell = shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-        ]
+        )
 
         self._run_mysqlsh_script("\n".join(commands))
 
