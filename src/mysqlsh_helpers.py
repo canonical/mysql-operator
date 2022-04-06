@@ -55,12 +55,11 @@ class MySQL:
         """
         # Allow for various versions of the mysql-shell snap
         # When we get the alias use /snap/bin/mysqlsh
-        if os.path.exists("/usr/bin/mysqlsh"):
-            return "/usr/bin/mysqlsh"
-        if os.path.exists("/snap/bin/mysqlsh"):
-            return "/snap/bin/mysqlsh"
-        if os.path.exists("/snap/bin/mysql-shell.mysqlsh"):
-            return "/snap/bin/mysql-shell.mysqlsh"
+        _paths = ("/usr/bin/mysqlsh", "/snap/bin/mysqlsh", "/snap/bin/mysql-shell.mysqlsh")
+
+        for path in _paths:
+            if os.path.exists(path):
+                return path
         # Default to the full path version
         return "/snap/bin/mysql-shell"
 
