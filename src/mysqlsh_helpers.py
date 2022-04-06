@@ -174,7 +174,7 @@ class MySQL:
             cmd = [self.mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
             subprocess.check_output(cmd, stderr=subprocess.PIPE)
 
-    def _run_mysqlcli_script(self, script: str):
+    def _run_mysqlcli_script(self, script: str) -> None:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
