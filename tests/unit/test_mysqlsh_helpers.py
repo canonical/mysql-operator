@@ -23,9 +23,15 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
+        configure_instance_commands = [
+            "dba.configure_instance('clusteradmin:innodb@127.0.0.1')",
+            "my_shell = shell.connect('clusteradmin:innodb@127.0.0.1')",
+            'my_shell.run_sql("RESTART;");',
+        ]
+
         self.mysql.configure_instance()
 
-        _run_mysqlsh_script.assert_called_once()
+        _run_mysqlsh_script.assert_called_once_with("\n".join(configure_instance_commands))
         _wait_until_mysql_connection.assert_called_once()
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
