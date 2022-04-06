@@ -80,6 +80,7 @@ class MySQL:
 
         Creates base `root@%` and `clusteradmin@instance_address` user with the
         appropriate privileges, and reconfigure `root@localhost` user password.
+        Raises MySQLConfigureMySQLUsersError if the user creation fails.
         """
         _script = (
             "SET @@SESSION.SQL_LOG_BIN=0;",
