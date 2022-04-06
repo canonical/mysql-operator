@@ -20,6 +20,12 @@ class MySQLInstanceConfigureError(Exception):
     pass
 
 
+class MySQLConfigureMySQLUsersError(Exception):
+    """Exception raised when creating a user fails."""
+
+    pass
+
+
 class MySQL:
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -56,10 +62,11 @@ class MySQL:
         """
         # Allow for various versions of the mysql-shell snap
         # When we get the alias use /snap/bin/mysqlsh
-        if os.path.exists("/snap/bin/mysqlsh"):
-            return "/snap/bin/mysqlsh"
-        if os.path.exists("/snap/bin/mysql-shell.mysqlsh"):
-            return "/snap/bin/mysql-shell.mysqlsh"
+        _paths = ("/usr/bin/mysqlsh", "/snap/bin/mysqlsh", "/snap/bin/mysql-shell.mysqlsh")
+
+        for path in _paths:
+            if os.path.exists(path):
+                return path
         # Default to the full path version
         return "/snap/bin/mysql-shell"
 
@@ -70,15 +77,35 @@ class MySQL:
         Returns:
             Path to common dir
         """
-        return "/root/snap/mysql-shell/common"
+        if os.path.exists("/root/snap/mysql-shell/common"):
+            return "/root/snap/mysql-shell/common"
+        return "/tmp"
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
 
-        Creates a 'clusteradmin' user with the appropriate privileges and
-        revokes certain privileges from the 'root' user.
+        Creates base `root@%` and `clusteradmin@instance_address` user with the
+        appropriate privileges, and reconfigure `root@localhost` user password.
+        Raises MySQLConfigureMySQLUsersError if the user creation fails.
         """
-        pass
+        _script = (
+            "SET @@SESSION.SQL_LOG_BIN=0;",
+            f"CREATE USER '{self.cluster_admin_user}'@'{self.instance_address}' IDENTIFIED BY '{self.cluster_admin_password}';",
+            f"GRANT ALL ON *.* TO '{self.cluster_admin_user}'@'{self.instance_address}' WITH GRANT OPTION;",
+            f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}';",
+            "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
+            f"ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{self.root_password}';",
+            "REVOKE SYSTEM_USER ON *.* FROM root@'%';",
+            "REVOKE SYSTEM_USER ON *.* FROM root@localhost;",
+            "FLUSH PRIVILEGES;",
+        )
+
+        try:
+            self._run_mysqlcli_script(" ".join(_script))
+        except subprocess.CalledProcessError as e:
+            logger.exception(f"Failed to configure users for: {self.instance_address}", exc_info=e)
+            raise MySQLConfigureMySQLUsersError(e.stdout)
 
     def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster."""
@@ -146,3 +173,26 @@ class MySQL:
             # of the mysql-shell snap
             cmd = [self.mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
             subprocess.check_output(cmd, stderr=subprocess.PIPE)
+
+    def _run_mysqlcli_script(self, script: str):
+        """Execute a MySQL CLI script.
+
+        Execute SQL script as instance root user.
+        Raises CalledProcessError if the script gets a non-zero return code.
+
+        Args:
+            script: raw SQL script string
+
+        Returns:
+            Byte string subprocess output
+        """
+        cmd = [
+            "mysql",
+            "-u",
+            "root",
+            "--protocol=SOCKET",
+            "--socket=/var/run/mysqld/mysqld.sock",
+            "-e",
+            script,
+        ]
+        subprocess.check_output(cmd, stderr=subprocess.PIPE)
