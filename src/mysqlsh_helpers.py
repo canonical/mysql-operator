@@ -7,12 +7,19 @@
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 
 from tenacity import retry, stop_after_delay, wait_fixed
 
 logger = logging.getLogger(__name__)
+
+
+class MySQLInitializationError(Exception):
+    """Exception raised when initializing MySQL helper class."""
+
+    pass
 
 
 class MySQLConfigureMySQLUsersError(Exception):
@@ -29,6 +36,12 @@ class MySQLConfigureInstanceError(Exception):
 
 class MySQLCreateClusterError(Exception):
     """Exception raised when there is an issue creating an InnoDB cluster."""
+
+    pass
+
+
+class MySQLUpdateConfigurationError(Exception):
+    """Exception raised when there is an issue updating the MySQL configuration."""
 
     pass
 
@@ -69,7 +82,13 @@ class MySQL:
         self.server_config_password = server_config_password
         self.server_config_user = server_config_user
 
-        self._ensure_mysqlsh_common_dir()
+        try:
+            self._ensure_mysqlsh_common_dir()
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                f"Failed to ensure mysqlsh common dir for: {self.instance_address}", exc_info=e
+            )
+            raise MySQLInitializationError(e.stderr)
 
     @property
     def _mysqlsh_bin(self) -> str:
@@ -97,6 +116,20 @@ class MySQL:
             Path to common dir
         """
         return "/root/snap/mysql-shell/common"
+
+    def update_mysql_configuration(self):
+        """Add a configuration file for mysqld and restart the mysql service."""
+        try:
+            # target file starts with 'z-' so it has priority over the default config file
+            shutil.copyfile("templates/mysqld.cnf", "/etc/mysql/mysql.conf.d/z-custom-mysqld.cnf")
+
+            restart_mysql_command = ["systemctl", "restart", "mysql"]
+            subprocess.check_output(restart_mysql_command, stderr=subprocess.PIPE)
+        except Exception as e:
+            logger.exception(
+                f"Failed to update mysql config for: {self.instance_address}", exc_info=e
+            )
+            raise MySQLUpdateConfigurationError(e.stderr)
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.

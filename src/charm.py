@@ -13,6 +13,12 @@ from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
+from mysqlsh_helpers import (
+    MySQL,
+    MySQLInitializationError,
+    MySQLUpdateConfigurationError,
+)
+
 logger = logging.getLogger(__name__)
 
 # TODO: determine if version locking is needed for both mysql-shell and mysql-server
@@ -25,6 +31,9 @@ class MySQLOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        # initialized in _on_install()
+        self.mysql_helpers = None
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -51,16 +60,9 @@ class MySQLOperatorCharm(CharmBase):
         try:
             logger.debug(f"Installing '{MYSQL_APT_PACKAGE_NAME}' apt package")
             apt.add_package(MYSQL_APT_PACKAGE_NAME)
-        except apt.PackageNotFoundError as e:
+        except (apt.PackageNotFoundError, apt.PackageError) as e:
             logger.exception(
-                f"'{MYSQL_APT_PACKAGE_NAME}' apt package not found in package cache or on system",
-                exc_info=e,
-            )
-            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_APT_PACKAGE_NAME}'")
-            return
-        except apt.PackageError as e:
-            logger.exception(
-                f"could not install package '{MYSQL_APT_PACKAGE_NAME}'",
+                f"Failed to install '{MYSQL_APT_PACKAGE_NAME}' apt package",
                 exc_info=e,
             )
             self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_APT_PACKAGE_NAME}'")
@@ -74,13 +76,26 @@ class MySQLOperatorCharm(CharmBase):
             if not mysql_shell.present:
                 logger.debug(f"Installing '{MYSQL_SHELL_SNAP_NAME}' snap")
                 mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
-        except snap.SnapNotFoundError as e:
-            logger.exception(f"Failed to find the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
-            self.unit.status = BlockedStatus(f"Failed to find '{MYSQL_SHELL_SNAP_NAME}'")
-            return
-        except snap.SnapError as e:
+        except (snap.SnapNotFoundError, snap.SnapError) as e:
             logger.exception(f"Failed to install the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
             self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_SHELL_SNAP_NAME}'")
+            return
+
+        # Update the mysql configuration - from templates/mysqld.cnf
+        try:
+            # TODO: replace stubbed arguments once mechanisms to generate them exist
+            self.mysql_helpers = MySQL(
+                "clusteradminpassword",
+                "clusteradmin",
+                "test_cluster",
+                "127.0.0.1",
+                "password",
+                "serverconfigpassword",
+                "serverconfig",
+            )
+            self.mysql_helpers.update_mysql_configuration()
+        except (MySQLInitializationError, MySQLUpdateConfigurationError):
+            self.unit.status = BlockedStatus("Failed to update the mysql configuration")
             return
 
         # TODO: Set status to WaitingStatus once _on_start is implemented

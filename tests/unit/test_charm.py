@@ -11,6 +11,7 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
+from mysqlsh_helpers import MySQLInitializationError, MySQLUpdateConfigurationError
 
 
 class TestCharm(unittest.TestCase):
@@ -23,7 +24,16 @@ class TestCharm(unittest.TestCase):
     @patch("charms.operator_libs_linux.v0.apt.update")
     @patch("charms.operator_libs_linux.v0.apt.add_package")
     @patch("charms.operator_libs_linux.v1.snap.SnapCache")
-    def test_on_install(self, _snap_cache, _apt_add_package, _apt_update):
+    @patch("mysqlsh_helpers.MySQL._ensure_mysqlsh_common_dir")
+    @patch("mysqlsh_helpers.MySQL.update_mysql_configuration")
+    def test_on_install(
+        self,
+        _update_mysql_configuration,
+        _ensure_mysqlsh_common_dir,
+        _snap_cache,
+        _apt_add_package,
+        _apt_update,
+    ):
         """Test the successful installation of packages."""
         mock_cache = MagicMock()
         _snap_cache.return_value = mock_cache
@@ -42,6 +52,8 @@ class TestCharm(unittest.TestCase):
         _apt_add_package.assert_called_once_with("mysql-server-8.0")
 
         mock_ensure.assert_called_once_with(snap.SnapState.Latest, channel="stable")
+
+        _update_mysql_configuration.assert_called_once()
 
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
 
@@ -68,7 +80,7 @@ class TestCharm(unittest.TestCase):
         _apt_add_package.assert_called_once_with("mysql-server-8.0")
 
         self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("Failed to find 'mysql-server-8.0'")
+            self.harness.model.unit.status, BlockedStatus("Failed to install 'mysql-server-8.0'")
         )
 
         # Reset the mocks
@@ -101,7 +113,7 @@ class TestCharm(unittest.TestCase):
         _apt_add_package.assert_called_once_with("mysql-server-8.0")
 
         self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("Failed to find 'mysql-shell'")
+            self.harness.model.unit.status, BlockedStatus("Failed to install 'mysql-shell'")
         )
 
         # Reset the mocks
@@ -119,4 +131,51 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.model.unit.status, BlockedStatus("Failed to install 'mysql-shell'")
+        )
+
+    @patch("charms.operator_libs_linux.v0.apt.update")
+    @patch("charms.operator_libs_linux.v0.apt.add_package")
+    @patch("charms.operator_libs_linux.v1.snap.SnapCache")
+    @patch("mysqlsh_helpers.MySQL._ensure_mysqlsh_common_dir")
+    @patch("mysqlsh_helpers.MySQL.update_mysql_configuration")
+    def test_on_install_update_mysql_configuration_error(
+        self,
+        _update_mysql_configuration,
+        _ensure_mysqlsh_common_dir,
+        _snap_cache,
+        _apt_add_package,
+        _apt_update,
+    ):
+        """Test an issue with snap installations."""
+        # Test MySQLInitializationError
+        _update_mysql_configuration.side_effect = MySQLInitializationError
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_once_with("mysql-server-8.0")
+        _snap_cache.assert_called_once()
+
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BlockedStatus("Failed to update the mysql configuration"),
+        )
+
+        # Reset the mocks
+        _apt_update.reset_mock()
+        _apt_add_package.reset_mock()
+        _snap_cache.reset_mock()
+
+        # Test MySQLUpdateConfigurationError
+        _update_mysql_configuration.side_effect = MySQLUpdateConfigurationError
+
+        self.charm.on.install.emit()
+
+        _apt_update.assert_called_once()
+        _apt_add_package.assert_called_once_with("mysql-server-8.0")
+        _snap_cache.assert_called_once()
+
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BlockedStatus("Failed to update the mysql configuration"),
         )
