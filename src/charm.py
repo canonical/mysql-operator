@@ -32,8 +32,8 @@ class MySQLOperatorCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        # initialized in _on_install()
-        self.mysql_helpers = None
+        # Please do not reference this variable directly. Instead use _get_mysql_helpers().
+        self._mysql_helpers = None
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -83,17 +83,8 @@ class MySQLOperatorCharm(CharmBase):
 
         # Update the mysql configuration - from templates/mysqld.cnf
         try:
-            # TODO: replace stubbed arguments once mechanisms to generate them exist
-            self.mysql_helpers = MySQL(
-                "clusteradminpassword",
-                "clusteradmin",
-                "test_cluster",
-                "127.0.0.1",
-                "password",
-                "serverconfigpassword",
-                "serverconfig",
-            )
-            self.mysql_helpers.update_mysql_configuration()
+            mysql_helpers = self._get_mysql_helpers()
+            mysql_helpers.update_mysql_configuration()
         except (MySQLInitializationError, MySQLUpdateConfigurationError):
             self.unit.status = BlockedStatus("Failed to update the mysql configuration")
             return
@@ -106,6 +97,27 @@ class MySQLOperatorCharm(CharmBase):
     def _on_start(self, _) -> None:
         """Ensure that required software is running."""
         pass
+
+    # =======================
+    #  Helpers
+    # =======================
+
+    def _get_mysql_helpers(self):
+        """Returns an instance of the MySQL object from mysqlsh_helpers."""
+        if not self._mysql_helpers:
+            # TODO: replace stubbed arguments once mechanisms to generate them exist
+            # Mechanisms = generating user/pass and storing+retrieving them from peer databag.
+            self._mysql_helpers = MySQL(
+                "clusteradminpassword",
+                "clusteradmin",
+                "test_cluster",
+                "127.0.0.1",
+                "password",
+                "serverconfigpassword",
+                "serverconfig",
+            )
+
+        return self._mysql_helpers
 
 
 if __name__ == "__main__":

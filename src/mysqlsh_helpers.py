@@ -46,6 +46,12 @@ class MySQLUpdateConfigurationError(Exception):
     pass
 
 
+class MySQLAddInstanceToClusterError(Exception):
+    """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
+
+    pass
+
+
 class MySQL:
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -64,6 +70,8 @@ class MySQL:
         server_config_user: str,
     ):
         """Initialize the MySQL class.
+
+        Raises MySQLInitializationError if the was an error initializing the helper class.
 
         Args:
             cluster_admin_password: password for the cluster admin user
@@ -112,6 +120,8 @@ class MySQL:
     def _mysqlsh_common_dir(self) -> str:
         """Determine snap common dir for mysqlsh.
 
+        Raises MySQLUpdateConfigurationError if there was an issue configuring the mysql service.
+
         Returns:
             Path to common dir
         """
@@ -139,7 +149,20 @@ class MySQL:
 
         Raises MySQLConfigureMySQLUsersError if the user creation fails.
         """
-        privileges_to_revoke = ("SYSTEM_USER", "SYSTEM_VARIABLES_ADMIN", "SUPER")
+        # SYSTEM_USER and SUPER privileges to revoke from the root users
+        # Reference: https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_super
+        privileges_to_revoke = (
+            "SYSTEM_USER",
+            "SYSTEM_VARIABLES_ADMIN",
+            "SUPER",
+            "REPLICATION_SLAVE_ADMIN",
+            "GROUP_REPLICATION_ADMIN",
+            "BINLOG_ADMIN",
+            "SET_USER_ID",
+            "ENCRYPTION_KEY_ADMIN",
+            "VERSION_TOKEN_ADMIN",
+            "CONNECTION_ADMIN",
+        )
 
         commands = (
             "SET @@SESSION.SQL_LOG_BIN=0;",
@@ -162,7 +185,11 @@ class MySQL:
             raise MySQLConfigureMySQLUsersError(e.stdout)
 
     def configure_instance(self) -> None:
-        """Configure the instance to be used in an InnoDB cluster."""
+        """Configure the instance to be used in an InnoDB cluster.
+
+        Raises MySQLConfigureInstanceError
+            if the was an error configuring the instance for use in an InnoDB cluster.
+        """
         options = {
             "clusterAdmin": self.cluster_admin_user,
             "clusterAdminPassword": self.cluster_admin_password,
@@ -184,7 +211,10 @@ class MySQL:
             raise MySQLConfigureInstanceError(e.stderr)
 
     def create_cluster(self) -> None:
-        """Create an InnoDB cluster with Group Replication enabled."""
+        """Create an InnoDB cluster with Group Replication enabled.
+
+        Raises MySQLCreateClusterError if there was an issue creating the cluster.
+        """
         commands = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"dba.create_cluster('{self.cluster_name}')",
@@ -199,10 +229,35 @@ class MySQL:
             )
             raise MySQLCreateClusterError(e.stderr)
 
-    def add_instance_to_cluster(self) -> None:
-        """Add an instance to the InnoDB cluster."""
-        # TODO: implement logic to add the instance to a cluster
-        pass
+    def add_instance_to_cluster(self, instance_address) -> None:
+        """Add an instance to the InnoDB cluster.
+
+        Raises MySQLADDInstanceToClusterError
+            if there was an issue adding the instance to the cluster.
+
+        Args:
+            instance_address: address of the instance to add to the cluster
+        """
+        options = {
+            "password": self.cluster_admin_password,
+            "recoveryMethod": "clone",
+        }
+
+        commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.add_instance('{self.cluster_admin_user}@{instance_address}', {json.dumps(options)})",
+        )
+
+        try:
+            logger.debug(f"Adding instance {instance_address} to cluster {self.cluster_name}")
+            self._run_mysqlsh_script("\n".join(commands))
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                f"Failed to add instance {instance_address} to cluster {self.cluster_name}",
+                exc_info=e,
+            )
+            raise MySQLAddInstanceToClusterError(e.stderr)
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:

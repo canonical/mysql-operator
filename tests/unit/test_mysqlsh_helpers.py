@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from mysqlsh_helpers import (
     MySQL,
+    MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
@@ -40,8 +41,8 @@ class TestMySQL(unittest.TestCase):
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
                 "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER ON *.* FROM root@'%';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER ON *.* FROM root@localhost;",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%';",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost;",
                 "FLUSH PRIVILEGES;",
             )
         )
@@ -128,3 +129,24 @@ class TestMySQL(unittest.TestCase):
 
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster()
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_add_instance_to_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of create_cluster."""
+        add_instance_to_cluster_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            "cluster = dba.get_cluster('test_cluster')",
+            'cluster.add_instance(\'clusteradmin@127.0.0.2\', {"password": "clusteradminpassword", "recoveryMethod": "clone"})',
+        )
+
+        self.mysql.add_instance_to_cluster("127.0.0.2")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script):
+        """Test exceptions raised while running add_instance_to_cluster."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        with self.assertRaises(MySQLAddInstanceToClusterError):
+            self.mysql.add_instance_to_cluster("127.0.0.2")
