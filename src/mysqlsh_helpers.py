@@ -7,19 +7,24 @@
 import json
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import tempfile
 
+from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
 logger = logging.getLogger(__name__)
 
 
-class MySQLInitializationError(Exception):
-    """Exception raised when initializing MySQL helper class."""
-
-    pass
+# TODO: determine if version locking is needed for both mysql-shell and mysql-server
+MYSQL_SHELL_SNAP_NAME = "mysql-shell"
+MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
+MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
+MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
+MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
 
 
 class MySQLConfigureMySQLUsersError(Exception):
@@ -40,14 +45,14 @@ class MySQLCreateClusterError(Exception):
     pass
 
 
-class MySQLUpdateConfigurationError(Exception):
-    """Exception raised when there is an issue updating the MySQL configuration."""
+class MySQLAddInstanceToClusterError(Exception):
+    """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
 
     pass
 
 
-class MySQLAddInstanceToClusterError(Exception):
-    """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
+class MySQLServiceNotRunningError(Exception):
+    """Exception raised when the MySQL service is not running."""
 
     pass
 
@@ -71,8 +76,6 @@ class MySQL:
     ):
         """Initialize the MySQL class.
 
-        Raises MySQLInitializationError if the was an error initializing the helper class.
-
         Args:
             cluster_admin_password: password for the cluster admin user
             cluster_admin_user: user name for the cluster admin user
@@ -90,16 +93,8 @@ class MySQL:
         self.server_config_password = server_config_password
         self.server_config_user = server_config_user
 
-        try:
-            self._ensure_mysqlsh_common_dir()
-        except subprocess.CalledProcessError as e:
-            logger.exception(
-                f"Failed to ensure mysqlsh common dir for: {self.instance_address}", exc_info=e
-            )
-            raise MySQLInitializationError(e.stderr)
-
-    @property
-    def _mysqlsh_bin(self) -> str:
+    @staticmethod
+    def _get_mysqlsh_bin() -> str:
         """Determine binary path for MySQL Shell.
 
         Returns:
@@ -116,30 +111,56 @@ class MySQL:
         # Default to the full path version
         return "/snap/bin/mysql-shell"
 
-    @property
-    def _mysqlsh_common_dir(self) -> str:
-        """Determine snap common dir for mysqlsh.
+    @staticmethod
+    def install_and_configure_mysql_dependencies() -> None:
+        """Install and configure MySQL dependencies.
 
-        Raises MySQLUpdateConfigurationError if there was an issue configuring the mysql service.
-
-        Returns:
-            Path to common dir
+        Raises
+            subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
+            apt.PackageNotFoundError, apt.PackageError: if issue install mysql server
+            snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
         """
-        return "/root/snap/mysql-shell/common"
-
-    def update_mysql_configuration(self):
-        """Add a configuration file for mysqld and restart the mysql service."""
         try:
-            # target file starts with 'z-' so it has priority over the default config file
-            shutil.copyfile("templates/mysqld.cnf", "/etc/mysql/mysql.conf.d/z-custom-mysqld.cnf")
-
-            restart_mysql_command = ["systemctl", "restart", "mysql"]
-            subprocess.check_output(restart_mysql_command, stderr=subprocess.PIPE)
-        except Exception as e:
-            logger.exception(
-                f"Failed to update mysql config for: {self.instance_address}", exc_info=e
+            # create the mysqld config directory if it does not exist
+            logger.debug("Copying custom mysqld config")
+            pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
+            # target file has prefix 'z-' to ensure priority over the default mysqld config file
+            shutil.copyfile(
+                "templates/mysqld.cnf", f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
             )
-            raise MySQLUpdateConfigurationError(e.stderr)
+
+            # install mysql server
+            logger.debug("Updating apt")
+            apt.update()
+            logger.debug("Installing mysql server")
+            apt.add_package(MYSQL_APT_PACKAGE_NAME)
+
+            # install mysql shell if not already installed
+            logger.debug("Retrieving snap cache")
+            cache = snap.SnapCache()
+            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
+
+            if not mysql_shell.present:
+                logger.debug("Installing mysql shell snap")
+                mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
+
+            # ensure creation of mysql shell common directory by running 'mysqlsh --help'
+            if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
+                logger.debug("Creating mysql shell common directory")
+                mysqlsh_help_command = [MySQL._get_mysqlsh_bin(), "--help"]
+                subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            logger.exception("Failed to execute subprocess command", exc_info=e)
+            raise
+        except (apt.PackageNotFoundError, apt.PackageError) as e:
+            logger.exception("Failed to install apt packages", exc_info=e)
+            raise
+        except (snap.SnapNotFoundError, snap.SnapError) as e:
+            logger.exception("Failed to install snaps", exc_info=e)
+            raise
+        except Exception as e:
+            logger.exception("Encountered an unexpected exception", exc_info=e)
+            raise
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -164,25 +185,38 @@ class MySQL:
             "CONNECTION_ADMIN",
         )
 
-        commands = (
+        # commands  to create 'root'@'%' user
+        create_root_user_commands = (
             "SET @@SESSION.SQL_LOG_BIN=0;",
             f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}';",
             "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+        )
+
+        # commands to be run from mysql client with root user and password set above
+        configure_users_commands = (
+            "SET @@SESSION.SQL_LOG_BIN=0;",
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}';",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION;",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-            f"ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{self.root_password}';",
+            f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%';",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@localhost;",
             "FLUSH PRIVILEGES;",
         )
 
         try:
-            logger.debug("Configuring MySQL users=")
-            self._run_mysqlcli_script(" ".join(commands))
+            logger.debug("Configuring MySQL users")
+            self._run_mysqlcli_script(" ".join(create_root_user_commands))
+            # run configure users commands with newly created root user
+            self._run_mysqlcli_script(
+                " ".join(configure_users_commands), password=self.root_password
+            )
         except subprocess.CalledProcessError as e:
-            logger.exception(f"Failed to configure users for: {self.instance_address}", exc_info=e)
-            raise MySQLConfigureMySQLUsersError(e.stdout)
+            logger.exception(
+                f"Failed to configure users for: {self.instance_address} with error {e.stderr}",
+                exc_info=e,
+            )
+            raise MySQLConfigureMySQLUsersError(e.stderr)
 
     def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster.
@@ -206,8 +240,11 @@ class MySQL:
 
             logger.debug("Waiting until MySQL is restarted")
             self._wait_until_mysql_connection()
-        except subprocess.CalledProcessError as e:
-            logger.exception(f"Failed to configure instance: {self.instance_address}", exc_info=e)
+        except (subprocess.CalledProcessError, MySQLServiceNotRunningError) as e:
+            logger.exception(
+                f"Failed to configure instance: {self.instance_address} with error {e.stderr}",
+                exc_info=e,
+            )
             raise MySQLConfigureInstanceError(e.stderr)
 
     def create_cluster(self) -> None:
@@ -225,7 +262,8 @@ class MySQL:
             self._run_mysqlsh_script("\n".join(commands))
         except subprocess.CalledProcessError as e:
             logger.exception(
-                f"Failed to create cluster on instance: {self.instance_address}", exc_info=e
+                f"Failed to create cluster on instance: {self.instance_address} with error {e.stderr}",
+                exc_info=e,
             )
             raise MySQLCreateClusterError(e.stderr)
 
@@ -254,7 +292,7 @@ class MySQL:
             self._run_mysqlsh_script("\n".join(commands))
         except subprocess.CalledProcessError as e:
             logger.exception(
-                f"Failed to add instance {instance_address} to cluster {self.cluster_name}",
+                f"Failed to add instance {instance_address} to cluster {self.cluster_name} with error {e.stderr}",
                 exc_info=e,
             )
             raise MySQLAddInstanceToClusterError(e.stderr)
@@ -265,22 +303,8 @@ class MySQL:
 
         Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
         """
-        commands = (
-            f"my_shell = shell.connect('root:{self.root_password}@{self.instance_address}')",
-        )
-
-        self._run_mysqlsh_script("\n".join(commands))
-
-    def _ensure_mysqlsh_common_dir(self) -> None:
-        """Ensure that the mysql-shell common directory exists.
-
-        Creates the directory by running 'mysqlsh --help' if it doesn't exist.
-        """
-        if not os.path.exists(self._mysqlsh_common_dir):
-            # Execute mysqlsh to create self.mysqlsh_common_dir
-            # This will only ever execute once
-            cmd = [self._mysqlsh_bin, "--help"]
-            subprocess.check_call(cmd, stderr=subprocess.PIPE)
+        if not os.path.exists(MYSQLD_SOCK_FILE):
+            raise MySQLServiceNotRunningError()
 
     def _run_mysqlsh_script(self, script: str) -> None:
         """Execute a MySQL shell script.
@@ -293,19 +317,17 @@ class MySQL:
         Returns:
             Byte string subprocess output
         """
-        self._ensure_mysqlsh_common_dir()
-
-        # Use the self.mysqlsh_common_dir dir for the confined mysql-shell snap.
-        with tempfile.NamedTemporaryFile(mode="w", dir=self._mysqlsh_common_dir) as _file:
+        # Use the self.mysqlsh_common_dir for the confined mysql-shell snap.
+        with tempfile.NamedTemporaryFile(mode="w", dir=MYSQL_SHELL_COMMON_DIRECTORY) as _file:
             _file.write(script)
             _file.flush()
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            cmd = [self._mysqlsh_bin, "--no-wizard", "--python", "-f", _file.name]
-            subprocess.check_output(cmd, stderr=subprocess.PIPE)
+            command = [MySQL._get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
+            subprocess.check_output(command, stderr=subprocess.PIPE)
 
-    def _run_mysqlcli_script(self, script: str) -> None:
+    def _run_mysqlcli_script(self, script: str, password=None) -> None:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
@@ -317,7 +339,7 @@ class MySQL:
         Returns:
             Byte string subprocess output
         """
-        cmd = [
+        command = [
             "mysql",
             "-u",
             "root",
@@ -327,4 +349,7 @@ class MySQL:
             script,
         ]
 
-        subprocess.check_output(cmd, stderr=subprocess.PIPE)
+        if password:
+            command.append(f"--password={password}")
+
+        subprocess.check_output(command, stderr=subprocess.PIPE)

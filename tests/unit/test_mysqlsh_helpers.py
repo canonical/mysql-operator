@@ -3,7 +3,7 @@
 
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from mysqlsh_helpers import (
     MySQL,
@@ -16,31 +16,36 @@ from mysqlsh_helpers import (
 
 class TestMySQL(unittest.TestCase):
     def setUp(self):
-        with patch("mysqlsh_helpers.MySQL._ensure_mysqlsh_common_dir"):
-            self.mysql = MySQL(
-                "clusteradminpassword",
-                "clusteradmin",
-                "test_cluster",
-                "127.0.0.1",
-                "password",
-                "serverconfigpassword",
-                "serverconfig",
-            )
+        self.mysql = MySQL(
+            "clusteradminpassword",
+            "clusteradmin",
+            "test_cluster",
+            "127.0.0.1",
+            "password",
+            "serverconfigpassword",
+            "serverconfig",
+        )
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users(self, _run_mysqlcli_script):
         """Test failed to configuring the MySQL users."""
         _run_mysqlcli_script.return_value = b""
 
-        _expected_script = " ".join(
+        _expected_create_root_user_commands = " ".join(
             (
                 "SET @@SESSION.SQL_LOG_BIN=0;",
                 "CREATE USER 'root'@'%' IDENTIFIED BY 'password';",
                 "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+            )
+        )
+
+        _expected_configure_user_commands = " ".join(
+            (
+                "SET @@SESSION.SQL_LOG_BIN=0;",
                 "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword';",
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-                "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';",
+                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';",
                 "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%';",
                 "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost;",
                 "FLUSH PRIVILEGES;",
@@ -48,7 +53,18 @@ class TestMySQL(unittest.TestCase):
         )
 
         self.mysql.configure_mysql_users()
-        _run_mysqlcli_script.assert_called_once_with(_expected_script)
+
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+
+        self.assertEqual(
+            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(
+                [
+                    call(_expected_create_root_user_commands),
+                    call(_expected_configure_user_commands, password="password"),
+                ]
+            ),
+        )
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
@@ -64,10 +80,10 @@ class TestMySQL(unittest.TestCase):
     def test_mysqlsh_bin(self, _exists):
         """Test the mysqlsh_bin property."""
         _exists.return_value = True
-        self.assertEqual(self.mysql._mysqlsh_bin, "/usr/bin/mysqlsh")
+        self.assertEqual(MySQL._get_mysqlsh_bin(), "/usr/bin/mysqlsh")
 
         _exists.return_value = False
-        self.assertEqual(self.mysql._mysqlsh_bin, "/snap/bin/mysql-shell")
+        self.assertEqual(MySQL._get_mysqlsh_bin(), "/snap/bin/mysql-shell")
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")

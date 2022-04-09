@@ -5,25 +5,14 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
-import subprocess
 
-from charms.operator_libs_linux.v0 import apt
-from charms.operator_libs_linux.v1 import snap
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
-from mysqlsh_helpers import (
-    MySQL,
-    MySQLInitializationError,
-    MySQLUpdateConfigurationError,
-)
+from mysqlsh_helpers import MySQL
 
 logger = logging.getLogger(__name__)
-
-# TODO: determine if version locking is needed for both mysql-shell and mysql-server
-MYSQL_SHELL_SNAP_NAME = "mysql-shell"
-MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 
 
 class MySQLOperatorCharm(CharmBase):
@@ -46,47 +35,10 @@ class MySQLOperatorCharm(CharmBase):
         """Initial setup operations like installing dependencies, and creating users and groups."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
-        # Install 'mysql-server-8.0' apt package
-        # Note: installing mysql-server will create the 'mysql' user and 'mysql' group,
-        # and run mysql with the 'mysql' user
         try:
-            logger.debug("Updating apt cache")
-            apt.update()
-        except subprocess.CalledProcessError as e:
-            logger.exception("Failed to update apt cache", exc_info=e)
-            self.unit.status = BlockedStatus("Failed to update apt")
-            return
-
-        try:
-            logger.debug(f"Installing '{MYSQL_APT_PACKAGE_NAME}' apt package")
-            apt.add_package(MYSQL_APT_PACKAGE_NAME)
-        except (apt.PackageNotFoundError, apt.PackageError) as e:
-            logger.exception(
-                f"Failed to install '{MYSQL_APT_PACKAGE_NAME}' apt package",
-                exc_info=e,
-            )
-            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_APT_PACKAGE_NAME}'")
-            return
-
-        # Install 'mysql-shell' snap
-        try:
-            cache = snap.SnapCache()
-            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
-
-            if not mysql_shell.present:
-                logger.debug(f"Installing '{MYSQL_SHELL_SNAP_NAME}' snap")
-                mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
-        except (snap.SnapNotFoundError, snap.SnapError) as e:
-            logger.exception(f"Failed to install the '{MYSQL_SHELL_SNAP_NAME}' snap", exc_info=e)
-            self.unit.status = BlockedStatus(f"Failed to install '{MYSQL_SHELL_SNAP_NAME}'")
-            return
-
-        # Update the mysql configuration - from templates/mysqld.cnf
-        try:
-            mysql_helpers = self._get_mysql_helpers()
-            mysql_helpers.update_mysql_configuration()
-        except (MySQLInitializationError, MySQLUpdateConfigurationError):
-            self.unit.status = BlockedStatus("Failed to update the mysql configuration")
+            MySQL.install_and_configure_mysql_dependencies()
+        except Exception:
+            self.unit.status = BlockedStatus("Failed to install and configure MySQL")
             return
 
         # TODO: Set status to WaitingStatus once _on_start is implemented
@@ -102,7 +54,8 @@ class MySQLOperatorCharm(CharmBase):
     #  Helpers
     # =======================
 
-    def _get_mysql_helpers(self):
+    @property
+    def _mysql(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
         if not self._mysql_helpers:
             # TODO: replace stubbed arguments once mechanisms to generate them exist
