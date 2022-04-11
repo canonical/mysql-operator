@@ -61,13 +61,13 @@ class MySQLOperatorCharm(CharmBase):
             # TODO: replace stubbed arguments once mechanisms to generate them exist
             # Mechanisms = generating user/pass and storing+retrieving them from peer databag.
             self._mysql_helpers = MySQL(
-                "clusteradminpassword",
-                "clusteradmin",
-                "test_cluster",
                 "127.0.0.1",
+                "test_cluster",
                 "password",
-                "serverconfigpassword",
                 "serverconfig",
+                "serverconfigpassword",
+                "clusteradmin",
+                "clusteradminpassword",
             )
 
         return self._mysql_helpers

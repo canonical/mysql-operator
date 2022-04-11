@@ -17,13 +17,13 @@ from mysqlsh_helpers import (
 class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
-            "clusteradminpassword",
-            "clusteradmin",
-            "test_cluster",
             "127.0.0.1",
+            "test_cluster",
             "password",
-            "serverconfigpassword",
             "serverconfig",
+            "serverconfigpassword",
+            "clusteradmin",
+            "clusteradminpassword",
         )
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")

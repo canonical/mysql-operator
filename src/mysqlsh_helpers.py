@@ -66,32 +66,32 @@ class MySQL:
 
     def __init__(
         self,
-        cluster_admin_password: str,
-        cluster_admin_user: str,
-        cluster_name: str,
         instance_address: str,
+        cluster_name: str,
         root_password: str,
-        server_config_password: str,
         server_config_user: str,
+        server_config_password: str,
+        cluster_admin_user: str,
+        cluster_admin_password: str,
     ):
         """Initialize the MySQL class.
 
         Args:
-            cluster_admin_password: password for the cluster admin user
-            cluster_admin_user: user name for the cluster admin user
-            cluster_name: cluster name
             instance_address: address of the targeted instance
+            cluster_name: cluster name
             root_password: password for the 'root' user
-            server_config_password: password for the server config user
             server_config_user: user name for the server config user
+            server_config_password: password for the server config user
+            cluster_admin_user: user name for the cluster admin user
+            cluster_admin_password: password for the cluster admin user
         """
-        self.cluster_admin_password = cluster_admin_password
-        self.cluster_admin_user = cluster_admin_user
-        self.cluster_name = cluster_name
         self.instance_address = instance_address
+        self.cluster_name = cluster_name
         self.root_password = root_password
-        self.server_config_password = server_config_password
         self.server_config_user = server_config_user
+        self.server_config_password = server_config_password
+        self.cluster_admin_user = cluster_admin_user
+        self.cluster_admin_password = cluster_admin_password
 
     @staticmethod
     def _get_mysqlsh_bin() -> str:
