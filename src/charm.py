@@ -72,8 +72,10 @@ class MySQLOperatorCharm(CharmBase):
     def _on_start(self, _) -> None:
         """Ensure that required software is running."""
         try:
-            self._mysql.configure_mysql_users()
-            self._mysql.configure_instance()
+            # TODO: add logic to determine how to add non-leader instances to the cluster
+            if self.unit.is_leader():
+                self._mysql.configure_mysql_users()
+                self._mysql.configure_instance()
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
@@ -126,18 +128,22 @@ class MySQLOperatorCharm(CharmBase):
         if not mysql_configs["cluster_name"]:
             cluster_name = self.config.get("cluster_name") or generate_random_hash()
             peer_relation.data[self.app]["cluster_name"] = cluster_name
+            mysql_configs["cluster_name"] = cluster_name
 
         if not mysql_configs["root_password"]:
             root_password = generate_random_password(PASSWORD_LENGTH)
             peer_relation.data[self.app]["root_password"] = root_password
+            mysql_configs["root_password"] = root_password
 
         if not mysql_configs["server_config_password"]:
             server_config_password = generate_random_password(PASSWORD_LENGTH)
             peer_relation.data[self.app]["server_config_password"] = server_config_password
+            mysql_configs["server_config_password"] = server_config_password
 
         if not mysql_configs["cluster_admin_password"]:
             cluster_admin_password = generate_random_password(PASSWORD_LENGTH)
             peer_relation.data[self.app]["cluster_admin_password"] = cluster_admin_password
+            mysql_configs["cluster_admin_password"] = cluster_admin_password
 
         return mysql_configs
 
