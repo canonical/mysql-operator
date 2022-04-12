@@ -4,15 +4,41 @@
 
 """Charmed Machine Operator for MySQL."""
 
+import hashlib
 import logging
+import secrets
+import string
 
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
-from mysqlsh_helpers import MySQL
+from mysqlsh_helpers import (
+    MySQL,
+    MySQLConfigureInstanceError,
+    MySQLConfigureMySQLUsersError,
+)
 
 logger = logging.getLogger(__name__)
+
+PASSWORD_LENGTH = 24
+PEER = "mysql-replicas"
+
+
+def generate_random_password(length: int) -> str:
+    """Randomly generate a string intended to be used as a password.
+
+    Args:
+        length: length of the randomly generated string to be returned
+    """
+    choices = string.ascii_letters + string.digits
+    return "".join([secrets.choice(choices) for i in range(length)])
+
+
+def generate_random_hash() -> str:
+    """Generate a hash based on a random string."""
+    random_characters = generate_random_password(10)
+    return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
 
 class MySQLOperatorCharm(CharmBase):
@@ -21,7 +47,7 @@ class MySQLOperatorCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        # Please do not reference this variable directly. Instead use _get_mysql_helpers().
+        # Please do not reference this variable directly. Instead use the _mysql property.
         self._mysql_helpers = None
 
         self.framework.observe(self.on.install, self._on_install)
@@ -41,14 +67,21 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
             return
 
-        # TODO: Set status to WaitingStatus once _on_start is implemented
-        # Temporarily set the unit status to ActiveStatus
-        # self.unit.status = WaitingStatus("Waiting to start MySQL")
-        self.unit.status = ActiveStatus()
+        self.unit.status = WaitingStatus("Waiting to start MySQL")
 
     def _on_start(self, _) -> None:
         """Ensure that required software is running."""
-        pass
+        try:
+            self._mysql.configure_mysql_users()
+            self._mysql.configure_instance()
+        except MySQLConfigureMySQLUsersError:
+            self.unit.status = BlockedStatus("Failed to initialize MySQL users")
+            return
+        except MySQLConfigureInstanceError:
+            self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
+            return
+
+        self.unit.status = ActiveStatus()
 
     # =======================
     #  Helpers
@@ -58,19 +91,55 @@ class MySQLOperatorCharm(CharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
         if not self._mysql_helpers:
-            # TODO: replace stubbed arguments once mechanisms to generate them exist
-            # Mechanisms = generating user/pass and storing+retrieving them from peer databag.
+            mysql_configs = self._get_or_create_mysql_configs()
+
             self._mysql_helpers = MySQL(
-                "127.0.0.1",
-                "test_cluster",
-                "password",
+                mysql_configs["unit_ip"],
+                mysql_configs["cluster_name"],
+                mysql_configs["root_password"],
                 "serverconfig",
-                "serverconfigpassword",
+                mysql_configs["server_config_password"],
                 "clusteradmin",
-                "clusteradminpassword",
+                mysql_configs["cluster_admin_password"],
             )
 
         return self._mysql_helpers
+
+    def _get_or_create_mysql_configs(self):
+        peer_relation = self.model.get_relation(PEER)
+        if peer_relation is None:
+            raise Exception(f"Peer relation {PEER} has not yet been established")
+
+        mysql_configs = {
+            "unit_ip": self.model.get_binding(PEER).network.bind_address,
+            "cluster_name": peer_relation.data[self.app].get("cluster_name"),
+            "root_password": peer_relation.data[self.app].get("root_password"),
+            "server_config_password": peer_relation.data[self.app].get("server_config_password"),
+            "cluster_admin_password": peer_relation.data[self.app].get("cluster_admin_password"),
+        }
+
+        is_unit_leader = self.unit.is_leader()
+        has_missing_peer_data = any([value is None for value in mysql_configs.values()])
+        if has_missing_peer_data and not is_unit_leader:
+            raise Exception("Trying to store data in peer relation on non-leader unit")
+
+        if not mysql_configs["cluster_name"]:
+            cluster_name = self.config.get("cluster_name") or generate_random_hash()
+            peer_relation.data[self.app]["cluster_name"] = cluster_name
+
+        if not mysql_configs["root_password"]:
+            root_password = generate_random_password(PASSWORD_LENGTH)
+            peer_relation.data[self.app]["root_password"] = root_password
+
+        if not mysql_configs["server_config_password"]:
+            server_config_password = generate_random_password(PASSWORD_LENGTH)
+            peer_relation.data[self.app]["server_config_password"] = server_config_password
+
+        if not mysql_configs["cluster_admin_password"]:
+            cluster_admin_password = generate_random_password(PASSWORD_LENGTH)
+            peer_relation.data[self.app]["cluster_admin_password"] = cluster_admin_password
+
+        return mysql_configs
 
 
 if __name__ == "__main__":
