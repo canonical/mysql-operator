@@ -94,7 +94,7 @@ class MySQL:
         self.cluster_admin_password = cluster_admin_password
 
     @staticmethod
-    def _get_mysqlsh_bin() -> str:
+    def get_mysqlsh_bin() -> str:
         """Determine binary path for MySQL Shell.
 
         Returns:
@@ -147,7 +147,7 @@ class MySQL:
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
                 logger.debug("Creating mysql shell common directory")
-                mysqlsh_help_command = [MySQL._get_mysqlsh_bin(), "--help"]
+                mysqlsh_help_command = [MySQL.get_mysqlsh_bin(), "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
@@ -278,24 +278,37 @@ class MySQL:
         """
         options = {
             "password": self.cluster_admin_password,
-            "recoveryMethod": "clone",
         }
 
-        commands = (
+        connect_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            f"cluster.add_instance('{self.cluster_admin_user}@{instance_address}', {json.dumps(options)})",
         )
 
-        try:
-            logger.debug(f"Adding instance {instance_address} to cluster {self.cluster_name} on {self.instance_address}")
-            self._run_mysqlsh_script("\n".join(commands))
-        except subprocess.CalledProcessError as e:
-            logger.exception(
-                f"Failed to add instance {instance_address} to cluster {self.cluster_name} with error {e.stderr}",
-                exc_info=e,
-            )
-            raise MySQLAddInstanceToClusterError(e.stderr)
+        for recovery_method in ["auto", "clone"]:
+            try:
+                options["recoveryMethod"] = recovery_method
+                add_instance_command = (
+                    f"cluster.add_instance('{self.cluster_admin_user}@{instance_address}', {json.dumps(options)})",
+                )
+
+                logger.debug(
+                    f"Adding instance {instance_address} to cluster {self.cluster_name} with recovery method {recovery_method}"
+                )
+                self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
+
+                break
+            except subprocess.CalledProcessError as e:
+                if recovery_method == "clone":
+                    logger.exception(
+                        f"Failed to add instance {instance_address} to cluster {self.cluster_name} on {self.instance_address}",
+                        exc_info=e,
+                    )
+                    raise MySQLAddInstanceToClusterError(e.stderr)
+
+                logger.debug(
+                    f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
+                )
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:
@@ -324,7 +337,7 @@ class MySQL:
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            command = [MySQL._get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
+            command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             subprocess.check_output(command, stderr=subprocess.PIPE)
 
     def _run_mysqlcli_script(self, script: str, password=None) -> None:
