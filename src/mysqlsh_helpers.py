@@ -278,7 +278,6 @@ class MySQL:
         """
         options = {
             "password": self.cluster_admin_password,
-            "recoveryMethod": "auto",
         }
 
         connect_commands = (
