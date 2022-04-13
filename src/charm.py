@@ -48,6 +48,8 @@ class MySQLOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
     # =======================
@@ -55,9 +57,10 @@ class MySQLOperatorCharm(CharmBase):
     # =======================
 
     def _on_install(self, _) -> None:
-        """Initial setup operations like installing dependencies, and creating users and groups."""
+        """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
+        # Initial setup operations like installing dependencies, and creating users and groups.
         try:
             MySQL.install_and_configure_mysql_dependencies()
         except Exception:
@@ -66,8 +69,28 @@ class MySQLOperatorCharm(CharmBase):
 
         self.unit.status = WaitingStatus("Waiting to start MySQL")
 
+    def _on_leader_elected(self, _) -> None:
+        """Handle the leader elected event."""
+        # Set MySQL config values in the peer relation databag
+        peer_data = self._peers.data[self.app]
+
+        required_passwords = ["root_password", "server_config_password", "cluster_admin_password"]
+
+        for required_password in required_passwords:
+            if not peer_data[required_password]:
+                password = generate_random_password(PASSWORD_LENGTH)
+                peer_data[required_password] = password
+
+    def _on_config_changed(self, _) -> None:
+        """Handle the config changed event."""
+        # Set the cluster name in the peer relation databag if it is not already set
+        peer_data = self._peers.data[self.app]
+
+        if not peer_data["cluster_name"]:
+            peer_data["cluster_name"] = self.config.get("cluster_name") or generate_random_hash()
+
     def _on_start(self, _) -> None:
-        """Ensure that required software is running."""
+        """Handle the start event."""
         try:
             # TODO: add logic to determine how to add non-leader instances to the cluster
             if self.unit.is_leader():
@@ -88,59 +111,18 @@ class MySQLOperatorCharm(CharmBase):
 
     def _get_mysql_helpers(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
-        mysql_configs = self._get_or_create_mysql_configs()
+        peer_relation = self.model.get_relation(PEER)
+        peer_data = peer_relation.data[self.app]
 
         return MySQL(
-            mysql_configs["unit_ip"],
-            mysql_configs["cluster_name"],
-            mysql_configs["root_password"],
+            peer_relation.network.bind_address,
+            peer_data["cluster_name"],
+            peer_data["root_password"],
             "serverconfig",
-            mysql_configs["server_config_password"],
+            peer_data["server_config_password"],
             "clusteradmin",
-            mysql_configs["cluster_admin_password"],
+            peer_data["cluster_admin_password"],
         )
-
-        return self._mysql_helpers
-
-    def _get_or_create_mysql_configs(self):
-        peer_relation = self.model.get_relation(PEER)
-        if peer_relation is None:
-            raise Exception(f"Peer relation {PEER} has not yet been established")
-
-        mysql_configs = {
-            "unit_ip": self.model.get_binding(PEER).network.bind_address,
-            "cluster_name": peer_relation.data[self.app].get("cluster_name"),
-            "root_password": peer_relation.data[self.app].get("root_password"),
-            "server_config_password": peer_relation.data[self.app].get("server_config_password"),
-            "cluster_admin_password": peer_relation.data[self.app].get("cluster_admin_password"),
-        }
-
-        is_unit_leader = self.unit.is_leader()
-        has_missing_peer_data = any([value is None for value in mysql_configs.values()])
-        if has_missing_peer_data and not is_unit_leader:
-            raise Exception("Trying to store data in peer relation on non-leader unit")
-
-        if not mysql_configs["cluster_name"]:
-            cluster_name = self.config.get("cluster_name") or generate_random_hash()
-            peer_relation.data[self.app]["cluster_name"] = cluster_name
-            mysql_configs["cluster_name"] = cluster_name
-
-        if not mysql_configs["root_password"]:
-            root_password = generate_random_password(PASSWORD_LENGTH)
-            peer_relation.data[self.app]["root_password"] = root_password
-            mysql_configs["root_password"] = root_password
-
-        if not mysql_configs["server_config_password"]:
-            server_config_password = generate_random_password(PASSWORD_LENGTH)
-            peer_relation.data[self.app]["server_config_password"] = server_config_password
-            mysql_configs["server_config_password"] = server_config_password
-
-        if not mysql_configs["cluster_admin_password"]:
-            cluster_admin_password = generate_random_password(PASSWORD_LENGTH)
-            peer_relation.data[self.app]["cluster_admin_password"] = cluster_admin_password
-            mysql_configs["cluster_admin_password"] = cluster_admin_password
-
-        return mysql_configs
 
 
 if __name__ == "__main__":
