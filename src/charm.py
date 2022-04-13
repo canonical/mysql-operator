@@ -21,9 +21,6 @@ class MySQLOperatorCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        # Please do not reference this variable directly. Instead use _get_mysql_helpers().
-        self._mysql_helpers = None
-
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
 
@@ -54,23 +51,19 @@ class MySQLOperatorCharm(CharmBase):
     #  Helpers
     # =======================
 
-    @property
-    def _mysql(self):
+    def _get_mysql_helpers(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
-        if not self._mysql_helpers:
-            # TODO: replace stubbed arguments once mechanisms to generate them exist
-            # Mechanisms = generating user/pass and storing+retrieving them from peer databag.
-            self._mysql_helpers = MySQL(
-                "127.0.0.1",
-                "test_cluster",
-                "password",
-                "serverconfig",
-                "serverconfigpassword",
-                "clusteradmin",
-                "clusteradminpassword",
-            )
-
-        return self._mysql_helpers
+        # TODO: replace stubbed arguments once mechanisms to generate them exist
+        # Mechanisms = generating user/pass and storing+retrieving them from peer databag.
+        return MySQL(
+            "127.0.0.1",
+            "test_cluster",
+            "password",
+            "serverconfig",
+            "serverconfigpassword",
+            "clusteradmin",
+            "clusteradminpassword",
+        )
 
 
 if __name__ == "__main__":

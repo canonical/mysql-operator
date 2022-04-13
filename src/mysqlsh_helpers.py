@@ -94,7 +94,7 @@ class MySQL:
         self.cluster_admin_password = cluster_admin_password
 
     @staticmethod
-    def _get_mysqlsh_bin() -> str:
+    def get_mysqlsh_bin() -> str:
         """Determine binary path for MySQL Shell.
 
         Returns:
@@ -147,7 +147,7 @@ class MySQL:
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
                 logger.debug("Creating mysql shell common directory")
-                mysqlsh_help_command = [MySQL._get_mysqlsh_bin(), "--help"]
+                mysqlsh_help_command = [MySQL.get_mysqlsh_bin(), "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
@@ -324,7 +324,7 @@ class MySQL:
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            command = [MySQL._get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
+            command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             subprocess.check_output(command, stderr=subprocess.PIPE)
 
     def _run_mysqlcli_script(self, script: str, password=None) -> None:

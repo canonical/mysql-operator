@@ -80,10 +80,10 @@ class TestMySQL(unittest.TestCase):
     def test_mysqlsh_bin(self, _exists):
         """Test the mysqlsh_bin property."""
         _exists.return_value = True
-        self.assertEqual(MySQL._get_mysqlsh_bin(), "/usr/bin/mysqlsh")
+        self.assertEqual(MySQL.get_mysqlsh_bin(), "/usr/bin/mysqlsh")
 
         _exists.return_value = False
-        self.assertEqual(MySQL._get_mysqlsh_bin(), "/snap/bin/mysql-shell")
+        self.assertEqual(MySQL.get_mysqlsh_bin(), "/snap/bin/mysql-shell")
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")
