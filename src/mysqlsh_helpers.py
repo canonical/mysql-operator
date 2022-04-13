@@ -278,24 +278,38 @@ class MySQL:
         """
         options = {
             "password": self.cluster_admin_password,
-            "recoveryMethod": "clone",
+            "recoveryMethod": "auto",
         }
 
-        commands = (
+        connect_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            f"cluster.add_instance('{self.cluster_admin_user}@{instance_address}', {json.dumps(options)})",
         )
 
-        try:
-            logger.debug(f"Adding instance {instance_address} to cluster {self.cluster_name}")
-            self._run_mysqlsh_script("\n".join(commands))
-        except subprocess.CalledProcessError as e:
-            logger.exception(
-                f"Failed to add instance {instance_address} to cluster {self.cluster_name} with error {e.stderr}",
-                exc_info=e,
-            )
-            raise MySQLAddInstanceToClusterError(e.stderr)
+        for recovery_method in ["auto", "clone"]:
+            try:
+                options["recoveryMethod"] = recovery_method
+                add_instance_command = (
+                    f"cluster.add_instance('{self.cluster_admin_user}@{instance_address}', {json.dumps(options)})",
+                )
+
+                logger.debug(
+                    f"Adding instance {instance_address} to cluster {self.cluster_name} with recovery method {recovery_method}"
+                )
+                self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
+
+                break
+            except subprocess.CalledProcessError as e:
+                if recovery_method == "clone":
+                    logger.exception(
+                        f"Failed to add instance {instance_address} to cluster {self.cluster_name} on {self.instance_address}",
+                        exc_info=e,
+                    )
+                    raise MySQLAddInstanceToClusterError(e.stderr)
+
+                logger.debug(
+                    f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
+                )
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:
