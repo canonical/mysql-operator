@@ -77,16 +77,20 @@ class MySQLOperatorCharm(CharmBase):
         required_passwords = ["root_password", "server_config_password", "cluster_admin_password"]
 
         for required_password in required_passwords:
-            if not peer_data[required_password]:
+            if not peer_data.get(required_password):
                 password = generate_random_password(PASSWORD_LENGTH)
                 peer_data[required_password] = password
 
     def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
+        # Only execute on unit leader
+        if not self.unit.is_leader():
+            return
+
         # Set the cluster name in the peer relation databag if it is not already set
         peer_data = self._peers.data[self.app]
 
-        if not peer_data["cluster_name"]:
+        if not peer_data.get("cluster_name"):
             peer_data["cluster_name"] = self.config.get("cluster_name") or generate_random_hash()
 
     def _on_start(self, _) -> None:
@@ -112,11 +116,10 @@ class MySQLOperatorCharm(CharmBase):
     @property
     def _mysql(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
-        peer_relation = self.model.get_relation(PEER)
-        peer_data = peer_relation.data[self.app]
+        peer_data = self._peers.data[self.app]
 
         return MySQL(
-            peer_relation.network.bind_address,
+            self.model.get_binding(PEER).network.bind_address,
             peer_data["cluster_name"],
             peer_data["root_password"],
             "serverconfig",
@@ -124,6 +127,11 @@ class MySQLOperatorCharm(CharmBase):
             "clusteradmin",
             peer_data["cluster_admin_password"],
         )
+
+    @property
+    def _peers(self):
+        """Retrieve the peer relation (`ops.model.Relation`)."""
+        return self.model.get_relation(PEER)
 
 
 if __name__ == "__main__":
