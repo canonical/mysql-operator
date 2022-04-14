@@ -3,49 +3,66 @@
 
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from mysqlsh_helpers import (
     MySQL,
+    MySQLAddInstanceToClusterError,
+    MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
-    MySQLInstanceConfigureError,
+    MySQLCreateClusterError,
 )
 
 
 class TestMySQL(unittest.TestCase):
     def setUp(self):
-        root_password = "password"
-        cluster_admin_user = "clusteradmin"
-        cluster_admin_password = "innodb"
-        instance_address = "127.0.0.1"
-
         self.mysql = MySQL(
-            root_password, cluster_admin_user, cluster_admin_password, instance_address
+            "127.0.0.1",
+            "test_cluster",
+            "password",
+            "serverconfig",
+            "serverconfigpassword",
+            "clusteradmin",
+            "clusteradminpassword",
         )
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users(self, _run_mysqlcli_script):
         """Test failed to configuring the MySQL users."""
         _run_mysqlcli_script.return_value = b""
-        _expected_script = " ".join(
+
+        _expected_create_root_user_commands = " ".join(
             (
-                "SET @@SESSION.SQL_LOG_BIN=0;",
-                "CREATE USER 'cadmin'@'10.1.1.1' IDENTIFIED BY 'test';",
-                "GRANT ALL ON *.* TO 'cadmin'@'10.1.1.1' WITH GRANT OPTION;",
-                "CREATE USER 'root'@'%' IDENTIFIED BY 'test';",
+                "CREATE USER 'root'@'%' IDENTIFIED BY 'password';",
                 "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+            )
+        )
+
+        _expected_configure_user_commands = " ".join(
+            (
+                "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword';",
+                "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-                "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'test';",
-                "REVOKE SYSTEM_USER ON *.* FROM root@'%';",
-                "REVOKE SYSTEM_USER ON *.* FROM root@localhost;",
+                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%';",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost;",
                 "FLUSH PRIVILEGES;",
             )
         )
 
-        _m = MySQL("test", "cadmin", "test", "10.1.1.1")
+        self.mysql.configure_mysql_users()
 
-        _m.configure_mysql_users()
-        _run_mysqlcli_script.assert_called_once_with(_expected_script)
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+
+        self.assertEqual(
+            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(
+                [
+                    call(_expected_create_root_user_commands),
+                    call(_expected_configure_user_commands, password="password"),
+                ]
+            ),
+        )
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
@@ -54,38 +71,24 @@ class TestMySQL(unittest.TestCase):
             cmd="mysqlsh", returncode=127
         )
 
-        _m = MySQL("test", "test", "test", "10.1.1.1")
         with self.assertRaises(MySQLConfigureMySQLUsersError):
-            _m.configure_mysql_users()
+            self.mysql.configure_mysql_users()
 
     @patch("os.path.exists")
     def test_mysqlsh_bin(self, _exists):
         """Test the mysqlsh_bin property."""
         _exists.return_value = True
-        _m = MySQL("test", "test", "test", "10.0.1.1")
-
-        self.assertEqual(_m.mysqlsh_bin, "/usr/bin/mysqlsh")
+        self.assertEqual(MySQL.get_mysqlsh_bin(), "/usr/bin/mysqlsh")
 
         _exists.return_value = False
-        self.assertEqual(_m.mysqlsh_bin, "/snap/bin/mysql-shell")
-
-    @patch("os.path.exists")
-    def test_mysqlsh_common_dir(self, _exists):
-        """Test the mysqlsh_common_dir property."""
-        _exists.return_value = True
-        _m = MySQL("test", "test", "test", "11.1.1.1")
-        self.assertEqual(_m.mysqlsh_common_dir, "/root/snap/mysql-shell/common")
-        _exists.return_value = False
-        self.assertEqual(_m.mysqlsh_common_dir, "/tmp")
+        self.assertEqual(MySQL.get_mysqlsh_bin(), "/snap/bin/mysql-shell")
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
         configure_instance_commands = (
-            "dba.configure_instance('clusteradmin:innodb@127.0.0.1')",
-            "my_shell = shell.connect('clusteradmin:innodb@127.0.0.1')",
-            'my_shell.run_sql("RESTART;");',
+            'dba.configure_instance(\'serverconfig:serverconfigpassword@127.0.0.1\', {"clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword", "restart": "true"})',
         )
 
         self.mysql.configure_instance()
@@ -98,11 +101,11 @@ class TestMySQL(unittest.TestCase):
     def test_configure_instance_exceptions(
         self, _wait_until_mysql_connection, _run_mysqlsh_script
     ):
-        """Test exceptions raised by methods called in configure_instance."""
+        """Test exceptions raise while running configure_instance."""
         # Test an issue with _run_mysqlsh_script
         _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
 
-        with self.assertRaises(MySQLInstanceConfigureError):
+        with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
 
         _wait_until_mysql_connection.assert_not_called()
@@ -116,7 +119,48 @@ class TestMySQL(unittest.TestCase):
             cmd="mock", returncode=127
         )
 
-        with self.assertRaises(MySQLInstanceConfigureError):
+        with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
 
         _run_mysqlsh_script.assert_called_once()
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_create_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of create_cluster."""
+        create_cluster_commands = (
+            "shell.connect('serverconfig:serverconfigpassword@127.0.0.1')",
+            "dba.create_cluster('test_cluster')",
+        )
+
+        self.mysql.create_cluster()
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(create_cluster_commands))
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_create_cluster_exceptions(self, _run_mysqlsh_script):
+        """Test exceptions raised while running create_cluster."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        with self.assertRaises(MySQLCreateClusterError):
+            self.mysql.create_cluster()
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_add_instance_to_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of create_cluster."""
+        add_instance_to_cluster_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            "cluster = dba.get_cluster('test_cluster')",
+            'cluster.add_instance(\'clusteradmin@127.0.0.2\', {"password": "clusteradminpassword", "recoveryMethod": "auto"})',
+        )
+
+        self.mysql.add_instance_to_cluster("127.0.0.2")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script):
+        """Test exceptions raised while running add_instance_to_cluster."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        with self.assertRaises(MySQLAddInstanceToClusterError):
+            self.mysql.add_instance_to_cluster("127.0.0.2")
