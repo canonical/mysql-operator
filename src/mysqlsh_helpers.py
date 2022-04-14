@@ -187,14 +187,12 @@ class MySQL:
 
         # commands  to create 'root'@'%' user
         create_root_user_commands = (
-            "SET @@SESSION.SQL_LOG_BIN=0;",
             f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}';",
             "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
         )
 
         # commands to be run from mysql client with root user and password set above
         configure_users_commands = (
-            "SET @@SESSION.SQL_LOG_BIN=0;",
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}';",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION;",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",

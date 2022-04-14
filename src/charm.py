@@ -109,7 +109,8 @@ class MySQLOperatorCharm(CharmBase):
     #  Helpers
     # =======================
 
-    def _get_mysql_helpers(self):
+    @property
+    def _mysql(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
         peer_relation = self.model.get_relation(PEER)
         peer_data = peer_relation.data[self.app]

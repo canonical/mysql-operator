@@ -33,7 +33,6 @@ class TestMySQL(unittest.TestCase):
 
         _expected_create_root_user_commands = " ".join(
             (
-                "SET @@SESSION.SQL_LOG_BIN=0;",
                 "CREATE USER 'root'@'%' IDENTIFIED BY 'password';",
                 "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
             )
@@ -41,7 +40,6 @@ class TestMySQL(unittest.TestCase):
 
         _expected_configure_user_commands = " ".join(
             (
-                "SET @@SESSION.SQL_LOG_BIN=0;",
                 "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword';",
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
