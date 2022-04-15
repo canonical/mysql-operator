@@ -14,3 +14,7 @@ summary: |
 maintainers:
   - Paulo Machado <paulo.machado@canonical.com>
   - Shayan Patel <shayan.patel@canonical.com>
+
+peers:
+  mysql-replicas:
+    interface: mysql-replicas

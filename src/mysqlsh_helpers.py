@@ -203,7 +203,7 @@ class MySQL:
         )
 
         try:
-            logger.debug("Configuring MySQL users")
+            logger.debug(f"Configuring MySQL users for {self.instance_address}")
             self._run_mysqlcli_script(" ".join(create_root_user_commands))
             # run configure users commands with newly created root user
             self._run_mysqlcli_script(
@@ -233,7 +233,7 @@ class MySQL:
         )
 
         try:
-            logger.debug("Configuring instance for InnoDB")
+            logger.debug(f"Configuring instance for InnoDB for {self.instance_address}")
             self._run_mysqlsh_script("\n".join(commands))
 
             logger.debug("Waiting until MySQL is restarted")
@@ -256,7 +256,7 @@ class MySQL:
         )
 
         try:
-            logger.debug("Creating a MySQL InnoDB cluster")
+            logger.debug(f"Creating a MySQL InnoDB cluster on {self.instance_address}")
             self._run_mysqlsh_script("\n".join(commands))
         except subprocess.CalledProcessError as e:
             logger.exception(
