@@ -21,7 +21,7 @@ class TestCharm(unittest.TestCase):
         self.harness = Harness(MySQLOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.peer_relation_id = self.harness.add_relation("mysql-replicas", "mysql-replicas")
+        self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.charm = self.harness.charm
 

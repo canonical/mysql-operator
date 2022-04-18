@@ -165,3 +165,45 @@ class TestMySQL(unittest.TestCase):
 
         with self.assertRaises(MySQLAddInstanceToClusterError):
             self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script", return_value="INSTANCE_CONFIGURED")
+    def test_is_instance_configured_for_innodb(self, _run_mysqlsh_script):
+        """Test with no exceptions while calling the is_instance_configured_for_innodb method."""
+        # test successfully configured instance
+        check_instance_configuration_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.2')",
+            "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
+            'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
+        )
+
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        self.assertTrue(is_instance_configured)
+
+        # reset mocks
+        _run_mysqlsh_script.reset_mock()
+
+        # test instance not configured for innodb
+        _run_mysqlsh_script.return_value = "INSTANCE_NOT_CONFIGURED"
+
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        self.assertFalse(is_instance_configured)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_is_instance_configured_for_innodb_exceptions(self, _run_mysqlsh_script):
+        """Test an exception while calling the is_instance_configured_for_innodb method."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        check_instance_configuration_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.2')",
+            "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
+            'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
+        )
+
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        self.assertFalse(is_instance_configured)

@@ -57,6 +57,12 @@ class MySQLServiceNotRunningError(Exception):
     pass
 
 
+class MySQLConfirmAllInstancesOnlineError(Exception):
+    """Exception raised when there is an issue confirming instance's InnoDB configuration."""
+
+    pass
+
+
 class MySQL:
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -294,7 +300,7 @@ class MySQL:
                 )
 
                 logger.debug(
-                    f"Adding instance {instance_address} to cluster {self.cluster_name} with recovery method {recovery_method}"
+                    f"Adding instance {instance_address}/{instance_unit_label} to cluster {self.cluster_name} with recovery method {recovery_method}"
                 )
                 self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
 
@@ -310,6 +316,38 @@ class MySQL:
                 logger.debug(
                     f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
                 )
+
+    def is_instance_configured_for_innodb(
+        self, instance_address: str, instance_unit_label: str
+    ) -> bool:
+        """Confirm if instance is configured for use in an InnoDB cluster.
+
+        Args:
+            instance_address: The instance address for which to confirm InnoDB configuration
+
+        Returns:
+            Boolean indicating whether the instance is configured for use in an InnoDB cluster
+        """
+        commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{instance_address}')",
+            "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
+            'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
+        )
+
+        try:
+            logger.debug(
+                f"Confirming instance {instance_address}/{instance_unit_label} configuration for InnoDB"
+            )
+
+            output = self._run_mysqlsh_script("\n".join(commands))
+            return "INSTANCE_CONFIGURED" in output
+        except subprocess.CalledProcessError as e:
+            # confirmation can fail if the clusteradmin user does not yet exist on the instance
+            logger.warning(
+                f"Failed to confirm instance configuration for {instance_address} with error {e.stderr}",
+                exc_info=e,
+            )
+            return False
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:

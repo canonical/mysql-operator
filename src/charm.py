@@ -9,7 +9,7 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -23,7 +23,7 @@ from mysqlsh_helpers import (
 logger = logging.getLogger(__name__)
 
 PASSWORD_LENGTH = 24
-PEER = "mysql-replicas"
+PEER = "database-peers"
 
 
 def generate_random_password(length: int) -> str:
@@ -52,6 +52,7 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -122,6 +123,24 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = ActiveStatus()
+
+    def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Handle the peer relation joined event."""  # Only execute in the unit leader
+        if not self.unit.is_leader():
+            return
+
+        # Defer if the instance is not configured for use in an InnoDB cluster
+        # Every instance gets configured for use in an InnoDB cluster on start
+        event_unit_address = event.relation.data[event.unit]["private-address"]
+        event_unit_label = event.unit.name.replace("/", "-")
+
+        if not self._mysql.is_instance_configured_for_innodb(event_unit_address, event_unit_label):
+            event.defer()
+            return
+
+        # Add the instance to the cluster. The operation is blocking until the
+        # data recovery is complete
+        self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
 
     # =======================
     #  Helpers

@@ -16,5 +16,5 @@ maintainers:
   - Shayan Patel <shayan.patel@canonical.com>
 
 peers:
-  mysql-replicas:
-    interface: mysql-replicas
+  database-peers:
+    interface: mysql-peers
