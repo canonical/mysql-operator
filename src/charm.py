@@ -17,6 +17,7 @@ from mysqlsh_helpers import (
     MySQL,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
+    MySQLCreateClusterError,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,9 @@ def generate_random_password(length: int) -> str:
     return "".join([secrets.choice(choices) for i in range(length)])
 
 
-def generate_random_hash() -> str:
-    """Generate a hash based on a random string."""
-    random_characters = generate_random_password(10)
+def generate_random_hash(length=20) -> str:
+    """Generate a random hash."""
+    random_characters = generate_random_password(20)
     return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
 
@@ -74,7 +75,7 @@ class MySQLOperatorCharm(CharmBase):
         # Set MySQL config values in the peer relation databag
         peer_data = self._peers.data[self.app]
 
-        required_passwords = ["root_password", "server_config_password", "cluster_admin_password"]
+        required_passwords = ["root-password", "server-config-password", "cluster-admin-password"]
 
         for required_password in required_passwords:
             if not peer_data.get(required_password):
@@ -90,21 +91,34 @@ class MySQLOperatorCharm(CharmBase):
         # Set the cluster name in the peer relation databag if it is not already set
         peer_data = self._peers.data[self.app]
 
-        if not peer_data.get("cluster_name"):
-            peer_data["cluster_name"] = self.config.get("cluster_name") or generate_random_hash()
+        if not peer_data.get("cluster-name"):
+            peer_data["cluster-name"] = (
+                self.config.get("cluster-name") or f"cluster_{generate_random_hash()}"
+            )
 
     def _on_start(self, _) -> None:
         """Handle the start event."""
+        # Configure MySQL users and the instance for use in an InnoDB cluster
         try:
-            # TODO: add logic to determine how to add non-leader instances to the cluster
-            if self.unit.is_leader():
-                self._mysql.configure_mysql_users()
-                self._mysql.configure_instance()
+            self._mysql.configure_mysql_users()
+            self._mysql.configure_instance()
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
+            return
+
+        # Create the cluster on the juju leader unit
+        if not self.unit.is_leader():
+            self.unit.status = ActiveStatus()
+            return
+
+        try:
+            unit_label = self.model.unit.name.replace("/", "-")
+            self._mysql.create_cluster(unit_label)
+        except MySQLCreateClusterError:
+            self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
             return
 
         self.unit.status = ActiveStatus()
@@ -120,12 +134,12 @@ class MySQLOperatorCharm(CharmBase):
 
         return MySQL(
             self.model.get_binding(PEER).network.bind_address,
-            peer_data["cluster_name"],
-            peer_data["root_password"],
+            peer_data["cluster-name"],
+            peer_data["root-password"],
             "serverconfig",
-            peer_data["server_config_password"],
+            peer_data["server-config-password"],
             "clusteradmin",
-            peer_data["cluster_admin_password"],
+            peer_data["cluster-admin-password"],
         )
 
     @property
