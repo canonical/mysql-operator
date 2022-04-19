@@ -26,7 +26,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     """
     # build and deploy charm from local source folder
     charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=2)
+    await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
 
     # issuing dummy update_status just to trigger an event
     await ops_test.model.set_config({"update-status-hook-interval": "10s"})
@@ -37,9 +37,10 @@ async def test_build_and_deploy(ops_test: OpsTest):
         raise_on_blocked=True,
         timeout=1000,
     )
-    assert len(ops_test.model.applications[APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
     assert ops_test.model.applications[APP_NAME].units[1].workload_status == "active"
+    assert ops_test.model.applications[APP_NAME].units[2].workload_status == "active"
 
     # effectively disable the update status from firing
     await ops_test.model.set_config({"update-status-hook-interval": "60m"})
