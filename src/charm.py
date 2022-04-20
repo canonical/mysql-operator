@@ -111,6 +111,8 @@ class MySQLOperatorCharm(CharmBase):
 
         # Create the cluster on the juju leader unit
         if not self.unit.is_leader():
+            # TODO: change to WaitingStatus, and move to ActiveStatus in the update-status
+            # event handler after the instance has been added to the cluster
             self.unit.status = ActiveStatus()
             return
 

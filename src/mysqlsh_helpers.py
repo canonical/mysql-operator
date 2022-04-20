@@ -320,7 +320,7 @@ class MySQL:
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError()
 
-    def _run_mysqlsh_script(self, script: str) -> str:
+    def _run_mysqlsh_script(self, script: str) -> None:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
@@ -339,7 +339,7 @@ class MySQL:
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
-            return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
+            subprocess.check_output(command, stderr=subprocess.PIPE)
 
     def _run_mysqlcli_script(self, script: str, password=None) -> None:
         """Execute a MySQL CLI script.
