@@ -8,6 +8,11 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
+from mysqlsh_helpers import (
+    MySQLConfigureInstanceError,
+    MySQLConfigureMySQLUsersError,
+    MySQLCreateClusterError,
+)
 from tests.unit.helpers import patch_network_get
 
 
@@ -49,9 +54,9 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.harness.charm.app
         )
         expected_peer_relation_databag_keys = [
-            "root_password",
-            "server_config_password",
-            "cluster_admin_password",
+            "root-password",
+            "server-config-password",
+            "cluster-admin-password",
         ]
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
@@ -66,14 +71,14 @@ class TestCharm(unittest.TestCase):
 
         # trigger the leader_elected and config_changed events
         self.harness.set_leader(True)
-        self.harness.update_config({"cluster_name": "test_cluster"})
+        self.harness.update_config({"cluster-name": "test-cluster"})
 
         # ensure that the peer relation has 'cluster_name' set to the config value
         peer_relation_databag = self.harness.get_relation_data(
             self.peer_relation_id, self.harness.charm.app
         )
 
-        self.assertEqual(peer_relation_databag["cluster_name"], "test_cluster")
+        self.assertEqual(peer_relation_databag["cluster-name"], "test-cluster")
 
     def test_on_config_changed_sets_random_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
@@ -91,12 +96,13 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.harness.charm.app
         )
 
-        self.assertIsNotNone(peer_relation_databag["cluster_name"])
+        self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
     @patch("mysqlsh_helpers.MySQL.configure_instance")
-    def test_on_start(self, _configure_instance, _configure_mysql_users):
+    @patch("mysqlsh_helpers.MySQL.create_cluster")
+    def test_on_start(self, _create_cluster, _configure_instance, _configure_mysql_users):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -104,3 +110,36 @@ class TestCharm(unittest.TestCase):
         self.charm.on.start.emit()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
+    @patch("mysqlsh_helpers.MySQL.configure_instance")
+    @patch("mysqlsh_helpers.MySQL.create_cluster")
+    def test_on_start_exceptions(
+        self, _create_cluster, _configure_instance, _configure_mysql_users
+    ):
+        # execute on_leader_elected and config_changed to populate the peer databag
+        self.harness.set_leader(True)
+        self.charm.on.config_changed.emit()
+
+        # test an exception while configuring mysql users
+        _configure_mysql_users.side_effect = MySQLConfigureMySQLUsersError
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _configure_mysql_users.reset_mock()
+
+        # test an exception while configuring the instance
+        _configure_instance.side_effect = MySQLConfigureInstanceError
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _configure_instance.reset_mock()
+
+        # test an exception with creating a cluster
+        _create_cluster.side_effect = MySQLCreateClusterError
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))

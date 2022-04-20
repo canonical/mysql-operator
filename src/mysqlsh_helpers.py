@@ -233,7 +233,7 @@ class MySQL:
         )
 
         try:
-            logger.debug(f"Configuring instance for InnoDB for {self.instance_address}")
+            logger.debug(f"Configuring instance for InnoDB on {self.instance_address}")
             self._run_mysqlsh_script("\n".join(commands))
 
             logger.debug("Waiting until MySQL is restarted")
@@ -245,14 +245,15 @@ class MySQL:
             )
             raise MySQLConfigureInstanceError(e.stderr)
 
-    def create_cluster(self) -> None:
+    def create_cluster(self, unit_label) -> None:
         """Create an InnoDB cluster with Group Replication enabled.
 
         Raises MySQLCreateClusterError if there was an issue creating the cluster.
         """
         commands = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
-            f"dba.create_cluster('{self.cluster_name}')",
+            f"cluster = dba.create_cluster('{self.cluster_name}')",
+            f"cluster.set_instance_option('{self.instance_address}', 'label', '{unit_label}')",
         )
 
         try:
@@ -265,7 +266,7 @@ class MySQL:
             )
             raise MySQLCreateClusterError(e.stderr)
 
-    def add_instance_to_cluster(self, instance_address) -> None:
+    def add_instance_to_cluster(self, instance_address, instance_unit_label) -> None:
         """Add an instance to the InnoDB cluster.
 
         Raises MySQLADDInstanceToClusterError
@@ -273,9 +274,11 @@ class MySQL:
 
         Args:
             instance_address: address of the instance to add to the cluster
+            instance_unit_label: the label/name of the unit
         """
         options = {
             "password": self.cluster_admin_password,
+            "label": instance_unit_label,
         }
 
         connect_commands = (
@@ -326,7 +329,7 @@ class MySQL:
             script: Mysqlsh script string
 
         Returns:
-            Byte string subprocess output
+            String representing the output of the mysqlsh command
         """
         # Use the self.mysqlsh_common_dir for the confined mysql-shell snap.
         with tempfile.NamedTemporaryFile(mode="w", dir=MYSQL_SHELL_COMMON_DIRECTORY) as _file:
@@ -346,9 +349,7 @@ class MySQL:
 
         Args:
             script: raw SQL script string
-
-        Returns:
-            Byte string subprocess output
+            password: (optional) password to invoke the mysql cli script with
         """
         command = [
             "mysql",
