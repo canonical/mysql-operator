@@ -2,9 +2,10 @@
 # See LICENSE file for licensing details.
 
 import subprocess
-import tenacity
 import unittest
 from unittest.mock import call, patch
+
+import tenacity
 
 from mysqlsh_helpers import (
     MySQL,
