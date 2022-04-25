@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import subprocess
+import tenacity
 import unittest
 from unittest.mock import call, patch
 
@@ -11,6 +12,7 @@ from mysqlsh_helpers import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLRemoveInstanceDBConnectionError,
 )
 
 
@@ -221,3 +223,40 @@ class TestMySQL(unittest.TestCase):
             "\n".join(check_instance_configuration_commands)
         )
         self.assertFalse(is_instance_configured)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_remove_instance(self, _run_mysqlsh_script):
+        """Test with no exceptions while running the remove_instance() method."""
+        expected_commands = (
+            "cluster_admin_user = 'clusteradmin'",
+            "cluster_admin_password = 'clusteradminpassword'",
+            "this_instance_address = '127.0.0.1'",
+            "remove_instance_address = '127.0.0.2'",
+            "cluster_name = 'test_cluster'",
+            'remove_instance_options = {"password": "clusteradminpassword", "force": "true"}',
+            'dissolve_cluster_options = {"force": "true"}',
+            "shell.connect(f'{cluster_admin_user}:{cluster_admin_password}@{this_instance_address}')",
+            "cluster = dba.get_cluster(f'{cluster_name}')",
+            "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+            "shell.connect(f'{cluster_admin_user}:{cluster_admin_password}@{primary_address}')",
+            "session.run_sql(\"SELECT get_lock('remove_instance', -1);\")",
+            "cluster = dba.get_cluster(f'{cluster.name}')",
+            "number_cluster_members = len(cluster.describe()['defaultReplicaSet']['topology'])",
+            "cluster.remove_instance(f'{cluster_admin_user}@{remove_instance_address}', remove_instance_options) if number_cluster_members > 1 else cluster.dissolve(dissolve_cluster_options)",
+            "session.run_sql(\"SELECT release_lock('remove_instance')\")",
+        )
+
+        self.mysql.remove_instance("127.0.0.2")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(expected_commands))
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_remove_instance_exceptions(self, _run_mysqlsh_script):
+        """Test an exception while calling the remove_instance() method."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        # disable the tenacity retry
+        self.mysql.remove_instance.retry.wait = tenacity.wait_none()
+
+        with self.assertRaises(MySQLRemoveInstanceDBConnectionError):
+            self.mysql.remove_instance("127.0.0.2")

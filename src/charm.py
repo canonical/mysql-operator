@@ -104,6 +104,7 @@ class MySQLOperatorCharm(CharmBase):
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event."""
         # Configure MySQL users and the instance for use in an InnoDB cluster
+        # Safeguard unit starting before leader unit sets peer data
         if not self._is_peer_data_set:
             event.defer()
             return
@@ -138,10 +139,6 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        if not self._is_peer_data_set:
-            event.defer()
-            return
-
         # Defer if the instance is not configured for use in an InnoDB cluster
         # Every instance gets configured for use in an InnoDB cluster on start
         event_unit_address = event.relation.data[event.unit]["private-address"]
@@ -152,7 +149,8 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # Add the instance to the cluster. This operation uses locks to ensure that
-        # only one instance is added to the cluster at a time (only one instance getting state transfer)
+        # only one instance is added to the cluster at a time
+        # (so only one instance is involved in a state transfer at a time)
         self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
 
     def _on_database_storage_detaching(self, event: StopEvent) -> None:

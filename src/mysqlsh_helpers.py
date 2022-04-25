@@ -426,7 +426,7 @@ class MySQL:
                 exc_info=e,
             )
 
-            MySQLRemoveInstanceDBConnectionError(e.stderr)
+            raise MySQLRemoveInstanceDBConnectionError(e.stderr)
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:
@@ -458,7 +458,7 @@ class MySQL:
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
 
-    def _run_mysqlcli_script(self, script: str, password=None) -> str:
+    def _run_mysqlcli_script(self, script: str, password=None) -> None:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
@@ -481,4 +481,4 @@ class MySQL:
         if password:
             command.append(f"--password={password}")
 
-        return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
+        return subprocess.check_output(command, stderr=subprocess.PIPE)
