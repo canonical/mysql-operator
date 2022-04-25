@@ -14,7 +14,14 @@ import tempfile
 
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
-from tenacity import retry, stop_after_delay, wait_fixed
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_exponential,
+    wait_fixed,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +66,12 @@ class MySQLServiceNotRunningError(Exception):
 
 class MySQLConfirmAllInstancesOnlineError(Exception):
     """Exception raised when there is an issue confirming instance's InnoDB configuration."""
+
+    pass
+
+
+class MySQLRemoveInstanceDBConnectionError(Exception):
+    """Exception raised when there is an issue obtaining a lock when removing an instance."""
 
     pass
 
@@ -275,6 +288,9 @@ class MySQL:
     def add_instance_to_cluster(self, instance_address, instance_unit_label) -> None:
         """Add an instance to the InnoDB cluster.
 
+        This method is only called from the juju leader unit (thus locks are
+        obtained locally)
+
         Raises MySQLADDInstanceToClusterError
             if there was an issue adding the instance to the cluster.
 
@@ -289,8 +305,11 @@ class MySQL:
 
         connect_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            "session.run_sql(\"SELECT get_lock('add_instance', -1);\")",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
         )
+
+        release_lock_command = ("session.run_sql(\"SELECT release_lock('add_instance');\")",)
 
         for recovery_method in ["auto", "clone"]:
             try:
@@ -302,7 +321,9 @@ class MySQL:
                 logger.debug(
                     f"Adding instance {instance_address}/{instance_unit_label} to cluster {self.cluster_name} with recovery method {recovery_method}"
                 )
-                self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
+                self._run_mysqlsh_script(
+                    "\n".join(connect_commands + add_instance_command + release_lock_command)
+                )
 
                 break
             except subprocess.CalledProcessError as e:
@@ -349,6 +370,64 @@ class MySQL:
             )
             return False
 
+    @retry(
+        retry=retry_if_exception_type(MySQLRemoveInstanceDBConnectionError),
+        stop=stop_after_attempt(5),
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=4, max=30),
+    )
+    def remove_instance(self, instance_address: str) -> None:
+        """Remove instance from the cluster.
+
+        This method is called from each unit being torn down, thus we must obtain
+        locks on the cluster primary. There is a retry mechanism to account for the
+        primary being torn down while an instance is waiting to obtain a lock from the
+        primary.
+
+        Args:
+            instance_address: The instance address for which to remove from the cluster
+        """
+        remove_instance_options = {
+            "password": self.cluster_admin_password,
+            "force": "true",
+        }
+
+        dissolve_cluster_options = {
+            "force": "true",
+        }
+
+        # TODO: Revisit when implementing removal of multi-primary clusters
+        remove_instance_commands = (
+            f"cluster_admin_user = '{self.cluster_admin_user}'",
+            f"cluster_admin_password = '{self.cluster_admin_password}'",
+            f"this_instance_address = '{self.instance_address}'",
+            f"remove_instance_address = '{instance_address}'",
+            f"cluster_name = '{self.cluster_name}'",
+            f"remove_instance_options = {json.dumps(remove_instance_options)}",
+            f"dissolve_cluster_options = {json.dumps(dissolve_cluster_options)}",
+            "shell.connect(f'{cluster_admin_user}:{cluster_admin_password}@{this_instance_address}')",
+            "cluster = dba.get_cluster(f'{cluster_name}')",
+            "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+            "shell.connect(f'{cluster_admin_user}:{cluster_admin_password}@{primary_address}')",
+            "session.run_sql(\"SELECT get_lock('remove_instance', -1);\")",
+            "cluster = dba.get_cluster(f'{cluster.name}')",
+            "number_cluster_members = len(cluster.describe()['defaultReplicaSet']['topology'])",
+            "cluster.remove_instance(f'{cluster_admin_user}@{remove_instance_address}', remove_instance_options) if number_cluster_members > 1 else cluster.dissolve(dissolve_cluster_options)",
+            "session.run_sql(\"SELECT release_lock('remove_instance')\")",
+        )
+
+        try:
+            logger.debug(f"Removing instance {instance_address} from cluster {self.cluster_name}")
+
+            self._run_mysqlsh_script("\n".join(remove_instance_commands))
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                f"Failed to remove instance {instance_address} from cluster {self.cluster_name} with error {e.stderr}",
+                exc_info=e,
+            )
+
+            MySQLRemoveInstanceDBConnectionError(e.stderr)
+
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def _wait_until_mysql_connection(self) -> None:
         """Wait until a connection to MySQL has been obtained.
@@ -379,7 +458,7 @@ class MySQL:
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
 
-    def _run_mysqlcli_script(self, script: str, password=None) -> None:
+    def _run_mysqlcli_script(self, script: str, password=None) -> str:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
@@ -402,4 +481,4 @@ class MySQL:
         if password:
             command.append(f"--password={password}")
 
-        subprocess.check_output(command, stderr=subprocess.PIPE)
+        return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")

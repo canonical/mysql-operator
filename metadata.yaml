@@ -18,3 +18,9 @@ maintainers:
 peers:
   database-peers:
     interface: mysql-peers
+
+storage:
+  database:
+    type: filesystem
+    description: Persistent storage for MySQL data
+    location: /var/lib/mysql

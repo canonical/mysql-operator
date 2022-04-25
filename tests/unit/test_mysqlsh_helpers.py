@@ -150,8 +150,10 @@ class TestMySQL(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            "session.run_sql(\"SELECT get_lock('add_instance', -1);\")",
             "cluster = dba.get_cluster('test_cluster')",
             'cluster.add_instance(\'clusteradmin@127.0.0.2\', {"password": "clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
+            "session.run_sql(\"SELECT release_lock('add_instance');\")",
         )
 
         self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
@@ -176,9 +178,13 @@ class TestMySQL(unittest.TestCase):
             'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
         )
 
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
+            "127.0.0.2", "mysql-1"
+        )
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        _run_mysqlsh_script.assert_called_once_with(
+            "\n".join(check_instance_configuration_commands)
+        )
         self.assertTrue(is_instance_configured)
 
         # reset mocks
@@ -187,9 +193,13 @@ class TestMySQL(unittest.TestCase):
         # test instance not configured for innodb
         _run_mysqlsh_script.return_value = "INSTANCE_NOT_CONFIGURED"
 
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
+            "127.0.0.2", "mysql-1"
+        )
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        _run_mysqlsh_script.assert_called_once_with(
+            "\n".join(check_instance_configuration_commands)
+        )
         self.assertFalse(is_instance_configured)
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
@@ -203,7 +213,11 @@ class TestMySQL(unittest.TestCase):
             'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
         )
 
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb("127.0.0.2", "mysql-1")
+        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
+            "127.0.0.2", "mysql-1"
+        )
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(check_instance_configuration_commands))
+        _run_mysqlsh_script.assert_called_once_with(
+            "\n".join(check_instance_configuration_commands)
+        )
         self.assertFalse(is_instance_configured)
