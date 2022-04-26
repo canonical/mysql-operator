@@ -9,7 +9,7 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase, RelationJoinedEvent, StartEvent, StopEvent
+from ops.charm import CharmBase, RelationJoinedEvent, StartEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -18,6 +18,7 @@ from mysqlsh_helpers import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLInitializeJujuOperationsTableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,8 +128,12 @@ class MySQLOperatorCharm(CharmBase):
         try:
             unit_label = self.unit.name.replace("/", "-")
             self._mysql.create_cluster(unit_label)
+            self._mysql.initialize_juju_units_operations_table()
         except MySQLCreateClusterError:
             self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
+            return
+        except MySQLInitializeJujuOperationsTableError:
+            self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
             return
 
         self.unit.status = ActiveStatus()
@@ -153,11 +158,12 @@ class MySQLOperatorCharm(CharmBase):
         # (so only one instance is involved in a state transfer at a time)
         self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
 
-    def _on_database_storage_detaching(self, event: StopEvent) -> None:
+    def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
-        self._mysql.remove_instance(self.model.get_binding(PEER).network.bind_address)
+        unit_label = self.unit.name.replace("/", "-")
+        self._mysql.remove_instance(unit_label)
 
     # =======================
     #  Helpers
@@ -188,10 +194,10 @@ class MySQLOperatorCharm(CharmBase):
         peer_data = self._peers.data[self.app]
 
         return (
-            peer_data["cluster-name"]
-            and peer_data["root-password"]
-            and peer_data["server-config-password"]
-            and peer_data["cluster-admin-password"]
+            peer_data.get("cluster-name")
+            and peer_data.get("root-password")
+            and peer_data.get("server-config-password")
+            and peer_data.get("cluster-admin-password")
         )
 
 
