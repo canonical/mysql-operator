@@ -9,16 +9,16 @@ summary: |
   MySQL is  a widely used, open-source relational database management system
   (RDBMS). MySQL InnoDB cluster provides a complete high availability solution
   for MySQL via Group Replication.
+source: https://github.com/canonical/mysql-operator
+issues: https://github.com/canonical/mysql-operator/issues
 
   This charm supports MySQL 8 on machines.
 maintainers:
   - Paulo Machado <paulo.machado@canonical.com>
   - Shayan Patel <shayan.patel@canonical.com>
-
 peers:
   database-peers:
     interface: mysql-peers
-
 storage:
   database:
     type: filesystem

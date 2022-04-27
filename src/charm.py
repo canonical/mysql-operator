@@ -32,13 +32,20 @@ def generate_random_password(length: int) -> str:
 
     Args:
         length: length of the randomly generated string to be returned
+
+    Returns:
+        a string with random letters and digits of length specified
     """
     choices = string.ascii_letters + string.digits
     return "".join([secrets.choice(choices) for i in range(length)])
 
 
-def generate_random_hash(length=20) -> str:
-    """Generate a random hash."""
+def generate_random_hash() -> str:
+    """Generate a random hash.
+
+    Returns:
+        A random MD5 hash
+    """
     random_characters = generate_random_password(20)
     return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 

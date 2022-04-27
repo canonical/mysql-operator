@@ -180,10 +180,8 @@ class TestMySQL(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-            "session.run_sql(\"SELECT get_lock('add_instance', -1);\")",
             "cluster = dba.get_cluster('test_cluster')",
             'cluster.add_instance(\'clusteradmin@127.0.0.2\', {"password": "clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
-            "session.run_sql(\"SELECT release_lock('add_instance');\")",
         )
 
         self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
@@ -327,7 +325,7 @@ class TestMySQL(unittest.TestCase):
     def test_remove_instance_subprocess_execption(
         self, _get_cluster_member_addresses, _run_mysqlsh_script, _get_cluster_primary_address
     ):
-        """Test CalledProcessError to acquire lock while running the remove_instance() method."""
+        """Test CalledProcessError while acquiring lock running the remove_instance() method."""
         _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
         _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
         _get_cluster_member_addresses.return_value = ("2.2.2.2", True)

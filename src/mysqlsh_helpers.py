@@ -72,7 +72,10 @@ class MySQLConfirmAllInstancesOnlineError(Exception):
 
 
 class MySQLRemoveInstanceError(Exception):
-    """Exception raised when there is an issue removing an instance."""
+    """Exception raised when there is an issue removing an instance.
+
+    Utilized by tenacity to retry the method.
+    """
 
     pass
 
@@ -336,11 +339,8 @@ class MySQL:
 
         connect_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            "session.run_sql(\"SELECT get_lock('add_instance', -1);\")",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
         )
-
-        release_lock_command = ("session.run_sql(\"SELECT release_lock('add_instance');\")",)
 
         for recovery_method in ["auto", "clone"]:
             try:
@@ -352,9 +352,7 @@ class MySQL:
                 logger.debug(
                     f"Adding instance {instance_address}/{instance_unit_label} to cluster {self.cluster_name} with recovery method {recovery_method}"
                 )
-                self._run_mysqlsh_script(
-                    "\n".join(connect_commands + add_instance_command + release_lock_command)
-                )
+                self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
 
                 break
             except subprocess.CalledProcessError as e:
@@ -470,26 +468,6 @@ class MySQL:
                 f"cluster.remove_instance('{self.cluster_admin_user}@{self.instance_address}', {json.dumps(remove_instance_options)}) if number_cluster_members > 1 else cluster.dissolve({json.dumps(dissolve_cluster_options)})",
             )
             self._run_mysqlsh_script("\n".join(remove_instance_commands))
-
-            # There is no need to release the lock if cluster was dissolved
-            if not remaining_cluster_member_addresses:
-                return
-
-            # Retrieve the cluster primary's address again (in case the old primary is scaled down)
-            # Release the lock by making a request to this primary member's address
-            primary_address = self._get_cluster_primary_address(
-                connect_instance_address=remaining_cluster_member_addresses[0]
-            )
-
-            logger.debug(
-                f"Releasing lock after removing unit {self.instance_address}/{unit_label}"
-            )
-            release_lock_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-                f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='{unit_label}';\")",
-            )
-
-            self._run_mysqlsh_script("\n".join(release_lock_commands))
         except subprocess.CalledProcessError as e:
             # In case of an error, raise an error and retry
             logger.warning(
@@ -497,6 +475,29 @@ class MySQL:
                 exc_info=e,
             )
             raise MySQLRemoveInstanceError(e.stderr)
+
+        # The below code could raise exceptions, but do not result in retries
+        # of this method since the instance would already be removed from the cluster.
+
+        # There is no need to release the lock if cluster was dissolved
+        if not remaining_cluster_member_addresses:
+            return
+
+        # Retrieve the cluster primary's address again (in case the old primary is scaled down)
+        # Release the lock by making a request to this primary member's address
+        primary_address = self._get_cluster_primary_address(
+            connect_instance_address=remaining_cluster_member_addresses[0]
+        )
+        if not primary_address:
+            raise Exception("Unable to retrieve the address of the cluster primary")
+
+        logger.debug(f"Releasing lock after removing unit {self.instance_address}/{unit_label}")
+        release_lock_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+            f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='{unit_label}';\")",
+        )
+
+        self._run_mysqlsh_script("\n".join(release_lock_commands))
 
     def _get_cluster_member_addresses(self, exclude_unit_labels=[]):
         """Get the addresses of the cluster's members.
