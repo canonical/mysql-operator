@@ -15,6 +15,7 @@ from mysqlsh_helpers import (
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
+    MySQLRemoveInstanceRetryError,
 )
 
 
@@ -251,29 +252,24 @@ class TestMySQL(unittest.TestCase):
         self.assertFalse(is_instance_configured)
 
     @patch("mysqlsh_helpers.MySQL._get_cluster_primary_address")
-    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    @patch("mysqlsh_helpers.MySQL._acquire_lock")
     @patch("mysqlsh_helpers.MySQL._get_cluster_member_addresses")
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    @patch("mysqlsh_helpers.MySQL._release_lock")
     def test_remove_primary_instance(
-        self, _get_cluster_member_addresses, _run_mysqlsh_script, _get_cluster_primary_address
+        self,
+        _release_lock,
+        _run_mysqlsh_script,
+        _get_cluster_member_addresses,
+        _acquire_lock,
+        _get_cluster_primary_address,
     ):
         """Test with no exceptions while running the remove_instance() method."""
         _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
-        _run_mysqlsh_script.side_effect = ["<ACQUIRED_LOCK>1</ACQUIRED_LOCK>", "", ""]
+        _acquire_lock.return_value = True
         _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
 
         self.mysql.remove_instance("mysql-0")
-
-        self.assertEqual(_get_cluster_primary_address.call_count, 2)
-        _get_cluster_member_addresses.assert_called_once_with(exclude_unit_labels=["mysql-0"])
-
-        expected_acquire_lock_commands = "\n".join(
-            [
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1')",
-                "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='mysql-0', status='in-progress' WHERE task='unit-teardown' AND executor='';\")",
-                "acquired_lock = session.run_sql(\"SELECT count(*) FROM mysql.juju_units_operations WHERE task='unit-teardown' AND executor='mysql-0';\").fetch_one()[0]",
-                "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
-            ]
-        )
 
         expected_remove_instance_commands = "\n".join(
             [
@@ -284,54 +280,212 @@ class TestMySQL(unittest.TestCase):
             ]
         )
 
+        self.assertEqual(_get_cluster_primary_address.call_count, 2)
+        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
+        _get_cluster_member_addresses.assert_called_once_with(exclude_unit_labels=["mysql-0"])
+        _run_mysqlsh_script.assert_called_once_with(expected_remove_instance_commands)
+        _release_lock.assert_called_once_with("2.2.2.2", "mysql-0", "unit-teardown")
+
+    @patch("mysqlsh_helpers.MySQL._get_cluster_primary_address")
+    @patch("mysqlsh_helpers.MySQL._acquire_lock")
+    @patch("mysqlsh_helpers.MySQL._get_cluster_member_addresses")
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    @patch("mysqlsh_helpers.MySQL._release_lock")
+    def test_remove_primary_instance_error_acquiring_lock(
+        self,
+        _release_lock,
+        _run_mysqlsh_script,
+        _get_cluster_member_addresses,
+        _acquire_lock,
+        _get_cluster_primary_address,
+    ):
+        """Test an issue acquiring lock while running the remove_instance() method."""
+        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
+        _acquire_lock.return_value = False
+
+        # disable tenacity retry
+        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda x: True)
+
+        with self.assertRaises(MySQLRemoveInstanceRetryError):
+            self.mysql.remove_instance("mysql-0")
+
+        self.assertEqual(_get_cluster_primary_address.call_count, 1)
+        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
+        _get_cluster_member_addresses.assert_not_called()
+        _run_mysqlsh_script.assert_not_called()
+        _release_lock.assert_not_called()
+
+    @patch("mysqlsh_helpers.MySQL._get_cluster_primary_address")
+    @patch("mysqlsh_helpers.MySQL._acquire_lock")
+    @patch("mysqlsh_helpers.MySQL._get_cluster_member_addresses")
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    @patch("mysqlsh_helpers.MySQL._release_lock")
+    def test_remove_primary_instance_error_releasing_lock(
+        self,
+        _release_lock,
+        _run_mysqlsh_script,
+        _get_cluster_member_addresses,
+        _acquire_lock,
+        _get_cluster_primary_address,
+    ):
+        """Test an issue releasing locks while running the remove_instance() method."""
+        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
+        _acquire_lock.return_value = True
+        _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
+        _release_lock.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        with self.assertRaises(MySQLRemoveInstanceError):
+            self.mysql.remove_instance("mysql-0")
+
+        expected_remove_instance_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "number_cluster_members = len(cluster.status()['defaultReplicaSet']['topology'])",
+                'cluster.remove_instance(\'clusteradmin@127.0.0.1\', {"password": "clusteradminpassword", "force": "true"}) if number_cluster_members > 1 else cluster.dissolve({"force": "true"})',
+            ]
+        )
+
+        self.assertEqual(_get_cluster_primary_address.call_count, 2)
+        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
+        _get_cluster_member_addresses.assert_called_once_with(exclude_unit_labels=["mysql-0"])
+        _run_mysqlsh_script.assert_called_once_with(expected_remove_instance_commands)
+        _release_lock.assert_called_once_with("2.2.2.2", "mysql-0", "unit-teardown")
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_acquire_lock(self, _run_mysqlsh_script):
+        """Test a successful execution of _acquire_lock()."""
+        _run_mysqlsh_script.return_value = "<ACQUIRED_LOCK>1</ACQUIRED_LOCK>"
+
+        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
+
+        self.assertTrue(acquired_lock)
+
+        expected_acquire_lock_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1')",
+                "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='mysql-0', status='in-progress' WHERE task='unit-teardown' AND executor='';\")",
+                "acquired_lock = session.run_sql(\"SELECT count(*) FROM mysql.juju_units_operations WHERE task='unit-teardown' AND executor='mysql-0';\").fetch_one()[0]",
+                "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
+            ]
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_acquire_lock_commands)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_unable_to_acquire_lock(self, _run_mysqlsh_script):
+        """Test a successful execution of _acquire_lock() but failure to acquire lock."""
+        _run_mysqlsh_script.return_value = "<ACQUIRED_LOCK>0</ACQUIRED_LOCK>"
+
+        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
+
+        self.assertFalse(acquired_lock)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_issue_with_acquire_lock(self, _run_mysqlsh_script):
+        """Test an issue while executing _acquire_lock()."""
+        _run_mysqlsh_script.return_value = ""
+
+        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
+
+        self.assertFalse(acquired_lock)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_release_lock(self, _run_mysqlsh_script):
+        """Test a successful execution of _acquire_lock()."""
+        self.mysql._release_lock("2.2.2.2", "mysql-0", "unit-teardown")
+
         expected_release_lock_commands = "\n".join(
             [
                 "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
                 "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='mysql-0';\")",
             ]
         )
+        _run_mysqlsh_script.assert_called_once_with(expected_release_lock_commands)
 
-        self.assertEqual(
-            sorted(_run_mysqlsh_script.mock_calls),
-            sorted(
-                [
-                    call(expected_acquire_lock_commands),
-                    call(expected_remove_instance_commands),
-                    call(expected_release_lock_commands),
-                ]
-            ),
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_get_cluster_member_addresses(self, _run_mysqlsh_script):
+        """Test a successful execution of _get_cluster_member_addresses()."""
+        _run_mysqlsh_script.return_value = "<MEMBER_ADDRESSES>1.1.1.1,2.2.2.2</MEMBER_ADDRESSES>"
+
+        cluster_members, valid = self.mysql._get_cluster_member_addresses(
+            exclude_unit_labels=["mysql-0"]
         )
 
-    @patch("mysqlsh_helpers.MySQL._get_cluster_primary_address")
+        self.assertEqual(cluster_members, ["1.1.1.1", "2.2.2.2"])
+        self.assertTrue(valid)
+
+        expected_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "member_addresses = ','.join([member['address'] for label, member in cluster.status()['defaultReplicaSet']['topology'].items() if label not in ['mysql-0']])",
+                "print(f'<MEMBER_ADDRESSES>{member_addresses}</MEMBER_ADDRESSES>')",
+            ]
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
-    @patch("mysqlsh_helpers.MySQL._get_cluster_member_addresses")
-    def test_remove_instance_failed_to_acquire_lock(
-        self, _get_cluster_member_addresses, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
-        """Test failure to acquire lock while running the remove_instance() method."""
-        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
-        _run_mysqlsh_script.side_effect = ["<ACQUIRED_LOCK>0</ACQUIRED_LOCK>", "", ""]
-        _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
+    def test_empty_get_cluster_member_addresses(self, _run_mysqlsh_script):
+        """Test successful execution of _get_cluster_member_addresses() with empty return value."""
+        _run_mysqlsh_script.return_value = "<MEMBER_ADDRESSES></MEMBER_ADDRESSES>"
 
-        # disable tenacity retry
-        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda x: True)
+        cluster_members, valid = self.mysql._get_cluster_member_addresses(
+            exclude_unit_labels=["mysql-0"]
+        )
 
-        with self.assertRaises(MySQLRemoveInstanceError):
-            self.mysql.remove_instance("mysql-0")
+        self.assertEqual(cluster_members, [])
+        self.assertTrue(valid)
 
-    @patch("mysqlsh_helpers.MySQL._get_cluster_primary_address")
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
-    @patch("mysqlsh_helpers.MySQL._get_cluster_member_addresses")
-    def test_remove_instance_subprocess_execption(
-        self, _get_cluster_member_addresses, _run_mysqlsh_script, _get_cluster_primary_address
+    def test_error_get_cluster_member_addresses(self, _run_mysqlsh_script):
+        """Test an issue executing _get_cluster_member_addresses()."""
+        _run_mysqlsh_script.return_value = ""
+
+        cluster_members, valid = self.mysql._get_cluster_member_addresses(
+            exclude_unit_labels=["mysql-0"]
+        )
+
+        self.assertEqual(cluster_members, [])
+        self.assertFalse(valid)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_get_cluster_primary_address(self, _run_mysqlsh_script):
+        """Test a successful execution of _get_cluster_primary_address()."""
+        _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>1.1.1.1</PRIMARY_ADDRESS>"
+
+        primary_address = self.mysql._get_cluster_primary_address()
+
+        self.assertEqual(primary_address, "1.1.1.1")
+
+        expected_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+                "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
+            ]
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_no_match_cluster_primary_address_with_connect_instance_address(
+        self, _run_mysqlsh_script
     ):
-        """Test CalledProcessError while acquiring lock running the remove_instance() method."""
-        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
-        _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
+        """Test an issue executing _get_cluster_primary_address()."""
+        _run_mysqlsh_script.return_value = ""
 
-        # disable tenacity retry
-        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda x: True)
+        primary_address = self.mysql._get_cluster_primary_address(
+            connect_instance_address="127.0.0.2"
+        )
 
-        with self.assertRaises(MySQLRemoveInstanceError):
-            self.mysql.remove_instance("mysql-0")
+        self.assertIsNone(primary_address)
+
+        expected_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.2')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+                "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
+            ]
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)

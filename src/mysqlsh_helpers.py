@@ -34,6 +34,8 @@ MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
 MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
 MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
 
+UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
+
 
 class MySQLConfigureMySQLUsersError(Exception):
     """Exception raised when creating a user fails."""
@@ -71,13 +73,20 @@ class MySQLConfirmAllInstancesOnlineError(Exception):
     pass
 
 
-class MySQLRemoveInstanceError(Exception):
+class MySQLRemoveInstanceRetryError(Exception):
     """Exception raised when there is an issue removing an instance.
 
     Utilized by tenacity to retry the method.
     """
 
     pass
+
+
+class MySQLRemoveInstanceError(Exception):
+    """Exception raised when there is an issue removing an instance.
+
+    Exempt from the retry mechanism provided by tenacity.
+    """
 
 
 class MySQLInitializeJujuOperationsTableError(Exception):
@@ -299,7 +308,7 @@ class MySQL:
         """Initialize the mysql.juju_units_operations table using the serverconfig user."""
         initalize_table_commands = (
             "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started');",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started');",
         )
 
         try:
@@ -400,7 +409,7 @@ class MySQL:
             return False
 
     @retry(
-        retry=retry_if_exception_type(MySQLRemoveInstanceError),
+        retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
         stop=stop_after_attempt(15),
         reraise=True,
         wait=wait_random(min=4, max=30),
@@ -413,6 +422,12 @@ class MySQL:
         obtaining the lock, removing instances/dissolving the cluster, or releasing
         the lock.
 
+        Raises:
+            MySQLRemoveInstanceRetryError - to retry this method if there was an issue
+                obtaining a lock or removing the instance
+            MySQLRemoveInstanceError - if there is an issue releasing
+                the lock after the instance is removed from the cluster (avoids retries)
+
         Args:
             unit_label: The label for this unit's instance (to be torn down)
         """
@@ -420,35 +435,21 @@ class MySQL:
             # Get the cluster primary's address to direct lock acquisition request to.
             primary_address = self._get_cluster_primary_address()
             if not primary_address:
-                raise MySQLRemoveInstanceError("Unable to retrieve the cluster primary's address")
+                raise MySQLRemoveInstanceRetryError(
+                    "Unable to retrieve the cluster primary's address"
+                )
 
             # Attempt to acquire a lock on the primary instance
-            logger.debug(
-                f"Attempting to acquire lock to remove unit {self.instance_address}/{unit_label}"
-            )
-            acquire_lock_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-                f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='{unit_label}', status='in-progress' WHERE task='unit-teardown' AND executor='';\")",
-                f"acquired_lock = session.run_sql(\"SELECT count(*) FROM mysql.juju_units_operations WHERE task='unit-teardown' AND executor='{unit_label}';\").fetch_one()[0]",
-                "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
-            )
-
-            output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
-            matches = re.search(r"<ACQUIRED_LOCK>(\d)</ACQUIRED_LOCK>", output)
-            if not matches:
-                raise MySQLRemoveInstanceError("Unable to acquire lock to remove unit")
-
-            # If unable to acquire the lock, raise an error to retry
-            acquired_lock = int(matches.group(1))
+            acquired_lock = self._acquire_lock(primary_address, unit_label, UNIT_TEARDOWN_LOCKNAME)
             if not acquired_lock:
-                raise MySQLRemoveInstanceError("Did not acquire lock to remove unit")
+                raise MySQLRemoveInstanceRetryError("Did not acquire lock to remove unit")
 
             # Get remaining cluster member addresses before calling mysqlsh.remove_instance()
             remaining_cluster_member_addresses, valid = self._get_cluster_member_addresses(
                 exclude_unit_labels=[unit_label]
             )
             if not valid:
-                raise MySQLRemoveInstanceError("Unable to retrieve cluster member addresses")
+                raise MySQLRemoveInstanceRetryError("Unable to retrieve cluster member addresses")
 
             # Remove instance from cluster, or dissolve cluster if no other members remain
             logger.debug(
@@ -474,29 +475,88 @@ class MySQL:
                 f"Failed to acquire lock and remove instance {self.instance_address} with error {e.stderr}",
                 exc_info=e,
             )
-            raise MySQLRemoveInstanceError(e.stderr)
-
-        # The below code could raise exceptions, but do not result in retries
-        # of this method since the instance would already be removed from the cluster.
+            raise MySQLRemoveInstanceRetryError(e.stderr)
 
         # There is no need to release the lock if cluster was dissolved
         if not remaining_cluster_member_addresses:
             return
 
-        # Retrieve the cluster primary's address again (in case the old primary is scaled down)
-        # Release the lock by making a request to this primary member's address
-        primary_address = self._get_cluster_primary_address(
-            connect_instance_address=remaining_cluster_member_addresses[0]
-        )
-        if not primary_address:
-            raise Exception("Unable to retrieve the address of the cluster primary")
+        # The below code should not result in retries of this method since the
+        # instance would already be removed from the cluster.
+        try:
+            # Retrieve the cluster primary's address again (in case the old primary is scaled down)
+            # Release the lock by making a request to this primary member's address
+            primary_address = self._get_cluster_primary_address(
+                connect_instance_address=remaining_cluster_member_addresses[0]
+            )
+            if not primary_address:
+                raise MySQLRemoveInstanceError(
+                    "Unable to retrieve the address of the cluster primary"
+                )
 
-        logger.debug(f"Releasing lock after removing unit {self.instance_address}/{unit_label}")
+            self._release_lock(primary_address, unit_label, UNIT_TEARDOWN_LOCKNAME)
+        except subprocess.CalledProcessError as e:
+            # Raise an error that does not lead to a retry of this method
+            logger.exception(
+                f"Failed to release lock on {unit_label} with error {e.stderr}", exc_info=e
+            )
+            raise MySQLRemoveInstanceError(e.stderr)
+
+    def _acquire_lock(self, primary_address, unit_label, lock_name):
+        """Attempts to acquire a lock by using the mysql.juju_units_operations table.
+
+        Note that there must exist the appropriate rows in the table, created in the
+        initialize_juju_units_operations_table() method.
+
+        Args:
+            primary_address: The address of the cluster's primary
+            unit_label: The label of the unit for which to obtain the lock
+            lock_name: The name of the lock to obtain
+
+        Raises:
+            subprocess.CalledProcessError if there's an issue acquiring the lock
+
+        Returns:
+            Boolean indicating whether the lock was obtained
+        """
+        logger.debug(
+            f"Attempting to acquire lock {lock_name} on {primary_address} for unit {unit_label}"
+        )
+
+        acquire_lock_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+            f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='{unit_label}', status='in-progress' WHERE task='{lock_name}' AND executor='';\")",
+            f"acquired_lock = session.run_sql(\"SELECT count(*) FROM mysql.juju_units_operations WHERE task='{lock_name}' AND executor='{unit_label}';\").fetch_one()[0]",
+            "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
+        )
+
+        output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+        matches = re.search(r"<ACQUIRED_LOCK>(\d)</ACQUIRED_LOCK>", output)
+        if not matches:
+            return False
+
+        return bool(int(matches.group(1)))
+
+    def _release_lock(self, primary_address, unit_label, lock_name):
+        """Releases a lock in the mysql.juju_units_operations table.
+
+        Note that there must exist the appropriate rows in the table, created in the
+        initialize_juju_units_operations_table() method.
+
+        Args:
+            primary_address: The address of the cluster's primary
+            unit_label: The label of the unit to release the lock for
+            lock_name: The name of the lock to release
+
+        Raises:
+            subprocess.CalledProcessError if there's an issue releasing the lock
+        """
+        logger.debug(f"Releasing lock {lock_name} on {primary_address} for unit {unit_label}")
+
         release_lock_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-            f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='{unit_label}';\")",
+            f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='{lock_name}' AND executor='{unit_label}';\")",
         )
-
         self._run_mysqlsh_script("\n".join(release_lock_commands))
 
     def _get_cluster_member_addresses(self, exclude_unit_labels=[]):
@@ -504,6 +564,10 @@ class MySQL:
 
         Keyword args:
             exclude_unit_labels: (Optional) unit labels to exclude when retrieving cluster members
+
+        Raises:
+            subprocess.CalledProcessError if there is an issue getting cluster
+                members' addresses
 
         Returns:
             ([member_addresses], valid): a list of member addresses and
@@ -537,6 +601,10 @@ class MySQL:
         Keyword args:
             connect_instance_address: The address for the cluster primary
                 (default to this instance's address)
+
+        Raises:
+            subprocess.CalledProcessError if there is an issue retrieving the
+                cluster primary's address
 
         Returns:
             The address of the cluster's primary
