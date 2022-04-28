@@ -305,7 +305,12 @@ class MySQL:
             raise MySQLCreateClusterError(e.stderr)
 
     def initialize_juju_units_operations_table(self) -> None:
-        """Initialize the mysql.juju_units_operations table using the serverconfig user."""
+        """Initialize the mysql.juju_units_operations table using the serverconfig user.
+
+        Raises
+            MySQLInitializeJujuOperationsTableError if there is an issue
+                initializing the juju_units_opertions table
+        """
         initalize_table_commands = (
             "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
             f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started');",
