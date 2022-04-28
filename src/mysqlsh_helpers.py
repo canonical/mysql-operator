@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from typing import List, Tuple
 
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
@@ -63,12 +64,6 @@ class MySQLAddInstanceToClusterError(Exception):
 
 class MySQLServiceNotRunningError(Exception):
     """Exception raised when the MySQL service is not running."""
-
-    pass
-
-
-class MySQLConfirmAllInstancesOnlineError(Exception):
-    """Exception raised when there is an issue confirming instance's InnoDB configuration."""
 
     pass
 
@@ -388,6 +383,7 @@ class MySQL:
 
         Args:
             instance_address: The instance address for which to confirm InnoDB configuration
+            instance_unit_label: The label of the instance unit to confirm InnoDB configuration
 
         Returns:
             Boolean indicating whether the instance is configured for use in an InnoDB cluster
@@ -507,7 +503,7 @@ class MySQL:
             )
             raise MySQLRemoveInstanceError(e.stderr)
 
-    def _acquire_lock(self, primary_address, unit_label, lock_name):
+    def _acquire_lock(self, primary_address: str, unit_label: str, lock_name: str) -> bool:
         """Attempts to acquire a lock by using the mysql.juju_units_operations table.
 
         Note that there must exist the appropriate rows in the table, created in the
@@ -542,7 +538,7 @@ class MySQL:
 
         return bool(int(matches.group(1)))
 
-    def _release_lock(self, primary_address, unit_label, lock_name):
+    def _release_lock(self, primary_address: str, unit_label: str, lock_name: str) -> None:
         """Releases a lock in the mysql.juju_units_operations table.
 
         Note that there must exist the appropriate rows in the table, created in the
@@ -564,7 +560,7 @@ class MySQL:
         )
         self._run_mysqlsh_script("\n".join(release_lock_commands))
 
-    def _get_cluster_member_addresses(self, exclude_unit_labels=[]):
+    def _get_cluster_member_addresses(self, exclude_unit_labels: List = []) -> Tuple[List, bool]:
         """Get the addresses of the cluster's members.
 
         Keyword args:
@@ -600,7 +596,7 @@ class MySQL:
 
         return (member_addresses, "<MEMBER_ADDRESSES>" in output)
 
-    def _get_cluster_primary_address(self, connect_instance_address=None):
+    def _get_cluster_primary_address(self, connect_instance_address: str = None) -> str:
         """Get the cluster primary's address.
 
         Keyword args:
@@ -664,7 +660,7 @@ class MySQL:
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
 
-    def _run_mysqlcli_script(self, script: str, user="root", password=None) -> None:
+    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> None:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
