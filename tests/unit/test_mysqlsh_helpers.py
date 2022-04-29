@@ -489,3 +489,31 @@ class TestMySQL(unittest.TestCase):
             ]
         )
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_is_instance_in_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of is_instance_in_cluster() method."""
+        _run_mysqlsh_script.return_value = "ONLINE"
+
+        result = self.mysql.is_instance_in_cluster("mysql-0")
+        self.assertTrue(result)
+
+        expected_commands = "\n".join([
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            "cluster = dba.get_cluster('test_cluster')",
+            "print(cluster.status()['defaultReplicaSet']['topology'].get('mysql-0', {}).get('status', 'NOT_A_MEMBER'))",
+        ])
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        _run_mysqlsh_script.return_value = "NOT_A_MEMBER"
+
+        result = self.mysql.is_instance_in_cluster("mysql-0")
+        self.assertFalse(result)
+
+    @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
+    def test_is_instance_in_cluster_exception(self, _run_mysqlsh_script):
+        """Test an exception executing is_instance_in_cluster() method."""
+        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+
+        result = self.mysql.is_instance_in_cluster("mysql-0")
+        self.assertFalse(result)
