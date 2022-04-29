@@ -12,6 +12,7 @@ from mysqlsh_helpers import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLInitializeJujuOperationsTableError,
 )
 from tests.unit.helpers import patch_network_get
 
@@ -21,7 +22,7 @@ class TestCharm(unittest.TestCase):
         self.harness = Harness(MySQLOperatorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.peer_relation_id = self.harness.add_relation("mysql-replicas", "mysql-replicas")
+        self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.charm = self.harness.charm
 
@@ -101,8 +102,15 @@ class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
     @patch("mysqlsh_helpers.MySQL.configure_instance")
+    @patch("mysqlsh_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysqlsh_helpers.MySQL.create_cluster")
-    def test_on_start(self, _create_cluster, _configure_instance, _configure_mysql_users):
+    def test_on_start(
+        self,
+        _create_cluster,
+        _initialize_juju_units_operations_table,
+        _configure_instance,
+        _configure_mysql_users,
+    ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -114,9 +122,14 @@ class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
     @patch("mysqlsh_helpers.MySQL.configure_instance")
+    @patch("mysqlsh_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysqlsh_helpers.MySQL.create_cluster")
     def test_on_start_exceptions(
-        self, _create_cluster, _configure_instance, _configure_mysql_users
+        self,
+        _create_cluster,
+        _initialize_juju_units_operations_table,
+        _configure_instance,
+        _configure_mysql_users,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -137,6 +150,16 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         _configure_instance.reset_mock()
+
+        # test an exception initializing the mysql.juju_units_operations table
+        _initialize_juju_units_operations_table.side_effect = (
+            MySQLInitializeJujuOperationsTableError
+        )
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _initialize_juju_units_operations_table.reset_mock()
 
         # test an exception with creating a cluster
         _create_cluster.side_effect = MySQLCreateClusterError

@@ -9,7 +9,7 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, RelationJoinedEvent, StartEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -18,12 +18,13 @@ from mysqlsh_helpers import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLInitializeJujuOperationsTableError,
 )
 
 logger = logging.getLogger(__name__)
 
 PASSWORD_LENGTH = 24
-PEER = "mysql-replicas"
+PEER = "database-peers"
 
 
 def generate_random_password(length: int) -> str:
@@ -31,13 +32,20 @@ def generate_random_password(length: int) -> str:
 
     Args:
         length: length of the randomly generated string to be returned
+
+    Returns:
+        a string with random letters and digits of length specified
     """
     choices = string.ascii_letters + string.digits
     return "".join([secrets.choice(choices) for i in range(length)])
 
 
-def generate_random_hash(length=20) -> str:
-    """Generate a random hash."""
+def generate_random_hash() -> str:
+    """Generate a random hash.
+
+    Returns:
+        A random MD5 hash
+    """
     random_characters = generate_random_password(20)
     return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
@@ -52,6 +60,11 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(
+            self.on.database_storage_detaching, self._on_database_storage_detaching
+        )
+
+        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -84,7 +97,7 @@ class MySQLOperatorCharm(CharmBase):
 
     def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
-        # Only execute on unit leader
+        # Only execute on leader unit
         if not self.unit.is_leader():
             return
 
@@ -96,9 +109,14 @@ class MySQLOperatorCharm(CharmBase):
                 self.config.get("cluster-name") or f"cluster_{generate_random_hash()}"
             )
 
-    def _on_start(self, _) -> None:
+    def _on_start(self, event: StartEvent) -> None:
         """Handle the start event."""
         # Configure MySQL users and the instance for use in an InnoDB cluster
+        # Safeguard unit starting before leader unit sets peer data
+        if not self._is_peer_data_set:
+            event.defer()
+            return
+
         try:
             self._mysql.configure_mysql_users()
             self._mysql.configure_instance()
@@ -111,19 +129,48 @@ class MySQLOperatorCharm(CharmBase):
 
         # Create the cluster on the juju leader unit
         if not self.unit.is_leader():
-            # TODO: change to WaitingStatus, and move to ActiveStatus in the update-status
-            # event handler after the instance has been added to the cluster
-            self.unit.status = ActiveStatus()
+            self.unit.status = WaitingStatus("Waiting to join the cluster")
             return
 
         try:
-            unit_label = self.model.unit.name.replace("/", "-")
+            unit_label = self.unit.name.replace("/", "-")
             self._mysql.create_cluster(unit_label)
+            self._mysql.initialize_juju_units_operations_table()
         except MySQLCreateClusterError:
             self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
             return
+        except MySQLInitializeJujuOperationsTableError:
+            self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
+            return
 
         self.unit.status = ActiveStatus()
+
+    def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Handle the peer relation joined event."""
+        # Only execute in the unit leader
+        if not self.unit.is_leader():
+            return
+
+        # Defer if the instance is not configured for use in an InnoDB cluster
+        # Every instance gets configured for use in an InnoDB cluster on start
+        event_unit_address = event.relation.data[event.unit]["private-address"]
+        event_unit_label = event.unit.name.replace("/", "-")
+
+        if not self._mysql.is_instance_configured_for_innodb(event_unit_address, event_unit_label):
+            event.defer()
+            return
+
+        # Add the instance to the cluster. This operation uses locks to ensure that
+        # only one instance is added to the cluster at a time
+        # (so only one instance is involved in a state transfer at a time)
+        self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
+
+    def _on_database_storage_detaching(self, _) -> None:
+        """Handle the database storage detaching event."""
+        # The following operation uses locks to ensure that only one instance is removed
+        # from the cluster at a time (to avoid split-brain or lack of majority issues)
+        unit_label = self.unit.name.replace("/", "-")
+        self._mysql.remove_instance(unit_label)
 
     # =======================
     #  Helpers
@@ -148,6 +195,17 @@ class MySQLOperatorCharm(CharmBase):
     def _peers(self):
         """Retrieve the peer relation (`ops.model.Relation`)."""
         return self.model.get_relation(PEER)
+
+    @property
+    def _is_peer_data_set(self):
+        peer_data = self._peers.data[self.app]
+
+        return (
+            peer_data.get("cluster-name")
+            and peer_data.get("root-password")
+            and peer_data.get("server-config-password")
+            and peer_data.get("cluster-admin-password")
+        )
 
 
 if __name__ == "__main__":
