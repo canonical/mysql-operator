@@ -157,6 +157,9 @@ class MySQLOperatorCharm(CharmBase):
 
     def _on_update_status(self, _) -> None:
         """Handle the update_status event."""
+        if not self._is_peer_data_set:
+            return
+
         unit_label = self.unit.name.replace("/", "-")
         if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
             unit_label

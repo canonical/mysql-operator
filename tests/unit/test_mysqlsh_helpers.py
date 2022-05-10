@@ -498,11 +498,13 @@ class TestMySQL(unittest.TestCase):
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertTrue(result)
 
-        expected_commands = "\n".join([
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-            "cluster = dba.get_cluster('test_cluster')",
-            "print(cluster.status()['defaultReplicaSet']['topology'].get('mysql-0', {}).get('status', 'NOT_A_MEMBER'))",
-        ])
+        expected_commands = "\n".join(
+            [
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "print(cluster.status()['defaultReplicaSet']['topology'].get('mysql-0', {}).get('status', 'NOT_A_MEMBER'))",
+            ]
+        )
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
         _run_mysqlsh_script.return_value = "NOT_A_MEMBER"
