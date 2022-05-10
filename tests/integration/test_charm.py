@@ -165,8 +165,6 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
     old_unit_names = [unit.name for unit in ops_test.model.applications[APP_NAME].units]
 
     # Add a unit and wait until it is active
-    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
-
     await ops_test.model.applications[APP_NAME].add_unit()
     time.sleep(5)
     await ops_test.model.wait_for_idle(
@@ -175,8 +173,6 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
         raise_on_blocked=True,
         timeout=1000,
     )
-
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
 
     assert len(ops_test.model.applications[APP_NAME].units) == 3
 

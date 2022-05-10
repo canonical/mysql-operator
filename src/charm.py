@@ -65,9 +65,9 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(
             self.on.database_storage_detaching, self._on_database_storage_detaching
         )
-        self.framework.observe(self.on.update_status, self._on_update_status)
 
         self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
+        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         self.framework.observe(
             self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
@@ -153,18 +153,9 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
             return
 
+        self._peers.data[self.app]["units-added-to-cluster"] = "1"
+
         self.unit.status = ActiveStatus()
-
-    def _on_update_status(self, _) -> None:
-        """Handle the update_status event."""
-        if not self._is_peer_data_set:
-            return
-
-        unit_label = self.unit.name.replace("/", "-")
-        if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
-            unit_label
-        ):
-            self.unit.status = ActiveStatus()
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the peer relation joined event."""
@@ -185,6 +176,21 @@ class MySQLOperatorCharm(CharmBase):
         # only one instance is added to the cluster at a time
         # (so only one instance is involved in a state transfer at a time)
         self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
+
+        # Update 'units-added-to-cluster' counter in the peer relation databag
+        # in order to trigger a relation_changed event which will move the added unit
+        # into ActiveStatus
+        units_started = int(self._peers.data[self.app]["units-added-to-cluster"])
+        self._peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
+
+    def _on_peer_relation_changed(self, _) -> None:
+        """Handle the peer relation changed event."""
+        # Update the unit's status to ActiveStatus if it was added to the cluster
+        unit_label = self.unit.name.replace("/", "-")
+        if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
+            unit_label
+        ):
+            self.unit.status = ActiveStatus()
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
