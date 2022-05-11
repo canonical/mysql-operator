@@ -9,7 +9,13 @@ import logging
 import secrets
 import string
 
-from ops.charm import ActionEvent, CharmBase, RelationChangedEvent, RelationJoinedEvent, StartEvent
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+    StartEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
