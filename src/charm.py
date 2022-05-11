@@ -9,7 +9,7 @@ import logging
 import secrets
 import string
 
-from ops.charm import ActionEvent, CharmBase, RelationJoinedEvent, StartEvent
+from ops.charm import ActionEvent, CharmBase, RelationChangedEvent, RelationJoinedEvent, StartEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -183,8 +183,13 @@ class MySQLOperatorCharm(CharmBase):
         units_started = int(self._peers.data[self.app]["units-added-to-cluster"])
         self._peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
 
-    def _on_peer_relation_changed(self, _) -> None:
+    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
+        # Only execute if peer relation data contains cluster config values
+        if not self._is_peer_data_set:
+            event.defer()
+            return
+
         # Update the unit's status to ActiveStatus if it was added to the cluster
         unit_label = self.unit.name.replace("/", "-")
         if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(

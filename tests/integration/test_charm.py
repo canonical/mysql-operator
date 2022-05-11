@@ -95,6 +95,8 @@ async def test_consistent_data_replication_across_cluster(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_primary_reelection(ops_test: OpsTest):
     """Confirm that a new primary is elected when the current primary is torn down."""
+    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
+
     random_unit = ops_test.model.applications[APP_NAME].units[0]
     server_config_credentials = await get_server_config_credentials(random_unit)
 
@@ -132,6 +134,18 @@ async def test_primary_reelection(ops_test: OpsTest):
 
     assert primary_unit_name != new_primary_unit.name
 
+    # Add the unit back and wait until it is active
+    await ops_test.model.applications[APP_NAME].add_unit()
+    time.sleep(5)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        raise_on_blocked=True,
+        timeout=1000,
+    )
+
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
+
 
 @pytest.mark.order(4)
 @pytest.mark.abort_on_fail
@@ -161,7 +175,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
         primary_unit, f"{mysqlsh_sql_base_command} -e \"{';'.join(create_records_sql)}\""
     )
 
-    assert len(ops_test.model.applications[APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
     old_unit_names = [unit.name for unit in ops_test.model.applications[APP_NAME].units]
 
     # Add a unit and wait until it is active
@@ -174,7 +188,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
         timeout=1000,
     )
 
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+    assert len(ops_test.model.applications[APP_NAME].units) == 4
 
     added_unit = [
         unit
@@ -200,7 +214,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
         timeout=1000,
     )
 
-    assert len(ops_test.model.applications[APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
 
     # Ensure that the data still exists in all the units
     for unit in ops_test.model.applications[APP_NAME].units:
@@ -209,6 +223,8 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest):
             f"{mysqlsh_sql_base_command} -e \"SELECT * FROM test.instance_state_replication WHERE id = '{random_chars}'\"",
         )
         assert random_chars in output
+
+    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
 
 
 async def get_primary_unit(
