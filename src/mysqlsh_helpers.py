@@ -432,7 +432,7 @@ class MySQL:
         except subprocess.CalledProcessError:
             # confirmation can fail if the clusteradmin user does not yet exist on the instance
             logger.debug(
-                f"Failed to check existence of unit {unit_label} in cluster {self.cluster_name}"
+                f"Failed to confirm existence of unit {unit_label} in cluster {self.cluster_name}"
             )
             return False
 
