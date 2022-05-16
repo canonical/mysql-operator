@@ -47,12 +47,21 @@ async def scale_application(
     application_name: str,
     count: int,
 ):
+    """Scale a given application to a unit count.
+
+    Args:
+        ops_test: The ops test framework
+        application_name: The name of the application
+        count: The number of units to scale to
+    """
     application = ops_test.model.applications[application_name]
     count_existing_units = len(application.units)
 
+    # Do nothing if already in the desired state
     if count == count_existing_units:
         return
 
+    # Scale up
     if count > count_existing_units:
         for _ in range(count - count_existing_units):
             await application.add_unit()
@@ -67,6 +76,7 @@ async def scale_application(
 
         return
 
+    # Scale down
     units_to_destroy = [unit.name for unit in application.units[count:]]
 
     for unit_to_destroy in units_to_destroy:
@@ -158,6 +168,18 @@ async def execute_commands_on_unit(
     queries: List,
     commit: bool = False,
 ):
+    """Execute given MySQL queries on a unit.
+
+    Args:
+        unit_address: The public IP address of the unit to execute the queries on
+        username: The MySQL username
+        password: The MySQL password
+        queries: A list of queries to execute
+        commit: A keyword arg indicating whether there are any writes queries
+
+    Returns:
+        A list of rows that were potentially queried
+    """
     connection = mysql.connector.connect(
         host=unit_address,
         user=username,
