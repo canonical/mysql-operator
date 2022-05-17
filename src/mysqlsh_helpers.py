@@ -409,6 +409,33 @@ class MySQL:
             )
             return False
 
+    def is_instance_in_cluster(self, unit_label):
+        """Confirm if instance is in the cluster.
+
+        Args:
+            unit_label: The label of unit to check existence in cluster for
+
+        Returns:
+            Boolean indicating whether the unit is a member of the cluster
+        """
+        commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"print(cluster.status()['defaultReplicaSet']['topology'].get('{unit_label}', {{}}).get('status', 'NOT_A_MEMBER'))",
+        )
+
+        try:
+            logger.debug(f"Checking existence of unit {unit_label} in cluster {self.cluster_name}")
+
+            output = self._run_mysqlsh_script("\n".join(commands))
+            return "ONLINE" in output
+        except subprocess.CalledProcessError:
+            # confirmation can fail if the clusteradmin user does not yet exist on the instance
+            logger.debug(
+                f"Failed to confirm existence of unit {unit_label} in cluster {self.cluster_name}"
+            )
+            return False
+
     @retry(
         retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
         stop=stop_after_attempt(15),

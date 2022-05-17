@@ -9,7 +9,13 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase, RelationJoinedEvent, StartEvent
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    RelationChangedEvent,
+    RelationJoinedEvent,
+    StartEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
@@ -23,6 +29,8 @@ from mysqlsh_helpers import (
 
 logger = logging.getLogger(__name__)
 
+CLUSTER_ADMIN_USERNAME = "clusteradmin"
+SERVER_CONFIG_USERNAME = "serverconfig"
 PASSWORD_LENGTH = 24
 PEER = "database-peers"
 
@@ -65,6 +73,14 @@ class MySQLOperatorCharm(CharmBase):
         )
 
         self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
+        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+
+        self.framework.observe(
+            self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
+        )
+        self.framework.observe(
+            self.on.get_server_config_credentials_action, self._on_get_server_config_credentials
+        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -143,6 +159,8 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
             return
 
+        self._peers.data[self.app]["units-added-to-cluster"] = "1"
+
         self.unit.status = ActiveStatus()
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
@@ -165,12 +183,58 @@ class MySQLOperatorCharm(CharmBase):
         # (so only one instance is involved in a state transfer at a time)
         self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
 
+        # Update 'units-added-to-cluster' counter in the peer relation databag
+        # in order to trigger a relation_changed event which will move the added unit
+        # into ActiveStatus
+        units_started = int(self._peers.data[self.app]["units-added-to-cluster"])
+        self._peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
+
+    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Handle the peer relation changed event."""
+        # Only execute if peer relation data contains cluster config values
+        if not self._is_peer_data_set:
+            event.defer()
+            return
+
+        # Update the unit's status to ActiveStatus if it was added to the cluster
+        unit_label = self.unit.name.replace("/", "-")
+        if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
+            unit_label
+        ):
+            self.unit.status = ActiveStatus()
+
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
         unit_label = self.unit.name.replace("/", "-")
         self._mysql.remove_instance(unit_label)
+
+    # =======================
+    #  Custom Action Handlers
+    # =======================
+
+    def _on_get_cluster_admin_credentials(self, event: ActionEvent) -> None:
+        """Action used to retrieve the cluster admin credentials."""
+        event.set_results(
+            {
+                "cluster-admin-username": CLUSTER_ADMIN_USERNAME,
+                "cluster-admin-password": self._peers.data[self.app].get(
+                    "cluster-admin-password", "<to_be_generated>"
+                ),
+            }
+        )
+
+    def _on_get_server_config_credentials(self, event: ActionEvent) -> None:
+        """Action used to retrieve the server config credentials."""
+        event.set_results(
+            {
+                "server-config-username": SERVER_CONFIG_USERNAME,
+                "server-config-password": self._peers.data[self.app].get(
+                    "server-config-password", "<to_be_generated>"
+                ),
+            }
+        )
 
     # =======================
     #  Helpers
@@ -185,9 +249,9 @@ class MySQLOperatorCharm(CharmBase):
             self.model.get_binding(PEER).network.bind_address,
             peer_data["cluster-name"],
             peer_data["root-password"],
-            "serverconfig",
+            SERVER_CONFIG_USERNAME,
             peer_data["server-config-password"],
-            "clusteradmin",
+            CLUSTER_ADMIN_USERNAME,
             peer_data["cluster-admin-password"],
         )
 
