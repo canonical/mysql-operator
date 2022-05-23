@@ -19,13 +19,14 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
-from mysqlsh_helpers import (
-    MySQL,
+from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
+
+from mysqlsh_helpers import MySQL
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ class MySQLOperatorCharm(CharmBase):
         try:
             self._mysql.configure_mysql_users()
             self._mysql.configure_instance()
+            self._mysql.wait_until_mysql_connection()
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
