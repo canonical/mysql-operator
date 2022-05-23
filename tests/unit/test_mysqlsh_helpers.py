@@ -1,15 +1,17 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import subprocess
 import unittest
 from unittest.mock import call, patch
 
 import tenacity
 
-from mysqlsh_helpers import (
-    MySQL,
+from mysqlsh_helpers import MySQL
+
+
+from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
+    MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
@@ -72,9 +74,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
         """Test failed to configuring the MySQL users."""
-        _run_mysqlcli_script.side_effect = subprocess.CalledProcessError(
-            cmd="mysqlsh", returncode=127
-        )
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureMySQLUsersError):
             self.mysql.configure_mysql_users()
@@ -89,7 +89,7 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(MySQL.get_mysqlsh_bin(), "/snap/bin/mysql-shell")
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
-    @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")
+    @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection")
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
         configure_instance_commands = (
@@ -99,16 +99,15 @@ class TestMySQL(unittest.TestCase):
         self.mysql.configure_instance()
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(configure_instance_commands))
-        _wait_until_mysql_connection.assert_called_once()
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
-    @patch("mysqlsh_helpers.MySQL._wait_until_mysql_connection")
+    @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection")
     def test_configure_instance_exceptions(
         self, _wait_until_mysql_connection, _run_mysqlsh_script
     ):
         """Test exceptions raise while running configure_instance."""
         # Test an issue with _run_mysqlsh_script
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
@@ -120,9 +119,7 @@ class TestMySQL(unittest.TestCase):
         _wait_until_mysql_connection.reset_mock()
 
         # Test an issue with _wait_until_mysql_connection
-        _wait_until_mysql_connection.side_effect = subprocess.CalledProcessError(
-            cmd="mock", returncode=127
-        )
+        _wait_until_mysql_connection.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
@@ -148,9 +145,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_initialize_juju_units_operations_table_exception(self, _run_mysqlcli_script):
         """Test an exception initialization of the mysql.juju_units_operations table."""
-        _run_mysqlcli_script.side_effect = subprocess.CalledProcessError(
-            cmd="mock", returncode=127
-        )
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLInitializeJujuOperationsTableError):
             self.mysql.initialize_juju_units_operations_table()
@@ -171,7 +166,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     def test_create_cluster_exceptions(self, _run_mysqlsh_script):
         """Test exceptions raised while running create_cluster."""
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster("mysql-0")
@@ -192,7 +187,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script):
         """Test exceptions raised while running add_instance_to_cluster."""
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLAddInstanceToClusterError):
             self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
@@ -234,7 +229,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     def test_is_instance_configured_for_innodb_exceptions(self, _run_mysqlsh_script):
         """Test an exception while calling the is_instance_configured_for_innodb method."""
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         check_instance_configuration_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.2')",
@@ -332,7 +327,7 @@ class TestMySQL(unittest.TestCase):
         _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
         _acquire_lock.return_value = True
         _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
-        _release_lock.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _release_lock.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLRemoveInstanceError):
             self.mysql.remove_instance("mysql-0")
@@ -515,7 +510,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL._run_mysqlsh_script")
     def test_is_instance_in_cluster_exception(self, _run_mysqlsh_script):
         """Test an exception executing is_instance_in_cluster() method."""
-        _run_mysqlsh_script.side_effect = subprocess.CalledProcessError(cmd="mock", returncode=127)
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertFalse(result)
