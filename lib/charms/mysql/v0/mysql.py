@@ -119,7 +119,7 @@ class MySQLClientError(Error):
     pass
 
 
-class MySQL(ABC):
+class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
     This class handles the configuration of MySQL instances, and also the
