@@ -5,10 +5,6 @@ import unittest
 from unittest.mock import call, patch
 
 import tenacity
-
-from mysqlsh_helpers import MySQL
-
-
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLClientError,
@@ -19,6 +15,8 @@ from charms.mysql.v0.mysql import (
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
 )
+
+from mysqlsh_helpers import MySQL
 
 
 class TestMySQL(unittest.TestCase):

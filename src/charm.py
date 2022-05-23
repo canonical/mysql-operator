@@ -9,6 +9,12 @@ import logging
 import secrets
 import string
 
+from charms.mysql.v0.mysql import (
+    MySQLConfigureInstanceError,
+    MySQLConfigureMySQLUsersError,
+    MySQLCreateClusterError,
+    MySQLInitializeJujuOperationsTableError,
+)
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -18,13 +24,6 @@ from ops.charm import (
 )
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-
-from charms.mysql.v0.mysql import (
-    MySQLConfigureInstanceError,
-    MySQLConfigureMySQLUsersError,
-    MySQLCreateClusterError,
-    MySQLInitializeJujuOperationsTableError,
-)
 
 from mysqlsh_helpers import MySQL
 

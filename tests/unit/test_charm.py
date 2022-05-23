@@ -4,16 +4,16 @@
 import unittest
 from unittest.mock import patch
 
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.testing import Harness
-
-from charm import MySQLOperatorCharm
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.testing import Harness
+
+from charm import MySQLOperatorCharm
 from tests.unit.helpers import patch_network_get
 
 
