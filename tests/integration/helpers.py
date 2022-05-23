@@ -9,9 +9,10 @@ import secrets
 import string
 from typing import Dict, List, Optional
 
-import mysql.connector
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
+
+import mysql.connector
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
