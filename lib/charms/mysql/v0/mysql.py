@@ -23,37 +23,15 @@ inherited concrete class.
 
 """
 
-# The unique Charmhub library identifier, never change it
-LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
-
-# Increment this major API version when introducing breaking changes
-LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
-
-
-from abc import ABC, abstractmethod
 import json
 import logging
-import os
 import re
-import subprocess
-import tempfile
+from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_fixed,
-    wait_random,
-)
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
 
 logger = logging.getLogger(__name__)
-
 
 # The unique Charmhub library identifier, never change it
 LIBID = "7c3dbc9c2ad44a47bd6fcb25caa270e5"
@@ -64,14 +42,6 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 0
-
-
-# TODO: determine if version locking is needed for both mysql-shell and mysql-server
-MYSQL_SHELL_SNAP_NAME = "mysql-shell"
-MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
-MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
-MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
-MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -296,7 +266,7 @@ class MySQL(ABC):
             MySQLInitializeJujuOperationsTableError if there is an issue
                 initializing the juju_units_operations table
         """
-        initalize_table_commands = (
+        initialize_table_commands = (
             "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
             f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started');",
         )
@@ -307,7 +277,7 @@ class MySQL(ABC):
             )
 
             self._run_mysqlcli_script(
-                " ".join(initalize_table_commands),
+                " ".join(initialize_table_commands),
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
@@ -426,6 +396,31 @@ class MySQL(ABC):
                 f"Failed to confirm existence of unit {unit_label} in cluster {self.cluster_name}"
             )
             return False
+
+    def get_cluster_status(self) -> dict:
+        """Get the cluster status.
+
+        Executes script to retrieve cluster status.
+        Won't raise errors.
+
+        Returns:
+            Cluster status as a dictionary
+        """
+        status_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "print(cluster.status())",
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(status_commands), verbose=0)
+            output_dict = json.loads(output.lower())
+            # pop topology from status due it being potentially too long
+            # and containing keys with `:` in it
+            output_dict["defaultreplicaset"].pop("topology")
+            return output_dict
+        except MySQLClientError as e:
+            logger.exception(f"Failed to get cluster status for {self.cluster_name}", exc_info=e)
 
     @retry(
         retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
