@@ -413,7 +413,7 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(status_commands), verbose=0)
+            output = self._run_mysqlsh_script("\n".join(status_commands))
             output_dict = json.loads(output.lower())
             # pop topology from status due it being potentially too long
             # and containing keys with `:` in it
