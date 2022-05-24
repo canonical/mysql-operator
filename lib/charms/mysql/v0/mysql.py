@@ -415,9 +415,6 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlsh_script("\n".join(status_commands))
             output_dict = json.loads(output.lower())
-            # pop topology from status due it being potentially too long
-            # and containing keys with `:` in it
-            output_dict["defaultreplicaset"].pop("topology")
             return output_dict
         except MySQLClientError as e:
             logger.exception(f"Failed to get cluster status for {self.cluster_name}", exc_info=e)
