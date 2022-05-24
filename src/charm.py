@@ -251,7 +251,7 @@ class MySQLOperatorCharm(CharmBase):
         )
 
     def _get_cluster_status(self, event: ActionEvent) -> None:
-        """Get the cluster status without topology."""
+        """Action used to retrieve the cluster status."""
         event.set_results(self._mysql.get_cluster_status())
 
     # =======================
