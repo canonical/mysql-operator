@@ -9,6 +9,12 @@ import logging
 import secrets
 import string
 
+from charms.mysql.v0.mysql import (
+    MySQLConfigureInstanceError,
+    MySQLConfigureMySQLUsersError,
+    MySQLCreateClusterError,
+    MySQLInitializeJujuOperationsTableError,
+)
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -19,13 +25,7 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
-from mysqlsh_helpers import (
-    MySQL,
-    MySQLConfigureInstanceError,
-    MySQLConfigureMySQLUsersError,
-    MySQLCreateClusterError,
-    MySQLInitializeJujuOperationsTableError,
-)
+from mysqlsh_helpers import MySQL
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,8 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(
             self.on.get_server_config_credentials_action, self._on_get_server_config_credentials
         )
+        self.framework.observe(self.on.get_root_credentials_action, self._on_get_root_credentials)
+        self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -136,6 +138,7 @@ class MySQLOperatorCharm(CharmBase):
         try:
             self._mysql.configure_mysql_users()
             self._mysql.configure_instance()
+            self._mysql.wait_until_mysql_connection()
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
@@ -235,6 +238,21 @@ class MySQLOperatorCharm(CharmBase):
                 ),
             }
         )
+
+    def _on_get_root_credentials(self, event: ActionEvent) -> None:
+        """Action used to retrieve the root credentials."""
+        event.set_results(
+            {
+                "root-username": "root",
+                "root-password": self._peers.data[self.app].get(
+                    "root-password", "<to_be_generated>"
+                ),
+            }
+        )
+
+    def _get_cluster_status(self, event: ActionEvent) -> None:
+        """Action used to retrieve the cluster status."""
+        event.set_results(self._mysql.get_cluster_status())
 
     # =======================
     #  Helpers
