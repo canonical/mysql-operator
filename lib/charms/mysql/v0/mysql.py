@@ -14,12 +14,54 @@
 
 """MySQL helper class and functions.
 
-The `mysql` module provides an abstraction class for common methods for
-managing a Group Replication enabled MySQL cluster.
+The `mysql` module provides an abstraction class and methods for for managing a
+Group Replication enabled MySQL cluster.
 
-The `MySQL` class must be inherited and have abstract methods defined for
-each platform (vm/k8s). Platform specific methods must be defined in the
-inherited concrete class.
+The `MySQLBase` abstract class must be inherited and have its abstract methods
+implemented for each platform (vm/k8s) before being directly used in charm code.
+
+An example of inheriting `MySQLBase` and implementing the abstract methods plus extending it:
+
+```python
+from charms.mysql.v0.mysql import MySQLBase
+from tenacity import retry, stop_after_delay, wait_fixed
+
+class MySQL(MySQLBase):
+    def __init__(
+        self,
+        instance_address: str,
+        cluster_name: str,
+        root_password: str,
+        server_config_user: str,
+        server_config_password: str,
+        cluster_admin_user: str,
+        cluster_admin_password: str,
+        new_parameter: str
+    ):
+        super().__init__(
+                instance_address=instance_address,
+                cluster_name=cluster_name,
+                root_password=root_password,
+                server_config_user=server_config_user,
+                server_config_password=server_config_password,
+                cluster_admin_user=cluster_admin_user,
+                cluster_admin_password=cluster_admin_password,
+            )
+        # Add new attribute
+        self.new_parameter = new_parameter
+
+    # abstract method implementation
+    @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
+    def wait_until_mysql_connection(self) -> None:
+        if not os.path.exists(MYSQLD_SOCK_FILE):
+            raise MySQLServiceNotRunningError()
+
+    ...
+```
+
+The module also provides a set of custom exceptions, used to trigger specific
+error handling on the subclass and in the charm code.
+
 
 """
 
