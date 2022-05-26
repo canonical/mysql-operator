@@ -220,27 +220,27 @@ class MySQL:
 
         # commands  to create 'root'@'%' user
         create_root_user_commands = (
-            f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}';",
-            "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+            f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}'",
+            "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
         )
 
         # commands to be run from mysql client with root user and password set above
         configure_users_commands = (
-            f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}';",
-            f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION;",
-            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-            f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';",
-            f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%';",
-            f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@localhost;",
-            "FLUSH PRIVILEGES;",
+            f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
+            f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
+            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
+            f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
+            f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%'",
+            f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@localhost",
+            "FLUSH PRIVILEGES",
         )
 
         try:
             logger.debug(f"Configuring MySQL users for {self.instance_address}")
-            self._run_mysqlcli_script(" ".join(create_root_user_commands))
+            self._run_mysqlcli_script("; ".join(create_root_user_commands))
             # run configure users commands with newly created root user
             self._run_mysqlcli_script(
-                " ".join(configure_users_commands), password=self.root_password
+                "; ".join(configure_users_commands), password=self.root_password
             )
         except subprocess.CalledProcessError as e:
             logger.exception(
@@ -248,6 +248,79 @@ class MySQL:
                 exc_info=e,
             )
             raise MySQLConfigureMySQLUsersError(e.stderr)
+
+    def does_mysql_user_exist(self, username, hostname="%"):
+        """Checks if a mysqlrouter user already exists.
+
+        Args:
+            username: The username for the mysql user
+            hostname (optional): The hostname for the mysql user (defaults to %)
+        """
+        pass
+
+        user_existence_commands = (
+            f"select if((select count(*) from mysql.user where user = '{username}' and host = '{hostname}'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+        )
+
+        try:
+            output = self._run_mysqlcli_script("; ".join(user_existence_commands))
+            return "USER_EXISTS" in output
+        except subprocess.CalledProcessError as e:
+            raise e
+
+    def configure_mysqlrouter_user(self, username, password):
+        """Configure a mysqlrouter user and grant the appropriate permissions to the user.
+
+        Args:
+            username: The username for the mysqlrouter user
+            password: The password for the mysqlrouter user
+        """
+        create_mysqlrouter_user_commands = (
+            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
+        )
+        mysqlrouter_user_grant_commands = (
+            f"GRANT CREATE USER ON *.* TO '{username}'@'%' WITH GRANT OPTION",
+            f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'%'",
+            f"GRANT SELECT ON mysql.user TO '{username}'@'%'",
+            f"GRANT SELECT ON performance_schema.replication_group_members TO '{username}'@'%'",
+            f"GRANT SELECT ON performance_schema.replication_group_member_stats TO '{username}'@'%'",
+            f"GRANT SELECT ON performance_schema.global_variables TO '{username}'@'%'",
+        )
+
+        try:
+            logger.debug(f"Configuring MySQLRouter user for {self.instance_address}")
+            self._run_mysqlcli_script("; ".join(create_mysqlrouter_user_commands))
+            # grant permissions to the newly created mysqlrouter user
+            self._run_mysqlcli_script("; ".join(mysqlrouter_user_grant_commands))
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                f"Failed to configure mysqlrouter user for: {self.instance_address} with error {e.stderr}",
+                exc_info=e,
+            )
+            raise
+
+    def create_application_database_and_scoped_user(self, database_name, username, password):
+        """Create an application database and a user scoped to the created database.
+
+        Args:
+            database_name: The name of the database to create
+            username: The username of the scoped user
+            password: The password of the scoped user
+        """
+        create_database_commands = (
+            f"CREATE DATABASE IF NOT EXISTS {database_name} CHARACTER SET UTF8",
+        )
+        create_scoped_user_commands = (
+            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
+            f"GRANT USAGE ON *.* TO '{username}'@`%`",
+            f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`%`",
+        )
+
+        try:
+            self._run_mysqlcli_script("; ".join(create_database_commands))
+            self._run_mysqlcli_script("; ".join(create_scoped_user_commands))
+        except subprocess.CalledProcessError as e:
+            raise e
 
     def configure_instance(self) -> None:
         """Configure the instance to be used in an InnoDB cluster.
@@ -307,8 +380,8 @@ class MySQL:
                 initializing the juju_units_opertions table
         """
         initalize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started');",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started')",
         )
 
         try:
@@ -317,7 +390,7 @@ class MySQL:
             )
 
             self._run_mysqlcli_script(
-                " ".join(initalize_table_commands),
+                "; ".join(initalize_table_commands),
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
@@ -687,7 +760,7 @@ class MySQL:
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
 
-    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> None:
+    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
@@ -711,4 +784,4 @@ class MySQL:
         if password:
             command.append(f"--password={password}")
 
-        subprocess.check_output(command, stderr=subprocess.PIPE)
+        return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")

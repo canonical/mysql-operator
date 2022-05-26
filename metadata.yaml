@@ -19,6 +19,9 @@ maintainers:
 peers:
   database-peers:
     interface: mysql-peers
+provides:
+  db-router:
+    interface: mysql-router
 storage:
   database:
     type: filesystem

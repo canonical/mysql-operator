@@ -4,7 +4,10 @@
 
 """Charmed Machine Operator for MySQL."""
 
+import collections
+import copy
 import hashlib
+import json
 import logging
 import secrets
 import string
@@ -33,6 +36,7 @@ CLUSTER_ADMIN_USERNAME = "clusteradmin"
 SERVER_CONFIG_USERNAME = "serverconfig"
 PASSWORD_LENGTH = 24
 PEER = "database-peers"
+LEGACY_DB_ROUTER = "db-router"
 
 
 def generate_random_password(length: int) -> str:
@@ -74,6 +78,10 @@ class MySQLOperatorCharm(CharmBase):
 
         self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+
+        self.framework.observe(
+            self.on[LEGACY_DB_ROUTER].relation_changed, self._on_db_router_relation_changed
+        )
 
         self.framework.observe(
             self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
@@ -202,6 +210,59 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit.status = ActiveStatus()
+
+    def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
+        if not self.unit.is_leader():
+            return
+
+        unit_address = str(self.model.get_binding(PEER).network.bind_address)
+        unit_names = " ".join([unit.name for unit in event.relation.units])
+
+        event_relation_databag = event.relation.data[self.unit]
+        event_relation_databag["db_host"] = json.dumps(unit_address)
+
+        application_unit = list(event.relation.units)[0]
+        application_data = copy.deepcopy(event.relation.data[application_unit])
+        application_info = collections.defaultdict(dict)
+
+        mysqlrouter_username = application_data.get("mysqlrouter_username")
+        if mysqlrouter_username and not self._mysql.does_mysql_user_exist(mysqlrouter_username):
+            mysqlrouter_password = generate_random_password(PASSWORD_LENGTH)
+            self._mysql.configure_mysqlrouter_user(mysqlrouter_username, mysqlrouter_password)
+
+            event_relation_databag["mysqlrouter_password"] = json.dumps(mysqlrouter_password)
+
+        if mysqlrouter_username:
+            event_relation_databag["mysqlrouter_allowed_units"] = json.dumps(unit_names)
+
+        for key, value in application_data.items():
+            application_name = key.split("_")[0]
+
+            if application_name == "mysqlrouter":
+                continue
+
+            if "username" in key:
+                application_info[application_name]["username"] = value
+
+            if "database" in key:
+                application_info[application_name]["database"] = value
+
+        for application_name, database_info in application_info.items():
+            application_password = generate_random_password(PASSWORD_LENGTH)
+
+            if not self._mysql.does_mysql_user_exist(database_info.get("username")):
+                self._mysql.create_application_database_and_scoped_user(
+                    database_info.get("database"),
+                    database_info.get("username"),
+                    application_password,
+                )
+
+                event_relation_databag[f"{application_name}_password"] = json.dumps(
+                    application_password
+                )
+                event_relation_databag[f"{application_name}_allowed_units"] = json.dumps(
+                    unit_names
+                )
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""

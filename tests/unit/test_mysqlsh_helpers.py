@@ -33,25 +33,25 @@ class TestMySQL(unittest.TestCase):
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users(self, _run_mysqlcli_script):
-        """Test failed to configuring the MySQL users."""
+        """Test successful configuration of the MySQL users."""
         _run_mysqlcli_script.return_value = b""
 
-        _expected_create_root_user_commands = " ".join(
+        _expected_create_root_user_commands = "; ".join(
             (
-                "CREATE USER 'root'@'%' IDENTIFIED BY 'password';",
-                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+                "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
+                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
             )
         )
 
-        _expected_configure_user_commands = " ".join(
+        _expected_configure_user_commands = "; ".join(
             (
-                "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword';",
-                "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
-                "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost;",
-                "FLUSH PRIVILEGES;",
+                "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
+                "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
+                "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
+                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost",
+                "FLUSH PRIVILEGES",
             )
         )
 
@@ -71,7 +71,7 @@ class TestMySQL(unittest.TestCase):
 
     @patch("mysqlsh_helpers.MySQL._run_mysqlcli_script")
     def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
-        """Test failed to configuring the MySQL users."""
+        """Test failure of configuring the MySQL users."""
         _run_mysqlcli_script.side_effect = subprocess.CalledProcessError(
             cmd="mysqlsh", returncode=127
         )
@@ -133,14 +133,14 @@ class TestMySQL(unittest.TestCase):
     def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
         """Test a successful initialization of the mysql.juju_units_operations table."""
         expected_initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started');",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started')",
         )
 
         self.mysql.initialize_juju_units_operations_table()
 
         _run_mysqlcli_script.assert_called_once_with(
-            " ".join(expected_initialize_table_commands),
+            "; ".join(expected_initialize_table_commands),
             user="serverconfig",
             password="serverconfigpassword",
         )
