@@ -6,3 +6,9 @@ get-cluster-admin-credentials:
 
 get-server-config-credentials:
   description: Get the credentials for the server config user
+
+get-root-credentials:
+  description: Get the credentials for the root user
+
+get-cluster-status:
+  description: Get cluster status information

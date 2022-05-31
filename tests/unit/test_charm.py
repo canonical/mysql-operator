@@ -4,16 +4,16 @@
 import unittest
 from unittest.mock import patch
 
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.testing import Harness
-
-from charm import MySQLOperatorCharm
-from mysqlsh_helpers import (
+from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.testing import Harness
+
+from charm import MySQLOperatorCharm
 from tests.unit.helpers import patch_network_get
 
 
@@ -100,6 +100,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
     @patch("mysqlsh_helpers.MySQL.configure_instance")
     @patch("mysqlsh_helpers.MySQL.initialize_juju_units_operations_table")
@@ -110,6 +111,7 @@ class TestCharm(unittest.TestCase):
         _initialize_juju_units_operations_table,
         _configure_instance,
         _configure_mysql_users,
+        _wait_until_mysql_connection,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
