@@ -13,8 +13,11 @@ import secrets
 import string
 
 from charms.mysql.v0.mysql import (
+    MySQLCheckUserExistenceError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
+    MySQLConfigureRouterUserError,
+    MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
@@ -143,6 +146,8 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        self.unit.status = MaintenanceStatus("Setting up database cluster")
+
         try:
             self._mysql.configure_mysql_users()
             self._mysql.configure_instance()
@@ -215,9 +220,14 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = ActiveStatus()
 
     def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Handle the db_router relation changed event."""
         if not self.unit.is_leader():
             return
 
+        self.unit.status = MaintenanceStatus("Setting up db-router relation")
+
+        # Get the application data from the relation databag
+        # Abstracted is the fact that it is received from the leader unit of the related app
         unit_address = str(self.model.get_binding(PEER).network.bind_address)
         unit_names = " ".join([unit.name for unit in event.relation.units])
 
@@ -228,16 +238,24 @@ class MySQLOperatorCharm(CharmBase):
         application_data = copy.deepcopy(event.relation.data[application_unit])
         application_info = collections.defaultdict(dict)
 
-        mysqlrouter_username = application_data.get("mysqlrouter_username")
-        if mysqlrouter_username and not self._mysql.does_mysql_user_exist(mysqlrouter_username):
-            mysqlrouter_password = generate_random_password(PASSWORD_LENGTH)
-            self._mysql.configure_mysqlrouter_user(mysqlrouter_username, mysqlrouter_password)
+        # Create the mysql router user if it does not already exist
+        try:
+            mysqlrouter_username = application_data.get("mysqlrouter_username")
+            mysqlrouter_user_exists = self._mysql.does_mysql_user_exist(mysqlrouter_username)
 
-            event_relation_databag["mysqlrouter_password"] = json.dumps(mysqlrouter_password)
+            if mysqlrouter_username and not mysqlrouter_user_exists:
+                mysqlrouter_password = generate_random_password(PASSWORD_LENGTH)
+                self._mysql.configure_mysqlrouter_user(mysqlrouter_username, mysqlrouter_password)
 
-        if mysqlrouter_username:
-            event_relation_databag["mysqlrouter_allowed_units"] = json.dumps(unit_names)
+                event_relation_databag["mysqlrouter_password"] = json.dumps(mysqlrouter_password)
 
+            if mysqlrouter_username:
+                event_relation_databag["mysqlrouter_allowed_units"] = json.dumps(unit_names)
+        except (MySQLCheckUserExistenceError, MySQLConfigureRouterUserError):
+            self.unit.status = BlockedStatus("Failed to create mysqlrouter user")
+            return
+
+        # Retrieve and compile application usernames and database names
         for key, value in application_data.items():
             application_name = key.split("_")[0]
 
@@ -250,22 +268,29 @@ class MySQLOperatorCharm(CharmBase):
             if "database" in key:
                 application_info[application_name]["database"] = value
 
+        # Create the application database and scoped user if it does not already exist
         for application_name, database_info in application_info.items():
             application_password = generate_random_password(PASSWORD_LENGTH)
 
-            if not self._mysql.does_mysql_user_exist(database_info.get("username")):
-                self._mysql.create_application_database_and_scoped_user(
-                    database_info.get("database"),
-                    database_info.get("username"),
-                    application_password,
-                )
+            try:
+                if not self._mysql.does_mysql_user_exist(database_info.get("username")):
+                    self._mysql.create_application_database_and_scoped_user(
+                        database_info.get("database"),
+                        database_info.get("username"),
+                        application_password,
+                    )
 
-                event_relation_databag[f"{application_name}_password"] = json.dumps(
-                    application_password
-                )
-                event_relation_databag[f"{application_name}_allowed_units"] = json.dumps(
-                    unit_names
-                )
+                    event_relation_databag[f"{application_name}_password"] = json.dumps(
+                        application_password
+                    )
+                    event_relation_databag[f"{application_name}_allowed_units"] = json.dumps(
+                        unit_names
+                    )
+            except (MySQLCheckUserExistenceError, MySQLCreateApplicationDatabaseAndScopedUserError):
+                self.unit.status = BlockedStatus("Failed to create application database and scoped user")
+                return
+
+        self.unit.status = ActiveStatus()
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""

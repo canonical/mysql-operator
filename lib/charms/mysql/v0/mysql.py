@@ -320,7 +320,7 @@ class MySQLBase(ABC):
             self._run_mysqlcli_script("; ".join(mysqlrouter_user_grant_commands))
         except MySQLClientError as e:
             logger.exception(
-                f"Failed to configure mysqlrouter user for: {self.instance_address} with error {e.stderr}",
+                f"Failed to configure mysqlrouter user for: {self.instance_address} with error {e.message}",
                 exc_info=e,
             )
             raise MySQLConfigureRouterUserError(e.message)
