@@ -219,6 +219,7 @@ class MySQLOperatorCharm(CharmBase):
         ):
             self.unit.status = ActiveStatus()
 
+    # flake8: noqa: C901
     def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the db_router relation changed event."""
         if not self.unit.is_leader():
@@ -286,8 +287,13 @@ class MySQLOperatorCharm(CharmBase):
                     event_relation_databag[f"{application_name}_allowed_units"] = json.dumps(
                         unit_names
                     )
-            except (MySQLCheckUserExistenceError, MySQLCreateApplicationDatabaseAndScopedUserError):
-                self.unit.status = BlockedStatus("Failed to create application database and scoped user")
+            except (
+                MySQLCheckUserExistenceError,
+                MySQLCreateApplicationDatabaseAndScopedUserError,
+            ):
+                self.unit.status = BlockedStatus(
+                    "Failed to create application database and scoped user"
+                )
                 return
 
         self.unit.status = ActiveStatus()

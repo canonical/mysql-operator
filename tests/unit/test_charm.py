@@ -180,12 +180,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL.configure_mysqlrouter_user")
     @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
     def test_db_router_relation_changed(
-            self,
-            _create_application_database_and_scoped_user,
-            _configure_mysqlrouter_user,
-            _does_mysql_user_exist,
-            _generate_random_password,
-        ):
+        self,
+        _create_application_database_and_scoped_user,
+        _configure_mysqlrouter_user,
+        _does_mysql_user_exist,
+        _generate_random_password,
+    ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -228,25 +228,35 @@ class TestCharm(unittest.TestCase):
             ),
         )
 
-        _configure_mysqlrouter_user.assert_called_once_with("mysqlrouteruser", "super_secure_password")
-        _create_application_database_and_scoped_user.assert_called_once_with("keystone_database", "keystone_user", "super_secure_password")
+        _configure_mysqlrouter_user.assert_called_once_with(
+            "mysqlrouteruser", "super_secure_password"
+        )
+        _create_application_database_and_scoped_user.assert_called_once_with(
+            "keystone_database", "keystone_user", "super_secure_password"
+        )
 
         # confirm that credentials in the mysql leader unit databag is set correctly
-        self.assertEqual(db_router_relation.data.get(app_unit), {
-            "MRUP_database": "keystone_database",
-            "MRUP_hostname": "1.1.1.2",
-            "MRUP_username": "keystone_user",
-            "mysqlrouter_hostname": "1.1.1.3",
-            "mysqlrouter_username": "mysqlrouteruser",
-        })
+        self.assertEqual(
+            db_router_relation.data.get(app_unit),
+            {
+                "MRUP_database": "keystone_database",
+                "MRUP_hostname": "1.1.1.2",
+                "MRUP_username": "keystone_user",
+                "mysqlrouter_hostname": "1.1.1.3",
+                "mysqlrouter_username": "mysqlrouteruser",
+            },
+        )
 
-        self.assertEqual(db_router_relation.data.get(self.charm.unit), {
-            "db_host": '"1.1.1.1"',
-            "mysqlrouter_password": '"super_secure_password"',
-            "mysqlrouter_allowed_units": '"app/0"',
-            "MRUP_password": '"super_secure_password"',
-            "MRUP_allowed_units": '"app/0"',
-        })
+        self.assertEqual(
+            db_router_relation.data.get(self.charm.unit),
+            {
+                "db_host": '"1.1.1.1"',
+                "mysqlrouter_password": '"super_secure_password"',
+                "mysqlrouter_allowed_units": '"app/0"',
+                "MRUP_password": '"super_secure_password"',
+                "MRUP_allowed_units": '"app/0"',
+            },
+        )
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.generate_random_password", return_value="super_secure_password")
@@ -254,12 +264,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysqlsh_helpers.MySQL.configure_mysqlrouter_user")
     @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
     def test_db_router_relation_changed_exceptions(
-            self,
-            _create_application_database_and_scoped_user,
-            _configure_mysqlrouter_user,
-            _does_mysql_user_exist,
-            _generate_random_password,
-        ):
+        self,
+        _create_application_database_and_scoped_user,
+        _configure_mysqlrouter_user,
+        _does_mysql_user_exist,
+        _generate_random_password,
+    ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -312,7 +322,9 @@ class TestCharm(unittest.TestCase):
         _configure_mysqlrouter_user.reset_mock()
 
         # test an exception while creating the application database and scoped user
-        _create_application_database_and_scoped_user.side_effect = MySQLCreateApplicationDatabaseAndScopedUserError
+        _create_application_database_and_scoped_user.side_effect = (
+            MySQLCreateApplicationDatabaseAndScopedUserError
+        )
         self.harness.update_relation_data(
             self.db_router_relation_id,
             "app/0",

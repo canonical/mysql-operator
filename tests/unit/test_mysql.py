@@ -89,7 +89,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test successful execution of does_mysql_user_exist."""
         # Test passing in a custom hostname
         user_existence_command = (
-            f"select if((select count(*) from mysql.user where user = 'test_username' and host = 'test_hostname'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+            "select if((select count(*) from mysql.user where user = 'test_username' and host = 'test_hostname'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
         )
 
         self.mysql.does_mysql_user_exist("test_username", hostname="test_hostname")
@@ -100,7 +100,7 @@ class TestMySQLBase(unittest.TestCase):
 
         # Test default hostname
         user_existence_command = (
-            f"select if((select count(*) from mysql.user where user = 'test_username' and host = '%'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+            "select if((select count(*) from mysql.user where user = 'test_username' and host = '%'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
         )
 
         self.mysql.does_mysql_user_exist("test_username")
@@ -120,19 +120,17 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.return_value = b""
 
         _expected_create_mysqlrouter_user_commands = "; ".join(
-            (
-                f"CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",
-            )
+            ("CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",)
         )
 
         _expected_mysqlrouter_user_grant_commands = "; ".join(
             (
-                f"GRANT CREATE USER ON *.* TO 'test_username'@'%' WITH GRANT OPTION",
-                f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'%'",
-                f"GRANT SELECT ON mysql.user TO 'test_username'@'%'",
-                f"GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'%'",
-                f"GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'%'",
-                f"GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'%'",
+                "GRANT CREATE USER ON *.* TO 'test_username'@'%' WITH GRANT OPTION",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'%'",
+                "GRANT SELECT ON mysql.user TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'%'",
             )
         )
 
@@ -164,20 +162,20 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.return_value = b""
 
         _expected_create_database_commands = "; ".join(
-            (
-                "CREATE DATABASE IF NOT EXISTS test_database CHARACTER SET UTF8",
-            )
+            ("CREATE DATABASE IF NOT EXISTS test_database CHARACTER SET UTF8",)
         )
 
         _expected_create_scoped_user_commands = "; ".join(
             (
-                f"CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",
-                f"GRANT USAGE ON *.* TO 'test_username'@`%`",
-                f"GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`%`",
+                "CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",
+                "GRANT USAGE ON *.* TO 'test_username'@`%`",
+                "GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`%`",
             )
         )
 
-        self.mysql.create_application_database_and_scoped_user("test_database", "test_username", "test_password")
+        self.mysql.create_application_database_and_scoped_user(
+            "test_database", "test_username", "test_password"
+        )
 
         self.assertEqual(_run_mysqlcli_script.call_count, 2)
 
@@ -197,7 +195,9 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateApplicationDatabaseAndScopedUserError):
-            self.mysql.create_application_database_and_scoped_user("test_database", "test_username", "test_password")
+            self.mysql.create_application_database_and_scoped_user(
+                "test_database", "test_username", "test_password"
+            )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
