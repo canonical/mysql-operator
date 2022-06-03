@@ -109,43 +109,29 @@ class Error(Exception):
 class MySQLConfigureMySQLUsersError(Error):
     """Exception raised when creating a user fails."""
 
-    pass
-
 
 class MySQLCheckUserExistenceError(Error):
     """Exception raised when checking for the existence of a MySQL user."""
-
-    pass
 
 
 class MySQLConfigureRouterUserError(Error):
     """Exception raised when configuring the MySQLRouter user."""
 
-    pass
-
 
 class MySQLCreateApplicationDatabaseAndScopedUserError(Error):
     """Exception raised when creating application database and scoped user."""
-
-    pass
 
 
 class MySQLConfigureInstanceError(Error):
     """Exception raised when there is an issue configuring a MySQL instance."""
 
-    pass
-
 
 class MySQLCreateClusterError(Error):
     """Exception raised when there is an issue creating an InnoDB cluster."""
 
-    pass
-
 
 class MySQLAddInstanceToClusterError(Error):
     """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
-
-    pass
 
 
 class MySQLRemoveInstanceRetryError(Error):
@@ -153,8 +139,6 @@ class MySQLRemoveInstanceRetryError(Error):
 
     Utilized by tenacity to retry the method.
     """
-
-    pass
 
 
 class MySQLRemoveInstanceError(Error):
@@ -167,16 +151,12 @@ class MySQLRemoveInstanceError(Error):
 class MySQLInitializeJujuOperationsTableError(Error):
     """Exception raised when there is an issue initializing the juju units operations table."""
 
-    pass
-
 
 class MySQLClientError(Error):
     """Exception raised when there is an issue using the mysql cli or mysqlsh.
 
     Abstract platform specific exceptions for external commands execution Errors.
     """
-
-    pass
 
 
 class MySQLBase(ABC):
@@ -271,15 +251,19 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureMySQLUsersError(e.message)
 
-    def does_mysql_user_exist(self, username, hostname="%"):
+    def does_mysql_user_exist(self, username: str, hostname: str = "%") -> bool:
         """Checks if a mysqlrouter user already exists.
 
         Args:
             username: The username for the mysql user
             hostname (optional): The hostname for the mysql user (defaults to %)
-        """
-        pass
 
+        Returns:
+            A boolean indicating whether the provided mysql user exists
+
+        Raises MySQLCheckUserExistenceError
+            if there is an issue confirming that the mysql user exists
+        """
         user_existence_commands = (
             f"select if((select count(*) from mysql.user where user = '{username}' and host = '{hostname}'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
         )
@@ -294,12 +278,15 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
-    def configure_mysqlrouter_user(self, username, password):
+    def configure_mysqlrouter_user(self, username: str, password: str) -> None:
         """Configure a mysqlrouter user and grant the appropriate permissions to the user.
 
         Args:
             username: The username for the mysqlrouter user
             password: The password for the mysqlrouter user
+
+        Raises MySQLConfigureRouterUserError
+            if there is an issue creating and configuring the mysqlrouter user
         """
         create_mysqlrouter_user_commands = (
             f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
@@ -325,17 +312,20 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureRouterUserError(e.message)
 
-    def create_application_database_and_scoped_user(self, database_name, username, password):
+    def create_application_database_and_scoped_user(
+        self, database_name: str, username: str, password: str
+    ) -> None:
         """Create an application database and a user scoped to the created database.
 
         Args:
             database_name: The name of the database to create
             username: The username of the scoped user
             password: The password of the scoped user
+
+        Raises MySQLCreateApplicationDatabaseAndScopedUserError
+            if there is an issue creating the application database or a user scoped to the database
         """
-        create_database_commands = (
-            f"CREATE DATABASE IF NOT EXISTS {database_name} CHARACTER SET UTF8",
-        )
+        create_database_commands = (f"CREATE DATABASE IF NOT EXISTS {database_name}",)
         create_scoped_user_commands = (
             f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
             f"GRANT USAGE ON *.* TO '{username}'@`%`",

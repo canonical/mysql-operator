@@ -162,7 +162,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.return_value = b""
 
         _expected_create_database_commands = "; ".join(
-            ("CREATE DATABASE IF NOT EXISTS test_database CHARACTER SET UTF8",)
+            ("CREATE DATABASE IF NOT EXISTS test_database",)
         )
 
         _expected_create_scoped_user_commands = "; ".join(
