@@ -22,6 +22,8 @@ peers:
 provides:
   db-router:
     interface: mysql-router
+  shared-db:
+    interface: mysql-shared
 storage:
   database:
     type: filesystem
