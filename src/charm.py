@@ -334,9 +334,11 @@ class MySQLOperatorCharm(CharmBase):
             )
 
             # set the relation data for consumption
-            provides_relation_databag["db_host"] = self._mysql._get_cluster_primary_address()
-            provides_relation_databag["db_port"] = 3306
-            provides_relation_databag["wait_timeout"] = 3600
+            cluster_primary = self._mysql._get_cluster_primary_address().split(":")[0]
+
+            provides_relation_databag["db_host"] = cluster_primary
+            provides_relation_databag["db_port"] = "3306"
+            provides_relation_databag["wait_timeout"] = "3600"
             provides_relation_databag["password"] = password
 
             unit_names = " ".join([unit.name for unit in event.relation.units])
