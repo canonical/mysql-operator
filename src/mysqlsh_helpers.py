@@ -174,7 +174,7 @@ class MySQL(MySQLBase):
             except subprocess.CalledProcessError as e:
                 raise MySQLClientError(e.stderr)
 
-    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> None:
+    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.

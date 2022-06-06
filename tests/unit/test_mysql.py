@@ -10,9 +10,12 @@ import tenacity
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLBase,
+    MySQLCheckUserExistenceError,
     MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
+    MySQLConfigureRouterUserError,
+    MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
@@ -36,35 +39,35 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_users(self, mock_run_mysqlcli_script):
-        """Test failed to configuring the MySQL users."""
-        mock_run_mysqlcli_script.return_value = b""
+    def test_configure_mysql_users(self, _run_mysqlcli_script):
+        """Test successful configuration of MySQL users."""
+        _run_mysqlcli_script.return_value = b""
 
-        _expected_create_root_user_commands = " ".join(
+        _expected_create_root_user_commands = "; ".join(
             (
-                "CREATE USER 'root'@'%' IDENTIFIED BY 'password';",
-                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+                "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
+                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
             )
         )
 
-        _expected_configure_user_commands = " ".join(
+        _expected_configure_user_commands = "; ".join(
             (
-                "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword';",
-                "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION;",
-                "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost';",
-                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%';",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost;",
-                "FLUSH PRIVILEGES;",
+                "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
+                "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
+                "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
+                "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost",
+                "FLUSH PRIVILEGES",
             )
         )
 
         self.mysql.configure_mysql_users()
 
-        self.assertEqual(mock_run_mysqlcli_script.call_count, 2)
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
 
         self.assertEqual(
-            sorted(mock_run_mysqlcli_script.mock_calls),
+            sorted(_run_mysqlcli_script.mock_calls),
             sorted(
                 [
                     call(_expected_create_root_user_commands),
@@ -75,11 +78,126 @@ class TestMySQLBase(unittest.TestCase):
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
-        """Test failed to configuring the MySQL users."""
+        """Test failure to configure the MySQL users."""
         _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureMySQLUsersError):
             self.mysql.configure_mysql_users()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_does_mysql_user_exist(self, _run_mysqlcli_script):
+        """Test successful execution of does_mysql_user_exist."""
+        # Test passing in a custom hostname
+        user_existence_command = (
+            "select if((select count(*) from mysql.user where user = 'test_username' and host = 'test_hostname'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+        )
+
+        self.mysql.does_mysql_user_exist("test_username", hostname="test_hostname")
+        _run_mysqlcli_script.assert_called_once_with("\n".join(user_existence_command))
+
+        # Reset the mock
+        _run_mysqlcli_script.reset_mock()
+
+        # Test default hostname
+        user_existence_command = (
+            "select if((select count(*) from mysql.user where user = 'test_username' and host = '%'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+        )
+
+        self.mysql.does_mysql_user_exist("test_username")
+        _run_mysqlcli_script.assert_called_once_with("\n".join(user_existence_command))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_does_mysql_user_exist_failure(self, _run_mysqlcli_script):
+        """Test failure in execution of does_mysql_user_exist."""
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLCheckUserExistenceError):
+            self.mysql.does_mysql_user_exist("test_username")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysqlrouter_user(self, _run_mysqlcli_script):
+        """Test the successful execution of configure_mysqlrouter_user."""
+        _run_mysqlcli_script.return_value = b""
+
+        _expected_create_mysqlrouter_user_commands = "; ".join(
+            ("CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",)
+        )
+
+        _expected_mysqlrouter_user_grant_commands = "; ".join(
+            (
+                "GRANT CREATE USER ON *.* TO 'test_username'@'%' WITH GRANT OPTION",
+                "GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'%'",
+                "GRANT SELECT ON mysql.user TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'%'",
+                "GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'%'",
+            )
+        )
+
+        self.mysql.configure_mysqlrouter_user("test_username", "test_password")
+
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+
+        self.assertEqual(
+            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(
+                [
+                    call(_expected_create_mysqlrouter_user_commands),
+                    call(_expected_mysqlrouter_user_grant_commands),
+                ]
+            ),
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysqlrouter_user_failure(self, _run_mysqlcli_script):
+        """Test failure to configure the MySQLRouter user."""
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLConfigureRouterUserError):
+            self.mysql.configure_mysqlrouter_user("test_username", "test_password")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_create_application_database_and_scoped_user(self, _run_mysqlcli_script):
+        """Test the successful execution of create_application_database_and_scoped_user."""
+        _run_mysqlcli_script.return_value = b""
+
+        _expected_create_database_commands = "; ".join(
+            ("CREATE DATABASE IF NOT EXISTS test_database",)
+        )
+
+        _expected_create_scoped_user_commands = "; ".join(
+            (
+                "CREATE USER 'test_username'@'%' IDENTIFIED BY 'test_password'",
+                "GRANT USAGE ON *.* TO 'test_username'@`%`",
+                "GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`%`",
+            )
+        )
+
+        self.mysql.create_application_database_and_scoped_user(
+            "test_database", "test_username", "test_password"
+        )
+
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+
+        self.assertEqual(
+            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(
+                [
+                    call(_expected_create_database_commands),
+                    call(_expected_create_scoped_user_commands),
+                ]
+            ),
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_create_application_database_and_scoped_user_failure(self, _run_mysqlcli_script):
+        """Test failure to create application database and scoped user."""
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLCreateApplicationDatabaseAndScopedUserError):
+            self.mysql.create_application_database_and_scoped_user(
+                "test_database", "test_username", "test_password"
+            )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
@@ -123,14 +241,14 @@ class TestMySQLBase(unittest.TestCase):
     def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
         """Test a successful initialization of the mysql.juju_units_operations table."""
         expected_initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task));",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started');",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started')",
         )
 
         self.mysql.initialize_juju_units_operations_table()
 
         _run_mysqlcli_script.assert_called_once_with(
-            " ".join(expected_initialize_table_commands),
+            "; ".join(expected_initialize_table_commands),
             user="serverconfig",
             password="serverconfigpassword",
         )
