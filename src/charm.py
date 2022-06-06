@@ -12,6 +12,7 @@ import string
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
+    MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
@@ -38,6 +39,7 @@ SERVER_CONFIG_USERNAME = "serverconfig"
 PASSWORD_LENGTH = 24
 PEER = "database-peers"
 LEGACY_DB_ROUTER = "db-router"
+LEGACY_DB_SHARED = "shared-db"
 
 
 def generate_random_password(length: int) -> str:
@@ -82,6 +84,10 @@ class MySQLOperatorCharm(CharmBase):
 
         self.framework.observe(
             self.on[LEGACY_DB_ROUTER].relation_changed, self._on_db_router_relation_changed
+        )
+
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
         )
 
         self.framework.observe(
@@ -288,6 +294,61 @@ class MySQLOperatorCharm(CharmBase):
             ):
                 self.unit.status = BlockedStatus("Failed to initialize db-router relation")
                 return
+
+        self.unit.status = ActiveStatus()
+
+    def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
+        "Handle the legacy shared_db relation changed event."
+        if not self.unit.is_leader():
+            return
+
+        self.unit.status = MaintenanceStatus("Setting up shared-db relation")
+
+        provides_relation_databag = event.relation.data[self.unit]
+
+        if provides_relation_databag.get("password"):
+            # Test if relation data is already set
+            # and avoid overwriting it
+            logger.warning("Data for shared-db already set.")
+            self.unit.status = ActiveStatus()
+            return
+
+        # retrieve data from the relation databag
+        requires_relation_databag = event.relation.data[event.unit]
+        database_name = requires_relation_databag.get("database")
+        database_user = requires_relation_databag.get("username")
+
+        if not database_name or not database_user:
+            # Cannot create scoped database without credentials
+            logger.warning(
+                "Missing information for shared-db relation to create a database and scoped user"
+            )
+            self.unit.status = ActiveStatus()
+            return
+
+        password = generate_random_password(PASSWORD_LENGTH)
+
+        try:
+            self._mysql.create_application_database_and_scoped_user(
+                database_name, database_user, password
+            )
+
+            # set the relation data for consumption
+            provides_relation_databag["db_host"] = self._mysql._get_cluster_primary_address()
+            provides_relation_databag["db_port"] = 3306
+            provides_relation_databag["wait_timeout"] = 3600
+            provides_relation_databag["password"] = password
+
+            unit_names = " ".join([unit.name for unit in event.relation.units])
+            provides_relation_databag["allowed_units"] = json.dumps(unit_names)
+
+        except (
+            MySQLCheckUserExistenceError,
+            MySQLClientError,
+            MySQLCreateApplicationDatabaseAndScopedUserError,
+        ):
+            self.unit.status = BlockedStatus("Failed to initialize shared_db relation")
+            return
 
         self.unit.status = ActiveStatus()
 
