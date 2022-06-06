@@ -334,7 +334,7 @@ class MySQLOperatorCharm(CharmBase):
             )
 
             # set the relation data for consumption
-            cluster_primary = self._mysql._get_cluster_primary_address().split(":")[0]
+            cluster_primary = str(self.model.get_binding(PEER).network.bind_address)
 
             provides_relation_databag["db_host"] = cluster_primary
             provides_relation_databag["db_port"] = "3306"
