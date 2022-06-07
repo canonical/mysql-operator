@@ -159,6 +159,10 @@ class MySQLClientError(Error):
     """
 
 
+class MySQLRemoveUserError(Error):
+    """Exception raised when there is an issue removing a user."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -340,6 +344,24 @@ class MySQLBase(ABC):
                 f"Failed to create application database {database_name} and scoped user {username}@%"
             )
             raise MySQLCreateApplicationDatabaseAndScopedUserError(e.message)
+
+    def remove_user(self, username: str, hostname: str = "%") -> None:
+        """Remove a mysql user.
+
+        Args:
+            username: The username for the mysql user
+            hostname (optional): The hostname for the mysql user (defaults to %)
+
+        Raises MySQLRemoveUserError
+            if there is an issue removing the mysql user
+        """
+        remove_user_commands = (f"DROP USER '{username}'@'{hostname}'",)
+
+        try:
+            self._run_mysqlcli_script("; ".join(remove_user_commands))
+        except MySQLClientError as e:
+            logger.exception(f"Failed to remove mysql user {username}@{hostname}", exc_info=e)
+            raise MySQLRemoveUserError(e.message)
 
     def configure_instance(self, restart: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster.

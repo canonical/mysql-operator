@@ -19,10 +19,12 @@ from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLRemoveUserError,
 )
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    RelationBrokenEvent,
     RelationChangedEvent,
     RelationJoinedEvent,
     StartEvent,
@@ -88,6 +90,10 @@ class MySQLOperatorCharm(CharmBase):
 
         self.framework.observe(
             self.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
+        )
+
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
         )
 
         self.framework.observe(
@@ -353,6 +359,23 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = ActiveStatus()
+
+    def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
+        """Handle the complete removal of shared_db relation by removing related user."""
+        if not self.unit.is_leader():
+            return
+
+        relation_data = event.relation.data[event.unit]
+        username = relation_data.get("username")
+
+        if not username:
+            return
+
+        try:
+            self._mysql.remove_user(username)
+            logger.info(f"Removed user {username} from database.")
+        except MySQLRemoveUserError:
+            logger.warning(f"Failed to remove user {username} from database.")
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
