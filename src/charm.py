@@ -310,9 +310,10 @@ class MySQLOperatorCharm(CharmBase):
 
         self.unit.status = MaintenanceStatus("Setting up shared-db relation")
 
-        provides_relation_databag = event.relation.data[self.unit]
+        unit_relation_databag = event.relation.data[self.unit]
+        app_relation_databag = event.relation.data[self.app]
 
-        if provides_relation_databag.get("password"):
+        if unit_relation_databag.get("password"):
             # Test if relation data is already set
             # and avoid overwriting it
             logger.warning("Data for shared-db already set.")
@@ -320,6 +321,7 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # retrieve data from the relation databag
+        # Abstracted is the fact that it is received from the leader unit of the related app
         requires_relation_databag = event.relation.data[event.unit]
         database_name = requires_relation_databag.get("database")
         database_user = requires_relation_databag.get("username")
@@ -342,13 +344,17 @@ class MySQLOperatorCharm(CharmBase):
             # set the relation data for consumption
             cluster_primary = str(self.model.get_binding(PEER).network.bind_address)
 
-            provides_relation_databag["db_host"] = cluster_primary
-            provides_relation_databag["db_port"] = "3306"
-            provides_relation_databag["wait_timeout"] = "3600"
-            provides_relation_databag["password"] = password
+            unit_relation_databag["db_host"] = cluster_primary
+            unit_relation_databag["db_port"] = "3306"
+            unit_relation_databag["wait_timeout"] = "3600"
+            unit_relation_databag["password"] = password
 
             unit_names = " ".join([unit.name for unit in event.relation.units])
-            provides_relation_databag["allowed_units"] = json.dumps(unit_names)
+            unit_relation_databag["allowed_units"] = json.dumps(unit_names)
+
+            # store username for relation in app databag
+            # this is used to remove the user when the relation is broken
+            app_relation_databag[f"relation_id_{event.relation.id}_db_user"] = database_user
 
         except (
             MySQLCheckUserExistenceError,
@@ -365,8 +371,8 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        relation_data = event.relation.data[event.unit]
-        username = relation_data.get("username")
+        app_relation_databag = event.relation.data[self.app]
+        username = app_relation_databag.get(f"relation_id_{event.relation.id}_db_user")
 
         if not username:
             return
