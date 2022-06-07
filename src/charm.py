@@ -378,7 +378,9 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         try:
+            # remove user and pop relation data from app databag
             self._mysql.remove_user(username)
+            app_relation_databag.pop(f"relation_id_{event.relation.id}_db_user")
             logger.info(f"Removed user {username} from database.")
         except MySQLRemoveUserError:
             logger.warning(f"Failed to remove user {username} from database.")
