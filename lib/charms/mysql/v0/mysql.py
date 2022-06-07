@@ -355,7 +355,7 @@ class MySQLBase(ABC):
         Raises MySQLRemoveUserError
             if there is an issue removing the mysql user
         """
-        remove_user_commands = (f"DROP USER '{username}'@'{hostname}'",)
+        remove_user_commands = (f"DROP USER IF EXISTS '{username}'@'{hostname}'",)
 
         try:
             self._run_mysqlcli_script("; ".join(remove_user_commands))
