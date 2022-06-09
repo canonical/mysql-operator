@@ -627,3 +627,12 @@ class TestMySQLBase(unittest.TestCase):
 
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertFalse(result)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_remove_user(self, _run_mysqlcli_script):
+        """Test a successful execution of remove_user() method."""
+
+        self.mysql.remove_user("test_user", "test_host")
+
+        expected_commands = "DROP USER IF EXISTS 'test_user'@'test_host'"
+        _run_mysqlcli_script.assert_called_once_with(expected_commands)
