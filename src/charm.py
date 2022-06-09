@@ -304,7 +304,10 @@ class MySQLOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
-        "Handle the legacy shared_db relation changed event."
+        """Handle the legacy shared_db relation changed event.
+
+        Generate password and handle user and database creation for the related application.
+        """
         if not self.unit.is_leader():
             return
 
@@ -345,19 +348,21 @@ class MySQLOperatorCharm(CharmBase):
             cluster_primary = str(self.model.get_binding(PEER).network.bind_address)
 
             unit_relation_databag["db_host"] = cluster_primary
+            # Database port is static in legacy charm
             unit_relation_databag["db_port"] = "3306"
+            # Wait timeout is a config option in legacy charm
+            # defaulted to 3600 seconds
             unit_relation_databag["wait_timeout"] = "3600"
             unit_relation_databag["password"] = password
 
             unit_names = " ".join([unit.name for unit in event.relation.units])
-            unit_relation_databag["allowed_units"] = json.dumps(unit_names)
+            unit_relation_databag["allowed_units"] = unit_names
 
             # store username for relation in app databag
             # this is used to remove the user when the relation is broken
             app_relation_databag[f"relation_id_{event.relation.id}_db_user"] = database_user
 
         except (
-            MySQLCheckUserExistenceError,
             MySQLClientError,
             MySQLCreateApplicationDatabaseAndScopedUserError,
         ):
@@ -367,7 +372,10 @@ class MySQLOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle the complete removal of shared_db relation by removing related user."""
+        """Handle the departure of legacy shared_db relation.
+
+        Remove user created for the relation but keep the database.
+        """
         if not self.unit.is_leader():
             return
 
@@ -375,6 +383,7 @@ class MySQLOperatorCharm(CharmBase):
         username = app_relation_databag.get(f"relation_id_{event.relation.id}_db_user")
 
         if not username:
+            # Cant do much if we don't have the username
             return
 
         try:
