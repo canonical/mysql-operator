@@ -383,7 +383,7 @@ class MySQLOperatorCharm(CharmBase):
         username = app_relation_databag.get(f"relation_id_{event.relation.id}_db_user")
 
         if not username:
-            # Cant do much if we don't have the username
+            # Can't do much if we don't have the username
             return
 
         try:

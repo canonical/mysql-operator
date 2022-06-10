@@ -412,7 +412,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.config_changed.emit()
 
         _create_application_database_and_scoped_user.side_effect = (
-            MySQLCreateApplicationDatabaseAndScopedUserError("Cant create user")
+            MySQLCreateApplicationDatabaseAndScopedUserError("Can't create user")
         )
         # update the app leader unit data to trigger shared_db_relation_changed event
         self.harness.update_relation_data(

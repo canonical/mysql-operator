@@ -631,7 +631,6 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_remove_user(self, _run_mysqlcli_script):
         """Test a successful execution of remove_user() method."""
-
         self.mysql.remove_user("test_user", "test_host")
 
         expected_commands = "DROP USER IF EXISTS 'test_user'@'test_host'"
