@@ -312,6 +312,7 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = MaintenanceStatus("Setting up shared-db relation")
+        logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.unit]
         app_relation_databag = event.relation.data[self.app]
