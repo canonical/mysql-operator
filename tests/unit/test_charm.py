@@ -344,10 +344,14 @@ class TestCharm(unittest.TestCase):
         _create_application_database_and_scoped_user.reset_mock()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1")
     @patch("charm.generate_random_password", return_value="super_secure_password")
     @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_changed(
-        self, _create_application_database_and_scoped_user, _generate_random_password
+        self,
+        _create_application_database_and_scoped_user,
+        _generate_random_password,
+        _get_cluster_primary_address,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -398,6 +402,7 @@ class TestCharm(unittest.TestCase):
             shared_db_relation.data.get(self.charm.app),
             {
                 f"relation_id_{self.shared_db_relation_id}_db_user": "shared_user",
+                f"relation_id_{self.shared_db_relation_id}_db_name": "shared_database",
             },
         )
 
@@ -430,11 +435,18 @@ class TestCharm(unittest.TestCase):
         _create_application_database_and_scoped_user.reset_mock()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_shared_db_departed")
+    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1")
     @patch("mysqlsh_helpers.MySQL.remove_user")
     @patch("charm.generate_random_password", return_value="super_secure_password")
     @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_broken(
-        self, _create_application_database_and_scoped_user, _generate_random_password, _remove_user
+        self,
+        _create_application_database_and_scoped_user,
+        _generate_random_password,
+        _remove_user,
+        _get_cluster_primary_address,
+        _on_shared_db_departed,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
