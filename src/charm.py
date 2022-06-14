@@ -12,7 +12,6 @@ import string
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
-    MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
@@ -335,7 +334,7 @@ class MySQLOperatorCharm(CharmBase):
             logger.warning(
                 "Missing information for shared-db relation to create a database and scoped user"
             )
-            self.unit.status = ActiveStatus()
+            self.unit.status = WaitingStatus("Missing information for shared-db relation")
             return
 
         password = generate_random_password(PASSWORD_LENGTH)
@@ -363,10 +362,7 @@ class MySQLOperatorCharm(CharmBase):
             # this is used to remove the user when the relation is broken
             app_relation_databag[f"relation_id_{event.relation.id}_db_user"] = database_user
 
-        except (
-            MySQLClientError,
-            MySQLCreateApplicationDatabaseAndScopedUserError,
-        ):
+        except MySQLCreateApplicationDatabaseAndScopedUserError:
             self.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 
@@ -385,6 +381,7 @@ class MySQLOperatorCharm(CharmBase):
 
         if not username:
             # Can't do much if we don't have the username
+            logger.warning(f"Missing username for shared-db relation id {event.relation.id}.")
             return
 
         try:
