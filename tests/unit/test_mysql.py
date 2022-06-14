@@ -561,7 +561,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of _get_cluster_primary_address()."""
         _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>1.1.1.1</PRIMARY_ADDRESS>"
 
-        primary_address = self.mysql._get_cluster_primary_address()
+        primary_address = self.mysql.get_cluster_primary_address()
 
         self.assertEqual(primary_address, "1.1.1.1")
 
@@ -582,7 +582,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test an issue executing _get_cluster_primary_address()."""
         _run_mysqlsh_script.return_value = ""
 
-        primary_address = self.mysql._get_cluster_primary_address(
+        primary_address = self.mysql.get_cluster_primary_address(
             connect_instance_address="127.0.0.2"
         )
 
