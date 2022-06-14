@@ -353,7 +353,7 @@ class MySQLOperatorCharm(CharmBase):
             # set the relation data for consumption
             cluster_primary = self._mysql.get_cluster_primary_address()
 
-            unit_relation_databag["db_host"] = cluster_primary
+            unit_relation_databag["db_host"] = cluster_primary.split(":")[0]
             # Database port is static in legacy charm
             unit_relation_databag["db_port"] = "3306"
             # Wait timeout is a config option in legacy charm
