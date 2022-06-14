@@ -395,6 +395,23 @@ class MySQLOperatorCharm(CharmBase):
         except MySQLRemoveUserError:
             logger.warning(f"Failed to remove user {username} from database.")
 
+    def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
+        """Handle the departure of legacy shared_db relation.
+
+        Remove unit name from allowed_units key.
+        """
+        if not self.unit.is_leader():
+            return
+
+        departing_unit = event.departing_unit.name
+        unit_relation_databag = event.relation.data[self.unit]
+
+        current_allowed_units = unit_relation_databag.get("allowed_units", "")
+
+        unit_relation_databag["allowed_units"] = " ".join(
+            [unit for unit in current_allowed_units.split() if unit != departing_unit]
+        )
+
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # The following operation uses locks to ensure that only one instance is removed
