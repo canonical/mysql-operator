@@ -199,6 +199,6 @@ class MySQL(MySQLBase):
             command.append(f"--password={password}")
 
         try:
-            subprocess.check_output(command, stderr=subprocess.PIPE)
+            return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
         except subprocess.CalledProcessError as e:
             raise MySQLClientError(e.stderr)

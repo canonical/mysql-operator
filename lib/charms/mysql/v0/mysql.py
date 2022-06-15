@@ -801,7 +801,7 @@ class MySQLBase(ABC):
         pass
 
     @abstractmethod
-    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> None:
+    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance with given user.

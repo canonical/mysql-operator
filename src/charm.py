@@ -26,6 +26,7 @@ from ops.charm import (
     CharmBase,
     RelationBrokenEvent,
     RelationChangedEvent,
+    RelationDepartedEvent,
     RelationJoinedEvent,
     StartEvent,
 )
@@ -85,7 +86,13 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         self.framework.observe(
+            self.on[LEGACY_DB_ROUTER].relation_joined, self._on_db_router_relation_joined
+        )
+        self.framework.observe(
             self.on[LEGACY_DB_ROUTER].relation_changed, self._on_db_router_relation_changed
+        )
+        self.framework.observe(
+            self.on[LEGACY_DB_ROUTER].relation_departed, self._on_db_router_relation_departed
         )
 
         self.framework.observe(
@@ -231,10 +238,33 @@ class MySQLOperatorCharm(CharmBase):
         ):
             self.unit.status = ActiveStatus()
 
+    def _on_db_router_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Handle the legacy db_router relation joined event.
+
+        Ensure that the <app_user>_allowed_units relation data is correctly reflected.
+        """
+        if not self.unit.is_leader():
+            return
+
+        logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
+
+        # Add the joining unit's name for any key in the databag of the form "_allowed_units"
+        joining_unit_name = event.unit.name
+        leader_db_router_databag = event.relation.data[self.unit]
+
+        for key in leader_db_router_databag:
+            if "_allowed_units" in key:
+                allowed_units = set(json.loads(leader_db_router_databag[key]).split())
+                allowed_units.add(joining_unit_name)
+
+                leader_db_router_databag[key] = json.dumps(" ".join(allowed_units))
+
     def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the db_router relation changed event."""
         if not self.unit.is_leader():
             return
+
+        logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
 
         self.unit.status = MaintenanceStatus("Setting up db-router relation")
 
@@ -250,8 +280,13 @@ class MySQLOperatorCharm(CharmBase):
         application_data = event.relation.data[application_unit]
 
         # Retrieve application names in the relation databag (which correspond to usernames)
+        # Keys that include an _ are generally the ones set by the mysqlrouter legacy charm
         application_names = set(
-            [key.split("_")[0] for key in application_data if "username" == key.split("_")[1]]
+            [
+                key.split("_")[0]
+                for key in application_data
+                if "_" in key and "username" == key.split("_")[1]
+            ]
         )
 
         for application_name in application_names:
@@ -302,6 +337,27 @@ class MySQLOperatorCharm(CharmBase):
                 return
 
         self.unit.status = ActiveStatus()
+
+    def _on_db_router_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """Handle the legacy db_router relation departed event.
+
+        Ensure that the <app_user>_allowed_units relation data is correctly reflected.
+        """
+        if not self.unit.is_leader():
+            return
+
+        logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
+
+        # Remove departing unit's name from any key in the databag of the form "_allowed_units"
+        departing_unit_name = event.departing_unit.name
+        leader_db_router_databag = event.relation.data[self.unit]
+
+        for key in leader_db_router_databag:
+            if "_allowed_units" in key:
+                allowed_units = json.loads(leader_db_router_databag[key]).split()
+                allowed_units.remove(departing_unit_name)
+
+                leader_db_router_databag[key] = json.dumps(" ".join(allowed_units))
 
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
