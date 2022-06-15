@@ -359,7 +359,7 @@ class TestMySQLBase(unittest.TestCase):
         )
         self.assertFalse(is_instance_configured)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
@@ -394,7 +394,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_remove_instance_commands)
         _release_lock.assert_called_once_with("2.2.2.2", "mysql-0", "unit-teardown")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
@@ -423,7 +423,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_not_called()
         _release_lock.assert_not_called()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
@@ -561,7 +561,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of _get_cluster_primary_address()."""
         _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>1.1.1.1</PRIMARY_ADDRESS>"
 
-        primary_address = self.mysql._get_cluster_primary_address()
+        primary_address = self.mysql.get_cluster_primary_address()
 
         self.assertEqual(primary_address, "1.1.1.1")
 
@@ -582,7 +582,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test an issue executing _get_cluster_primary_address()."""
         _run_mysqlsh_script.return_value = ""
 
-        primary_address = self.mysql._get_cluster_primary_address(
+        primary_address = self.mysql.get_cluster_primary_address(
             connect_instance_address="127.0.0.2"
         )
 
@@ -627,3 +627,11 @@ class TestMySQLBase(unittest.TestCase):
 
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertFalse(result)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_remove_user(self, _run_mysqlcli_script):
+        """Test a successful execution of remove_user() method."""
+        self.mysql.remove_user("test_user", "test_host")
+
+        expected_commands = "DROP USER IF EXISTS 'test_user'@'test_host'"
+        _run_mysqlcli_script.assert_called_once_with(expected_commands)
