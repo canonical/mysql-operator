@@ -163,6 +163,10 @@ class MySQLRemoveUserError(Error):
     """Exception raised when there is an issue removing a user."""
 
 
+class MySQLRemoveDatabaseError(Error):
+    """Exception raised when there is an issue removing a database."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -362,6 +366,23 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.exception(f"Failed to remove mysql user {username}@{hostname}", exc_info=e)
             raise MySQLRemoveUserError(e.message)
+
+    def remove_database(self, database_name: str) -> None:
+        """Remove a mysql database.
+
+        Args:
+            database_name: The name of the database to remove
+
+        Raises MySQLRemoveDatabaseError
+            if there is an issue removing the database
+        """
+        remove_database_commands = (f"DROP DATABASE IF EXISTS {database_name}",)
+
+        try:
+            self._run_mysqlcli_script("; ".join(remove_database_commands))
+        except MySQLClientError as e:
+            logger.exception(f"Failed to remove database {database_name}", exc_info=e)
+            raise MySQLRemoveDatabaseError(e.message)
 
     def configure_instance(self, restart: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster.
@@ -596,7 +617,7 @@ class MySQLBase(ABC):
         """
         try:
             # Get the cluster primary's address to direct lock acquisition request to.
-            primary_address = self._get_cluster_primary_address()
+            primary_address = self.get_cluster_primary_address()
             if not primary_address:
                 raise MySQLRemoveInstanceRetryError(
                     "Unable to retrieve the cluster primary's address"
@@ -649,7 +670,7 @@ class MySQLBase(ABC):
         try:
             # Retrieve the cluster primary's address again (in case the old primary is scaled down)
             # Release the lock by making a request to this primary member's address
-            primary_address = self._get_cluster_primary_address(
+            primary_address = self.get_cluster_primary_address(
                 connect_instance_address=remaining_cluster_member_addresses[0]
             )
             if not primary_address:
@@ -748,7 +769,7 @@ class MySQLBase(ABC):
 
         return (member_addresses, "<MEMBER_ADDRESSES>" in output)
 
-    def _get_cluster_primary_address(self, connect_instance_address: str = None) -> str:
+    def get_cluster_primary_address(self, connect_instance_address: str = None) -> str:
         """Get the cluster primary's address.
 
         Keyword args:

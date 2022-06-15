@@ -12,13 +12,13 @@ import string
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
-    MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLRemoveDatabaseError,
     MySQLRemoveUserError,
 )
 from ops.charm import (
@@ -101,6 +101,10 @@ class MySQLOperatorCharm(CharmBase):
 
         self.framework.observe(
             self.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
+        )
+
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
         )
 
         self.framework.observe(
@@ -391,7 +395,7 @@ class MySQLOperatorCharm(CharmBase):
             logger.warning(
                 "Missing information for shared-db relation to create a database and scoped user"
             )
-            self.unit.status = ActiveStatus()
+            self.unit.status = WaitingStatus("Missing information for shared-db relation")
             return
 
         password = generate_random_password(PASSWORD_LENGTH)
@@ -402,9 +406,9 @@ class MySQLOperatorCharm(CharmBase):
             )
 
             # set the relation data for consumption
-            cluster_primary = str(self.model.get_binding(PEER).network.bind_address)
+            cluster_primary = self._mysql.get_cluster_primary_address()
 
-            unit_relation_databag["db_host"] = cluster_primary
+            unit_relation_databag["db_host"] = cluster_primary.split(":")[0]
             # Database port is static in legacy charm
             unit_relation_databag["db_port"] = "3306"
             # Wait timeout is a config option in legacy charm
@@ -415,14 +419,12 @@ class MySQLOperatorCharm(CharmBase):
             unit_names = " ".join([unit.name for unit in event.relation.units])
             unit_relation_databag["allowed_units"] = unit_names
 
-            # store username for relation in app databag
-            # this is used to remove the user when the relation is broken
+            # store username and database for relation in app databag
+            # this is used to remove the user and database when the relation is broken
             app_relation_databag[f"relation_id_{event.relation.id}_db_user"] = database_user
+            app_relation_databag[f"relation_id_{event.relation.id}_db_name"] = database_name
 
-        except (
-            MySQLClientError,
-            MySQLCreateApplicationDatabaseAndScopedUserError,
-        ):
+        except MySQLCreateApplicationDatabaseAndScopedUserError:
             self.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 
@@ -431,7 +433,8 @@ class MySQLOperatorCharm(CharmBase):
     def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the departure of legacy shared_db relation.
 
-        Remove user created for the relation but keep the database.
+        Remove user created for the relation.
+        Remove database created for the relation if `auto-delete` is set.
         """
         if not self.unit.is_leader():
             return
@@ -441,6 +444,7 @@ class MySQLOperatorCharm(CharmBase):
 
         if not username:
             # Can't do much if we don't have the username
+            logger.warning(f"Missing username for shared-db relation id {event.relation.id}.")
             return
 
         try:
@@ -450,6 +454,39 @@ class MySQLOperatorCharm(CharmBase):
             logger.info(f"Removed user {username} from database.")
         except MySQLRemoveUserError:
             logger.warning(f"Failed to remove user {username} from database.")
+
+        if self.config.get("auto-delete", False):
+            # remove database and pop relation data from app databag
+            database_name = app_relation_databag.get(f"relation_id_{event.relation.id}_db_name")
+            if not database_name:
+                logger.warning(
+                    f"Missing database name for shared-db relation id {event.relation.id}."
+                )
+                return
+
+            try:
+                self._mysql.remove_database(database_name)
+                app_relation_databag.pop(f"relation_id_{event.relation.id}_db_name")
+                logger.info(f"Removed database {database_name}.")
+            except MySQLRemoveDatabaseError:
+                logger.warning(f"Failed to remove database {database_name}.")
+
+    def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
+        """Handle the departure of legacy shared_db relation.
+
+        Remove unit name from allowed_units key.
+        """
+        if not self.unit.is_leader():
+            return
+
+        departing_unit = event.departing_unit.name
+        unit_relation_databag = event.relation.data[self.unit]
+
+        current_allowed_units = unit_relation_databag.get("allowed_units", "")
+
+        unit_relation_databag["allowed_units"] = " ".join(
+            [unit for unit in current_allowed_units.split() if unit != departing_unit]
+        )
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
