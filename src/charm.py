@@ -108,6 +108,18 @@ class MySQLOperatorCharm(CharmBase):
         )
 
         self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
+        )
+
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
+        )
+
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
+        )
+
+        self.framework.observe(
             self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
         )
         self.framework.observe(
