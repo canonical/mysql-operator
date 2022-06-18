@@ -167,6 +167,10 @@ class MySQLRemoveDatabaseError(Error):
     """Exception raised when there is an issue removing a database."""
 
 
+class MySQLListClusterUsersError(Error):
+    """Exception raised when there is an issue listing the users in the cluster."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -383,6 +387,29 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.exception(f"Failed to remove database {database_name}", exc_info=e)
             raise MySQLRemoveDatabaseError(e.message)
+
+    def list_cluster_users(self) -> List[str]:
+        """List the users in the cluster.
+
+        Returns:
+            A list of users in the cluster in the format of `<username>@<hostname>`
+            Exclude system users.
+
+        Raises MySQLListClusterUsersError
+            if there is an issue listing the users in the database
+        """
+        list_cluster_users_commands = (
+            "SELECT CONCAT(user, '@', host) FROM mysql.user",
+            "WHERE user NOT IN ('mysql.infoschema', 'mysql.session', 'mysql.sys', 'debian-sys-maint',",
+            f"'root', '{self.cluster_admin_user}', '{self.server_config_user}');",
+        )
+
+        try:
+            output = self._run_mysqlcli_script(" ".join(list_cluster_users_commands))
+            return [line.strip() for line in output.split("\n") if line.strip()][1:]
+        except MySQLClientError as e:
+            logger.exception(f"Failed to list database users", exc_info=e)
+            raise MySQLListClusterUsersError(e.message)
 
     def configure_instance(self, restart: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster.
