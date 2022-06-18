@@ -321,7 +321,7 @@ class MySQLBase(ABC):
             raise MySQLConfigureRouterUserError(e.message)
 
     def create_application_database_and_scoped_user(
-        self, database_name: str, username: str, password: str
+        self, database_name: str, username: str, password: str, hostname: str = "%"
     ) -> None:
         """Create an application database and a user scoped to the created database.
 
@@ -335,9 +335,9 @@ class MySQLBase(ABC):
         """
         create_database_commands = (f"CREATE DATABASE IF NOT EXISTS {database_name}",)
         create_scoped_user_commands = (
-            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
-            f"GRANT USAGE ON *.* TO '{username}'@`%`",
-            f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`%`",
+            f"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}'",
+            f"GRANT USAGE ON *.* TO '{username}'@`{hostname}`",
+            f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`",
         )
 
         try:
