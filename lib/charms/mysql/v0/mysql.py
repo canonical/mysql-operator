@@ -333,6 +333,7 @@ class MySQLBase(ABC):
             database_name: The name of the database to create
             username: The username of the scoped user
             password: The password of the scoped user
+            hostname: The hostname of the scoped user (defaults to %)
 
         Raises MySQLCreateApplicationDatabaseAndScopedUserError
             if there is an issue creating the application database or a user scoped to the database
@@ -398,17 +399,26 @@ class MySQLBase(ABC):
         Raises MySQLListClusterUsersError
             if there is an issue listing the users in the database
         """
+        reserved_users = [
+            "'root'",
+            "'mysql.sys'",
+            "'mysql.session'",
+            "'mysql.router'",
+            "'debian-sys-maint'",
+            f"'{self.cluster_admin_user}'",
+            f"'{self.server_config_user}'",
+        ]
+
         list_cluster_users_commands = (
             "SELECT CONCAT(user, '@', host) FROM mysql.user",
-            "WHERE user NOT IN ('mysql.infoschema', 'mysql.session', 'mysql.sys', 'debian-sys-maint',",
-            f"'root', '{self.cluster_admin_user}', '{self.server_config_user}');",
+            f"WHERE user NOT IN ({','.join(reserved_users)});",
         )
 
         try:
             output = self._run_mysqlcli_script(" ".join(list_cluster_users_commands))
             return [line.strip() for line in output.split("\n") if line.strip()][1:]
         except MySQLClientError as e:
-            logger.exception(f"Failed to list database users", exc_info=e)
+            logger.exception("Failed to list database users", exc_info=e)
             raise MySQLListClusterUsersError(e.message)
 
     def configure_instance(self, restart: bool = True) -> None:
