@@ -31,7 +31,7 @@ class SharedDBRelation(Object):
     """Legacy `shared-db` relation implementation."""
 
     def __init__(self, charm: CharmBase):
-        super().__init__(charm)
+        super().__init__(charm, "shared-db-handler")
 
         self._charm = charm
 
