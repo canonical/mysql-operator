@@ -5,24 +5,31 @@
 
 
 import logging
-from ops.framework import Object
+from typing import Set
 
-from ops.charm import CharmBase, RelationChangedEvent, RelationBrokenEvent, RelationDepartedEvent
-
-from ops.model import MaintenanceStatus, ActiveStatus, WaitingStatus, BlockedStatus
-
-from constants import PEER, PASSWORD_LENGTH, LEGACY_DB_SHARED
 from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLListClusterUsersError,
     MySQLRemoveUserError,
-    MySQLRemoveDatabaseError,
 )
+from ops.charm import (
+    CharmBase,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
+from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+
+from constants import LEGACY_DB_ROUTER, LEGACY_DB_SHARED, PASSWORD_LENGTH, PEER
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
 
 
 class SharedDBRelation(Object):
+    """Legacy `shared-db` relation implementation."""
+
     def __init__(self, charm: CharmBase):
         super().__init__(charm)
 
@@ -56,6 +63,73 @@ class SharedDBRelation(Object):
         self._peers.data[self.app][f"{app}_{username}_password"] = password
         return password
 
+    def _generate_user_diff(self) -> Set[str]:
+        """Generate a set of users to be removed.
+
+        Iterate units of relations to generate valid user list and compare with
+        user list from the cluster.
+
+        Returns:
+            Set[str]: The set of users to be removed.
+        """
+        valid_relation_users = set()
+
+        # list all units by `shared-db` relation name
+        shared_db_units = [
+            unit
+            for relation in self.model.relations.get(LEGACY_DB_SHARED, [])
+            for unit in relation.units
+        ]
+        shared_db_relation_data = self.model.get_relation(LEGACY_DB_SHARED).data
+        # generate valid users for `shared-db`
+        valid_relation_users |= set(
+            [
+                f"{shared_db_relation_data[unit].get('username')}@{shared_db_relation_data[unit].get('hostname')}"
+                for unit in shared_db_units
+            ]
+        )
+
+        # list all units by `db-router` relation name
+        db_router_units = [
+            unit
+            for relation in self.model.relations.get(LEGACY_DB_ROUTER, [])
+            for unit in relation.units
+        ]
+        db_router_relation_data = self.model.get_relation(LEGACY_DB_ROUTER).data
+        # generate valid users for `db-router`
+        for unit in db_router_units:
+            for key in db_router_relation_data[unit]:
+                if "_username" in key:
+                    application_name = key.split("_")[0]
+                    hostname_key = f"{application_name}_hostname"
+                    valid_relation_users.add(
+                        f"{db_router_relation_data[unit].get(key)}@{db_router_relation_data.get(hostname_key)}"
+                    )
+
+        # valid usernames for relations
+        valid_usernames = set([user.split("@")[0] for user in valid_relation_users])
+
+        try:
+            # retrieve cluster users list
+            database_users = self._charm._mysql.list_cluster_users()
+        except MySQLListClusterUsersError:
+            return
+
+        # filter out non related users
+        valid_database_users = set(
+            [user for user in database_users if user.split("@")[0] in valid_usernames]
+        )
+
+        return valid_relation_users - valid_database_users
+
+    def _remove_stale_users(self) -> None:
+        """Remove stale users from the cluster, if any."""
+        for user in self._generate_user_diff():
+            try:
+                self._charm._mysql.remove_user(user)
+            except MySQLRemoveUserError:
+                return
+
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
 
@@ -68,7 +142,6 @@ class SharedDBRelation(Object):
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.unit]
-        app_relation_databag = event.relation.data[self.app]
 
         if unit_relation_databag.get("password"):
             # Test if relation data is already set
@@ -121,45 +194,14 @@ class SharedDBRelation(Object):
         self.unit.status = ActiveStatus()
 
     def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle the departure of legacy shared_db relation.
-
-        Remove user created for the relation.
-        Remove database created for the relation if `auto-delete` is set.
-        """
+        """Handle the departure of legacy shared_db relation."""
         if not self.unit.is_leader():
             return
 
-        app_relation_databag = event.relation.data[self.app]
-        username = app_relation_databag.get(f"relation_id_{event.relation.id}_db_user")
+        # TODO: pop the password from the relation data
 
-        if not username:
-            # Can't do much if we don't have the username
-            logger.warning(f"Missing username for shared-db relation id {event.relation.id}.")
-            return
-
-        try:
-            # remove user and pop relation data from app databag
-            self._mysql.remove_user(username)
-            app_relation_databag.pop(f"relation_id_{event.relation.id}_db_user")
-            logger.info(f"Removed user {username} from database.")
-        except MySQLRemoveUserError:
-            logger.warning(f"Failed to remove user {username} from database.")
-
-        if self.config.get("auto-delete", False):
-            # remove database and pop relation data from app databag
-            database_name = app_relation_databag.get(f"relation_id_{event.relation.id}_db_name")
-            if not database_name:
-                logger.warning(
-                    f"Missing database name for shared-db relation id {event.relation.id}."
-                )
-                return
-
-            try:
-                self._mysql.remove_database(database_name)
-                app_relation_databag.pop(f"relation_id_{event.relation.id}_db_name")
-                logger.info(f"Removed database {database_name}.")
-            except MySQLRemoveDatabaseError:
-                logger.warning(f"Failed to remove database {database_name}.")
+        # remove stale users, if any
+        self._remove_stale_users()
 
     def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy shared_db relation.
@@ -177,3 +219,6 @@ class SharedDBRelation(Object):
         unit_relation_databag["allowed_units"] = " ".join(
             [unit for unit in current_allowed_units.split() if unit != departing_unit]
         )
+
+        # remove stale users, if any
+        self._remove_stale_users()

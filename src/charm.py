@@ -24,7 +24,6 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingSta
 
 from constants import (
     CLUSTER_ADMIN_USERNAME,
-    LEGACY_DB_SHARED,
     PASSWORD_LENGTH,
     PEER,
     SERVER_CONFIG_USERNAME,
