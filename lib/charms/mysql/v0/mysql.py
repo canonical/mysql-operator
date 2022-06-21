@@ -340,7 +340,7 @@ class MySQLBase(ABC):
         """
         create_database_commands = (f"CREATE DATABASE IF NOT EXISTS {database_name}",)
         create_scoped_user_commands = (
-            f"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}'",
+            f"CREATE USER IF NOT EXISTS '{username}'@'{hostname}' IDENTIFIED BY '{password}'",
             f"GRANT USAGE ON *.* TO '{username}'@`{hostname}`",
             f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`",
         )
