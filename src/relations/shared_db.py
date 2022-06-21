@@ -57,10 +57,10 @@ class SharedDBRelation(Object):
             username (str): The username.
 
         """
-        if password := self._peers.data[self.app].get(f"{app}_{username}_password"):
+        if password := self._peers.data[self._charm.app].get(f"{app}_{username}_password"):
             return password
         password = generate_random_password(PASSWORD_LENGTH)
-        self._peers.data[self.app][f"{app}_{username}_password"] = password
+        self._peers.data[self._charm.app][f"{app}_{username}_password"] = password
         return password
 
     def _generate_user_diff(self) -> Set[str]:
@@ -135,19 +135,19 @@ class SharedDBRelation(Object):
 
         Generate password and handle user and database creation for the related application.
         """
-        if not self.unit.is_leader():
+        if not self._charm.unit.is_leader():
             return
 
-        self.unit.status = MaintenanceStatus("Setting up shared-db relation")
+        self._charm.unit.status = MaintenanceStatus("Setting up shared-db relation")
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
-        unit_relation_databag = event.relation.data[self.unit]
+        unit_relation_databag = event.relation.data[self._charm.unit]
 
         if unit_relation_databag.get("password"):
             # Test if relation data is already set
             # and avoid overwriting it
             logger.warning("Data for shared-db already set.")
-            self.unit.status = ActiveStatus()
+            self._charm.unit.status = ActiveStatus()
             return
 
         # retrieve data from the relation databag
@@ -161,19 +161,19 @@ class SharedDBRelation(Object):
             logger.warning(
                 "Missing information for shared-db relation to create a database and scoped user"
             )
-            self.unit.status = WaitingStatus("Missing information for shared-db relation")
+            self._charm.unit.status = WaitingStatus("Missing information for shared-db relation")
             return
 
         password = self.get_and_set_password(event.unit.app, database_user)
         hostname = self.model.get_binding(event.relation).network.bind_address
 
         try:
-            self._mysql.create_application_database_and_scoped_user(
+            self._charm._mysql.create_application_database_and_scoped_user(
                 database_name, database_user, password, hostname
             )
 
             # set the relation data for consumption
-            cluster_primary = self._mysql.get_cluster_primary_address()
+            cluster_primary = self._charm._mysql.get_cluster_primary_address()
 
             unit_relation_databag["db_host"] = cluster_primary.split(":")[0]
             # Database port is static in legacy charm
@@ -188,14 +188,14 @@ class SharedDBRelation(Object):
             ] = f"{unit_relation_databag.get('allowed_units','')} {event.unit.name}"
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
-            self.unit.status = BlockedStatus("Failed to initialize shared_db relation")
+            self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 
-        self.unit.status = ActiveStatus()
+        self._charm.unit.status = ActiveStatus()
 
     def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the departure of legacy shared_db relation."""
-        if not self.unit.is_leader():
+        if not self._charm.unit.is_leader():
             return
 
         # TODO: pop the password from the relation data
@@ -208,11 +208,11 @@ class SharedDBRelation(Object):
 
         Remove unit name from allowed_units key.
         """
-        if not self.unit.is_leader():
+        if not self._charm.unit.is_leader():
             return
 
         departing_unit = event.departing_unit.name
-        unit_relation_databag = event.relation.data[self.unit]
+        unit_relation_databag = event.relation.data[self._charm.unit]
 
         current_allowed_units = unit_relation_databag.get("allowed_units", "")
 
