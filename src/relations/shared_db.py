@@ -80,7 +80,11 @@ class SharedDBRelation(Object):
             for relation in self.model.relations.get(LEGACY_DB_SHARED, [])
             for unit in relation.units
         ]
-        shared_db_relation_data = self.model.get_relation(LEGACY_DB_SHARED).data
+        shared_db_relation_data = (
+            self.model.get_relation(LEGACY_DB_SHARED).data
+            if self.model.get_relation(LEGACY_DB_SHARED)
+            else {}
+        )
         # generate valid users for `shared-db`
         valid_relation_users |= set(
             [
@@ -95,7 +99,11 @@ class SharedDBRelation(Object):
             for relation in self.model.relations.get(LEGACY_DB_ROUTER, [])
             for unit in relation.units
         ]
-        db_router_relation_data = self.model.get_relation(LEGACY_DB_ROUTER).data
+        db_router_relation_data = (
+            self.model.get_relation(LEGACY_DB_ROUTER).data
+            if self.model.get_relation(LEGACY_DB_ROUTER)
+            else {}
+        )
         # generate valid users for `db-router`
         for unit in db_router_units:
             for key in db_router_relation_data[unit]:
@@ -155,6 +163,7 @@ class SharedDBRelation(Object):
         requires_relation_databag = event.relation.data[event.unit]
         database_name = requires_relation_databag.get("database")
         database_user = requires_relation_databag.get("username")
+        hostname = requires_relation_databag.get("hostname")
 
         if not database_name or not database_user:
             # Cannot create scoped database without credentials
@@ -165,7 +174,6 @@ class SharedDBRelation(Object):
             return
 
         password = self.get_and_set_password(event.unit.app, database_user)
-        hostname = self.model.get_binding(event.relation).network.bind_address
 
         try:
             self._charm._mysql.create_application_database_and_scoped_user(
