@@ -158,11 +158,6 @@ class MySQLClientError(Error):
     Abstract platform specific exceptions for external commands execution Errors.
     """
 
-
-class MySQLRemoveUserError(Error):
-    """Exception raised when there is an issue removing a user."""
-
-
 class MySQLRemoveDatabaseError(Error):
     """Exception raised when there is an issue removing a database."""
 
@@ -259,12 +254,12 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureMySQLUsersError(e.message)
 
-    def does_mysql_user_exist(self, username: str, hostname: str = "%") -> bool:
+    def does_mysql_user_exist(self, username: str, hostname: str) -> bool:
         """Checks if a mysqlrouter user already exists.
 
         Args:
             username: The username for the mysql user
-            hostname (optional): The hostname for the mysql user (defaults to %)
+            hostname: The hostname for the mysql user
 
         Returns:
             A boolean indicating whether the provided mysql user exists
@@ -286,26 +281,31 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
-    def configure_mysqlrouter_user(self, username: str, password: str) -> None:
+    def configure_mysqlrouter_user(
+        self, username: str, password: str, hostname: str, unit_name: str
+    ) -> None:
         """Configure a mysqlrouter user and grant the appropriate permissions to the user.
 
         Args:
             username: The username for the mysqlrouter user
             password: The password for the mysqlrouter user
+            hostname: The hostname for the mysqlrouter user
+            unit_name: The name of unit from which the mysqlrouter user will be accessed
 
         Raises MySQLConfigureRouterUserError
             if there is an issue creating and configuring the mysqlrouter user
         """
+        mysqlrouter_user_attributes = {"unit_name": unit_name}
         create_mysqlrouter_user_commands = (
-            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
+            f"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{json.dumps(mysqlrouter_user_attributes)}'",
         )
         mysqlrouter_user_grant_commands = (
-            f"GRANT CREATE USER ON *.* TO '{username}'@'%' WITH GRANT OPTION",
-            f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'%'",
-            f"GRANT SELECT ON mysql.user TO '{username}'@'%'",
-            f"GRANT SELECT ON performance_schema.replication_group_members TO '{username}'@'%'",
-            f"GRANT SELECT ON performance_schema.replication_group_member_stats TO '{username}'@'%'",
-            f"GRANT SELECT ON performance_schema.global_variables TO '{username}'@'%'",
+            f"GRANT CREATE USER ON *.* TO '{username}'@'{hostname}' WITH GRANT OPTION",
+            f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'{hostname}'",
+            f"GRANT SELECT ON mysql.user TO '{username}'@'{hostname}'",
+            f"GRANT SELECT ON performance_schema.replication_group_members TO '{username}'@'{hostname}'",
+            f"GRANT SELECT ON performance_schema.replication_group_member_stats TO '{username}'@'{hostname}'",
+            f"GRANT SELECT ON performance_schema.global_variables TO '{username}'@'{hostname}'",
         )
 
         try:
@@ -321,7 +321,7 @@ class MySQLBase(ABC):
             raise MySQLConfigureRouterUserError(e.message)
 
     def create_application_database_and_scoped_user(
-        self, database_name: str, username: str, password: str
+        self, database_name: str, username: str, password: str, hostname: str, unit_name: str
     ) -> None:
         """Create an application database and a user scoped to the created database.
 
@@ -329,15 +329,18 @@ class MySQLBase(ABC):
             database_name: The name of the database to create
             username: The username of the scoped user
             password: The password of the scoped user
+            hostname: The hostname of the scoped user
+            unit_name: The name of the unit from which the user will be accessed
 
         Raises MySQLCreateApplicationDatabaseAndScopedUserError
             if there is an issue creating the application database or a user scoped to the database
         """
         create_database_commands = (f"CREATE DATABASE IF NOT EXISTS {database_name}",)
+        user_attributes = {"unit_name": unit_name}
         create_scoped_user_commands = (
-            f"CREATE USER '{username}'@'%' IDENTIFIED BY '{password}'",
-            f"GRANT USAGE ON *.* TO '{username}'@`%`",
-            f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`%`",
+            f"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{json.dumps(user_attributes)}'",
+            f"GRANT USAGE ON *.* TO '{username}'@`{hostname}`",
+            f"GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`",
         )
 
         try:
@@ -345,27 +348,31 @@ class MySQLBase(ABC):
             self._run_mysqlcli_script("; ".join(create_scoped_user_commands))
         except MySQLClientError as e:
             logger.exception(
-                f"Failed to create application database {database_name} and scoped user {username}@%"
+                f"Failed to create application database {database_name} and scoped user {username}@{hostname}",
+                exc_info=e
             )
             raise MySQLCreateApplicationDatabaseAndScopedUserError(e.message)
 
-    def remove_user(self, username: str, hostname: str = "%") -> None:
-        """Remove a mysql user.
-
-        Args:
-            username: The username for the mysql user
-            hostname (optional): The hostname for the mysql user (defaults to %)
-
-        Raises MySQLRemoveUserError
-            if there is an issue removing the mysql user
-        """
-        remove_user_commands = (f"DROP USER IF EXISTS '{username}'@'{hostname}'",)
+    def delete_users_for_unit(self, unit_name: str) -> None:
+        """Delete users for a unit."""
+        get_unit_user_commands = (
+            f"SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN information_schema.user_attributes AS attributes ON (user.user = attributes.user AND user.host = attributes.host) WHERE attributes.attribute LIKE '%\"unit_name\": \"{unit_name}\"%'",
+        )
 
         try:
-            self._run_mysqlcli_script("; ".join(remove_user_commands))
+            output = self._run_mysqlcli_script("; ".join(get_unit_user_commands))
+            users = [line.strip() for line in output.split("\n") if line.strip()][1:]
+
+            drop_users_commands = (
+                f"DROP USER IF EXISTS {', '.join(users)}",
+            )
+            self._run_mysqlcli_script("; ".join(drop_users_commands))
         except MySQLClientError as e:
-            logger.exception(f"Failed to remove mysql user {username}@{hostname}", exc_info=e)
-            raise MySQLRemoveUserError(e.message)
+            logger.exception(
+                f"Failed to query and delete users for unit {unit_name}",
+                exc_info=e
+            )
+            raise
 
     def remove_database(self, database_name: str) -> None:
         """Remove a mysql database.
