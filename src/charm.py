@@ -4,22 +4,16 @@
 
 """Charmed Machine Operator for MySQL."""
 
-import hashlib
-import json
 import logging
-import secrets
-import string
 
 from charms.mysql.v0.mysql import (
-    MySQLCheckUserExistenceError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
-    MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
-    MySQLRemoveDatabaseError,
-    MySQLRemoveUserError,
+    # MySQLRemoveDatabaseError,
+    # MySQLRemoveUserError,
 )
 from ops.charm import (
     ActionEvent,
@@ -33,39 +27,18 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
+from constants import (
+    CLUSTER_ADMIN_USERNAME,
+    LEGACY_DB_SHARED,
+    PASSWORD_LENGTH,
+    PEER,
+    SERVER_CONFIG_USERNAME,
+)
 from mysqlsh_helpers import MySQL
+from relations.db_router import DBRouterRelation
+from utils import generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
-
-CLUSTER_ADMIN_USERNAME = "clusteradmin"
-SERVER_CONFIG_USERNAME = "serverconfig"
-PASSWORD_LENGTH = 24
-PEER = "database-peers"
-LEGACY_DB_ROUTER = "db-router"
-LEGACY_DB_SHARED = "shared-db"
-
-
-def generate_random_password(length: int) -> str:
-    """Randomly generate a string intended to be used as a password.
-
-    Args:
-        length: length of the randomly generated string to be returned
-
-    Returns:
-        a string with random letters and digits of length specified
-    """
-    choices = string.ascii_letters + string.digits
-    return "".join([secrets.choice(choices) for i in range(length)])
-
-
-def generate_random_hash() -> str:
-    """Generate a random hash.
-
-    Returns:
-        A random MD5 hash
-    """
-    random_characters = generate_random_password(20)
-    return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
 
 class MySQLOperatorCharm(CharmBase):
@@ -86,17 +59,20 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         self.framework.observe(
-            self.on[LEGACY_DB_ROUTER].relation_changed, self._on_db_router_relation_changed
-        )
-
-        self.framework.observe(
             self.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
         )
-
         self.framework.observe(
             self.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
         )
-
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
+        )
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
+        )
+        self.framework.observe(
+            self.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
+        )
         self.framework.observe(
             self.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
         )
@@ -109,6 +85,8 @@ class MySQLOperatorCharm(CharmBase):
         )
         self.framework.observe(self.on.get_root_credentials_action, self._on_get_root_credentials)
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
+
+        self.db_router_relation = DBRouterRelation(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -236,78 +214,6 @@ class MySQLOperatorCharm(CharmBase):
         ):
             self.unit.status = ActiveStatus()
 
-    def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Handle the db_router relation changed event."""
-        if not self.unit.is_leader():
-            return
-
-        self.unit.status = MaintenanceStatus("Setting up db-router relation")
-
-        # Get the application data from the relation databag
-        # Abstracted is the fact that it is received from the leader unit of the related app
-        unit_address = str(self.model.get_binding(PEER).network.bind_address)
-        unit_names = " ".join([unit.name for unit in event.relation.units])
-
-        event_relation_databag = event.relation.data[self.unit]
-        event_relation_databag["db_host"] = json.dumps(unit_address)
-
-        application_unit = list(event.relation.units)[0]
-        application_data = event.relation.data[application_unit]
-
-        # Retrieve application names in the relation databag (which correspond to usernames)
-        application_names = set(
-            [key.split("_")[0] for key in application_data if "username" == key.split("_")[1]]
-        )
-
-        for application_name in application_names:
-            username = application_data.get(f"{application_name}_username")
-            database = application_data.get(f"{application_name}_database")
-
-            if not username or (application_name != "mysqlrouter" and not database):
-                logger.warning(
-                    f"Missing information for application {application_name} to create a database and scoped user"
-                )
-                continue
-
-            try:
-                password = generate_random_password(PASSWORD_LENGTH)
-
-                # Bootstrap the mysql router user
-                if application_name == "mysqlrouter":
-                    mysqlrouter_user_exists = self._mysql.does_mysql_user_exist(username)
-                    if not mysqlrouter_user_exists:
-                        self._mysql.configure_mysqlrouter_user(username, password)
-                        event_relation_databag["mysqlrouter_password"] = json.dumps(password)
-
-                    # Update the allowed units in case a new unit joins the relation
-                    event_relation_databag["mysqlrouter_allowed_units"] = json.dumps(unit_names)
-
-                    continue
-
-                # Create an application database and an application user scoped to that database
-                if not self._mysql.does_mysql_user_exist(username):
-                    self._mysql.create_application_database_and_scoped_user(
-                        database,
-                        username,
-                        password,
-                    )
-
-                    event_relation_databag[f"{application_name}_password"] = json.dumps(password)
-
-                # Update the allowed units in case a new unit joins the relation
-                event_relation_databag[f"{application_name}_allowed_units"] = json.dumps(
-                    unit_names
-                )
-            except (
-                MySQLCheckUserExistenceError,
-                MySQLConfigureRouterUserError,
-                MySQLCreateApplicationDatabaseAndScopedUserError,
-            ):
-                self.unit.status = BlockedStatus("Failed to initialize db-router relation")
-                return
-
-        self.unit.status = ActiveStatus()
-
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
 
@@ -392,29 +298,29 @@ class MySQLOperatorCharm(CharmBase):
             logger.warning(f"Missing username for shared-db relation id {event.relation.id}.")
             return
 
-        try:
-            # remove user and pop relation data from app databag
-            self._mysql.remove_user(username)
-            app_relation_databag.pop(f"relation_id_{event.relation.id}_db_user")
-            logger.info(f"Removed user {username} from database.")
-        except MySQLRemoveUserError:
-            logger.warning(f"Failed to remove user {username} from database.")
+        # try:
+        #     # remove user and pop relation data from app databag
+        #     self._mysql.remove_user(username)
+        #     app_relation_databag.pop(f"relation_id_{event.relation.id}_db_user")
+        #     logger.info(f"Removed user {username} from database.")
+        # except MySQLRemoveUserError:
+        #     logger.warning(f"Failed to remove user {username} from database.")
 
-        if self.config.get("auto-delete", False):
-            # remove database and pop relation data from app databag
-            database_name = app_relation_databag.get(f"relation_id_{event.relation.id}_db_name")
-            if not database_name:
-                logger.warning(
-                    f"Missing database name for shared-db relation id {event.relation.id}."
-                )
-                return
+        # if self.config.get("auto-delete", False):
+        #     # remove database and pop relation data from app databag
+        #     database_name = app_relation_databag.get(f"relation_id_{event.relation.id}_db_name")
+        #     if not database_name:
+        #         logger.warning(
+        #             f"Missing database name for shared-db relation id {event.relation.id}."
+        #         )
+        #         return
 
-            try:
-                self._mysql.remove_database(database_name)
-                app_relation_databag.pop(f"relation_id_{event.relation.id}_db_name")
-                logger.info(f"Removed database {database_name}.")
-            except MySQLRemoveDatabaseError:
-                logger.warning(f"Failed to remove database {database_name}.")
+        #     try:
+        #         self._mysql.remove_database(database_name)
+        #         app_relation_databag.pop(f"relation_id_{event.relation.id}_db_name")
+        #         logger.info(f"Removed database {database_name}.")
+        #     except MySQLRemoveDatabaseError:
+        #         logger.warning(f"Failed to remove database {database_name}.")
 
     def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy shared_db relation.
