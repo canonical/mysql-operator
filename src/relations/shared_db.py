@@ -5,13 +5,9 @@
 
 
 import logging
-from typing import Set
 
-from charms.mysql.v0.mysql import (
-    MySQLCreateApplicationDatabaseAndScopedUserError,
-    MySQLListClusterUsersError,
-    MySQLRemoveUserError,
-)
+from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
+
 from ops.charm import (
     CharmBase,
     RelationBrokenEvent,
@@ -19,9 +15,9 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
-from constants import LEGACY_DB_ROUTER, LEGACY_DB_SHARED, PASSWORD_LENGTH, PEER
+from constants import LEGACY_DB_SHARED, PASSWORD_LENGTH, PEER
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -51,19 +47,19 @@ class SharedDBRelation(Object):
     def _peers(self):
         return self.model.get_relation(PEER)
 
-    def _get_or_set_password(self, relation_id: int) -> str:
+    def _get_or_set_password(self, username: str) -> str:
         """Retrieve password from cache or generate a new one.
 
         Args:
-            app (str): The application name.
             username (str): The username.
+
         Returns:
             str: The password.
         """
-        if password := self._get_cached_key(relation_id, "password"):
+        if password := self._peers.data[self._charm.app].get(f"{username}_password"):
             return password
         password = generate_random_password(PASSWORD_LENGTH)
-        self._set_cached_key(relation_id, "password", password)
+        self._peers.data[self._charm.app][f"{username}_password"] = password
         return password
 
     def _get_cached_key(self, relation_id: int, key: str) -> str:
@@ -84,85 +80,11 @@ class SharedDBRelation(Object):
 
         Args:
             relation_id (int): The relation id.
-
+            key (str): The key to set a value to.
+            value (str): The value to set.
         """
         databag = self._peers.data[self._charm.app]
         databag[f"{str(relation_id)}_{key}"] = value
-
-    def _generate_user_diff(self) -> Set[str]:
-        """Generate a set of users to be removed.
-
-        Iterate units of relations to generate valid user list and compare with
-        user list from the cluster.
-
-        Returns:
-            Set[str]: The set of users to be removed.
-        """
-        valid_relation_users = set()
-
-        # list all units by `shared-db` relation name
-        shared_db_units = [
-            unit
-            for relation in self.model.relations.get(LEGACY_DB_SHARED, [])
-            for unit in relation.units
-        ]
-        shared_db_relation_data = (
-            self.model.get_relation(LEGACY_DB_SHARED).data
-            if self.model.get_relation(LEGACY_DB_SHARED)
-            else {}
-        )
-        # generate valid users for `shared-db`
-        valid_relation_users |= set(
-            [
-                f"{shared_db_relation_data[unit].get('username')}@{shared_db_relation_data[unit].get('hostname')}"
-                for unit in shared_db_units
-            ]
-        )
-
-        # list all units by `db-router` relation name
-        db_router_units = [
-            unit
-            for relation in self.model.relations.get(LEGACY_DB_ROUTER, [])
-            for unit in relation.units
-        ]
-        db_router_relation_data = (
-            self.model.get_relation(LEGACY_DB_ROUTER).data
-            if self.model.get_relation(LEGACY_DB_ROUTER)
-            else {}
-        )
-        # generate valid users for `db-router`
-        for unit in db_router_units:
-            for key in db_router_relation_data[unit]:
-                if "_username" in key:
-                    application_name = key.split("_")[0]
-                    hostname_key = f"{application_name}_hostname"
-                    valid_relation_users.add(
-                        f"{db_router_relation_data[unit].get(key)}@{db_router_relation_data.get(hostname_key)}"
-                    )
-
-        # valid usernames for relations
-        valid_usernames = set([user.split("@")[0] for user in valid_relation_users])
-
-        try:
-            # retrieve cluster users list
-            database_users = self._charm._mysql.list_cluster_users()
-        except MySQLListClusterUsersError:
-            return
-
-        # filter out non related users
-        valid_database_users = set(
-            [user for user in database_users if user.split("@")[0] in valid_usernames]
-        )
-
-        return valid_relation_users - valid_database_users
-
-    def _remove_stale_users(self) -> None:
-        """Remove stale users from the cluster, if any."""
-        for user in self._generate_user_diff():
-            try:
-                self._charm._mysql.remove_user(user)
-            except MySQLRemoveUserError:
-                return
 
     def _on_leader_elected(self, _) -> None:
         # Ensure that the leader unit contains the latest data.
@@ -170,10 +92,8 @@ class SharedDBRelation(Object):
         peer_data = self._peers.data
 
         for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
-            relation_id = relation.relation_id
-
             for key, value in peer_data[self._charm.app].items():
-                if key.startswith(str(relation_id)):
+                if key.startswith(str(relation.id)):
                     unit_key = key.split("_")[1]
                     relation.data[self._charm.unit][unit_key] = value
 
@@ -223,7 +143,7 @@ class SharedDBRelation(Object):
         self._set_cached_key(relation_id, "database", database_name)
         self._set_cached_key(relation_id, "username", database_user)
 
-        password = self._get_or_set_password(relation_id)
+        password = self._get_or_set_password(database_user)
         remote_host = event.relation.data[event.unit].get("private-address")
 
         try:
@@ -273,9 +193,6 @@ class SharedDBRelation(Object):
         for key in relation_keys:
             self._peers.data[self._charm.app].pop(key)
 
-        # remove stale users, if any
-        self._remove_stale_users()
-
     def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy shared_db relation.
 
@@ -290,7 +207,7 @@ class SharedDBRelation(Object):
         current_allowed_units = app_unit_data.get("allowed_units", "")
 
         app_unit_data["allowed_units"] = " ".join(
-            [unit for unit in current_allowed_units.split() if unit != departing_unit]
+            {unit for unit in current_allowed_units.split() if unit != departing_unit}
         )
         # sync with peer data
         try:
@@ -301,5 +218,5 @@ class SharedDBRelation(Object):
             # ignore error when the relation is no longer present
             pass
 
-        # remove stale users, if any
-        self._remove_stale_users()
+        # TODO: remove unit users
+        # self._charm._mysql.remove_scoped_user(departing_unit)
