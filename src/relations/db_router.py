@@ -8,7 +8,7 @@ import logging
 from collections import namedtuple
 from typing import Dict, List, Set, Tuple
 
-from charms.mysql.v0.mysql import (  # MySQLRemoveDatabaseError,
+from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,

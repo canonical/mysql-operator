@@ -158,6 +158,11 @@ class MySQLClientError(Error):
     Abstract platform specific exceptions for external commands execution Errors.
     """
 
+
+class MySQLDeleteUsersForUnitError(Error):
+    """Exception raised when there is an issue deleting users for a unit."""
+
+
 class MySQLRemoveDatabaseError(Error):
     """Exception raised when there is an issue removing a database."""
 
@@ -372,7 +377,7 @@ class MySQLBase(ABC):
                 f"Failed to query and delete users for unit {unit_name}",
                 exc_info=e
             )
-            raise
+            raise MySQLDeleteUsersForUnitError(e.message)
 
     def remove_database(self, database_name: str) -> None:
         """Remove a mysql database.
