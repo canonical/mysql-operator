@@ -199,28 +199,32 @@ class SharedDBRelation(Object):
             self._charm.unit.status = ActiveStatus()
             return
 
+        relation_id = event.relation.id
         # retrieve data from the relation databag
         # Abstracted is the fact that it is received from the leader unit of the related app
-        relation_id = event.relation.id
+        # fallback to peer data if data is not set for the unit (non leader unit)
         database_name = remote_unit_data.get(
-            "database", self._get_cached_key(event.relation.id, "database")
+            "database", self._get_cached_key(relation_id, "database")
         )
         database_user = remote_unit_data.get(
-            "username", self._get_cached_key(event.relation.id, "username")
-        )
-        remote_host = remote_unit_data.get(
-            "hostname", self._get_cached_key(event.relation.id, "hostname")
+            "username", self._get_cached_key(relation_id, "username")
         )
 
         if not database_name or not database_user:
             # Cannot create scoped database without credentials
+            # Defer the unit configuration until the relation is complete
             logger.warning(
                 f"Missing information for shared-db relation to create a database and scoped user for unit {event.unit.name}."
             )
             event.defer()
             return
 
+        # cache relation data
+        self._set_cached_key(relation_id, "database", database_name)
+        self._set_cached_key(relation_id, "username", database_user)
+
         password = self._get_or_set_password(relation_id)
+        remote_host = event.relation.data[event.unit].get("private-address")
 
         try:
             self._charm._mysql.create_application_database_and_scoped_user(
