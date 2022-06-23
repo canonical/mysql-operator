@@ -263,6 +263,16 @@ class SharedDBRelation(Object):
         if not self._charm.unit.is_leader():
             return
 
+        # Remove cached data
+        relation_keys = [
+            k
+            for k in self._peers.data[self._charm.app].keys()
+            if k.startswith(str(event.relation_id))
+        ]
+
+        for key in relation_keys:
+            self._peers.data[self._charm.app].pop(key)
+
         # remove stale users, if any
         self._remove_stale_users()
 
