@@ -267,7 +267,7 @@ class SharedDBRelation(Object):
         relation_keys = [
             k
             for k in self._peers.data[self._charm.app].keys()
-            if k.startswith(str(event.relation_id))
+            if k.startswith(str(event.relation.id))
         ]
 
         for key in relation_keys:
