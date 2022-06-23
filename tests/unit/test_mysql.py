@@ -17,6 +17,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
+    MySQLDeleteUsersForUnitError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
@@ -120,7 +121,9 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.return_value = b""
 
         _expected_create_mysqlrouter_user_commands = "; ".join(
-            ("CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}'",)
+            (
+                "CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}'",
+            )
         )
 
         _expected_mysqlrouter_user_grant_commands = "; ".join(
@@ -154,7 +157,9 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureRouterUserError):
-            self.mysql.configure_mysqlrouter_user("test_username", "test_password", "1.1.1.1", "app/0")
+            self.mysql.configure_mysqlrouter_user(
+                "test_username", "test_password", "1.1.1.1", "app/0"
+            )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_create_application_database_and_scoped_user(self, _run_mysqlcli_script):
@@ -198,6 +203,42 @@ class TestMySQLBase(unittest.TestCase):
             self.mysql.create_application_database_and_scoped_user(
                 "test_database", "test_username", "test_password", "1.1.1.1", "app/.0"
             )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_delete_users_for_unit(self, _run_mysqlcli_script):
+        """Test successful execution of delete_users_for_unit."""
+        _run_mysqlcli_script.side_effect = ["test_column\ntest@1.1.1.1\ntest2@1.1.1.2", ""]
+
+        _expected_get_unit_user_commands = "; ".join(
+            (
+                "SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN information_schema.user_attributes AS attributes ON (user.user = attributes.user AND user.host = attributes.host) WHERE attributes.attribute LIKE '%\"unit_name\": \"app/0\"%'",
+            )
+        )
+
+        _expected_drop_users_command = "; ".join(
+            ("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2",)
+        )
+
+        self.mysql.delete_users_for_unit("app/0")
+
+        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+        self.assertEqual(
+            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(
+                [
+                    call(_expected_get_unit_user_commands),
+                    call(_expected_drop_users_command),
+                ]
+            ),
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_delete_users_for_unit_failure(self, _run_mysqlcli_script):
+        """Test failure to delete users for a unit."""
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLDeleteUsersForUnitError):
+            self.mysql.delete_users_for_unit("app/0")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")

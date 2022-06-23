@@ -7,7 +7,6 @@ from unittest.mock import patch
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
-    MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
