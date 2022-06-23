@@ -45,23 +45,49 @@ class SharedDBRelation(Object):
             self._charm.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
         )
 
+        self.framework.observe(self._charm.on.leader_elected, self._on_leader_elected)
+
     @property
     def _peers(self):
         return self.model.get_relation(PEER)
 
-    def get_and_set_password(self, app: str, username: str) -> str:
+    def _get_or_set_password(self, relation_id: int) -> str:
         """Retrieve password from cache or generate a new one.
 
         Args:
             app (str): The application name.
             username (str): The username.
-
+        Returns:
+            str: The password.
         """
-        if password := self._peers.data[self._charm.app].get(f"{app}_{username}_password"):
+        if password := self._get_cached_key(relation_id, "password"):
             return password
         password = generate_random_password(PASSWORD_LENGTH)
-        self._peers.data[self._charm.app][f"{app}_{username}_password"] = password
+        self._set_cached_key(relation_id, "password", password)
         return password
+
+    def _get_cached_key(self, relation_id: int, key: str) -> str:
+        """Retrieve cached key from the peer databag.
+
+        Args:
+            relation_id (int): The relation id.
+            key (str): The key to retrieve.
+
+        Returns:
+            str: The value (str) of the key.
+        """
+        databag = self._peers.data[self._charm.app]
+        return databag.get(f"{relation_id}_{key}")
+
+    def _set_cached_key(self, relation_id: int, key: str, value: str) -> None:
+        """Set cached key in the peer databag.
+
+        Args:
+            relation_id (int): The relation id.
+
+        """
+        databag = self._peers.data[self._charm.app]
+        databag[f"{str(relation_id)}_{key}"] = value
 
     def _generate_user_diff(self) -> Set[str]:
         """Generate a set of users to be removed.
@@ -138,6 +164,19 @@ class SharedDBRelation(Object):
             except MySQLRemoveUserError:
                 return
 
+    def _on_leader_elected(self, _) -> None:
+        # Ensure that the leader unit contains the latest data.
+        # Legacy apps will consume data from leader unit.
+        peer_data = self._peers.data
+
+        for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
+            relation_id = relation.relation_id
+
+            for key, value in peer_data[self._charm.app].items():
+                if key.startswith(str(relation_id)):
+                    unit_key = key.split("_")[1]
+                    relation.data[self._charm.unit][unit_key] = value
+
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
 
@@ -149,51 +188,65 @@ class SharedDBRelation(Object):
         self._charm.unit.status = MaintenanceStatus("Setting up shared-db relation")
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
-        unit_relation_databag = event.relation.data[self._charm.unit]
+        # get relation data
+        remote_unit_data = event.relation.data[event.unit]
+        app_unit_data = event.relation.data[self._charm.unit]
 
-        if unit_relation_databag.get("password"):
-            # Test if relation data is already set
-            # and avoid overwriting it
-            logger.warning("Data for shared-db already set.")
+        if event.unit.name in app_unit_data.get("allowed_units", ""):
+            # Test if relation data is already set for the unit
+            # and avoid re-running it
+            logger.warning(f"Unit {event.unit.name} already added to relation")
             self._charm.unit.status = ActiveStatus()
             return
 
         # retrieve data from the relation databag
         # Abstracted is the fact that it is received from the leader unit of the related app
-        requires_relation_databag = event.relation.data[event.unit]
-        database_name = requires_relation_databag.get("database")
-        database_user = requires_relation_databag.get("username")
-        hostname = requires_relation_databag.get("hostname")
+        relation_id = event.relation.id
+        database_name = remote_unit_data.get(
+            "database", self._get_cached_key(event.relation.id, "database")
+        )
+        database_user = remote_unit_data.get(
+            "username", self._get_cached_key(event.relation.id, "username")
+        )
+        remote_host = remote_unit_data.get(
+            "hostname", self._get_cached_key(event.relation.id, "hostname")
+        )
 
         if not database_name or not database_user:
             # Cannot create scoped database without credentials
             logger.warning(
-                "Missing information for shared-db relation to create a database and scoped user"
+                f"Missing information for shared-db relation to create a database and scoped user for unit {event.unit.name}."
             )
-            self._charm.unit.status = WaitingStatus("Missing information for shared-db relation")
+            event.defer()
             return
 
-        password = self.get_and_set_password(event.unit.app, database_user)
+        password = self._get_or_set_password(relation_id)
 
         try:
             self._charm._mysql.create_application_database_and_scoped_user(
-                database_name, database_user, password, hostname
+                database_name, database_user, password, remote_host
             )
 
             # set the relation data for consumption
             cluster_primary = self._charm._mysql.get_cluster_primary_address()
 
-            unit_relation_databag["db_host"] = cluster_primary.split(":")[0]
+            app_unit_data["db_host"] = cluster_primary.split(":")[0]
+            self._set_cached_key(relation_id, "db_host", app_unit_data["db_host"])
             # Database port is static in legacy charm
-            unit_relation_databag["db_port"] = "3306"
+            app_unit_data["db_port"] = "3306"
+            self._set_cached_key(relation_id, "db_port", app_unit_data["db_port"])
             # Wait timeout is a config option in legacy charm
             # defaulted to 3600 seconds
-            unit_relation_databag["wait_timeout"] = "3600"
-            unit_relation_databag["password"] = password
+            app_unit_data["wait_timeout"] = "3600"
+            self._set_cached_key(relation_id, "wait_timeout", app_unit_data["wait_timeout"])
 
-            unit_relation_databag[
+            # password already cached
+            app_unit_data["password"] = password
+
+            app_unit_data[
                 "allowed_units"
-            ] = f"{unit_relation_databag.get('allowed_units','')} {event.unit.name}"
+            ] = f"{app_unit_data.get('allowed_units','')} {event.unit.name}"
+            self._set_cached_key(relation_id, "allowed_units", app_unit_data["allowed_units"])
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
             self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
@@ -205,8 +258,6 @@ class SharedDBRelation(Object):
         """Handle the departure of legacy shared_db relation."""
         if not self._charm.unit.is_leader():
             return
-
-        # TODO: pop the password from the relation data
 
         # remove stale users, if any
         self._remove_stale_users()
@@ -220,13 +271,15 @@ class SharedDBRelation(Object):
             return
 
         departing_unit = event.departing_unit.name
-        unit_relation_databag = event.relation.data[self._charm.unit]
+        app_unit_data = event.relation.data[self._charm.unit]
 
-        current_allowed_units = unit_relation_databag.get("allowed_units", "")
+        current_allowed_units = app_unit_data.get("allowed_units", "")
 
-        unit_relation_databag["allowed_units"] = " ".join(
+        app_unit_data["allowed_units"] = " ".join(
             [unit for unit in current_allowed_units.split() if unit != departing_unit]
         )
+        # sync with peer data
+        self._set_cached_key(event.relation.id, "allowed_units", app_unit_data["allowed_units"])
 
         # remove stale users, if any
         self._remove_stale_users()
