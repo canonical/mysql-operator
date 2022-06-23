@@ -73,17 +73,17 @@ class TestDBRouter(unittest.TestCase):
             sorted(_does_mysql_user_exist.mock_calls),
             sorted(
                 [
-                    call("mysqlrouteruser"),
-                    call("keystone_user"),
+                    call("mysqlrouteruser", "1.1.1.3"),
+                    call("keystone_user", "1.1.1.2"),
                 ]
             ),
         )
 
         _configure_mysqlrouter_user.assert_called_once_with(
-            "mysqlrouteruser", "super_secure_password"
+            "mysqlrouteruser", "super_secure_password", "1.1.1.3", "app/0"
         )
         _create_application_database_and_scoped_user.assert_called_once_with(
-            "keystone_database", "keystone_user", "super_secure_password"
+            "keystone_database", "keystone_user", "super_secure_password", "1.1.1.2", "app/0"
         )
 
         # confirm that credentials in the mysql leader unit databag is set correctly

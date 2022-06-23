@@ -193,6 +193,7 @@ class DBRouterRelation(Object):
             MySQLCreateApplicationDatabaseAndScopedUserError,
         ):
             self.charm.unit.status = BlockedStatus("Failed to create app user or scoped database")
+            return
 
         # All values consumed by the legacy mysqlrouter charm are expected to be json encoded
         databag_updates = {}

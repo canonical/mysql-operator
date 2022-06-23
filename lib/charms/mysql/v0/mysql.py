@@ -163,10 +163,6 @@ class MySQLClientError(Error):
     """
 
 
-class MySQLRemoveDatabaseError(Error):
-    """Exception raised when there is an issue removing a database."""
-
-
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -373,23 +369,6 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.exception(f"Failed to query and delete users for unit {unit_name}", exc_info=e)
             raise MySQLDeleteUsersForUnitError(e.message)
-
-    def remove_database(self, database_name: str) -> None:
-        """Remove a mysql database.
-
-        Args:
-            database_name: The name of the database to remove
-
-        Raises MySQLRemoveDatabaseError
-            if there is an issue removing the database
-        """
-        remove_database_commands = (f"DROP DATABASE IF EXISTS {database_name}",)
-
-        try:
-            self._run_mysqlcli_script("; ".join(remove_database_commands))
-        except MySQLClientError as e:
-            logger.exception(f"Failed to remove database {database_name}", exc_info=e)
-            raise MySQLRemoveDatabaseError(e.message)
 
     def configure_instance(self, restart: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster.
