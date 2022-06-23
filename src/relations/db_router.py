@@ -231,6 +231,10 @@ class DBRouterRelation(Object):
         Ensure that the <app_user>_allowed_units relation data is correctly reflected.
         Also clean up users for the departing unit created by this charm.
         """
+        # Only execute if the departing unit is from the remote related application
+        if self.charm.app.name == event.departing_unit.app.name:
+            return
+
         if not self.charm.unit.is_leader():
             return
 
