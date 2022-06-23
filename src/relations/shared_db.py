@@ -293,7 +293,13 @@ class SharedDBRelation(Object):
             [unit for unit in current_allowed_units.split() if unit != departing_unit]
         )
         # sync with peer data
-        self._set_cached_key(event.relation.id, "allowed_units", app_unit_data["allowed_units"])
+        try:
+            self._set_cached_key(
+                event.relation.id, "allowed_units", app_unit_data["allowed_units"]
+            )
+        except KeyError:
+            # ignore error when the relation is no longer present
+            pass
 
         # remove stale users, if any
         self._remove_stale_users()
