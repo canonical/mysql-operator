@@ -9,7 +9,6 @@ import logging
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
 from ops.charm import (
     CharmBase,
-    RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
 )
@@ -32,9 +31,6 @@ class SharedDBRelation(Object):
 
         self.framework.observe(
             self._charm.on[LEGACY_DB_SHARED].relation_changed, self._on_shared_db_relation_changed
-        )
-        self.framework.observe(
-            self._charm.on[LEGACY_DB_SHARED].relation_broken, self._on_shared_db_broken
         )
         self.framework.observe(
             self._charm.on[LEGACY_DB_SHARED].relation_departed, self._on_shared_db_departed
@@ -61,41 +57,13 @@ class SharedDBRelation(Object):
         self._peers.data[self._charm.app][f"{username}_password"] = password
         return password
 
-    def _get_cached_key(self, relation_id: int, key: str) -> str:
-        """Retrieve cached key from the peer databag.
-
-        Args:
-            relation_id (int): The relation id.
-            key (str): The key to retrieve.
-
-        Returns:
-            str: The value (str) of the key.
-        """
-        databag = self._peers.data[self._charm.app]
-        return databag.get(f"{relation_id}_{key}")
-
-    def _set_cached_key(self, relation_id: int, key: str, value: str) -> None:
-        """Set cached key in the peer databag.
-
-        Args:
-            relation_id (int): The relation id.
-            key (str): The key to set a value to.
-            value (str): The value to set.
-        """
-        databag = self._peers.data[self._charm.app]
-        databag[f"{str(relation_id)}_{key}"] = value
-
     def _on_leader_elected(self, _) -> None:
         # Ensure that the leader unit contains the latest data.
         # Legacy apps will consume data from leader unit.
-        peer_data = self._peers.data
-
-        logger.debug("Syncing data from leader unit")
         for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
-            for key, value in peer_data[self._charm.app].items():
-                if key.startswith(str(relation.id)):
-                    unit_key = key.split("_")[1]
-                    relation.data[self._charm.unit][unit_key] = value
+            logger.debug(f"Syncing data from leader unit for relation {relation.id}")
+            for key, value in relation.data[self._charm.app].items():
+                relation.data[self._charm.unit][key] = value
 
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
@@ -110,27 +78,23 @@ class SharedDBRelation(Object):
 
         # get relation data
         remote_unit_data = event.relation.data[event.unit]
-        app_unit_data = event.relation.data[self._charm.unit]
+        local_unit_data = event.relation.data[self._charm.unit]
+        local_app_data = event.relation.data[self._charm.app]
 
         joined_unit = event.unit.name
 
-        if joined_unit in app_unit_data.get("allowed_units", ""):
+        if joined_unit in local_unit_data.get("allowed_units", ""):
             # Test if relation data is already set for the unit
             # and avoid re-running it
             logger.warning(f"Unit {joined_unit} already added to relation")
             self._charm.unit.status = ActiveStatus()
             return
 
-        relation_id = event.relation.id
         # retrieve data from the relation databag
         # Abstracted is the fact that it is received from the leader unit of the related app
         # fallback to peer data if data is not set for the unit (non leader unit)
-        database_name = remote_unit_data.get(
-            "database", self._get_cached_key(relation_id, "database")
-        )
-        database_user = remote_unit_data.get(
-            "username", self._get_cached_key(relation_id, "username")
-        )
+        database_name = remote_unit_data.get("database", local_app_data.get("database"))
+        database_user = remote_unit_data.get("username", local_app_data.get("username"))
 
         if not database_name or not database_user:
             # Cannot create scoped database without credentials
@@ -142,8 +106,8 @@ class SharedDBRelation(Object):
             return
 
         # cache relation data
-        self._set_cached_key(relation_id, "database", database_name)
-        self._set_cached_key(relation_id, "username", database_user)
+        local_app_data["database"] = database_name
+        local_app_data["username"] = database_user
 
         password = self._get_or_set_password(database_user)
         remote_host = event.relation.data[event.unit].get("private-address")
@@ -156,53 +120,26 @@ class SharedDBRelation(Object):
             # set the relation data for consumption
             cluster_primary = self._charm._mysql.get_cluster_primary_address()
 
-            app_unit_data["db_host"] = cluster_primary.split(":")[0]
-            self._set_cached_key(relation_id, "db_host", app_unit_data["db_host"])
+            local_app_data["db_host"] = local_unit_data["db_host"] = cluster_primary.split(":")[0]
+
             # Database port is static in legacy charm
-            app_unit_data["db_port"] = "3306"
-            self._set_cached_key(relation_id, "db_port", app_unit_data["db_port"])
+            local_app_data["db_port"] = local_unit_data["db_port"] = "3306"
             # Wait timeout is a config option in legacy charm
             # defaulted to 3600 seconds
-            app_unit_data["wait_timeout"] = "3600"
-            self._set_cached_key(relation_id, "wait_timeout", app_unit_data["wait_timeout"])
+            local_app_data["wait_timeout"] = local_unit_data["wait_timeout"] = "3600"
 
             # password already cached
-            app_unit_data["password"] = password
+            local_app_data["password"] = local_unit_data["password"] = password
 
-            app_unit_data[
+            local_app_data["allowed_units"] = local_unit_data[
                 "allowed_units"
-            ] = f"{app_unit_data.get('allowed_units','')} {joined_unit}"
-            self._set_cached_key(relation_id, "allowed_units", app_unit_data["allowed_units"])
+            ] = f"{local_unit_data.get('allowed_units','')} {joined_unit}"
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
             self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 
         self._charm.unit.status = ActiveStatus()
-
-    def _on_shared_db_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle the departure of legacy shared_db relation."""
-        if not self._charm.unit.is_leader():
-            return
-
-        # Remove cached data
-        relation_keys = [
-            k
-            for k in self._peers.data[self._charm.app].keys()
-            if k.startswith(str(event.relation.id))
-        ]
-
-        # if event.relation.data:
-        #     # TODO: safeguard for relation_broken being emitted on scale in
-        #     #       to be confirmed juju bug
-        #     # FIXME: this test wont do!!!
-        #     logger.debug("Refuse to remove cached data from active relation.")
-        #     return
-
-        logger.debug(f"Removing cached keys for relation {event.relation.id}")
-
-        for key in relation_keys:
-            self._peers.data[self._charm.app].pop(key)
 
     def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy shared_db relation.
@@ -212,23 +149,20 @@ class SharedDBRelation(Object):
         if not self._charm.unit.is_leader():
             return
 
-        departing_unit = event.departing_unit.name
-        app_unit_data = event.relation.data[self._charm.unit]
+        if event.departing_unit.app == self._charm.app:
+            # Just run for departing of remote units
+            return
 
-        current_allowed_units = app_unit_data.get("allowed_units", "")
+        departing_unit = event.departing_unit.name
+        local_unit_data = event.relation.data[self._charm.unit]
+        local_app_data = event.relation.data[self._charm.app]
+
+        current_allowed_units = local_unit_data.get("allowed_units", "")
 
         logger.debug(f"Removing unit {departing_unit} from allowed_units")
-        app_unit_data["allowed_units"] = " ".join(
+        local_app_data["allowed_units"] = local_unit_data["allowed_units"] = " ".join(
             {unit for unit in current_allowed_units.split() if unit != departing_unit}
         )
-        # sync with peer data
-        try:
-            self._set_cached_key(
-                event.relation.id, "allowed_units", app_unit_data["allowed_units"]
-            )
-        except KeyError:
-            # ignore error when the relation is no longer present
-            pass
 
         # remove unit users
         self._charm._mysql.delete_users_for_unit(departing_unit)
