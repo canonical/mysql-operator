@@ -7,7 +7,6 @@
 import logging
 
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
-
 from ops.charm import (
     CharmBase,
     RelationBrokenEvent,
@@ -91,6 +90,7 @@ class SharedDBRelation(Object):
         # Legacy apps will consume data from leader unit.
         peer_data = self._peers.data
 
+        logger.debug("Syncing data from leader unit")
         for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
             for key, value in peer_data[self._charm.app].items():
                 if key.startswith(str(relation.id)):
@@ -112,10 +112,12 @@ class SharedDBRelation(Object):
         remote_unit_data = event.relation.data[event.unit]
         app_unit_data = event.relation.data[self._charm.unit]
 
-        if event.unit.name in app_unit_data.get("allowed_units", ""):
+        joined_unit = event.unit.name
+
+        if joined_unit in app_unit_data.get("allowed_units", ""):
             # Test if relation data is already set for the unit
             # and avoid re-running it
-            logger.warning(f"Unit {event.unit.name} already added to relation")
+            logger.warning(f"Unit {joined_unit} already added to relation")
             self._charm.unit.status = ActiveStatus()
             return
 
@@ -134,7 +136,7 @@ class SharedDBRelation(Object):
             # Cannot create scoped database without credentials
             # Defer the unit configuration until the relation is complete
             logger.warning(
-                f"Missing information for shared-db relation to create a database and scoped user for unit {event.unit.name}."
+                f"Missing information for shared-db relation to create a database and scoped user for unit {joined_unit}."
             )
             event.defer()
             return
@@ -148,7 +150,7 @@ class SharedDBRelation(Object):
 
         try:
             self._charm._mysql.create_application_database_and_scoped_user(
-                database_name, database_user, password, remote_host
+                database_name, database_user, password, remote_host, joined_unit
             )
 
             # set the relation data for consumption
@@ -169,7 +171,7 @@ class SharedDBRelation(Object):
 
             app_unit_data[
                 "allowed_units"
-            ] = f"{app_unit_data.get('allowed_units','')} {event.unit.name}"
+            ] = f"{app_unit_data.get('allowed_units','')} {joined_unit}"
             self._set_cached_key(relation_id, "allowed_units", app_unit_data["allowed_units"])
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
@@ -190,6 +192,15 @@ class SharedDBRelation(Object):
             if k.startswith(str(event.relation.id))
         ]
 
+        # if event.relation.data:
+        #     # TODO: safeguard for relation_broken being emitted on scale in
+        #     #       to be confirmed juju bug
+        #     # FIXME: this test wont do!!!
+        #     logger.debug("Refuse to remove cached data from active relation.")
+        #     return
+
+        logger.debug(f"Removing cached keys for relation {event.relation.id}")
+
         for key in relation_keys:
             self._peers.data[self._charm.app].pop(key)
 
@@ -206,6 +217,7 @@ class SharedDBRelation(Object):
 
         current_allowed_units = app_unit_data.get("allowed_units", "")
 
+        logger.debug(f"Removing unit {departing_unit} from allowed_units")
         app_unit_data["allowed_units"] = " ".join(
             {unit for unit in current_allowed_units.split() if unit != departing_unit}
         )
@@ -218,5 +230,5 @@ class SharedDBRelation(Object):
             # ignore error when the relation is no longer present
             pass
 
-        # TODO: remove unit users
-        # self._charm._mysql.remove_scoped_user(departing_unit)
+        # remove unit users
+        self._charm._mysql.delete_users_for_unit(departing_unit)
