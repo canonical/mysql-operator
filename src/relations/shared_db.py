@@ -60,10 +60,18 @@ class SharedDBRelation(Object):
     def _on_leader_elected(self, _) -> None:
         # Ensure that the leader unit contains the latest data.
         # Legacy apps will consume data from leader unit.
+
+        db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+
         for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
             logger.debug(f"Syncing data from leader unit for relation {relation.id}")
             for key, value in relation.data[self._charm.app].items():
-                relation.data[self._charm.unit][key] = value
+                if key == "db_host":
+                    relation.data[self._charm.unit][key] = db_host
+                    continue
+
+                if relation.data[self._charm.unit].get(key) != value:
+                    relation.data[self._charm.unit][key] = value
 
     def _on_shared_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy shared_db relation changed event.
@@ -165,4 +173,5 @@ class SharedDBRelation(Object):
         )
 
         # remove unit users
+        logger.debug(f"Removing user for unit {departing_unit}")
         self._charm._mysql.delete_users_for_unit(departing_unit)
