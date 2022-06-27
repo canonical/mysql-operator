@@ -158,6 +158,10 @@ class DBRouterRelation(Object):
         since legacy applications expect credential data to be populated on the leader
         unit databag.
         """
+        # Skip if the charm is not past the setup phase (config-changed event not executed yet)
+        if not self.charm._peers.data[self.charm.app].get("cluster-name"):
+            return
+
         for relation in self.model.relations.get(LEGACY_DB_ROUTER, []):
             relation_databag = relation.data
 

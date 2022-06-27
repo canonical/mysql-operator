@@ -29,6 +29,7 @@ class TestDBRouter(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
+    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("mysqlsh_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysqlsh_helpers.MySQL.configure_mysqlrouter_user")
     @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
@@ -37,6 +38,7 @@ class TestDBRouter(unittest.TestCase):
         _create_application_database_and_scoped_user,
         _configure_mysqlrouter_user,
         _does_mysql_user_exist,
+        _get_cluster_primary_address,
         _generate_random_password,
     ):
         # run start-up events to enable usage of the helper class
@@ -101,7 +103,7 @@ class TestDBRouter(unittest.TestCase):
         self.assertEqual(
             db_router_relation.data.get(self.charm.unit),
             {
-                "db_host": '"1.1.1.1"',
+                "db_host": '"2.2.2.2"',
                 "mysqlrouter_password": '"super_secure_password"',
                 "mysqlrouter_allowed_units": '"app/0"',
                 "MRUP_password": '"super_secure_password"',

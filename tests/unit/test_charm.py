@@ -65,6 +65,7 @@ class TestCharm(unittest.TestCase):
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
         )
 
+    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -83,6 +84,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(peer_relation_databag["cluster-name"], "test-cluster")
 
+    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_random_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(

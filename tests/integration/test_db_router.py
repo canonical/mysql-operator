@@ -172,12 +172,30 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     Args:
         ops_test: The ops test framework
     """
+    # Build and deploy the mysql charm
+    charm = await ops_test.build_charm(".")
+    config = {"cluster-name": CLUSTER_NAME}
+    await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
+
     # Get the server config credentials
     random_unit = ops_test.model.applications[APP_NAME].units[0]
     server_config_credentials = await get_server_config_credentials(random_unit)
 
     # Reduce the update_status frequency until the keystone charm is deployed
     await ops_test.model.set_config({"update-status-hook-interval": "10s"})
+
+    # Wait until the mysql charm is successfully deployed
+    await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        raise_on_blocked=True,
+        timeout=1000,
+    )
+    assert len(ops_test.model.applications[APP_NAME].units) == 3
+
+    for unit in ops_test.model.applications[APP_NAME].units:
+        assert unit.workload_status == "active"
 
     # Deploy and test the first deployment of keystone
     await deploy_and_relate_keystone_with_mysqlrouter(
