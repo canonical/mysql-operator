@@ -159,7 +159,7 @@ class DBRouterRelation(Object):
         unit databag.
         """
         # Skip if the charm is not past the setup phase (config-changed event not executed yet)
-        if not self.charm._peers.data[self.charm.app].get("cluster-name"):
+        if not self.charm._is_peer_data_set:
             return
 
         for relation in self.model.relations.get(LEGACY_DB_ROUTER, []):
@@ -172,7 +172,8 @@ class DBRouterRelation(Object):
 
             # Update the db host as the cluster primary may have changed
             primary_address = self.charm._mysql.get_cluster_primary_address()
-            relation_databag["db_host"] = json.dumps(primary_address)
+            relation_databag[self.charm.unit]["db_host"] = json.dumps(primary_address)
+            relation_databag[self.charm.app]["db_host"] = json.dumps(primary_address)
 
     def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the db-router relation changed event.
@@ -186,7 +187,12 @@ class DBRouterRelation(Object):
 
         logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
 
-        changed_unit_databag = event.relation.data[event.unit]
+        changed_unit_databag = event.relation.data.get(event.unit)
+        if not changed_unit_databag:
+            # Guard against relating and unrelating too fast
+            logger.warning("No data found for remote relation. Was the relation removed?")
+            return
+
         changed_unit_name = event.unit.name
         requested_users = self._get_requested_users_from_relation_databag(changed_unit_databag)
 

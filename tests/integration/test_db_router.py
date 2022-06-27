@@ -177,10 +177,6 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     config = {"cluster-name": CLUSTER_NAME}
     await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
 
-    # Get the server config credentials
-    random_unit = ops_test.model.applications[APP_NAME].units[0]
-    server_config_credentials = await get_server_config_credentials(random_unit)
-
     # Reduce the update_status frequency until the keystone charm is deployed
     await ops_test.model.set_config({"update-status-hook-interval": "10s"})
 
@@ -196,6 +192,10 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
 
     for unit in ops_test.model.applications[APP_NAME].units:
         assert unit.workload_status == "active"
+
+    # Get the server config credentials
+    random_unit = ops_test.model.applications[APP_NAME].units[0]
+    server_config_credentials = await get_server_config_credentials(random_unit)
 
     # Deploy and test the first deployment of keystone
     await deploy_and_relate_keystone_with_mysqlrouter(
@@ -273,6 +273,10 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     await scale_application(ops_test, KEYSTONE_APP_NAME, 0)
     await ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True)
     await ops_test.model.remove_application(KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True)
+
+    # Scale down the mysql application
+    await scale_application(ops_test, APP_NAME, 0)
+    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
     # Effectively disable the update status from firing
     await ops_test.model.set_config({"update-status-hook-interval": "60m"})

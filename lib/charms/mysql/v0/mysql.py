@@ -375,8 +375,12 @@ class MySQLBase(ABC):
                 logger.debug(f"There are no users to drop for unit {unit_name}")
                 return
 
-            drop_users_commands = (f"DROP USER IF EXISTS {', '.join(users)}",)
-            self._run_mysqlcli_script("; ".join(drop_users_commands))
+            primary_address = self.get_cluster_primary_address()
+            drop_users_command = (
+                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"session.run_sql(\"DROP USER IF EXISTS {', '.join(users)};\")",
+            )
+            self._run_mysqlsh_script("\n".join(drop_users_command))
         except MySQLClientError as e:
             logger.exception(f"Failed to query and delete users for unit {unit_name}", exc_info=e)
             raise MySQLDeleteUsersForUnitError(e.message)
