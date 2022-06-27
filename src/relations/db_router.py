@@ -17,7 +17,7 @@ from ops.charm import RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, RelationDataContent
 
-from constants import LEGACY_DB_ROUTER, PASSWORD_LENGTH, PEER
+from constants import LEGACY_DB_ROUTER, PASSWORD_LENGTH
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -158,14 +158,17 @@ class DBRouterRelation(Object):
         since legacy applications expect credential data to be populated on the leader
         unit databag.
         """
-        relation = self.charm.model.get_relation(LEGACY_DB_ROUTER)
-        if not relation:
-            return
+        for relation in self.model.relations.get(LEGACY_DB_ROUTER, []):
+            relation_databag = relation.data
 
-        relation_databag = relation.data
-        for key, value in relation_databag[self.charm.app].items():
-            if relation_databag[self.charm.unit].get(key) != value:
-                relation_databag[self.charm.unit][key] = value
+            # Copy data from the application databag into the leader unit's databag
+            for key, value in relation_databag.get(self.charm.app, {}).items():
+                if relation_databag[self.charm.unit].get(key) != value:
+                    relation_databag[self.charm.unit][key] = value
+
+            # Update the db host as the cluster primary may have changed
+            primary_address = self.charm._mysql.get_cluster_primary_address()
+            relation_databag["db_host"] = json.dumps(primary_address)
 
     def _on_db_router_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the db-router relation changed event.
@@ -212,8 +215,8 @@ class DBRouterRelation(Object):
                 " ".join(application_allowed_units)
             )
 
-        unit_address = str(self.charm.model.get_binding(PEER).network.bind_address)
-        databag_updates["db_host"] = json.dumps(unit_address)
+        primary_address = self.charm._mysql.get_cluster_primary_address()
+        databag_updates["db_host"] = json.dumps(primary_address)
 
         # Copy the databag_updates to both the leader unit databag
         # as well as the application databag (so it can be copied to a
