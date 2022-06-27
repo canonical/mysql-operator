@@ -364,7 +364,10 @@ class MySQLBase(ABC):
             MySQLDeleteUsersForUnitError if there is an error deleting users for the unit
         """
         get_unit_user_commands = (
-            f"SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN information_schema.user_attributes AS attributes ON (user.user = attributes.user AND user.host = attributes.host) WHERE attributes.attribute LIKE '%\"unit_name\": \"{unit_name}\"%'",
+            "SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user "
+            "JOIN information_schema.user_attributes AS attributes"
+            " ON (user.user = attributes.user AND user.host = attributes.host) "
+            f'WHERE attributes.attribute LIKE \'%"unit_name": "{unit_name}"%\'',
         )
 
         try:
