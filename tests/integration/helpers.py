@@ -82,13 +82,15 @@ async def scale_application(
     for unit_to_destroy in units_to_destroy:
         await ops_test.model.destroy_units(unit_to_destroy)
 
-    await ops_test.model_block_until(lambda: len(application.units) == count)
-    await ops_test.model.wait_for_idle(
-        apps=[application_name],
-        status="active",
-        raised_on_blocked=True,
-        timeout=1000,
-    )
+    await ops_test.model.block_until(lambda: len(application.units) == count)
+
+    if count > 0:
+        await ops_test.model.wait_for_idle(
+            apps=[application_name],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
 
 
 async def get_primary_unit(
