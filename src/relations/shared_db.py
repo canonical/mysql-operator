@@ -7,11 +7,7 @@
 import logging
 
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
-from ops.charm import (
-    CharmBase,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 

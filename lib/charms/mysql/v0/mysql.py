@@ -367,7 +367,7 @@ class MySQLBase(ABC):
             "SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN",
             "information_schema.user_attributes AS attributes ON (user.user = attributes.user",
             "AND user.host = attributes.host) WHERE attributes.attribute LIKE",
-            f" '%\"unit_name\": \"{unit_name}\"%';",
+            f' \'%"unit_name": "{unit_name}"%\';',
         )
 
         try:

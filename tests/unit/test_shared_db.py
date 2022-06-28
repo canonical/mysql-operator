@@ -4,11 +4,11 @@
 import unittest
 from unittest.mock import patch
 
+from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
 from ops.model import BlockedStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
 from constants import LEGACY_DB_SHARED
 from tests.unit.helpers import patch_network_get
 
