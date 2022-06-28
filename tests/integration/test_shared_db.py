@@ -156,95 +156,92 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
 
     # Reduce the update_status frequency until the keystone charm is deployed
-    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
+    async with ops_test.fast_forward():
 
-    # Wait until the mysql charm is successfully deployed
-    await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-    )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+        # Wait until the mysql charm is successfully deployed
+        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
+        assert len(ops_test.model.applications[APP_NAME].units) == 3
 
-    for unit in ops_test.model.applications[APP_NAME].units:
-        assert unit.workload_status == "active"
+        for unit in ops_test.model.applications[APP_NAME].units:
+            assert unit.workload_status == "active"
 
-    # Get the server config credentials
-    random_unit = ops_test.model.applications[APP_NAME].units[0]
-    server_config_credentials = await get_server_config_credentials(random_unit)
+        # Get the server config credentials
+        random_unit = ops_test.model.applications[APP_NAME].units[0]
+        server_config_credentials = await get_server_config_credentials(random_unit)
 
-    # Deploy and test the first deployment of keystone
-    await deploy_and_relate_keystone_with_mysql(ops_test, KEYSTONE_APP_NAME, 2)
-    await check_successful_keystone_migration(ops_test, server_config_credentials)
+        # Deploy and test the first deployment of keystone
+        await deploy_and_relate_keystone_with_mysql(ops_test, KEYSTONE_APP_NAME, 2)
+        await check_successful_keystone_migration(ops_test, server_config_credentials)
 
-    keystone_users = []
-    for unit in ops_test.model.applications[KEYSTONE_APP_NAME].units:
-        unit_address = await unit.get_public_address()
+        keystone_users = []
+        for unit in ops_test.model.applications[KEYSTONE_APP_NAME].units:
+            unit_address = await unit.get_public_address()
 
-        keystone_users.append(f"keystone@{unit_address}")
+            keystone_users.append(f"keystone@{unit_address}")
 
-    await check_keystone_users_existence(ops_test, server_config_credentials, keystone_users, [])
+        await check_keystone_users_existence(ops_test, server_config_credentials, keystone_users, [])
 
-    # Deploy and test another deployment of keystone
-    await deploy_and_relate_keystone_with_mysql(ops_test, ANOTHER_KEYSTONE_APP_NAME, 2)
-    await check_successful_keystone_migration(ops_test, server_config_credentials)
+        # Deploy and test another deployment of keystone
+        await deploy_and_relate_keystone_with_mysql(ops_test, ANOTHER_KEYSTONE_APP_NAME, 2)
+        await check_successful_keystone_migration(ops_test, server_config_credentials)
 
-    another_keystone_users = []
-    for unit in ops_test.model.applications[ANOTHER_KEYSTONE_APP_NAME].units:
-        unit_address = await unit.get_public_address()
+        another_keystone_users = []
+        for unit in ops_test.model.applications[ANOTHER_KEYSTONE_APP_NAME].units:
+            unit_address = await unit.get_public_address()
 
-        another_keystone_users.append(f"keystone@{unit_address}")
+            another_keystone_users.append(f"keystone@{unit_address}")
 
-    await check_keystone_users_existence(
-        ops_test, server_config_credentials, keystone_users + another_keystone_users, []
-    )
+        await check_keystone_users_existence(
+            ops_test, server_config_credentials, keystone_users + another_keystone_users, []
+        )
 
-    # Scale down the second deployment of keystone and confirm that the first deployment
-    # is still active
-    await scale_application(ops_test, ANOTHER_KEYSTONE_APP_NAME, 0)
-    await ops_test.model.remove_application(ANOTHER_KEYSTONE_APP_NAME, block_until_done=True)
+        # Scale down the second deployment of keystone and confirm that the first deployment
+        # is still active
+        await scale_application(ops_test, ANOTHER_KEYSTONE_APP_NAME, 0)
+        await ops_test.model.remove_application(ANOTHER_KEYSTONE_APP_NAME, block_until_done=True)
 
-    await check_keystone_users_existence(
-        ops_test, server_config_credentials, keystone_users, another_keystone_users
-    )
+        await check_keystone_users_existence(
+            ops_test, server_config_credentials, keystone_users, another_keystone_users
+        )
 
-    # Scale down the primary unit of mysql
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        APP_NAME,
-        CLUSTER_NAME,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-    )
-    primary_unit_name = primary_unit.name
+        # Scale down the primary unit of mysql
+        primary_unit = await get_primary_unit(
+            ops_test,
+            random_unit,
+            APP_NAME,
+            CLUSTER_NAME,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+        )
+        primary_unit_name = primary_unit.name
 
-    await ops_test.model.destroy_units(primary_unit_name)
+        await ops_test.model.destroy_units(primary_unit_name)
 
-    await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 2)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-    )
+        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 2)
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
 
-    await check_keystone_users_existence(
-        ops_test, server_config_credentials, keystone_users, another_keystone_users
-    )
+        await check_keystone_users_existence(
+            ops_test, server_config_credentials, keystone_users, another_keystone_users
+        )
 
-    # Scale mysql back up to 3 units
-    await scale_application(ops_test, APP_NAME, 3)
+        # Scale mysql back up to 3 units
+        await scale_application(ops_test, APP_NAME, 3)
 
-    # Scale down the first deployment of keystone
-    await scale_application(ops_test, KEYSTONE_APP_NAME, 0)
-    await ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True)
+        # Scale down the first deployment of keystone
+        await scale_application(ops_test, KEYSTONE_APP_NAME, 0)
+        await ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True)
 
-    # Scale down the mysql application
-    await scale_application(ops_test, APP_NAME, 0)
-    await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-
-    # Effectively disable the update status from firing
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
+        # Scale down the mysql application
+        await scale_application(ops_test, APP_NAME, 0)
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
