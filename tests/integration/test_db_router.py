@@ -81,7 +81,7 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
         apps=[keystone_application_name, keystone_mysqlrouter_application_name],
         status="active",
         raise_on_blocked=False,  # both applications are blocked initially
-        timeout=1000,
+        timeout=1500,
     )
 
 
