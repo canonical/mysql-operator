@@ -9,7 +9,7 @@ import logging
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
 from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import BlockedStatus
 
 from constants import LEGACY_DB_SHARED, PASSWORD_LENGTH, PEER
 from utils import generate_random_password
@@ -81,7 +81,6 @@ class SharedDBRelation(Object):
         if not self._charm.unit.is_leader():
             return
 
-        self._charm.unit.status = MaintenanceStatus("Setting up shared-db relation")
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
         # get relation data
@@ -90,7 +89,6 @@ class SharedDBRelation(Object):
             # This can happen if the relation is undone before
             # the related app become ready
             logger.warning("No data for remote unit. Did the relation was removed?")
-            self._charm.unit.status = ActiveStatus()
             return
 
         local_unit_data = event.relation.data[self._charm.unit]
@@ -102,7 +100,6 @@ class SharedDBRelation(Object):
             # Test if relation data is already set for the unit
             # and avoid re-running it
             logger.warning(f"Unit {joined_unit} already added to relation")
-            self._charm.unit.status = ActiveStatus()
             return
 
         # retrieve data from the relation databag
@@ -156,8 +153,6 @@ class SharedDBRelation(Object):
             self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 
-        self._charm.unit.status = ActiveStatus()
-
     def _on_shared_db_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy shared_db relation.
 
@@ -173,6 +168,7 @@ class SharedDBRelation(Object):
         departing_unit = event.departing_unit.name
         local_unit_data = event.relation.data[self._charm.unit]
         local_app_data = event.relation.data[self._charm.app]
+        # from ipdb import set_trace; set_trace()
 
         current_allowed_units = local_unit_data.get("allowed_units", "")
 

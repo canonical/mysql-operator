@@ -204,33 +204,34 @@ class TestMySQLBase(unittest.TestCase):
                 "test_database", "test_username", "test_password", "1.1.1.1", "app/.0"
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_delete_users_for_unit(self, _run_mysqlcli_script):
+    @patch(
+        "charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script",
+        return_value="test_column\ntest@1.1.1.1\ntest2@1.1.1.2",
+    )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_delete_users_for_unit(
+        self, _run_mysqlsh_script, _get_cluster_primary_address, _run_mysqlcli_script
+    ):
         """Test successful execution of delete_users_for_unit."""
-        _run_mysqlcli_script.side_effect = ["test_column\ntest@1.1.1.1\ntest2@1.1.1.2", ""]
-
         _expected_get_unit_user_commands = "; ".join(
             (
                 "SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN information_schema.user_attributes AS attributes ON (user.user = attributes.user AND user.host = attributes.host) WHERE attributes.attribute LIKE '%\"unit_name\": \"app/0\"%'",
             )
         )
 
-        _expected_drop_users_command = "; ".join(
-            ("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2",)
+        _expected_drop_users_command = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
+                'session.run_sql("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2;")',
+            )
         )
 
         self.mysql.delete_users_for_unit("app/0")
 
-        self.assertEqual(_run_mysqlcli_script.call_count, 2)
-        self.assertEqual(
-            sorted(_run_mysqlcli_script.mock_calls),
-            sorted(
-                [
-                    call(_expected_get_unit_user_commands),
-                    call(_expected_drop_users_command),
-                ]
-            ),
-        )
+        _run_mysqlcli_script.assert_called_once_with(_expected_get_unit_user_commands)
+        _get_cluster_primary_address.assert_called_once()
+        _run_mysqlsh_script.assert_called_once_with(_expected_drop_users_command)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_delete_users_for_unit_failure(self, _run_mysqlcli_script):

@@ -20,7 +20,7 @@ class TestSharedDBRelation(unittest.TestCase):
         self.harness.begin()
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
-        self.shared_db_relation_id = self.harness.add_relation("shared-db", "other-app")
+        self.shared_db_relation_id = self.harness.add_relation(LEGACY_DB_SHARED, "other-app")
         self.harness.add_relation_unit(self.shared_db_relation_id, "other-app/0")
         self.charm = self.harness.charm
 
@@ -108,7 +108,6 @@ class TestSharedDBRelation(unittest.TestCase):
         _create_application_database_and_scoped_user.reset_mock()
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("relations.shared_db.SharedDBRelation._on_shared_db_departed")
     @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch("mysqlsh_helpers.MySQL.delete_users_for_unit")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
@@ -117,15 +116,13 @@ class TestSharedDBRelation(unittest.TestCase):
         self,
         _create_application_database_and_scoped_user,
         _generate_random_password,
-        _remove_user,
+        _delete_users_for_unit,
         _get_cluster_primary_address,
-        _on_shared_db_departed,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
-        shared_db_relation = self.charm.model.get_relation(LEGACY_DB_SHARED)
         # update the app leader unit data to trigger shared_db_relation_changed event
         self.harness.update_relation_data(
             self.shared_db_relation_id,
@@ -134,12 +131,9 @@ class TestSharedDBRelation(unittest.TestCase):
                 "database": "shared_database",
                 "hostname": "1.1.1.2",
                 "username": "shared_user",
+                "private-address": "1.1.1.2",
             },
         )
-
         self.harness.remove_relation_unit(self.shared_db_relation_id, "other-app/0")
-        # self.charm.on[LEGACY_DB_SHARED].relation_departed.emit(shared_db_relation)
 
-        _remove_user.assert_called_once_with("other-app/0")
-
-        self.assertEqual(shared_db_relation.data.get(self.charm.app), {})
+        _delete_users_for_unit.assert_called_once_with("other-app/0")
