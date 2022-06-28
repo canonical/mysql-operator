@@ -61,6 +61,10 @@ class SharedDBRelation(Object):
         # Ensure that the leader unit contains the latest data.
         # Legacy apps will consume data from leader unit.
 
+        if not self._charm._is_peer_data_set:
+            # Bypass run on initial deployment leader elected event.
+            return
+
         db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
 
         for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
@@ -85,7 +89,14 @@ class SharedDBRelation(Object):
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
         # get relation data
-        remote_unit_data = event.relation.data[event.unit]
+        remote_unit_data = event.relation.data.get(event.unit)
+        if not remote_unit_data:
+            # This can happen if the relation is undone before
+            # the related app become ready
+            logger.warning("No data for remote unit. Did the relation was removed?")
+            self._charm.unit.status = ActiveStatus()
+            return
+
         local_unit_data = event.relation.data[self._charm.unit]
         local_app_data = event.relation.data[self._charm.app]
 
@@ -139,9 +150,11 @@ class SharedDBRelation(Object):
             # password already cached
             local_app_data["password"] = local_unit_data["password"] = password
 
-            local_app_data["allowed_units"] = local_unit_data[
-                "allowed_units"
-            ] = f"{local_unit_data.get('allowed_units','')} {joined_unit}"
+            allowed_units_set = set(local_unit_data.get("allowed_units", "").split())
+            allowed_units_set.add(joined_unit)
+            local_app_data["allowed_units"] = local_unit_data["allowed_units"] = " ".join(
+                allowed_units_set
+            )
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
             self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
