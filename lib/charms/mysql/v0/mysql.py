@@ -358,21 +358,32 @@ class MySQLBase(ABC):
         """Delete users for a unit.
 
         Args:
-            unit_name: The name of the unit mapped to the user
+            unit_name: The name of the unit for which to delete mysql users for
 
-        Raises
-            MySQLDeleteUsersForUnitError when there is an issue deleting users for a unit
+        Raises:
+            MySQLDeleteUsersForUnitError if there is an error deleting users for the unit
         """
         get_unit_user_commands = (
-            f"SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN information_schema.user_attributes AS attributes ON (user.user = attributes.user AND user.host = attributes.host) WHERE attributes.attribute LIKE '%\"unit_name\": \"{unit_name}\"%'",
+            "SELECT CONCAT(user.user, '@', user.host) FROM mysql.user AS user JOIN",
+            "information_schema.user_attributes AS attributes ON (user.user = attributes.user",
+            "AND user.host = attributes.host) WHERE attributes.attribute LIKE",
+            f" '%\"unit_name\": \"{unit_name}\"%';",
         )
 
         try:
-            output = self._run_mysqlcli_script("; ".join(get_unit_user_commands))
+            output = self._run_mysqlcli_script(" ".join(get_unit_user_commands))
             users = [line.strip() for line in output.split("\n") if line.strip()][1:]
 
-            drop_users_commands = (f"DROP USER IF EXISTS {', '.join(users)}",)
-            self._run_mysqlcli_script("; ".join(drop_users_commands))
+            if len(users) == 0:
+                logger.debug(f"There are no users to drop for unit {unit_name}")
+                return
+
+            primary_address = self.get_cluster_primary_address()
+            drop_users_command = (
+                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"session.run_sql(\"DROP USER IF EXISTS {', '.join(users)};\")",
+            )
+            self._run_mysqlsh_script("\n".join(drop_users_command))
         except MySQLClientError as e:
             logger.exception(f"Failed to query and delete users for unit {unit_name}", exc_info=e)
             raise MySQLDeleteUsersForUnitError(e.message)
