@@ -159,7 +159,9 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
 
         # Wait until the mysql charm is successfully deployed
-        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
+        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
@@ -185,7 +187,9 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
 
             keystone_users.append(f"keystone@{unit_address}")
 
-        await check_keystone_users_existence(ops_test, server_config_credentials, keystone_users, [])
+        await check_keystone_users_existence(
+            ops_test, server_config_credentials, keystone_users, []
+        )
 
         # Deploy and test another deployment of keystone
         await deploy_and_relate_keystone_with_mysql(ops_test, ANOTHER_KEYSTONE_APP_NAME, 2)
@@ -223,7 +227,9 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
 
         await ops_test.model.destroy_units(primary_unit_name)
 
-        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 2)
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 2
+        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",

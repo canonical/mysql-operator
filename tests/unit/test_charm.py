@@ -25,9 +25,7 @@ class TestCharm(unittest.TestCase):
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.db_router_relation_id = self.harness.add_relation("db-router", "app")
-        self.shared_db_relation_id = self.harness.add_relation("shared-db", "other-app")
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
-        self.harness.add_relation_unit(self.shared_db_relation_id, "other-app/0")
         self.charm = self.harness.charm
 
     @patch("mysqlsh_helpers.MySQL.install_and_configure_mysql_dependencies")
@@ -67,6 +65,7 @@ class TestCharm(unittest.TestCase):
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
         )
 
+    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -85,6 +84,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(peer_relation_databag["cluster-name"], "test-cluster")
 
+    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_random_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
