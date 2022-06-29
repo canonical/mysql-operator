@@ -2,9 +2,10 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
+from ops.charm import RelationDepartedEvent
 from ops.model import BlockedStatus
 from ops.testing import Harness
 
@@ -132,6 +133,14 @@ class TestSharedDBRelation(unittest.TestCase):
                 "private-address": "1.1.1.2",
             },
         )
-        self.harness.remove_relation_unit(self.shared_db_relation_id, "other-app/0")
+
+        # Workaround ops.testing not setting `departing_unit` in v1.5.0
+        # ref https://github.com/canonical/operator/pull/790
+        shared_db_relation = self.charm.model.get_relation(LEGACY_DB_SHARED)
+        with patch.object(
+            RelationDepartedEvent, "departing_unit", new_callable=PropertyMock
+        ) as mock_departing_unit:
+            mock_departing_unit.return_value = list(shared_db_relation.units)[0]
+            self.harness.remove_relation_unit(self.shared_db_relation_id, "other-app/0")
 
         _delete_users_for_unit.assert_called_once_with("other-app/0")
