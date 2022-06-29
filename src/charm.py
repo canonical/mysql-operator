@@ -30,6 +30,7 @@ from constants import (
 )
 from mysqlsh_helpers import MySQL
 from relations.db_router import DBRouterRelation
+from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on.get_root_credentials_action, self._on_get_root_credentials)
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
 
+        self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
 
     # =======================
