@@ -105,8 +105,6 @@ class TestSharedDBRelation(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-        _create_application_database_and_scoped_user.reset_mock()
-
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch("mysqlsh_helpers.MySQL.delete_users_for_unit")

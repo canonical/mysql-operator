@@ -104,7 +104,7 @@ class SharedDBRelation(Object):
 
         # retrieve data from the relation databag
         # Abstracted is the fact that it is received from the leader unit of the related app
-        # fallback to peer data if data is not set for the unit (non leader unit)
+        # fallback to relation app data if data is not set for the unit (non leader unit)
         database_name = remote_unit_data.get("database", local_app_data.get("database"))
         database_user = remote_unit_data.get("username", local_app_data.get("username"))
 
@@ -117,9 +117,10 @@ class SharedDBRelation(Object):
             event.defer()
             return
 
-        # cache relation data
-        local_app_data["database"] = database_name
-        local_app_data["username"] = database_user
+        # cache relation data if not cached already
+        if not local_app_data.get("database"):
+            local_app_data["database"] = database_name
+            local_app_data["username"] = database_user
 
         password = self._get_or_set_password(database_user)
         remote_host = event.relation.data[event.unit].get("private-address")

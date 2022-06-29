@@ -159,14 +159,12 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
 
         # Wait until the mysql charm is successfully deployed
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
-        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
             timeout=1000,
+            wait_for_exact_units=3,
         )
         assert len(ops_test.model.applications[APP_NAME].units) == 3
 
@@ -227,14 +225,12 @@ async def test_keystone_bundle(ops_test: OpsTest) -> None:
 
         await ops_test.model.destroy_units(primary_unit_name)
 
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 2
-        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
             timeout=1000,
+            wait_for_exact_units=2,
         )
 
         await check_keystone_users_existence(
