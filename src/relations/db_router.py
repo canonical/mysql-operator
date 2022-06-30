@@ -171,7 +171,7 @@ class DBRouterRelation(Object):
                     relation_databag[self.charm.unit][key] = value
 
             # Update the db host as the cluster primary may have changed
-            primary_address = self.charm._mysql.get_cluster_primary_address()
+            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
             relation_databag[self.charm.unit]["db_host"] = json.dumps(primary_address)
             relation_databag[self.charm.app]["db_host"] = json.dumps(primary_address)
 
@@ -225,7 +225,7 @@ class DBRouterRelation(Object):
                 " ".join(application_allowed_units)
             )
 
-        primary_address = self.charm._mysql.get_cluster_primary_address()
+        primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
         databag_updates["db_host"] = json.dumps(primary_address)
 
         # Copy the databag_updates to both the leader unit databag
