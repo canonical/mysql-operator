@@ -36,7 +36,39 @@ Note: the `--destroy-storage` will delete any data persisted by MySQL.
 
 ## Relations
 
-There are no relations implemented yet.
+We have added support for two legacy relations (from the [mysql-innodb-cluster](https://charmhub.io/mysql-innodb-cluster) charm):
+
+1. `db-router` is a relation that one uses with the [mysql router](https://charmhub.io/mysql-router) charm. The following commands can be executed to deploy and relate to the keystone charm:
+
+```shell
+# Pack the charm
+charmcraft pack
+
+# Deploy the relevant charms
+juju deploy -n 3 ./mysql_ubuntu-20.04-amd64.charm mysql
+juju deploy keystone
+juju deploy mysql-router keystone-mysql-router
+
+# Relate mysql-router with keystone
+juju relate keystone:shared-db keystone-mysql-router:shared-db
+
+# Relate mysql-router with mysql
+juju relate keystone-mysql-router:db-router mysql:db-router
+```
+
+1. `shared-db` is a relation that one uses when the application needs to connect directly to the database cluster. The following commands can be executed to deploy and relate to the keystone charm:
+
+```shell
+# Pack the charm
+charmcraft pack
+
+# Deploy the relevant charms
+juju deploy -n 3 ./mysql_ubuntu-20.04-amd64.charm mysql
+juju deploy keystone
+
+# Relate keystone with mysql
+juju relate keystone:shared-db mysql:shared-db
+```
 
 ## Contributing
 
