@@ -44,7 +44,7 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
     """
     # Deploy keystone
     # Explicitly setting the series to 'focal' as it defaults to 'xenial'
-    await ops_test.model.deploy(
+    keystone_app = await ops_test.model.deploy(
         "keystone",
         series="focal",
         application_name=keystone_application_name,
@@ -58,7 +58,7 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
     )
 
     # Deploy mysqlrouter and relate it to keystone
-    await ops_test.model.deploy(
+    keystone_mysqlrouter_app = await ops_test.model.deploy(
         "mysql-router",
         application_name=keystone_mysqlrouter_application_name,
     )
@@ -77,12 +77,12 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
     await ops_test.model.relate(
         f"{keystone_mysqlrouter_application_name}:db-router", f"{APP_NAME}:db-router"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_application_name, keystone_mysqlrouter_application_name],
-        status="active",
-        raise_on_blocked=False,  # both applications are blocked initially
+    await ops_test.model.block_until(
+        lambda: keystone_app.status in ("active", "error")
+        and keystone_mysqlrouter_app.status in ("active", "error"),
         timeout=1500,
     )
+    assert keystone_app.status == "active" and keystone_mysqlrouter_app.status == "active"
 
 
 async def check_successful_keystone_migration(
