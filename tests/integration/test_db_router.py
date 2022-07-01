@@ -181,7 +181,9 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     # Reduce the update_status frequency for the duration of the test
     async with ops_test.fast_forward():
         # Wait until the mysql charm is successfully deployed
-        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
+        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
@@ -210,7 +212,9 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             keystone_users.append(f"keystone@{unit_address}")
             keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-        await check_keystone_users_existence(ops_test, server_config_credentials, keystone_users, [])
+        await check_keystone_users_existence(
+            ops_test, server_config_credentials, keystone_users, []
+        )
 
         # Deploy and test another deployment of keystone
         await deploy_and_relate_keystone_with_mysqlrouter(
@@ -254,7 +258,9 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
 
         await ops_test.model.destroy_units(primary_unit_name)
 
-        await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 2)
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 2
+        )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
@@ -272,7 +278,9 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         # Scale down the first deployment of keystone
         await scale_application(ops_test, KEYSTONE_APP_NAME, 0)
         await ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True)
-        await ops_test.model.remove_application(KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True)
+        await ops_test.model.remove_application(
+            KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
+        )
 
         # Scale down the mysql application
         await scale_application(ops_test, APP_NAME, 0)
