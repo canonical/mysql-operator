@@ -28,6 +28,7 @@ CLUSTER_NAME = "test_cluster"
 
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charm from local source folder
@@ -56,6 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
+@pytest.mark.ha_tests
 async def test_consistent_data_replication_across_cluster(ops_test: OpsTest) -> None:
     """Confirm that data is replicated from the primary node to all the replicas."""
     # Insert values into a table on the primary unit
@@ -109,6 +111,7 @@ async def test_consistent_data_replication_across_cluster(ops_test: OpsTest) -> 
 
 @pytest.mark.order(3)
 @pytest.mark.abort_on_fail
+@pytest.mark.ha_tests
 async def test_primary_reelection(ops_test: OpsTest) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
     await ops_test.model.set_config({"update-status-hook-interval": "10s"})
@@ -159,6 +162,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
 
 @pytest.mark.order(4)
 @pytest.mark.abort_on_fail
+@pytest.mark.ha_tests
 async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit

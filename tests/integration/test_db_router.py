@@ -164,8 +164,9 @@ async def check_keystone_users_existence(
         assert user not in output
 
 
-@pytest.mark.order(100)
+@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.db_router_tests
 async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation.
 
