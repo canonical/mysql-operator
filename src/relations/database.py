@@ -25,7 +25,7 @@ from utils import generate_random_password
 logger = logging.getLogger(__name__)
 
 
-class ProvidesRelation(Object):
+class DatabaseRelation(Object):
     def __init__(self, charm):
         super().__init__(charm, "database")
 
