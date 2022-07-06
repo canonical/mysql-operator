@@ -29,8 +29,8 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from mysqlsh_helpers import MySQL
-from relations.db_router import DBRouterRelation
 from relations.database import DatabaseRelation
+from relations.db_router import DBRouterRelation
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
@@ -156,8 +156,6 @@ class MySQLOperatorCharm(CharmBase):
         # Only execute in the unit leader
         if not self.unit.is_leader():
             return
-
-        logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
 
         # Defer if the instance is not configured for use in an InnoDB cluster
         # Every instance gets configured for use in an InnoDB cluster on start
