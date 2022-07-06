@@ -74,10 +74,12 @@ class DatabaseRelation(Object):
             self.database.set_credentials(relation_id, db_user, db_pass)
             self.database.set_endpoints(relation_id, primary_endpoint)
             self.database.set_version(relation_id, db_version)
-            secondaries_endpoints = self._charm._mysql.get_cluster_members_addresses() - set(
-                primary_endpoint
-            )
-            self.database.set_secondaries_endpoints(relation_id, secondaries_endpoints)
+            # get read only endpoints by removing primary from all members
+            read_only_endpoints = self._charm._mysql.get_cluster_members_addresses() - {
+                primary_endpoint,
+            }
+
+            self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
             # TODO:
             # add setup of tls, tls_ca and status
             self._charm._mysql.create_application_database_and_scoped_user(
@@ -89,9 +91,9 @@ class DatabaseRelation(Object):
             logger.error(f"Failed to create scoped user for app {remote_app}")
             self._charm.unit.status = BlockedStatus("Failed to create scoped user")
             return
-        except MySQLClientError:
-            logger.error("Failed to find MySQL cluster primary")
-            self._charm.unit.status = BlockedStatus("Failed to retrieve endpoint")
+        except MySQLClientError as e:
+            logger.exception("Failed to retrieve cluster info", exc_info=e)
+            self._charm.unit.status = BlockedStatus("Failed to retrieve cluster info")
             return
 
     def _on_database_broken(self, event: RelationDepartedEvent) -> None:
