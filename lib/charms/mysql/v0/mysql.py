@@ -857,13 +857,14 @@ class MySQLBase(ABC):
         """
         logger.debug("Getting InnoDB version")
 
-        get_innodb_version_commands = (
+        get_version_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            'session.run_sql("SELECT version()")',
+            'result = session.run_sql("SELECT version()")',
+            'print(f"<VERSION>result.fetch_one()[0]"</VERSION>")',
         )
 
-        output = self._run_mysqlsh_script("\n".join(get_innodb_version_commands))
-        matches = re.search(r"InnoDB\s+(\d+\.\d+\.\d+)", output)
+        output = self._run_mysqlsh_script("\n".join(get_version_commands))
+        matches = re.search(r"<VERSION>(.+)</VERSION>", output)
 
         if not matches:
             return None
