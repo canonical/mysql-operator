@@ -837,7 +837,7 @@ class MySQLBase(ABC):
         get_cluster_members_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "members = ','.join((member['address'] for member in cluster.describe()['defaultReplicaSet']['topology']))"
+            "members = ','.join((member['address'] for member in cluster.describe()['defaultReplicaSet']['topology']))",
             "print(f'<MEMBERS>{members}</MEMBERS>')",
         )
 
