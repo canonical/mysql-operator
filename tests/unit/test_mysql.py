@@ -128,14 +128,14 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_create_mysqlrouter_user_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
-                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}';\")",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
             )
         )
 
         _expected_mysqlrouter_user_grant_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
                 "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION;\")",
                 "session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1';\")",
                 "session.run_sql(\"GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1';\")",
@@ -184,15 +184,15 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_create_database_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
                 'session.run_sql("CREATE DATABASE IF NOT EXISTS test_database;")',
             )
         )
 
         _expected_create_scoped_user_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
-                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}';\")",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
                 "session.run_sql(\"GRANT USAGE ON *.* TO 'test_username'@`1.1.1.1`;\")",
                 'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
             )
@@ -246,7 +246,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_drop_users_command = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
                 'session.run_sql("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2;")',
             )
         )

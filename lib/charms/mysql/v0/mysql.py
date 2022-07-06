@@ -301,14 +301,18 @@ class MySQLBase(ABC):
         try:
             primary_address = self.get_cluster_primary_address()
 
-            mysqlrouter_user_attributes = {"unit_name": unit_name}
+            escaped_mysqlrouter_user_attributes = json.dumps({"unit_name": unit_name}).replace(
+                '"', r"\""
+            )
+            # Using server_config_user as we are sure it has create user grants
             create_mysqlrouter_user_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-                f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{json.dumps(mysqlrouter_user_attributes)}';\")",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+                f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_mysqlrouter_user_attributes}';\")",
             )
 
+            # Using server_config_user as we are sure it has create user grants
             mysqlrouter_user_grant_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f"session.run_sql(\"GRANT CREATE USER ON *.* TO '{username}'@'{hostname}' WITH GRANT OPTION;\")",
                 f"session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'{hostname}';\")",
                 f"session.run_sql(\"GRANT SELECT ON mysql.user TO '{username}'@'{hostname}';\")",
@@ -346,15 +350,17 @@ class MySQLBase(ABC):
         try:
             primary_address = self.get_cluster_primary_address()
 
+            # Using server_config_user as we are sure it has create database grants
             create_database_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f'session.run_sql("CREATE DATABASE IF NOT EXISTS {database_name};")',
             )
 
-            user_attributes = {"unit_name": unit_name}
+            escaped_user_attributes = json.dumps({"unit_name": unit_name}).replace('"', r"\"")
+            # Using server_config_user as we are sure it has create user grants
             create_scoped_user_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-                f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{json.dumps(user_attributes)}';\")",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+                f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_user_attributes}';\")",
                 f"session.run_sql(\"GRANT USAGE ON *.* TO '{username}'@`{hostname}`;\")",
                 f'session.run_sql("GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`;")',
             )
@@ -393,8 +399,10 @@ class MySQLBase(ABC):
                 return
 
             primary_address = self.get_cluster_primary_address()
+
+            # Using server_config_user as we are sure it has drop user grants
             drop_users_command = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f"session.run_sql(\"DROP USER IF EXISTS {', '.join(users)};\")",
             )
             self._run_mysqlsh_script("\n".join(drop_users_command))
