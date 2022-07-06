@@ -61,27 +61,28 @@ class DatabaseRelation(Object):
             return
 
         # get base relation data
+        relation_id = event.relation.id
         db_name = event.database
-        db_user = f"relation-{event.relation.id}"
+        db_user = f"relation-{relation_id}"
         db_pass = self._get_or_set_password(event.relation)
         db_version = self._charm._mysql.get_mysql_version()
 
         remote_app = event.app.name
 
         try:
-            self._charm._mysql.create_application_database_and_scoped_user(
-                db_name, db_user, db_pass, "%", remote_app
-            )
             primary_endpoint = self._charm._mysql.get_cluster_primary_address()
-            self.database.set_credentials(event.relation.id, db_user, db_pass)
-            self.database.set_endpoints(event.relation.id, primary_endpoint)
-            self.database.set_version(event.relation.id, db_version)
+            self.database.set_credentials(relation_id, db_user, db_pass)
+            self.database.set_endpoints(relation_id, primary_endpoint)
+            self.database.set_version(relation_id, db_version)
             secondaries_endpoints = self._charm._mysql.get_cluster_members_addresses() - set(
                 primary_endpoint
             )
-            self.database.set_secondaries_endpoints(event.relation.id, secondaries_endpoints)
+            self.database.set_secondaries_endpoints(relation_id, secondaries_endpoints)
             # TODO:
             # add setup of tls, tls_ca and status
+            self._charm._mysql.create_application_database_and_scoped_user(
+                db_name, db_user, db_pass, "%", remote_app
+            )
 
             logger.info(f"Created user for app {remote_app}")
         except MySQLCreateApplicationDatabaseAndScopedUserError:
@@ -100,10 +101,6 @@ class DatabaseRelation(Object):
         """
         if not self._charm.unit.is_leader():
             # run once by the leader
-            return
-
-        if event.departing_unit.app == self._charm.app:
-            # Just run for departing of remote units
             return
 
         try:
