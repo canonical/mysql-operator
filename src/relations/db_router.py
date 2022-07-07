@@ -162,7 +162,7 @@ class DBRouterRelation(Object):
         if not self.charm._is_peer_data_set:
             return
 
-        for relation in self.model.relations.get(LEGACY_DB_ROUTER, []):
+        for relation in self.charm.model.relations.get(LEGACY_DB_ROUTER, []):
             relation_databag = relation.data
 
             # Copy data from the application databag into the leader unit's databag

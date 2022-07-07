@@ -4,8 +4,6 @@
 
 The [MySQL](https://www.mysql.com/) operator provides an open-source relational database management system (RDBMS). This repository contains a Juju Charm for deploying MySQL on machines.
 
-This charm is currently in development, with High Availability via Group Replication as a short-term goal.
-
 ## Usage
 
 To deploy this charm using Juju 2.9.0 or later, run:
