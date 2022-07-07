@@ -76,14 +76,14 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ra
 logger = logging.getLogger(__name__)
 
 # The unique Charmhub library identifier, never change it
-LIBID = "7c3dbc9c2ad44a47bd6fcb25caa270e5"
+LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
