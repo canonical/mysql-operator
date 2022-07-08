@@ -12,6 +12,7 @@ from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLDeleteUsersForUnitError,
 )
 from ops.charm import RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
@@ -264,4 +265,7 @@ class DBRouterRelation(Object):
 
                 leader_db_router_databag[key] = json.dumps(" ".join(allowed_units))
 
-        self.charm._mysql.delete_users_for_unit(departing_unit_name)
+        try:
+            self.charm._mysql.delete_users_for_unit(departing_unit_name)
+        except MySQLDeleteUsersForUnitError:
+            self.charm.unit.status = BlockedStatus("Failed to delete users for departing unit")
