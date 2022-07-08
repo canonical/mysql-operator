@@ -94,7 +94,9 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
-        _run_mysqlcli_script.assert_called_once_with("\n".join(user_existence_command))
+        _run_mysqlcli_script.assert_called_once_with(
+            "\n".join(user_existence_command), password="password"
+        )
 
         # Reset the mock
         _run_mysqlcli_script.reset_mock()
@@ -105,7 +107,9 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.2")
-        _run_mysqlcli_script.assert_called_once_with("\n".join(user_existence_command))
+        _run_mysqlcli_script.assert_called_once_with(
+            "\n".join(user_existence_command), password="password"
+        )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_does_mysql_user_exist_failure(self, _run_mysqlcli_script):
@@ -115,34 +119,38 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLCheckUserExistenceError):
             self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysqlrouter_user(self, _run_mysqlcli_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_configure_mysqlrouter_user(self, _run_mysqlsh_script, _get_cluster_primary_address):
         """Test the successful execution of configure_mysqlrouter_user."""
-        _run_mysqlcli_script.return_value = b""
+        _get_cluster_primary_address.return_value = "2.2.2.2"
+        _run_mysqlsh_script.return_value = ""
 
-        _expected_create_mysqlrouter_user_commands = "; ".join(
+        _expected_create_mysqlrouter_user_commands = "\n".join(
             (
-                "CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}'",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
             )
         )
 
-        _expected_mysqlrouter_user_grant_commands = "; ".join(
+        _expected_mysqlrouter_user_grant_commands = "\n".join(
             (
-                "GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION",
-                "GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1'",
-                "GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1'",
-                "GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'1.1.1.1'",
-                "GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'1.1.1.1'",
-                "GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'1.1.1.1'",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION;\")",
+                "session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1';\")",
+                "session.run_sql(\"GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1';\")",
+                "session.run_sql(\"GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'1.1.1.1';\")",
+                "session.run_sql(\"GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'1.1.1.1';\")",
+                "session.run_sql(\"GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'1.1.1.1';\")",
             )
         )
 
         self.mysql.configure_mysqlrouter_user("test_username", "test_password", "1.1.1.1", "app/0")
 
-        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+        self.assertEqual(_run_mysqlsh_script.call_count, 2)
 
         self.assertEqual(
-            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(_run_mysqlsh_script.mock_calls),
             sorted(
                 [
                     call(_expected_create_mysqlrouter_user_commands),
@@ -151,30 +159,42 @@ class TestMySQLBase(unittest.TestCase):
             ),
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysqlrouter_user_failure(self, _run_mysqlcli_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_configure_mysqlrouter_user_failure(
+        self, _run_mysqlsh_script, _get_cluster_primary_address
+    ):
         """Test failure to configure the MySQLRouter user."""
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        _get_cluster_primary_address.return_value = "2.2.2.2"
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureRouterUserError):
             self.mysql.configure_mysqlrouter_user(
                 "test_username", "test_password", "1.1.1.1", "app/0"
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_create_application_database_and_scoped_user(self, _run_mysqlcli_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_database_and_scoped_user(
+        self, _run_mysqlsh_script, _get_cluster_primary_address
+    ):
         """Test the successful execution of create_application_database_and_scoped_user."""
-        _run_mysqlcli_script.return_value = b""
+        _get_cluster_primary_address.return_value = "2.2.2.2"
+        _run_mysqlsh_script.return_value = ""
 
-        _expected_create_database_commands = "; ".join(
-            ("CREATE DATABASE IF NOT EXISTS test_database",)
+        _expected_create_database_commands = "\n".join(
+            (
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                'session.run_sql("CREATE DATABASE IF NOT EXISTS test_database;")',
+            )
         )
 
-        _expected_create_scoped_user_commands = "; ".join(
+        _expected_create_scoped_user_commands = "\n".join(
             (
-                "CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\"unit_name\": \"app/0\"}'",
-                "GRANT USAGE ON *.* TO 'test_username'@`1.1.1.1`",
-                "GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
+                "session.run_sql(\"GRANT USAGE ON *.* TO 'test_username'@`1.1.1.1`;\")",
+                'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
             )
         )
 
@@ -182,10 +202,10 @@ class TestMySQLBase(unittest.TestCase):
             "test_database", "test_username", "test_password", "1.1.1.1", "app/0"
         )
 
-        self.assertEqual(_run_mysqlcli_script.call_count, 2)
+        self.assertEqual(_run_mysqlsh_script.call_count, 2)
 
         self.assertEqual(
-            sorted(_run_mysqlcli_script.mock_calls),
+            sorted(_run_mysqlsh_script.mock_calls),
             sorted(
                 [
                     call(_expected_create_database_commands),
@@ -194,10 +214,14 @@ class TestMySQLBase(unittest.TestCase):
             ),
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_create_application_database_and_scoped_user_failure(self, _run_mysqlcli_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_database_and_scoped_user_failure(
+        self, _run_mysqlsh_script, _get_cluster_primary_address
+    ):
         """Test failure to create application database and scoped user."""
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        _get_cluster_primary_address.return_value = "2.2.2.2"
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateApplicationDatabaseAndScopedUserError):
             self.mysql.create_application_database_and_scoped_user(
@@ -222,7 +246,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_drop_users_command = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@2.2.2.2')",
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
                 'session.run_sql("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2;")',
             )
         )

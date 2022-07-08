@@ -12,6 +12,7 @@ from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLDeleteUsersForUnitError,
 )
 from ops.charm import RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
@@ -162,7 +163,7 @@ class DBRouterRelation(Object):
         if not self.charm._is_peer_data_set:
             return
 
-        for relation in self.model.relations.get(LEGACY_DB_ROUTER, []):
+        for relation in self.charm.model.relations.get(LEGACY_DB_ROUTER, []):
             relation_databag = relation.data
 
             # Copy data from the application databag into the leader unit's databag
@@ -264,4 +265,7 @@ class DBRouterRelation(Object):
 
                 leader_db_router_databag[key] = json.dumps(" ".join(allowed_units))
 
-        self.charm._mysql.delete_users_for_unit(departing_unit_name)
+        try:
+            self.charm._mysql.delete_users_for_unit(departing_unit_name)
+        except MySQLDeleteUsersForUnitError:
+            self.charm.unit.status = BlockedStatus("Failed to delete users for departing unit")
