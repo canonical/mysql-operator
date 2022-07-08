@@ -427,7 +427,7 @@ class MySQLBase(ABC):
             user = f"relation-{str(relation_id)}"
             primary_address = self.get_cluster_primary_address()
             drop_users_command = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f"session.run_sql(\"DROP USER IF EXISTS '{user}'@'%';\")",
             )
             self._run_mysqlsh_script("\n".join(drop_users_command))
