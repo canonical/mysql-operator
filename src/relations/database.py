@@ -58,7 +58,12 @@ class DatabaseRelation(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Handle the `database-requested` event."""
         if not self.charm.unit.is_leader():
+            return
 
+        # check if cluster is ready and if not, defer
+        if not self.charm.cluster_initialized:
+            logger.debug("Waiting cluster to be initialized")
+            event.defer()
             return
 
         # get base relation data
