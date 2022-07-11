@@ -265,6 +265,7 @@ class MySQLOperatorCharm(CharmBase):
 
     @property
     def _is_peer_data_set(self):
+        """Returns True if the peer relation data is set."""
         peer_data = self._peers.data[self.app]
 
         return (
@@ -273,6 +274,11 @@ class MySQLOperatorCharm(CharmBase):
             and peer_data.get("server-config-password")
             and peer_data.get("cluster-admin-password")
         )
+
+    @property
+    def cluster_initialized(self):
+        """Returns True if the cluster is initialized."""
+        return self._peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
 
 
 if __name__ == "__main__":
