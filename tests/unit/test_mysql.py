@@ -18,8 +18,8 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
-    MySQLDeleteUsersForUnitError,
     MySQLDeleteUserForRelationError,
+    MySQLDeleteUsersForUnitError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
@@ -722,7 +722,6 @@ class TestMySQLBase(unittest.TestCase):
 
     def test_error(self):
         """Test Error class."""
-
         error = Error("Error message")
 
         self.assertEqual(error.__repr__(), "<charms.mysql.v0.mysql.Error ('Error message',)>")
@@ -733,7 +732,6 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_user_for_relation(self, _run_mysqlsh_script, _get_cluster_primary_address):
         """Test delete_user_for_relation() method."""
-
         self.mysql.delete_user_for_relation(40)
 
         expected_commands = "\n".join(
@@ -793,7 +791,6 @@ class TestMySQLBase(unittest.TestCase):
 
     def test_abstract_methods(self):
         """Test abstract methods."""
-
         with self.assertRaises(NotImplementedError):
             self.mysql.wait_until_mysql_connection()
 
