@@ -69,7 +69,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
 
@@ -871,7 +871,7 @@ class MySQLBase(ABC):
 
         return set(matches.group(1).split(","))
 
-    def get_mysql_version(self) -> str:
+    def get_mysql_version(self) -> Optional[str]:
         """Get the MySQL version.
 
         Returns:
@@ -899,7 +899,7 @@ class MySQLBase(ABC):
 
         Implemented in subclasses, test for socket file existence.
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _run_mysqlsh_script(self, script: str) -> str:
@@ -913,7 +913,7 @@ class MySQLBase(ABC):
         Returns:
             String representing the output of the mysqlsh command
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:
@@ -928,4 +928,4 @@ class MySQLBase(ABC):
             user: (optional) user to invoke the mysql cli script with (default is "root")
             password: (optional) password to invoke the mysql cli script with
         """
-        pass
+        raise NotImplementedError
