@@ -59,7 +59,6 @@ class DatabaseRelation(Object):
         """Handle the `database-requested` event."""
         if not self.charm.unit.is_leader():
             return
-
         # check if cluster is ready and if not, defer
         if not self.charm.cluster_initialized:
             logger.debug("Waiting cluster to be initialized")
@@ -82,9 +81,12 @@ class DatabaseRelation(Object):
             self.database.set_endpoints(relation_id, primary_endpoint)
             self.database.set_version(relation_id, db_version)
             # get read only endpoints by removing primary from all members
-            read_only_endpoints = self.charm._mysql.get_cluster_members_addresses() - {
-                primary_endpoint,
-            }
+            read_only_endpoints = sorted(
+                self.charm._mysql.get_cluster_members_addresses()
+                - {
+                    primary_endpoint,
+                }
+            )
 
             self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
             # TODO:
