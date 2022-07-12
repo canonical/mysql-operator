@@ -774,7 +774,7 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_mysql_version(self, _run_mysqlsh_script):
         """Test get_mysql_version() method."""
-        _run_mysqlsh_script.return_value = "<VERSION>8.0.29-0ubuntu0.20.04</VERSION>"
+        _run_mysqlsh_script.return_value = "<VERSION>8.0.29-0ubuntu0.20.04.3</VERSION>"
 
         version = self.mysql.get_mysql_version()
         expected_commands = "\n".join(
@@ -787,7 +787,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
-        self.assertEqual(version, "8.0.29-0ubuntu0.20.04")
+        self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
 
     def test_abstract_methods(self):
         """Test abstract methods."""
