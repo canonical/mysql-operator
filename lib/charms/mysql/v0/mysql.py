@@ -69,7 +69,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
 
@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -850,11 +850,11 @@ class MySQLBase(ABC):
 
         return matches.group(1)
 
-    def get_cluster_members_addresses(self) -> Optional[Set[str]]:
+    def get_cluster_members_addresses(self) -> Optional[Iterable[str]]:
         """Get the addresses of the cluster's members.
 
         Returns:
-            A set of members addresses
+            Iterable of members addresses
         """
         get_cluster_members_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
