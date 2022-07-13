@@ -14,6 +14,8 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUserForRelationError,
+    MySQLGetClusterMembersAddressesError,
+    MySQLGetMySQLVersionError,
 )
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
@@ -71,11 +73,11 @@ class DatabaseRelation(Object):
         # user name is derived from the relation id
         db_user = f"relation-{relation_id}"
         db_pass = self._get_or_set_password(event.relation)
-        db_version = self.charm._mysql.get_mysql_version()
 
         remote_app = event.app.name
 
         try:
+            db_version = self.charm._mysql.get_mysql_version()
             primary_endpoint = self.charm._mysql.get_cluster_primary_address()
             self.database.set_credentials(relation_id, db_user, db_pass)
             self.database.set_endpoints(relation_id, primary_endpoint)
@@ -100,11 +102,15 @@ class DatabaseRelation(Object):
         except MySQLCreateApplicationDatabaseAndScopedUserError:
             logger.error(f"Failed to create scoped user for app {remote_app}")
             self.charm.unit.status = BlockedStatus("Failed to create scoped user")
-            return
+        except MySQLGetMySQLVersionError as e:
+            logger.exception("Failed to get MySQL version", exc_info=e)
+            self.charm.unit.status = BlockedStatus("Failed to get MySQL version")
+        except MySQLGetClusterMembersAddressesError as e:
+            logger.exception("Failed to get cluster members", exc_info=e)
+            self.charm.unit.status = BlockedStatus("Failed to get cluster members")
         except MySQLClientError as e:
-            logger.exception("Failed to retrieve cluster info", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to retrieve cluster info")
-            return
+            logger.exception("Failed to get primary", exc_info=e)
+            self.charm.unit.status = BlockedStatus("Failed to get primary")
 
     def _on_database_broken(self, event: RelationDepartedEvent) -> None:
         """Handle the removal of database relation.

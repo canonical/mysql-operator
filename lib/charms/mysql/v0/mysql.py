@@ -167,6 +167,14 @@ class MySQLClientError(Error):
     """
 
 
+class MySQLGetClusterMembersAddressesError(Error):
+    """Exception raised when there is an issue getting the cluster members addresses."""
+
+
+class MySQLGetMySQLVersionError(Error):
+    """Exception raised when there is an issue getting the MySQL version."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -863,7 +871,12 @@ class MySQLBase(ABC):
             "print(f'<MEMBERS>{members}</MEMBERS>')",
         )
 
-        output = self._run_mysqlsh_script("\n".join(get_cluster_members_commands))
+        try:
+            output = self._run_mysqlsh_script("\n".join(get_cluster_members_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get cluster members addresses", exc_info=e)
+            raise MySQLGetClusterMembersAddressesError(e.message)
+
         matches = re.search(r"<MEMBERS>(.+)</MEMBERS>", output)
 
         if not matches:
@@ -885,7 +898,12 @@ class MySQLBase(ABC):
             'print(f"<VERSION>{result.fetch_one()[0]}</VERSION>")',
         )
 
-        output = self._run_mysqlsh_script("\n".join(get_version_commands))
+        try:
+            output = self._run_mysqlsh_script("\n".join(get_version_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get workload version", exc_info=e)
+            raise MySQLGetMySQLVersionError(e.message)
+
         matches = re.search(r"<VERSION>(.+)</VERSION>", output)
 
         if not matches:

@@ -7,10 +7,10 @@
 import logging
 
 from charms.mysql.v0.mysql import (
-    MySQLClientError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
 )
 from ops.charm import (
@@ -133,7 +133,7 @@ class MySQLOperatorCharm(CharmBase):
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
             return
-        except MySQLClientError:
+        except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
 
         # Create the cluster on the juju leader unit
