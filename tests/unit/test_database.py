@@ -65,13 +65,6 @@ class TestDatase(unittest.TestCase):
             self.database_relation_id, "app", {"database": "test_db"}
         )
 
-        # confirm that the relation databag is updated
-        database_relation_databag = self.harness.get_relation_data(
-            self.database_relation_id, self.harness.charm.app
-        )
-        database_relation = self.charm.model.get_relation(DB_RELATION_NAME)
-        app_unit = list(database_relation.units)[0]
-
         self.assertEqual(
             database_relation_databag,
             {
