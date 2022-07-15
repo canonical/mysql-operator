@@ -10,6 +10,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
 )
 from ops.charm import (
@@ -29,6 +30,7 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from mysqlsh_helpers import MySQL
+from relations.database import DatabaseRelation
 from relations.db_router import DBRouterRelation
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
@@ -64,6 +66,7 @@ class MySQLOperatorCharm(CharmBase):
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
+        self.database_relation = DatabaseRelation(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -122,12 +125,16 @@ class MySQLOperatorCharm(CharmBase):
             self._mysql.configure_mysql_users()
             self._mysql.configure_instance()
             self._mysql.wait_until_mysql_connection()
+            workload_version = self._mysql.get_mysql_version()
+            self.unit.set_workload_version(workload_version)
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
             return
+        except MySQLGetMySQLVersionError:
+            logger.debug("Fail to get MySQL version")
 
         # Create the cluster on the juju leader unit
         if not self.unit.is_leader():
@@ -154,8 +161,6 @@ class MySQLOperatorCharm(CharmBase):
         # Only execute in the unit leader
         if not self.unit.is_leader():
             return
-
-        logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
 
         # Defer if the instance is not configured for use in an InnoDB cluster
         # Every instance gets configured for use in an InnoDB cluster on start
@@ -265,6 +270,7 @@ class MySQLOperatorCharm(CharmBase):
 
     @property
     def _is_peer_data_set(self):
+        """Returns True if the peer relation data is set."""
         peer_data = self._peers.data[self.app]
 
         return (
@@ -273,6 +279,11 @@ class MySQLOperatorCharm(CharmBase):
             and peer_data.get("server-config-password")
             and peer_data.get("cluster-admin-password")
         )
+
+    @property
+    def cluster_initialized(self):
+        """Returns True if the cluster is initialized."""
+        return self._peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
 
 
 if __name__ == "__main__":

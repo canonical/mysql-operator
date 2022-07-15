@@ -8,6 +8,7 @@ from unittest.mock import call, patch
 
 import tenacity
 from charms.mysql.v0.mysql import (
+    Error,
     MySQLAddInstanceToClusterError,
     MySQLBase,
     MySQLCheckUserExistenceError,
@@ -17,6 +18,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
+    MySQLDeleteUserForRelationError,
     MySQLDeleteUsersForUnitError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
@@ -693,3 +695,107 @@ class TestMySQLBase(unittest.TestCase):
 
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertFalse(result)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_cluster_status(self, _run_mysqlsh_script):
+        """Test a successful execution of get_cluster_status() method."""
+        _run_mysqlsh_script.return_value = '{"status":"online"}'
+
+        self.mysql.get_cluster_status()
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "print(cluster.status())",
+            )
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("json.loads")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_cluster_status_failure(self, _run_mysqlsh_script, _json_loads):
+        """Test an exception executing get_cluster_status() method."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        self.mysql.get_cluster_status()
+        _json_loads.assert_not_called()
+
+    def test_error(self):
+        """Test Error class."""
+        error = Error("Error message")
+
+        self.assertEqual(error.__repr__(), "<charms.mysql.v0.mysql.Error ('Error message',)>")
+        self.assertEqual(error.name, "<charms.mysql.v0.mysql.Error>")
+        self.assertEqual(error.message, "Error message")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_delete_user_for_relation(self, _run_mysqlsh_script, _get_cluster_primary_address):
+        """Test delete_user_for_relation() method."""
+        self.mysql.delete_user_for_relation(40)
+
+        expected_commands = "\n".join(
+            (
+                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "session.run_sql(\"DROP USER IF EXISTS 'relation-40'@'%';\")",
+            )
+        )
+        _get_cluster_primary_address.assert_called_once()
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_delete_user_for_relation_failure(self, _run_mysqlsh_script):
+        """Test failure to delete users for relation."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLDeleteUserForRelationError):
+            self.mysql.delete_user_for_relation(40)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_cluster_members_addresses(self, _run_mysqlsh_script):
+        """Test get_cluster_members_addresses() method."""
+        _run_mysqlsh_script.return_value = "<MEMBERS>member1,member2,member4</MEMBERS>"
+
+        output = self.mysql.get_cluster_members_addresses()
+
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "members = ','.join((member['address'] for member in cluster.describe()['defaultReplicaSet']['topology']))",
+                "print(f'<MEMBERS>{members}</MEMBERS>')",
+            )
+        )
+
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        self.assertEqual(output, {"member1", "member2", "member4"})
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_mysql_version(self, _run_mysqlsh_script):
+        """Test get_mysql_version() method."""
+        _run_mysqlsh_script.return_value = "<VERSION>8.0.29-0ubuntu0.20.04.3</VERSION>"
+
+        version = self.mysql.get_mysql_version()
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                'result = session.run_sql("SELECT version()")',
+                'print(f"<VERSION>{result.fetch_one()[0]}</VERSION>")',
+            )
+        )
+
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
+
+    def test_abstract_methods(self):
+        """Test abstract methods."""
+        with self.assertRaises(NotImplementedError):
+            self.mysql.wait_until_mysql_connection()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql._run_mysqlsh_script("")
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql._run_mysqlcli_script("")

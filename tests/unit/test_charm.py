@@ -104,6 +104,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysqlsh_helpers.MySQL.get_mysql_version", return_value="8.0.0")
     @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
     @patch("mysqlsh_helpers.MySQL.configure_instance")
@@ -116,6 +117,7 @@ class TestCharm(unittest.TestCase):
         _configure_instance,
         _configure_mysql_users,
         _wait_until_mysql_connection,
+        _get_mysql_version,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)

@@ -24,6 +24,8 @@ provides:
     interface: mysql-router
   shared-db:
     interface: mysql-shared
+  database:
+    interface: mysql-client
 storage:
   database:
     type: filesystem
