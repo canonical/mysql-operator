@@ -102,7 +102,7 @@ class ApplicationCharm(CharmBase):
             # to force consume data from relation databag
             return
 
-        if self._peers.data[self.app].get("inserted", "false") == "true":
+        if not self._peers.data[self.app].get("inserted"):
             # run only after flag is set
             event.defer()
             return
@@ -189,7 +189,7 @@ class ApplicationCharm(CharmBase):
 
     def _read_test_data(self, cursor, relation_id) -> List[Tuple]:
         """Reads test data from the database."""
-        cursor.execute(f"SELECT * FROM app_data where username = relation-{relation_id}")
+        cursor.execute(f"SELECT * FROM app_data where username = 'relation-{relation_id}'")
         return cursor.fetchall()
 
     @property
