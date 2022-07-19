@@ -40,33 +40,35 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2)
 
     # Reduce the update_status frequency until the cluster is deployed
-    with ops_test.fast_forward():
+    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
 
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=1000,
-        )
-        assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+    await ops_test.model.block_until(
+        lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME],
+        status="active",
+        raise_on_blocked=True,
+        timeout=1000,
+    )
+    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
-        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-            assert unit.workload_status == "active"
+    for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+        assert unit.workload_status == "active"
 
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
-        )
+    await ops_test.model.block_until(
+        lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+    )
 
-        await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_APP_NAME],
-            status="waiting",
-            raise_on_blocked=True,
-            timeout=1000,
-        )
-        assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+    await ops_test.model.wait_for_idle(
+        apps=[APPLICATION_APP_NAME],
+        status="waiting",
+        raise_on_blocked=True,
+        timeout=1000,
+    )
+    assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+
+    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
 
 
 @pytest.mark.order(2)
