@@ -26,7 +26,7 @@ from connector import MysqlConnector
 logger = logging.getLogger(__name__)
 
 PEER = "application-peers"
-REMOTE = "mysql"
+REMOTE = "database"
 
 
 class ApplicationCharm(CharmBase):
@@ -109,6 +109,10 @@ class ApplicationCharm(CharmBase):
 
         # get remote relation databag
         remote_relation = self.model.get_relation(REMOTE)
+        if not remote_relation:
+            event.defer()
+            return
+
         remote_data = remote_relation.data[remote_relation.app]
 
         # parse read-only database host
