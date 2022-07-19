@@ -151,14 +151,16 @@ class ApplicationCharm(CharmBase):
     def _create_test_table(self, cursor) -> None:
         """Creates a test table in the database."""
         cursor.execute(
-            "CREATE TABLE IF NOT EXISTS app_data (",
-            "id SMALLINT not null auto_increment,",
-            "username VARCHAR(255),",
-            "password VARCHAR(255),",
-            "endpoints VARCHAR(255),",
-            "version VARCHAR(255),",
-            "read_only_endpoints VARCHAR(255),",
-            "PRIMARY KEY (id))",
+            (
+                "CREATE TABLE IF NOT EXISTS app_data ("
+                "id SMALLINT not null auto_increment,"
+                "username VARCHAR(255),"
+                "password VARCHAR(255),"
+                "endpoints VARCHAR(255),"
+                "version VARCHAR(255),"
+                "read_only_endpoints VARCHAR(255),"
+                "PRIMARY KEY (id))"
+            )
         )
 
     def _insert_test_data(
