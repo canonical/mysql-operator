@@ -198,9 +198,18 @@ class MySQLOperatorCharm(CharmBase):
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
+        # Only execute if peer relation data contains cluster config values
+        if not self._is_peer_data_set:
+            return
+
+        unit_label = self.unit.name.replace("/", "-")
+
+        # No need to remove the instance from the cluster if it is not a member of the cluster
+        if not self._mysql.is_instance_in_cluster(unit_label):
+            return
+
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
-        unit_label = self.unit.name.replace("/", "-")
         self._mysql.remove_instance(unit_label)
 
     # =======================
