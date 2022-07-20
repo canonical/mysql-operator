@@ -167,9 +167,9 @@ async def execute_commands_on_unit(
     unit_address: str,
     username: str,
     password: str,
-    queries: List,
+    queries: List[str],
     commit: bool = False,
-):
+) -> List:
     """Execute given MySQL queries on a unit.
 
     Args:
