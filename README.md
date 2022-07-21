@@ -9,9 +9,8 @@ The [MySQL](https://www.mysql.com/) operator provides an open-source relational 
 To deploy this charm using Juju 2.9.0 or later, run:
 
 ```shell
-juju add-model mysql
-charmcraft pack
-juju deploy ./mysql_ubuntu-20.04-amd64.charm mysql
+juju add-model my-model
+juju deploy mysql --channel=edge -n 3
 ```
 
 Note: the above model must exist outside of a k8s environment (you could bootstrap an lxd environment).
@@ -27,23 +26,38 @@ Once MySQL starts up, it will be running on the default port (3306).
 If required, you can remove the deployment completely by running:
 
 ```shell
-juju destroy-model -y mysql --destroy-storage
+juju destroy-model -y my-model --destroy-storage
 ```
 
 Note: the `--destroy-storage` will delete any data persisted by MySQL.
 
 ## Relations
 
-We have added support for two legacy relations (from the [mysql-innodb-cluster](https://charmhub.io/mysql-innodb-cluster) charm):
+This charm implements the [provides data platform library](https://charmhub.io/data-platform-libs/libraries/database_provides), with the `mysql-client` interface.
+To relate to it, use the [requires data-platform library](https://charmhub.io/data-platform-libs/libraries/database_requires).
+
+Adding a relation is accomplished with:
+
+```shell
+# Deploy the relevant charms
+juju deploy -n 3 mysql --channel edge
+juju deploy mycharm
+# Relate mysql-router with keystone
+juju relate mycharm:database mysql:database
+```
+
+
+### Legacy relations
+
+**NOTE:** Legacy relations are deprecated and will be discontinued on future releases.
+
+This charm supports two legacy relations (from the [mysql-innodb-cluster](https://charmhub.io/mysql-innodb-cluster) charm).
 
 1. `db-router` is a relation that one uses with the [mysql router](https://charmhub.io/mysql-router) charm. The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
-# Pack the charm
-charmcraft pack
-
 # Deploy the relevant charms
-juju deploy -n 3 ./mysql_ubuntu-20.04-amd64.charm mysql
+juju deploy -n 3 mysql --channel edge
 juju deploy keystone
 juju deploy mysql-router keystone-mysql-router
 
@@ -57,11 +71,8 @@ juju relate keystone-mysql-router:db-router mysql:db-router
 1. `shared-db` is a relation that one uses when the application needs to connect directly to the database cluster. The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
-# Pack the charm
-charmcraft pack
-
 # Deploy the relevant charms
-juju deploy -n 3 ./mysql_ubuntu-20.04-amd64.charm mysql
+juju deploy -n 3 mysql --channel edge
 juju deploy keystone
 
 # Relate keystone with mysql
