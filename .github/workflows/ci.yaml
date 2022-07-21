@@ -72,5 +72,5 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-      - name: Run integration shared-db tests
+      - name: Run integration database tests
         run: tox -e integration-database
