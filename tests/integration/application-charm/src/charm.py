@@ -5,7 +5,7 @@
 """Application charm that connects to database charms.
 
 This charm is meant to be used only for testing
-of the libraries in this repository.
+the database requires-provides relation.
 """
 
 import logging
@@ -28,7 +28,7 @@ REMOTE = "database"
 
 
 class ApplicationCharm(CharmBase):
-    """Application charm that connects to MySQL charm."""
+    """Application charm that relates to MySQL charm."""
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -48,10 +48,9 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(self.on[REMOTE].relation_broken, self._on_database_broken)
 
     def _on_start(self, _) -> None:
-        """Only sets an Active status."""
+        """Only sets an waiting status."""
         self.unit.status = WaitingStatus("Waiting for relation")
 
-    # First database events observers.
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
         # Retrieve the credentials using the charm library.
@@ -100,7 +99,7 @@ class ApplicationCharm(CharmBase):
             # to force consume data from relation databag
             return
 
-        if not self._peers.data[self.app].get("inserted"):
+        if "inserted" not in self._peers.data[self.app]:
             # run only after flag is set
             event.defer()
             return
@@ -145,7 +144,7 @@ class ApplicationCharm(CharmBase):
         if not self.unit.is_leader():
             return
         # clear flag to allow complete process
-        if self._peers.data[self.app].get("inserted"):
+        if "inserted" in self._peers.data[self.app]:
             self._peers.data[self.app].pop("inserted")
 
     def _create_test_table(self, cursor) -> None:
