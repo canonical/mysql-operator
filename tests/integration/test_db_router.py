@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Dict, List
@@ -50,27 +51,31 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
         application_name=keystone_application_name,
         num_units=number_of_units,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_application_name],
-        status="blocked",
-        raise_on_blocked=False,
-        timeout=1500,
-    )
 
     # Deploy mysqlrouter and relate it to keystone
     keystone_mysqlrouter_app = await ops_test.model.deploy(
         "mysql-router",
         application_name=keystone_mysqlrouter_application_name,
     )
+
     await ops_test.model.relate(
         f"{keystone_application_name}:shared-db",
         f"{keystone_mysqlrouter_application_name}:shared-db",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_mysqlrouter_application_name],
-        status="blocked",
-        raise_on_blocked=False,
-        timeout=1500,
+
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(
+            apps=[keystone_application_name],
+            status="blocked",
+            raise_on_blocked=False,
+            timeout=1500,
+        ),
+        ops_test.model.wait_for_idle(
+            apps=[keystone_mysqlrouter_application_name],
+            status="blocked",
+            raise_on_blocked=False,
+            timeout=1500,
+        ),
     )
 
     # Relate mysqlrouter to mysql
@@ -236,9 +241,12 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         # Scale down the second deployment of keystone and confirm that the first deployment
         # is still active
         await scale_application(ops_test, ANOTHER_KEYSTONE_APP_NAME, 0)
-        await ops_test.model.remove_application(ANOTHER_KEYSTONE_APP_NAME, block_until_done=True)
-        await ops_test.model.remove_application(
-            ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
+
+        await asyncio.gather(
+            ops_test.model.remove_application(ANOTHER_KEYSTONE_APP_NAME, block_until_done=True),
+            ops_test.model.remove_application(
+                ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
+            ),
         )
 
         await check_keystone_users_existence(
@@ -277,11 +285,14 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
 
         # Scale down the first deployment of keystone
         await scale_application(ops_test, KEYSTONE_APP_NAME, 0)
-        await ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True)
-        await ops_test.model.remove_application(
-            KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
+
+        await asyncio.gather(
+            ops_test.model.remove_application(KEYSTONE_APP_NAME, block_until_done=True),
+            ops_test.model.remove_application(
+                KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
+            ),
         )
 
         # Scale down the mysql application
-        await scale_application(ops_test, APP_NAME, 0)
-        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+        # await scale_application(ops_test, APP_NAME, 0)
+        # await ops_test.model.remove_application(APP_NAME, block_until_done=True)
