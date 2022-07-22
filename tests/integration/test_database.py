@@ -37,14 +37,16 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
     config = {"cluster-name": CLUSTER_NAME}
-    await ops_test.model.deploy(
-        charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+
+    await asyncio.gather(
+        ops_test.model.deploy(
+            charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+        ),
+        ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )
 
-    await ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2)
-
     # Reduce the update_status frequency until the cluster is deployed
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
 
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
@@ -54,14 +56,14 @@ async def test_build_and_deploy(ops_test: OpsTest):
             lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
         )
 
-        asyncio.gather(
-            await ops_test.model.wait_for_idle(
+        await asyncio.gather(
+            ops_test.model.wait_for_idle(
                 apps=[DATABASE_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
                 timeout=1000,
             ),
-            await ops_test.model.wait_for_idle(
+            ops_test.model.wait_for_idle(
                 apps=[APPLICATION_APP_NAME],
                 status="waiting",
                 raise_on_blocked=True,
@@ -84,7 +86,7 @@ async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:database")
 
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await ops_test.model.block_until(
             lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
         )
@@ -105,7 +107,7 @@ async def test_relation_broken(ops_test: OpsTest):
         lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
     )
 
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
