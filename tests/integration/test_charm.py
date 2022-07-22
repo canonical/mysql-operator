@@ -37,7 +37,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
 
     # Reduce the update_status frequency until the cluster is deployed
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
 
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[APP_NAME].units) == 3
@@ -134,7 +134,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     # juju status changed from active
     await ops_test.model.destroy_units(primary_unit.name)
 
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await ops_test.model.block_until(lambda: len(application.units) == 2)
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
@@ -157,7 +157,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     assert primary_unit_name != new_primary_unit.name
 
     # Add the unit back and wait until it is active
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await scale_application(ops_test, APP_NAME, 3)
 
 
@@ -200,7 +200,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     old_unit_names = [unit.name for unit in ops_test.model.applications[APP_NAME].units]
 
     # Add a unit and wait until it is active
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await scale_application(ops_test, APP_NAME, 4)
 
     added_unit = [unit for unit in application.units if unit.name not in old_unit_names][0]
@@ -222,7 +222,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
 
     # Destroy the recently created unit and wait until the application is active
     await ops_test.model.destroy_units(added_unit.name)
-    with ops_test.fast_forward():
+    async with ops_test.fast_forward():
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[APP_NAME].units) == 3
         )
