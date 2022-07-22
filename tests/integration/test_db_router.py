@@ -27,6 +27,8 @@ KEYSTONE_APP_NAME = "keystone"
 KEYSTONE_MYSQLROUTER_APP_NAME = "keystone-mysql-router"
 ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
 ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME = "another-keystone-mysql-router"
+SLOW_WAIT_TIMEOUT = 25 * 60
+FAST_WAIT_TIMEOUT = 15 * 60
 
 
 async def deploy_and_relate_keystone_with_mysqlrouter(
@@ -68,13 +70,13 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
             apps=[keystone_application_name],
             status="blocked",
             raise_on_blocked=False,
-            timeout=1500,
+            timeout=SLOW_WAIT_TIMEOUT,
         ),
         ops_test.model.wait_for_idle(
             apps=[keystone_mysqlrouter_application_name],
             status="blocked",
             raise_on_blocked=False,
-            timeout=1500,
+            timeout=SLOW_WAIT_TIMEOUT,
         ),
     )
 
@@ -85,7 +87,7 @@ async def deploy_and_relate_keystone_with_mysqlrouter(
     await ops_test.model.block_until(
         lambda: keystone_app.status in ("active", "error")
         and keystone_mysqlrouter_app.status in ("active", "error"),
-        timeout=1500,
+        timeout=SLOW_WAIT_TIMEOUT,
     )
     assert keystone_app.status == "active" and keystone_mysqlrouter_app.status == "active"
 
@@ -193,7 +195,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=FAST_WAIT_TIMEOUT,
         )
         assert len(ops_test.model.applications[APP_NAME].units) == 3
 
@@ -273,7 +275,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=FAST_WAIT_TIMEOUT,
         )
 
         await check_keystone_users_existence(

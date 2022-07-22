@@ -24,6 +24,8 @@ APP_NAME = METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 KEYSTONE_APP_NAME = "keystone"
 ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
+SLOW_WAIT_TIMEOUT = 25 * 60
+FAST_WAIT_TIMEOUT = 15 * 60
 
 
 async def deploy_and_relate_keystone_with_mysql(
@@ -50,7 +52,7 @@ async def deploy_and_relate_keystone_with_mysql(
         apps=[keystone_application_name],
         status="blocked",
         raise_on_blocked=False,
-        timeout=1000,
+        timeout=SLOW_WAIT_TIMEOUT,
     )
 
     # Relate keystone to mysql
@@ -59,7 +61,7 @@ async def deploy_and_relate_keystone_with_mysql(
         apps=[keystone_application_name],
         status="active",
         raise_on_blocked=False,  # both applications are blocked initially
-        timeout=1000,
+        timeout=SLOW_WAIT_TIMEOUT,
     )
 
 
@@ -156,14 +158,14 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
     config = {"cluster-name": CLUSTER_NAME}
     await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
 
-    # Reduce the update_status frequency for the duration of the teset
+    # Reduce the update_status frequency for the duration of the test
     async with ops_test.fast_forward():
         # Wait until the mysql charm is successfully deployed
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=FAST_WAIT_TIMEOUT,
             wait_for_exact_units=3,
         )
         assert len(ops_test.model.applications[APP_NAME].units) == 3
@@ -229,7 +231,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
             apps=[APP_NAME],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=FAST_WAIT_TIMEOUT,
             wait_for_exact_units=2,
         )
 
