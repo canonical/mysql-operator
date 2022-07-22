@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -598,7 +598,6 @@ class MySQLBase(ABC):
             # confirmation can fail if the clusteradmin user does not yet exist on the instance
             logger.warning(
                 f"Failed to confirm instance configuration for {instance_address} with error {e.message}",
-                exc_info=e,
             )
             return False
 
