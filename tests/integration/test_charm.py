@@ -37,22 +37,21 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
 
     # Reduce the update_status frequency until the cluster is deployed
-    await ops_test.model.set_config({"update-status-hook-interval": "10s"})
+    async with ops_test.fast_forward():
 
-    await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-    )
-    assert len(ops_test.model.applications[APP_NAME].units) == 3
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
+        assert len(ops_test.model.applications[APP_NAME].units) == 3
 
-    for unit in ops_test.model.applications[APP_NAME].units:
-        assert unit.workload_status == "active"
-
-    # Effectively disable the update status from firing
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
+        for unit in ops_test.model.applications[APP_NAME].units:
+            assert unit.workload_status == "active"
 
 
 @pytest.mark.order(2)
@@ -135,13 +134,14 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     # juju status changed from active
     await ops_test.model.destroy_units(primary_unit.name)
 
-    await ops_test.model.block_until(lambda: len(application.units) == 2)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-    )
+    async with ops_test.fast_forward():
+        await ops_test.model.block_until(lambda: len(application.units) == 2)
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
 
     # Wait for unit to be destroyed and confirm that the new primary unit is different
     random_unit = application.units[0]
@@ -157,7 +157,8 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     assert primary_unit_name != new_primary_unit.name
 
     # Add the unit back and wait until it is active
-    await scale_application(ops_test, APP_NAME, 3)
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, APP_NAME, 3)
 
 
 @pytest.mark.order(4)
@@ -199,7 +200,8 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     old_unit_names = [unit.name for unit in ops_test.model.applications[APP_NAME].units]
 
     # Add a unit and wait until it is active
-    await scale_application(ops_test, APP_NAME, 4)
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, APP_NAME, 4)
 
     added_unit = [unit for unit in application.units if unit.name not in old_unit_names][0]
 
@@ -220,14 +222,16 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
 
     # Destroy the recently created unit and wait until the application is active
     await ops_test.model.destroy_units(added_unit.name)
-
-    await ops_test.model.block_until(lambda: len(ops_test.model.applications[APP_NAME].units) == 3)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-    )
+    async with ops_test.fast_forward():
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
 
     # Ensure that the data still exists in all the units
     for unit in application.units:
@@ -239,5 +243,3 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
             select_data_sql,
         )
         assert random_chars in output
-
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
