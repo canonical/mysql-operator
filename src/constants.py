@@ -9,4 +9,5 @@ PASSWORD_LENGTH = 24
 PEER = "database-peers"
 LEGACY_DB_ROUTER = "db-router"
 LEGACY_DB_SHARED = "shared-db"
+LEGACY_MYSQL = "mysql"
 DB_RELATION_NAME = "database"
