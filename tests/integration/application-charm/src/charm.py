@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 PEER = "application-peers"
 REMOTE = "database"
-MARIADB = "mysql-client"
+MARIADB = "mysql"
 
 
 class ApplicationCharm(CharmBase):

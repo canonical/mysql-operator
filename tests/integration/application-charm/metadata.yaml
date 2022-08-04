@@ -10,6 +10,8 @@ summary: |
 requires:
   database:
     interface: mysql-client
+  mysql:
+    interface: mysql
 
 peers:
   application-peers:
