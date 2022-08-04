@@ -8,6 +8,7 @@ This charm is meant to be used only for testing
 the database requires-provides relation.
 """
 
+import json
 import logging
 from typing import List, Tuple
 
@@ -17,7 +18,7 @@ from charms.data_platform_libs.v0.database_requires import (
     DatabaseRequires,
 )
 from connector import MysqlConnector
-from ops.charm import CharmBase, RelationChangedEvent
+from ops.charm import CharmBase, RelationChangedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, WaitingStatus
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 PEER = "application-peers"
 REMOTE = "database"
+MARIADB = "mysql-client"
 
 
 class ApplicationCharm(CharmBase):
@@ -46,6 +48,9 @@ class ApplicationCharm(CharmBase):
         )
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[REMOTE].relation_broken, self._on_database_broken)
+        # Handlers for testing mariadb legacy relation.
+        self.framework.observe(self.on[MARIADB].relation_joined, self._relation_joined)
+        self.framework.observe(self.on[MARIADB].relation_broken, self._on_database_broken)
 
     def _on_start(self, _) -> None:
         """Only sets an waiting status."""
@@ -80,7 +85,44 @@ class ApplicationCharm(CharmBase):
                 event.read_only_endpoints,
             )
 
-        self._peers.data[self.app]["inserted"] = "true"
+        self._peers.data[self.app]["test"] = REMOTE
+        logger.info("Inserted relation data in database")
+        self.unit.status = ActiveStatus()
+
+    def _relation_joined(self, event: RelationJoinedEvent):
+        """Handle mariadb legacy relation joined."""
+        # return to initial status
+        logger.info("Mariadb legacy relation joined")
+
+        if not self.unit.is_leader():
+            return
+
+        # get remote relation databag
+        remote_unit_data = event.relation.data.get(event.unit)
+        if not remote_unit_data:
+            return
+
+        config = {
+            "user": remote_unit_data["user"],
+            "password": remote_unit_data["password"],
+            "host": remote_unit_data["host"],
+            "database": remote_unit_data["database"],
+            "raise_on_warnings": False,
+        }
+
+        with MysqlConnector(config) as cursor:
+            self._create_test_table(cursor)
+
+            self._insert_test_data(
+                cursor,
+                remote_unit_data["username"],
+                remote_unit_data["password"],
+                remote_unit_data["endpoints"],
+                remote_unit_data["version"],
+                remote_unit_data["read_only_endpoints"],
+            )
+
+        self._peers.data[self.app]["test"] = MARIADB
         logger.info("Inserted relation data in database")
         self.unit.status = ActiveStatus()
 
@@ -91,34 +133,53 @@ class ApplicationCharm(CharmBase):
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Handle peer relation changed.
 
-        Check relation data against relation data inserted in the database
-        from a read-only endpoint.
+        For database relation check relation data against relation data inserted
+        in the database from a read-only endpoint.
+
+        For mariadb legacy relation check relation data against relation data
+        inserted in the database from the known endpoint.
         """
         if self.unit.is_leader():
             # run from a non leader unit
             # to force consume data from relation databag
             return
 
-        if "inserted" not in self._peers.data[self.app]:
+        if "test" not in self._peers.data[self.app]:
             # run only after flag is set
             event.defer()
             return
 
-        # get remote relation databag
-        remote_relation = self.model.get_relation(REMOTE)
-        if not remote_relation:
-            event.defer()
-            return
+        test_type = self._peers.data[self.app]["test"]
 
-        remote_data = remote_relation.data[remote_relation.app]
+        if test_type == REMOTE:
+            # case when testing "new' relation
+            # get remote relation databag
+            remote_relation = self.model.get_relation(REMOTE)
+            if not remote_relation:
+                event.defer()
+                return
 
-        # parse read-only database host
-        ro_database = remote_data["read-only-endpoints"].split(",")[0].split(":")[0]
+            remote_data = remote_relation.data[remote_relation.app]
+
+            # parse read-only database host
+            host = remote_data["read-only-endpoints"].split(",")[0].split(":")[0]
+        else:
+            # case when testing "legacy" relation
+            # access is only defined for the primary
+            remote_relation = self.model.get_relation(MARIADB)
+            if not remote_relation:
+                event.defer()
+                return
+
+            remote_data = remote_relation.data[remote_relation.app]
+
+            # parse read-only database host
+            host = json.loads(remote_data["mysql_relation_data"])["host"]
 
         config = {
             "user": remote_data["username"],
             "password": remote_data["password"],
-            "host": ro_database,
+            "host": host,
             "database": self.database_name,
             "raise_on_warnings": False,
         }
@@ -144,8 +205,8 @@ class ApplicationCharm(CharmBase):
         if not self.unit.is_leader():
             return
         # clear flag to allow complete process
-        if "inserted" in self._peers.data[self.app]:
-            self._peers.data[self.app].pop("inserted")
+        if "test" in self._peers.data[self.app]:
+            self._peers.data[self.app].pop("test")
 
     def _create_test_table(self, cursor) -> None:
         """Creates a test table in the database."""
