@@ -46,6 +46,11 @@ juju deploy mycharm
 juju relate mycharm:database mysql:database
 ```
 
+**NOTE:** In order to relate with this charm, every table created by the related
+application must have a primary key. This is required by the [group replication
+plugin](https://dev.mysql.com/doc/refman/5.7/en/group-replication-requirements.html),
+enable in this charm.
+
 
 ### Legacy relations
 
