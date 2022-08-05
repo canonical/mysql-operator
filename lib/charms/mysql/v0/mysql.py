@@ -405,6 +405,7 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlcli_script("; ".join(get_unit_user_commands))
             users = [line.strip() for line in output.split("\n") if line.strip()][1:]
+            users = [f"'{user.split('@')[0]}'@'{user.split('@')[1]}'" for user in users]
 
             if len(users) == 0:
                 logger.debug(f"There are no users to drop for unit {unit_name}")
