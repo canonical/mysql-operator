@@ -54,7 +54,8 @@ enable in this charm.
 
 ### Legacy relations
 
-**NOTE:** Legacy relations are deprecated and will be discontinued on future releases.
+**NOTE:** Legacy relations are deprecated and will be discontinued on future
+releases. Usage should be avoided.
 
 This charm supports two legacy relations (from the [mysql-innodb-cluster](https://charmhub.io/mysql-innodb-cluster) charm).
 
@@ -73,7 +74,7 @@ juju relate keystone:shared-db keystone-mysql-router:shared-db
 juju relate keystone-mysql-router:db-router mysql:db-router
 ```
 
-1. `shared-db` is a relation that one uses when the application needs to connect directly to the database cluster. The following commands can be executed to deploy and relate to the keystone charm:
+2. `shared-db` is a relation that one uses when the application needs to connect directly to the database cluster. The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
 # Deploy the relevant charms
@@ -83,6 +84,10 @@ juju deploy keystone
 # Relate keystone with mysql
 juju relate keystone:shared-db mysql:shared-db
 ```
+
+3. `mysql` is a relation that's used from some k8s charms and can be used in cross-model relations.
+
+
 
 ## Contributing
 
