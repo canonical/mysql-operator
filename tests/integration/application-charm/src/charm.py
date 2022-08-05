@@ -91,15 +91,17 @@ class ApplicationCharm(CharmBase):
 
     def _relation_joined(self, event: RelationJoinedEvent):
         """Handle mariadb legacy relation joined."""
-        # return to initial status
-        logger.info("Mariadb legacy relation joined")
-
         if not self.unit.is_leader():
             return
 
         # get remote relation databag
-        remote_unit_data = event.relation.data.get(event.unit)
-        if not remote_unit_data:
+        remote_unit_data = event.relation.data[event.unit]
+        if "user" not in remote_unit_data:
+            if "test" in self._peers.data[self.app]:
+                logger.debug("Related unit is not the leader unit")
+                return
+            logger.debug("Relation data not ready yet")
+            event.defer()
             return
 
         config = {
@@ -115,15 +117,19 @@ class ApplicationCharm(CharmBase):
 
             self._insert_test_data(
                 cursor,
-                remote_unit_data["username"],
+                remote_unit_data["user"],
                 remote_unit_data["password"],
-                remote_unit_data["endpoints"],
-                remote_unit_data["version"],
-                remote_unit_data["read_only_endpoints"],
+                remote_unit_data["host"],
+                "dummy-version",
+                "dummy-read-only-endpoints",
             )
 
         self._peers.data[self.app]["test"] = MARIADB
-        logger.info("Inserted relation data in database")
+        self._peers.data[self.app]["mysql_user"] = remote_unit_data["user"]
+        self._peers.data[self.app]["mysql_password"] = remote_unit_data["password"]
+        self._peers.data[self.app]["mysql_host"] = remote_unit_data["host"]
+        self._peers.data[self.app]["mysql_database"] = remote_unit_data["database"]
+        logger.info("Mariadb legacy relation joined")
         self.unit.status = ActiveStatus()
 
     def _on_database_endpoints_changed(self, event: DatabaseEndpointsChangedEvent) -> None:
@@ -163,29 +169,40 @@ class ApplicationCharm(CharmBase):
 
             # parse read-only database host
             host = remote_data["read-only-endpoints"].split(",")[0].split(":")[0]
+            database = self.database_name
+            user = f"relation-{remote_relation.id}"
         else:
             # case when testing "legacy" relation
-            # access is only defined for the primary
-            remote_relation = self.model.get_relation(MARIADB)
-            if not remote_relation:
+            # user data stored in peer data
+            local_app_data = self._peers.data[self.app]
+            if "mysql_user" not in local_app_data:
+                # data not yet defined
                 event.defer()
                 return
 
-            remote_data = remote_relation.data[remote_relation.app]
-
-            # parse read-only database host
-            host = json.loads(remote_data["mysql_relation_data"])["host"]
+            # parse database host
+            host = local_app_data["mysql_host"]
+            database = local_app_data["mysql_database"]
+            user = local_app_data["mysql_user"]
+            # populate remote_data to emulate "new" relation one
+            remote_data = {
+                "username": user,
+                "password": local_app_data["mysql_password"],
+                "endpoints": host,
+                "version": "dummy-version",
+                "read-only-endpoints": "dummy-read-only-endpoints",
+            }
 
         config = {
-            "user": remote_data["username"],
+            "user": user,
             "password": remote_data["password"],
             "host": host,
-            "database": self.database_name,
+            "database": database,
             "raise_on_warnings": False,
         }
 
         with MysqlConnector(config, commit=False) as cursor:
-            rows = self._read_test_data(cursor, remote_relation.id)
+            rows = self._read_test_data(cursor, user)
             first_row = rows[0]
             # username, password, endpoints, version, ro-endpoints
             assert first_row[1] == remote_data["username"]
@@ -244,9 +261,9 @@ class ApplicationCharm(CharmBase):
             (username, password, endpoints, version, read_only_endpoints),
         )
 
-    def _read_test_data(self, cursor, relation_id) -> List[Tuple]:
+    def _read_test_data(self, cursor, user) -> List[Tuple]:
         """Reads test data from the database."""
-        cursor.execute(f"SELECT * FROM app_data where username = 'relation-{relation_id}'")
+        cursor.execute(f"SELECT * FROM app_data where username = '{user}'")
         return cursor.fetchall()
 
     @property
