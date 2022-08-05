@@ -33,7 +33,7 @@ Note: the `--destroy-storage` will delete any data persisted by MySQL.
 
 ## Relations
 
-This charm implements the [provides data platform library](https://charmhub.io/data-platform-libs/libraries/database_provides), with the `mysql-client` interface.
+This charm implements the [provides data platform library](https://charmhub.io/data-platform-libs/libraries/database_provides), with the `mysql_client` interface.
 To relate to it, use the [requires data-platform library](https://charmhub.io/data-platform-libs/libraries/database_requires).
 
 Adding a relation is accomplished with:

@@ -25,7 +25,7 @@ provides:
   shared-db:
     interface: mysql-shared
   database:
-    interface: mysql-client
+    interface: mysql_client
   mysql:
     interface: mysql
 storage:
