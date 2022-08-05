@@ -33,14 +33,16 @@ ENDPOINT = "database"
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
+    charms = await asyncio.gather(
+        ops_test.build_charm("."), ops_test.build_charm("./tests/integration/application-charm/")
+    )
+    db_charm, app_charm = charms
 
-    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
     config = {"cluster-name": CLUSTER_NAME}
 
     await asyncio.gather(
         ops_test.model.deploy(
-            charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+            db_charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
         ),
         ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )
@@ -84,7 +86,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 @pytest.mark.database_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
-    await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:database")
+    await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
 
     async with ops_test.fast_forward():
         await ops_test.model.block_until(

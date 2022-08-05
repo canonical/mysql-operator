@@ -39,8 +39,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         ops_test.build_charm("."), ops_test.build_charm("./tests/integration/application-charm/")
     )
 
-    db_charm = charms[0]
-    app_charm = charms[1]
+    db_charm, app_charm = charms
 
     config = {"cluster-name": CLUSTER_NAME}
 
