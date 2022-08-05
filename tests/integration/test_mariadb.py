@@ -89,7 +89,6 @@ async def test_build_and_deploy(ops_test: OpsTest):
 @pytest.mark.mariadb_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
-
     # Configure a user and database to be used for the relation
     # as required for this relation
     await ops_test.model.applications[DATABASE_APP_NAME].set_config(

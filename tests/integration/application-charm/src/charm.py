@@ -8,7 +8,6 @@ This charm is meant to be used only for testing
 the database requires-provides relation.
 """
 
-import json
 import logging
 from typing import List, Tuple
 
