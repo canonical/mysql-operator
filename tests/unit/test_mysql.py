@@ -249,7 +249,7 @@ class TestMySQLBase(unittest.TestCase):
         _expected_drop_users_command = "\n".join(
             (
                 "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                'session.run_sql("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2;")',
+                "session.run_sql(\"DROP USER IF EXISTS 'test'@'1.1.1.1', 'test2'@'1.1.1.2';\")",
             )
         )
 
