@@ -34,15 +34,19 @@ TEST_DATABASE = "testdb"
 @pytest.mark.mariadb_tests
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
+    # Build and deploy charms from local source folders
+    charms = await asyncio.gather(
+        ops_test.build_charm("."), ops_test.build_charm("./tests/integration/application-charm/")
+    )
 
-    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
+    db_charm = charms[0]
+    app_charm = charms[1]
+
     config = {"cluster-name": CLUSTER_NAME}
 
     await asyncio.gather(
         ops_test.model.deploy(
-            charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+            db_charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
         ),
         ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )
@@ -93,7 +97,7 @@ async def test_relation_creation(ops_test: OpsTest):
         {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
     )
 
-    await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:database")
+    await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
 
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
