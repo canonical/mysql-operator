@@ -72,7 +72,7 @@ jobs:
       - name: Run integration database tests
         run: tox -e integration-database
   integration-test-lxd-mysql:
-    name: Integration tests for mysql relation (lxd)
+    name: Integration tests for mysql interface (lxd)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -82,4 +82,4 @@ jobs:
         with:
           provider: lxd
       - name: Run integration database tests
-        run: tox -e integration-mariadb
+        run: tox -e integration-mysql-interface

@@ -6,8 +6,14 @@
 import json
 import logging
 
+from charms.mysql.v0.mysql import (
+    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLDeleteUsersForUnitError,
+    MysqlGetClusterPrimaryAddressError,
+)
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
+from ops.model import BlockedStatus, TooManyRelatedAppsError
 
 from constants import LEGACY_MYSQL, PASSWORD_LENGTH
 from utils import generate_random_password
@@ -96,6 +102,8 @@ class MySQLRelation(Object):
 
         logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
 
+        # username and database are defined in application config
+        # if not defined, defaults applies
         username = self.charm.config.get("mysql-interface-user")
         database = self.charm.config.get("mysql-interface-database")
 
@@ -104,20 +112,30 @@ class MySQLRelation(Object):
             return
 
         # Only execute if the application user does not exist
+        # since it could have been created by another related app
         if self.charm._mysql.does_mysql_user_exist(username, "%"):
             return
 
         password = self._get_or_set_password_in_peer_databag(username)
 
-        self.charm._mysql.create_application_database_and_scoped_user(
-            database,
-            username,
-            password,
-            "%",
-            "mysql-legacy-relation",
-        )
+        try:
+            self.charm._mysql.create_application_database_and_scoped_user(
+                database,
+                username,
+                password,
+                "%",
+                "mysql-legacy-relation",
+            )
 
-        primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+
+        except (
+            MySQLCreateApplicationDatabaseAndScopedUserError,
+            MysqlGetClusterPrimaryAddressError,
+        ):
+            self._charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
+            return
+
         updates = {
             "database": database,
             "host": primary_address,
@@ -143,4 +161,14 @@ class MySQLRelation(Object):
 
         logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
 
-        self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
+        try:
+            _ = self.model.get_relation(LEGACY_MYSQL)
+        except TooManyRelatedAppsError:
+            # avoid removing user when there other related applications
+            return
+
+        try:
+            self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
+        except MySQLDeleteUsersForUnitError:
+            logger.error("Failed to delete mysql users")
+            self._charm.unit.status = BlockedStatus("Failed to remove relation user")

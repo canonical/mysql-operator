@@ -19,8 +19,6 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.begin()
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
-        # self.maria_db_relation_id = self.harness.add_relation(LEGACY_MYSQL, "other-app")
-        # self.harness.add_relation_unit(self.maria_db_relation_id, "other-app/0")
         self.charm = self.harness.charm
 
     @patch_network_get(private_address="1.1.1.1")

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 PEER = "application-peers"
 REMOTE = "database"
-MARIADB = "mysql"
+LEGACY_MYSQL = "mysql"
 
 
 class ApplicationCharm(CharmBase):
@@ -48,8 +48,8 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[REMOTE].relation_broken, self._on_database_broken)
         # Handlers for testing mariadb legacy relation.
-        self.framework.observe(self.on[MARIADB].relation_joined, self._relation_joined)
-        self.framework.observe(self.on[MARIADB].relation_broken, self._on_database_broken)
+        self.framework.observe(self.on[LEGACY_MYSQL].relation_joined, self._relation_joined)
+        self.framework.observe(self.on[LEGACY_MYSQL].relation_broken, self._on_database_broken)
 
     def _on_start(self, _) -> None:
         """Only sets an waiting status."""
@@ -123,7 +123,7 @@ class ApplicationCharm(CharmBase):
                 "dummy-read-only-endpoints",
             )
 
-        self._peers.data[self.app]["test"] = MARIADB
+        self._peers.data[self.app]["test"] = LEGACY_MYSQL
         self._peers.data[self.app]["mysql_user"] = remote_unit_data["user"]
         self._peers.data[self.app]["mysql_password"] = remote_unit_data["password"]
         self._peers.data[self.app]["mysql_host"] = remote_unit_data["host"]

@@ -175,6 +175,10 @@ class MySQLGetMySQLVersionError(Error):
     """Exception raised when there is an issue getting the MySQL version."""
 
 
+class MysqlGetClusterPrimaryAddressError(Error):
+    """Exception raised when there is an issue getting the primary instance."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -850,7 +854,11 @@ class MySQLBase(ABC):
             "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
         )
 
-        output = self._run_mysqlsh_script("\n".join(get_cluster_primary_commands))
+        try:
+            output = self._run_mysqlsh_script("\n".join(get_cluster_primary_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get cluster primary addresses", exc_info=e)
+            raise MysqlGetClusterPrimaryAddressError(e.message)
         matches = re.search(r"<PRIMARY_ADDRESS>(.+)</PRIMARY_ADDRESS>", output)
 
         if not matches:

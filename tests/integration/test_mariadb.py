@@ -54,11 +54,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
     async with ops_test.fast_forward():
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3, timeout=1000
         )
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2, timeout=1000
         )
 
         await asyncio.gather(
@@ -99,7 +99,8 @@ async def test_relation_creation(ops_test: OpsTest):
 
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
-            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
+            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) is True,
+            timeout=1000,
         )
 
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
@@ -115,7 +116,8 @@ async def test_relation_broken(ops_test: OpsTest):
     )
 
     await ops_test.model.block_until(
-        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
+        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True,
+        timeout=1000,
     )
 
     async with ops_test.fast_forward():
