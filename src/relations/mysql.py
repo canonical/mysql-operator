@@ -159,13 +159,11 @@ class MySQLRelation(Object):
         if not self.charm.unit.is_leader():
             return
 
-        logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
-
-        try:
-            _ = self.model.get_relation(LEGACY_MYSQL)
-        except TooManyRelatedAppsError:
-            # avoid removing user when there other related applications
+        if len(self.model.relations[LEGACY_MYSQL]) > 1:
+            # avoid removing user when there's other related applications
             return
+
+        logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
 
         try:
             self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
