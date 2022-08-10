@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import is_relation_broken, is_relation_joined
+from helpers import get_legacy_mysql_credentials, is_relation_broken, is_relation_joined
 from pytest_operator.plugin import OpsTest
+
+from tests.integration.connector import MysqlConnector
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,10 @@ async def test_relation_creation(ops_test: OpsTest):
 @pytest.mark.mariadb_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
+    # store credentials for test access later
+    unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
+    credentials = await get_legacy_mysql_credentials(unit)
+
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
@@ -129,3 +135,11 @@ async def test_relation_broken(ops_test: OpsTest):
                 apps=[APPLICATION_APP_NAME], status="waiting", raise_on_blocked=True
             ),
         )
+
+    try:
+        with MysqlConnector(credentials) as cursor:
+            cursor.execute("SELECT 1;")
+            raise AssertionError("Expected connection to fail")
+    except Exception as e:
+        print(e)
+        logger.info("Expected connection to fail")

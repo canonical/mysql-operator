@@ -13,7 +13,7 @@ from charms.mysql.v0.mysql import (
 )
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
-from ops.model import BlockedStatus, TooManyRelatedAppsError
+from ops.model import BlockedStatus
 
 from constants import LEGACY_MYSQL, PASSWORD_LENGTH
 from utils import generate_random_password

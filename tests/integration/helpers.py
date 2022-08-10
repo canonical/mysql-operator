@@ -9,7 +9,7 @@ import secrets
 import string
 from typing import Dict, List, Optional
 
-import mysql.connector
+from connector import MysqlConnector
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
@@ -163,6 +163,21 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     }
 
 
+async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
+    """Helper to run an action to retrieve legacy mysql config credentials.
+
+    Args:
+        unit: The juju unit on which to run the get-legacy-mysql-credentials action
+
+    Returns:
+        A dictionary with the credentials
+    """
+    action = await unit.run_action("get-legacy-mysql-credentials")
+    result = await action.wait()
+
+    return result.results
+
+
 async def execute_commands_on_unit(
     unit_address: str,
     username: str,
@@ -182,23 +197,17 @@ async def execute_commands_on_unit(
     Returns:
         A list of rows that were potentially queried
     """
-    connection = mysql.connector.connect(
-        host=unit_address,
-        user=username,
-        password=password,
-    )
-    cursor = connection.cursor()
+    config = {
+        "user": username,
+        "password": password,
+        "host": unit_address,
+        "raise_on_warnings": False,
+    }
 
-    for query in queries:
-        cursor.execute(query)
-
-    if commit:
-        connection.commit()
-
-    output = list(itertools.chain(*cursor.fetchall()))
-
-    cursor.close()
-    connection.close()
+    with MysqlConnector(config, commit) as cursor:
+        for query in queries:
+            cursor.execute(query)
+        output = list(itertools.chain(*cursor.fetchall()))
 
     return output
 

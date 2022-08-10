@@ -17,7 +17,7 @@ from charms.data_platform_libs.v0.database_requires import (
     DatabaseRequires,
 )
 from connector import MysqlConnector
-from ops.charm import CharmBase, RelationChangedEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, CharmBase, RelationChangedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, WaitingStatus
 
@@ -50,6 +50,10 @@ class ApplicationCharm(CharmBase):
         # Handlers for testing mariadb legacy relation.
         self.framework.observe(self.on[LEGACY_MYSQL].relation_joined, self._relation_joined)
         self.framework.observe(self.on[LEGACY_MYSQL].relation_broken, self._on_database_broken)
+
+        self.framework.observe(
+            self.on.get_legacy_mysql_credentials, self._get_legacy_mysql_credentials
+        )
 
     def _on_start(self, _) -> None:
         """Only sets an waiting status."""
@@ -269,6 +273,18 @@ class ApplicationCharm(CharmBase):
     def _peers(self):
         """Retrieve the peer relation (`ops.model.Relation`)."""
         return self.model.get_relation(PEER)
+
+    def _get_legacy_mysql_credentials(self, event: ActionEvent) -> None:
+        """Retrieve legacy mariadb credentials."""
+        local_app_data = self._peers.data[self.app]
+        event.set_results(
+            {
+                "username": local_app_data["mysql_user"],
+                "password": local_app_data["mysql_password"],
+                "host": local_app_data["mysql_host"],
+                "database": local_app_data["mysql_database"],
+            }
+        )
 
 
 if __name__ == "__main__":
