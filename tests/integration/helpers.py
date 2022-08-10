@@ -240,3 +240,24 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
         if endpoint_one not in endpoints and endpoint_two not in endpoints:
             return True
     return False
+
+
+def is_connection_possible(credentials: Dict) -> bool:
+    """Test a connection to a MySQL server.
+
+    Args:
+        credentials: A dictionary with the credentials to test
+    """
+    config = {
+        "user": credentials["username"],
+        "password": credentials["password"],
+        "host": credentials["host"],
+        "raise_on_warnings": False,
+    }
+
+    try:
+        with MysqlConnector(config) as cursor:
+            cursor.execute("SELECT 1")
+            return cursor.fetchone()[0] == 1
+    except Exception:
+        return False

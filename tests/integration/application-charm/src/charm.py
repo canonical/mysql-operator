@@ -52,7 +52,7 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(self.on[LEGACY_MYSQL].relation_broken, self._on_database_broken)
 
         self.framework.observe(
-            self.on.get_legacy_mysql_credentials, self._get_legacy_mysql_credentials
+            self.on.get_legacy_mysql_credentials_action, self._get_legacy_mysql_credentials
         )
 
     def _on_start(self, _) -> None:
