@@ -9,6 +9,7 @@ import pytest
 import yaml
 from helpers import (
     get_legacy_mysql_credentials,
+    instance_ip,
     is_connection_possible,
     is_relation_broken,
     is_relation_joined,
@@ -116,9 +117,8 @@ async def test_relation_creation(ops_test: OpsTest):
 @pytest.mark.mariadb_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
-    # store credentials for test access later
-    unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
-    credentials = await get_legacy_mysql_credentials(unit)
+    # store database credentials for test access later
+    credentials = await application_database_credentials(ops_test)
 
     assert is_connection_possible(credentials) is True
 
@@ -134,11 +134,24 @@ async def test_relation_broken(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
+                apps=[DATABASE_APP_NAME],
+                status="active",
+                raise_on_blocked=True,
             ),
             ops_test.model.wait_for_idle(
-                apps=[APPLICATION_APP_NAME], status="waiting", raise_on_blocked=True
+                apps=[APPLICATION_APP_NAME],
+                status="waiting",
+                raise_on_blocked=True,
             ),
         )
 
     assert is_connection_possible(credentials) is False
+
+
+async def application_database_credentials(ops_test: OpsTest) -> dict:
+    unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
+    credentials = await get_legacy_mysql_credentials(unit)
+    host_instance = credentials["host"]
+    host_ip = instance_ip(ops_test.model.info.name, host_instance)
+    credentials["host"] = host_ip
+    return credentials

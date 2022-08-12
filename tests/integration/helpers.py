@@ -7,6 +7,7 @@ import json
 import re
 import secrets
 import string
+import subprocess
 from typing import Dict, List, Optional
 
 from connector import MysqlConnector
@@ -66,7 +67,10 @@ async def scale_application(
         for _ in range(count - count_existing_units):
             await application.add_unit()
 
-        await ops_test.model.block_until(lambda: len(application.units) == count)
+        await ops_test.model.block_until(
+            lambda: len(application.units) == count,
+            timeout=1500,
+        )
         await ops_test.model.wait_for_idle(
             apps=[application_name],
             status="active",
@@ -259,5 +263,22 @@ def is_connection_possible(credentials: Dict) -> bool:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except Exception:
+    except Exception as e:
+        print(e)
         return False
+
+
+def instance_ip(model: str, instance: str) -> str:
+    """Translate juju instance name to IP.
+
+    Args:
+        model: The name of the model
+        instance: The name of the instance
+    Returns:
+        The (str) IP address of the instance
+    """
+    output = subprocess.check_output(f"juju machines --model {model}".split())
+
+    for line in output.decode("utf8").splitlines():
+        if instance in line:
+            return line.split()[2]
