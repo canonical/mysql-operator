@@ -26,8 +26,14 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
+    # workaround for https://github.com/juju/python-libjuju/issues/707
     action = await unit.run(command)
-    return action.results.get("Stdout", None)
+    result = await action.wait()
+    code = str(result.results.get("Code") or result.results.get("return-code"))
+    stdout = result.results.get("Stdout") or result.results.get("stdout")
+    stderr = result.results.get("Stderr") or result.results.get("stderr")
+    assert code == "0", f"{command} failed ({code}): {stderr or stdout}"
+    return stdout
 
 
 def generate_random_string(length: int) -> str:
