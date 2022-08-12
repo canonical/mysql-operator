@@ -33,10 +33,8 @@ ENDPOINT = "database"
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charm from local source folder
-    charms = await asyncio.gather(
-        ops_test.build_charm("."), ops_test.build_charm("./tests/integration/application-charm/")
-    )
-    db_charm, app_charm = charms
+    db_charm = await ops_test.build_charm(".")
+    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
