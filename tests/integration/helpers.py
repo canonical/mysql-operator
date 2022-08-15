@@ -13,6 +13,9 @@ from typing import Dict, List, Optional
 from connector import MysqlConnector
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, stop_after_attempt, wait_fixed
+
+from mysql.connector.errors import OperationalError
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
@@ -252,6 +255,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
 def is_connection_possible(credentials: Dict) -> bool:
     """Test a connection to a MySQL server.
 
@@ -269,8 +273,8 @@ def is_connection_possible(credentials: Dict) -> bool:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except Exception as e:
-        print(e)
+    except OperationalError:
+        # Error raised when the connection is not possible
         return False
 
 
