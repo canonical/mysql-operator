@@ -12,10 +12,9 @@ from typing import Dict, List, Optional
 
 from connector import MysqlConnector
 from juju.unit import Unit
+from mysql.connector.errors import OperationalError
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed
-
-from mysql.connector.errors import OperationalError
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
