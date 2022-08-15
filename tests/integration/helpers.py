@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from connector import MysqlConnector
 from juju.unit import Unit
-from mysql.connector.errors import MySQLInterfaceError, OperationalError
+from mysql.connector.errors import InterfaceError, OperationalError
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -272,7 +272,7 @@ def is_connection_possible(credentials: Dict) -> bool:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except (OperationalError, MySQLInterfaceError):
+    except (InterfaceError, OperationalError):
         # Errors raised when the connection is not possible
         return False
 
