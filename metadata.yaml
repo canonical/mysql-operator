@@ -26,6 +26,8 @@ provides:
     interface: mysql-shared
   database:
     interface: mysql_client
+  mysql:
+    interface: mysql
 storage:
   database:
     type: filesystem

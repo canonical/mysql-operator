@@ -54,6 +54,54 @@ jobs:
           provider: lxd
       - name: Run integration HA tests
         run: tox -e integration-ha
+  integration-test-lxd-db-router:
+    name: Integration tests for db-router relation (lxd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration db-router tests
+        run: tox -e integration-db-router
+  integration-test-lxd-shared-db:
+    name: Integration tests for shared-db relation (lxd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration shared-db tests
+        run: tox -e integration-shared-db
+  integration-test-lxd-database:
+    name: Integration tests for database relation (lxd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration database tests
+        run: tox -e integration-database
+  integration-test-lxd-mysql:
+    name: Integration tests for mysql interface (lxd)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration database tests
+        run: tox -e integration-mysql-interface
 
   release-to-charmhub:
     name: Release to CharmHub
@@ -62,6 +110,10 @@ jobs:
       - lint
       - unit-test
       - integration-test-lxd-ha
+      - integration-test-lxd-db-router
+      - integration-test-lxd-shared-db
+      - integration-test-lxd-database
+      - integration-test-lxd-mysql
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -69,10 +121,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@1.0.3
+        uses: canonical/charming-actions/channel@2.0.0-rc
         id: channel
       - name: Upload charm to charmhub
-        uses: canonical/charming-actions/upload-charm@1.0.3
+        uses: canonical/charming-actions/upload-charm@2.0.0-rc
         with:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"

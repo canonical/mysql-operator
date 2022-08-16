@@ -249,7 +249,7 @@ class TestMySQLBase(unittest.TestCase):
         _expected_drop_users_command = "\n".join(
             (
                 "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                'session.run_sql("DROP USER IF EXISTS test@1.1.1.1, test2@1.1.1.2;")',
+                "session.run_sql(\"DROP USER IF EXISTS 'test'@'1.1.1.1', 'test2'@'1.1.1.2';\")",
             )
         )
 
@@ -309,7 +309,8 @@ class TestMySQLBase(unittest.TestCase):
     def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
         """Test a successful initialization of the mysql.juju_units_operations table."""
         expected_initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), "
+            "status varchar(20), primary key(task))",
             "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started')",
         )
 
@@ -356,7 +357,8 @@ class TestMySQLBase(unittest.TestCase):
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
             "cluster = dba.get_cluster('test_cluster')",
-            'cluster.add_instance(\'clusteradmin@127.0.0.2\', {"password": "clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
+            "cluster.add_instance('clusteradmin@127.0.0.2', {\"password\": "
+            '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
         )
 
         self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
@@ -743,8 +745,11 @@ class TestMySQLBase(unittest.TestCase):
         _get_cluster_primary_address.assert_called_once()
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_user_for_relation_failure(self, _run_mysqlsh_script):
+    def test_delete_user_for_relation_failure(
+        self, _run_mysqlsh_script, _get_cluster_primary_address
+    ):
         """Test failure to delete users for relation."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 

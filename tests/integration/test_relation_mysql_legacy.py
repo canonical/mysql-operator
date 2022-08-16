@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import is_relation_broken, is_relation_joined
+from helpers import (
+    get_legacy_mysql_credentials,
+    instance_ip,
+    is_connection_possible,
+    is_relation_broken,
+    is_relation_joined,
+)
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -22,17 +28,20 @@ APP_METADATA = yaml.safe_load(
 APPLICATION_APP_NAME = APP_METADATA["name"]
 
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
+ENDPOINT = "mysql"
 
-ENDPOINT = "database"
+TEST_USER = "testuser"
+TEST_DATABASE = "testdb"
 
 
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-@pytest.mark.database_tests
+@pytest.mark.mysql_interface_tests
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    # Build and deploy charm from local source folder
+    # Build and deploy charms from local source folders
+
     db_charm = await ops_test.build_charm(".")
     app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
 
@@ -49,11 +58,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
     async with ops_test.fast_forward():
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3, timeout=1000
         )
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2, timeout=1000
         )
 
         await asyncio.gather(
@@ -81,14 +90,21 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
+@pytest.mark.mysql_interface_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
+    # Configure a user and database to be used for the relation
+    # as required for this relation
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config(
+        {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
+    )
+
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
 
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
-            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
+            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) is True,
+            timeout=1000,
         )
 
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
@@ -96,23 +112,44 @@ async def test_relation_creation(ops_test: OpsTest):
 
 @pytest.mark.order(3)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
+@pytest.mark.mysql_interface_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
+    # store database credentials for test access later
+    credentials = await application_database_credentials(ops_test)
+
+    assert is_connection_possible(credentials) is True
+
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
 
     await ops_test.model.block_until(
-        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
+        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True,
+        timeout=1000,
     )
 
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
+                apps=[DATABASE_APP_NAME],
+                status="active",
+                raise_on_blocked=True,
             ),
             ops_test.model.wait_for_idle(
-                apps=[APPLICATION_APP_NAME], status="waiting", raise_on_blocked=True
+                apps=[APPLICATION_APP_NAME],
+                status="waiting",
+                raise_on_blocked=True,
             ),
         )
+
+    assert is_connection_possible(credentials) is False
+
+
+async def application_database_credentials(ops_test: OpsTest) -> dict:
+    unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
+    credentials = await get_legacy_mysql_credentials(unit)
+    host_instance = credentials["host"]
+    host_ip = instance_ip(ops_test.model.info.name, host_instance)
+    credentials["host"] = host_ip
+    return credentials

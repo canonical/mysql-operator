@@ -7,11 +7,14 @@ import json
 import re
 import secrets
 import string
+import subprocess
 from typing import Dict, List, Optional
 
-import mysql.connector
+from connector import MysqlConnector
 from juju.unit import Unit
+from mysql.connector.errors import InterfaceError, OperationalError, ProgrammingError
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
@@ -25,8 +28,14 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
+    # workaround for https://github.com/juju/python-libjuju/issues/707
     action = await unit.run(command)
-    return action.results.get("Stdout", None)
+    result = await action.wait()
+    code = str(result.results.get("Code") or result.results.get("return-code"))
+    stdout = result.results.get("Stdout") or result.results.get("stdout")
+    stderr = result.results.get("Stderr") or result.results.get("stderr")
+    assert code == "0", f"{command} failed ({code}): {stderr or stdout}"
+    return stdout
 
 
 def generate_random_string(length: int) -> str:
@@ -66,7 +75,10 @@ async def scale_application(
         for _ in range(count - count_existing_units):
             await application.add_unit()
 
-        await ops_test.model.block_until(lambda: len(application.units) == count)
+        await ops_test.model.block_until(
+            lambda: len(application.units) == count,
+            timeout=1500,
+        )
         await ops_test.model.wait_for_idle(
             apps=[application_name],
             status="active",
@@ -163,6 +175,21 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     }
 
 
+async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
+    """Helper to run an action to retrieve legacy mysql config credentials.
+
+    Args:
+        unit: The juju unit on which to run the get-legacy-mysql-credentials action
+
+    Returns:
+        A dictionary with the credentials
+    """
+    action = await unit.run_action("get-legacy-mysql-credentials")
+    result = await action.wait()
+
+    return result.results
+
+
 async def execute_commands_on_unit(
     unit_address: str,
     username: str,
@@ -182,23 +209,17 @@ async def execute_commands_on_unit(
     Returns:
         A list of rows that were potentially queried
     """
-    connection = mysql.connector.connect(
-        host=unit_address,
-        user=username,
-        password=password,
-    )
-    cursor = connection.cursor()
+    config = {
+        "user": username,
+        "password": password,
+        "host": unit_address,
+        "raise_on_warnings": False,
+    }
 
-    for query in queries:
-        cursor.execute(query)
-
-    if commit:
-        connection.commit()
-
-    output = list(itertools.chain(*cursor.fetchall()))
-
-    cursor.close()
-    connection.close()
+    with MysqlConnector(config, commit) as cursor:
+        for query in queries:
+            cursor.execute(query)
+        output = list(itertools.chain(*cursor.fetchall()))
 
     return output
 
@@ -231,3 +252,42 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
         if endpoint_one not in endpoints and endpoint_two not in endpoints:
             return True
     return False
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
+def is_connection_possible(credentials: Dict) -> bool:
+    """Test a connection to a MySQL server.
+
+    Args:
+        credentials: A dictionary with the credentials to test
+    """
+    config = {
+        "user": credentials["username"],
+        "password": credentials["password"],
+        "host": credentials["host"],
+        "raise_on_warnings": False,
+    }
+
+    try:
+        with MysqlConnector(config) as cursor:
+            cursor.execute("SELECT 1")
+            return cursor.fetchone()[0] == 1
+    except (InterfaceError, OperationalError, ProgrammingError):
+        # Errors raised when the connection is not possible
+        return False
+
+
+def instance_ip(model: str, instance: str) -> str:
+    """Translate juju instance name to IP.
+
+    Args:
+        model: The name of the model
+        instance: The name of the instance
+    Returns:
+        The (str) IP address of the instance
+    """
+    output = subprocess.check_output(f"juju machines --model {model}".split())
+
+    for line in output.decode("utf8").splitlines():
+        if instance in line:
+            return line.split()[2]
