@@ -7,10 +7,8 @@ options:
     type: "string"
 # Config options for the legacy 'mysql relation'
   mysql-interface-user:
-    default: "mysql"
     description: "The database username for the legacy 'mysql' relation"
     type: "string"
   mysql-interface-database:
-    default: "default_database"
     description: "The database name for the legacy 'mysql' relation"
     type: "string"
