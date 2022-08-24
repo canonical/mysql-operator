@@ -14,7 +14,7 @@ from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUsersForUnitError,
 )
-from ops.charm import RelationChangedEvent, RelationDepartedEvent
+from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, RelationDataContent
 
@@ -31,7 +31,7 @@ RequestedUser = namedtuple(
 class DBRouterRelation(Object):
     """Encapsulation of the legacy db-router relation."""
 
-    def __init__(self, charm):
+    def __init__(self, charm: CharmBase):
         super().__init__(charm, LEGACY_DB_ROUTER)
 
         self.charm = charm
