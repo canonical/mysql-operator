@@ -802,7 +802,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
                 "cluster = dba.get_cluster('test_cluster')",
-                "cluster.setup_router_account('test_user@%', {\"update\": \"true\"})",
+                'cluster.setup_router_account(\'test_user@%\', {"update": "true"})',
             )
         )
 
@@ -828,7 +828,9 @@ class TestMySQLBase(unittest.TestCase):
             )
         )
 
-        self.mysql.grant_privileges_to_user("test_user", "%", ["CREATE USER"], with_grant_option=True)
+        self.mysql.grant_privileges_to_user(
+            "test_user", "%", ["CREATE USER"], with_grant_option=True
+        )
 
         _run_mysqlsh_script.assert_called_with(expected_commands)
 

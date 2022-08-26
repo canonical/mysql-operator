@@ -105,24 +105,21 @@ class DatabaseRelation(Object):
 
             if "mysqlrouter" in extra_user_roles:
                 self.charm._mysql.upgrade_user_for_mysqlrouter(db_user, "%")
-                self.charm._mysql.grant_privileges_to_user(db_user, "%", ["CREATE USER"], with_grant_option=True)
+                self.charm._mysql.grant_privileges_to_user(
+                    db_user, "%", ["CREATE USER"], with_grant_option=True
+                )
 
             logger.info(f"Created user for app {remote_app}")
-        except MySQLCreateApplicationDatabaseAndScopedUserError:
-            logger.error(f"Failed to create scoped user for app {remote_app}")
-            self.charm.unit.status = BlockedStatus("Failed to create scoped user")
-        except MySQLGetMySQLVersionError as e:
-            logger.exception("Failed to get MySQL version", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get MySQL version")
-        except MySQLGetClusterMembersAddressesError as e:
-            logger.exception("Failed to get cluster members", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get cluster members")
-        except (MySQLUpgradeUserForMySQLRouterError, MySQLGrantPrivilegesToUserError) as e:
-            logger.exception("Failed to upgrade user for mysqlrouter", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to upgrade user for mysqlrouter")
-        except MySQLClientError as e:
-            logger.exception("Failed to get primary", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get primary")
+        except (
+            MySQLCreateApplicationDatabaseAndScopedUserError,
+            MySQLGetMySQLVersionError,
+            MySQLGetClusterMembersAddressesError,
+            MySQLUpgradeUserForMySQLRouterError,
+            MySQLGrantPrivilegesToUserError,
+            MySQLClientError,
+        ) as e:
+            logger.exception("Failed to set up database relation", exc_info=e)
+            self.charm.unit.status = BlockedStatus("Failed to set up relation")
 
     def _on_database_broken(self, event: RelationDepartedEvent) -> None:
         """Handle the removal of database relation.
