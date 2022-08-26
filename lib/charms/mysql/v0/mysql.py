@@ -939,7 +939,7 @@ class MySQLBase(ABC):
         Raises:
             MySQLUpgradeUserForMySQLRouterError if there is an issue upgrading user for mysqlrouter
         """
-        options = {"update": True}
+        options = {"update": "true"}
         upgrade_user_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
@@ -970,14 +970,14 @@ class MySQLBase(ABC):
         """
         grant_privileges_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            f"session.run_sql(\"GRANT {', '.join(privileges)} TO '{username}'@'{hostname}' {'WITH GRANT OPTION' if with_grant_option else ''}\")",
+            f"session.run_sql(\"GRANT {', '.join(privileges)} ON *.* TO '{username}'@'{hostname}'{' WITH GRANT OPTION' if with_grant_option else ''}\")",
         )
 
         try:
             self._run_mysqlsh_script("\n".join(grant_privileges_commands))
         except MySQLClientError as e:
             logger.warning(f"Failed to grant privileges to user {username}@{hostname}", exc_info=e)
-            raise MySQLGrantPrivilegesToUserError(e.messQLGage)
+            raise MySQLGrantPrivilegesToUserError(e.message)
 
     @abstractmethod
     def wait_until_mysql_connection(self) -> None:

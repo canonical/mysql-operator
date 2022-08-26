@@ -72,7 +72,9 @@ class DatabaseRelation(Object):
         # get base relation data
         relation_id = event.relation.id
         db_name = event.database
-        extra_user_roles = event.extra_user_roles.split(",")
+        extra_user_roles = []
+        if event.extra_user_roles:
+            extra_user_roles = event.extra_user_roles.split(",")
         # user name is derived from the relation id
         db_user = f"relation-{relation_id}"
         db_pass = self._get_or_set_password(event.relation)
@@ -103,7 +105,7 @@ class DatabaseRelation(Object):
 
             if "mysqlrouter" in extra_user_roles:
                 self.charm._mysql.upgrade_user_for_mysqlrouter(db_user, "%")
-                self.charm._mysql.grant_privileges_to_user(db_user, "%", ["CREATE_USER"])
+                self.charm._mysql.grant_privileges_to_user(db_user, "%", ["CREATE USER"], with_grant_option=True)
 
             logger.info(f"Created user for app {remote_app}")
         except MySQLCreateApplicationDatabaseAndScopedUserError:
