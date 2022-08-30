@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+from typing import Dict, Optional
 
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
@@ -295,6 +296,46 @@ class MySQLOperatorCharm(CharmBase):
     def cluster_initialized(self):
         """Returns True if the cluster is initialized."""
         return self._peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
+
+    @property
+    def unit_data(self) -> Dict:
+        """Peer relation data object."""
+        if self._peers is None:
+            return {}
+
+        return self._peers.data[self.unit]
+
+    @property
+    def app_data(self) -> Dict:
+        """Peer relation data object."""
+        if self._peers is None:
+            return {}
+
+        return self._peers.data[self.app]
+
+    def _get_secret(self, scope: str, key: str) -> Optional[str]:
+        """Get TLS secret from the secret storage."""
+        if scope == "unit":
+            return self.unit_data.get(key, None)
+        elif scope == "app":
+            return self.app_data.get(key, None)
+        else:
+            raise RuntimeError("Unknown secret scope.")
+
+    def _set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+        """Get TLS secret from the secret storage."""
+        if scope == "unit":
+            if not value:
+                del self.unit_data[key]
+                return
+            self.unit_data.update({key: value})
+        elif scope == "app":
+            if not value:
+                del self.app_data[key]
+                return
+            self.app_data.update({key: value})
+        else:
+            raise RuntimeError("Unknown secret scope.")
 
 
 if __name__ == "__main__":
