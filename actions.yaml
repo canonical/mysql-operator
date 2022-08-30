@@ -22,5 +22,26 @@ set-root-credentials:
 get-cluster-status:
   description: Get cluster status information
 
+get-password:
+  description: Fetch the system user's password, which is used by charm.
+    It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'operator'.
+        Possible values - operator, backup, replication.
+
+set-password:
+  description: Change the system user's password, which is used by charm.
+    It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'operator'.
+        Possible values - operator, backup, replication.
+    password:
+      type: string
+      description: The password will be auto-generated if this option is not specified.
+
 configure-backup-storage:
   description: Configure the backup storage
