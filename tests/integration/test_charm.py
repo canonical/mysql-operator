@@ -12,6 +12,7 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
+    app_name,
     execute_commands_on_unit,
     generate_random_string,
     get_primary_unit,
@@ -31,6 +32,9 @@ CLUSTER_NAME = "test_cluster"
 @pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
+    if await app_name(ops_test) and len(ops_test.model.applications[await app_name(ops_test)].units) >3:
+        return
+
     # Build and deploy charm from local source folder
     charm = await ops_test.build_charm(".")
     config = {"cluster-name": CLUSTER_NAME}
@@ -60,13 +64,13 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 async def test_consistent_data_replication_across_cluster(ops_test: OpsTest) -> None:
     """Confirm that data is replicated from the primary node to all the replicas."""
     # Insert values into a table on the primary unit
-    random_unit = ops_test.model.applications[APP_NAME].units[0]
+    random_unit = ops_test.model.applications[await app_name(ops_test)].units[0]
     server_config_credentials = await get_server_config_credentials(random_unit)
 
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
-        APP_NAME,
+        await app_name(ops_test),
         CLUSTER_NAME,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -96,7 +100,7 @@ async def test_consistent_data_replication_across_cluster(ops_test: OpsTest) -> 
     ]
 
     # Confirm that the values are available on all units
-    for unit in ops_test.model.applications[APP_NAME].units:
+    for unit in ops_test.model.applications[await app_name(ops_test)].units:
         unit_address = await unit.get_public_address()
 
         output = await execute_commands_on_unit(
@@ -115,7 +119,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
     await ops_test.model.set_config({"update-status-hook-interval": "10s"})
 
-    application = ops_test.model.applications[APP_NAME]
+    application = ops_test.model.applications[await app_name(ops_test)]
 
     random_unit = application.units[0]
     server_config_credentials = await get_server_config_credentials(random_unit)
@@ -123,7 +127,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
-        APP_NAME,
+        await app_name(ops_test),
         CLUSTER_NAME,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -137,7 +141,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.block_until(lambda: len(application.units) == 2)
         await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
+            apps=[await app_name(ops_test)],
             status="active",
             raise_on_blocked=True,
             timeout=1000,
@@ -148,7 +152,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
     new_primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
-        APP_NAME,
+        await app_name(ops_test),
         CLUSTER_NAME,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -158,7 +162,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
 
     # Add the unit back and wait until it is active
     async with ops_test.fast_forward():
-        await scale_application(ops_test, APP_NAME, 3)
+        await scale_application(ops_test, await app_name(ops_test), 3)
 
 
 @pytest.mark.order(4)
@@ -167,7 +171,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
 async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
-    application = ops_test.model.applications[APP_NAME]
+    application = ops_test.model.applications[await app_name(ops_test)]
 
     random_unit = application.units[0]
     server_config_credentials = await get_server_config_credentials(random_unit)
@@ -175,7 +179,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
-        APP_NAME,
+        await app_name(ops_test),
         CLUSTER_NAME,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -197,11 +201,11 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
         commit=True,
     )
 
-    old_unit_names = [unit.name for unit in ops_test.model.applications[APP_NAME].units]
+    old_unit_names = [unit.name for unit in ops_test.model.applications[await app_name(ops_test)].units]
 
     # Add a unit and wait until it is active
     async with ops_test.fast_forward():
-        await scale_application(ops_test, APP_NAME, 4)
+        await scale_application(ops_test, await app_name(ops_test), 4)
 
     added_unit = [unit for unit in application.units if unit.name not in old_unit_names][0]
 
@@ -224,10 +228,10 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
     await ops_test.model.destroy_units(added_unit.name)
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
+            lambda: len(ops_test.model.applications[await app_name(ops_test)].units) == 3
         )
         await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
+            apps=[await app_name(ops_test)],
             status="active",
             raise_on_blocked=True,
             timeout=1000,

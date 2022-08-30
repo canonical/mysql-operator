@@ -10,6 +10,7 @@ import string
 import subprocess
 from typing import Dict, List, Optional
 
+
 from connector import MysqlConnector
 from juju.unit import Unit
 from mysql.connector.errors import InterfaceError, OperationalError, ProgrammingError
@@ -291,3 +292,21 @@ def instance_ip(model: str, instance: str) -> str:
     for line in output.decode("utf8").splitlines():
         if instance in line:
             return line.split()[2]
+
+
+async def app_name(ops_test: OpsTest) -> str:
+    """Returns the name of the cluster running MySQL.
+
+    This is important since not all deployments of the MySQL charm have the application name
+    "mysql".
+
+    Note: if multiple clusters are running MySQL this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        # note that format of the charm field is not exactly "mysql" but instead takes the form
+        # of `local:focal/mysql-6`
+        if "mysql" in status["applications"][app]["charm"]:
+            return app
+
+    return None
