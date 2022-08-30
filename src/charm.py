@@ -25,9 +25,12 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 from constants import (
+    CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     PASSWORD_LENGTH,
     PEER,
+    ROOT_PASSWORD_KEY,
+    SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
 from mysqlsh_helpers import MySQL
@@ -38,10 +41,6 @@ from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
-
-ROOT_PASSWORD_KEY = "root-password"
-SERVER_CONFIG_PASSWORD_KEY = "server-config-password"
-CLUSTER_ADMIN_PASSWORD_KEY = "cluster-admin-password"
 
 
 class MySQLOperatorCharm(CharmBase):
