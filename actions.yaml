@@ -4,11 +4,23 @@
 get-cluster-admin-credentials:
   description: Get the credentials for the cluster admin user
 
+set-cluster-admin-credentials:
+  description: Update the credentials for the cluster admin user
+
 get-server-config-credentials:
   description: Get the credentials for the server config user
+
+set-server-config-credentials:
+  description: Update the credentials for the server config user
 
 get-root-credentials:
   description: Get the credentials for the root user
 
+set-root-credentials:
+  description: Update the credentials for the root user
+
 get-cluster-status:
   description: Get cluster status information
+
+configure-backup-storage:
+  description: Configure the backup storage

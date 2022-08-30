@@ -61,10 +61,20 @@ class MySQLOperatorCharm(CharmBase):
             self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
         )
         self.framework.observe(
+            self.on.set_cluster_admin_credentials_action, self._on_set_cluster_admin_credentials
+        )
+        self.framework.observe(
             self.on.get_server_config_credentials_action, self._on_get_server_config_credentials
         )
+        self.framework.observe(
+            self.on.set_server_config_credentials_action, self._on_set_server_config_credentials
+        )
         self.framework.observe(self.on.get_root_credentials_action, self._on_get_root_credentials)
+        self.framework.observe(self.on.set_root_credentials_action, self._on_set_root_credentials)
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
+        self.framework.observe(
+            self.on.configure_backup_storage_action, self._on_configure_backup_storage
+        )
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
@@ -228,6 +238,15 @@ class MySQLOperatorCharm(CharmBase):
             }
         )
 
+    def _on_set_cluster_admin_credentials(self, event: ActionEvent) -> None:
+        """Action used to update the cluster admin credentials."""
+        password = None
+        if "password" in event.params:
+            password = event.params["password"]
+        else:
+            password = generate_random_password(PASSWORD_LENGTH)
+        self._set_secret("app", "cluster-admin-password", password)
+
     def _on_get_server_config_credentials(self, event: ActionEvent) -> None:
         """Action used to retrieve the server config credentials."""
         event.set_results(
@@ -236,6 +255,15 @@ class MySQLOperatorCharm(CharmBase):
                 "server-config-password": self._get_secret("app", "server-config-password"),
             }
         )
+
+    def _on_set_server_config_credentials(self, event: ActionEvent) -> None:
+        """Action used to update the server config credentials."""
+        password = None
+        if "password" in event.params:
+            password = event.params["password"]
+        else:
+            password = generate_random_password(PASSWORD_LENGTH)
+        self._set_secret("app", "server-config-password", password)
 
     def _on_get_root_credentials(self, event: ActionEvent) -> None:
         """Action used to retrieve the root credentials."""
@@ -246,9 +274,49 @@ class MySQLOperatorCharm(CharmBase):
             }
         )
 
+    def _on_set_root_credentials(self, event: ActionEvent) -> None:
+        """Action used to update the root credentials."""
+        password = None
+        if "password" in event.params:
+            password = event.params["password"]
+        else:
+            password = generate_random_password(PASSWORD_LENGTH)
+        self._set_secret("app", "root-password", password)
+
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used to retrieve the cluster status."""
         event.set_results(self._mysql.get_cluster_status())
+
+    def _on_configure_backup_storage(self, event: ActionEvent) -> None:
+        """Action used to configure backup storage."""
+        if "storage-type" not in event.params:
+            raise RuntimeError("Undefined parameter storage-type.")
+        if "provider" not in event.params:
+            raise RuntimeError("Undefined parameter provider.")
+        if "volume-type" not in event.params:
+            raise RuntimeError("Undefined parameter volume-type.")
+        if "endpoint" not in event.params:
+            raise RuntimeError("Undefined parameter endpoint.")
+        if "container" not in event.params:
+            raise RuntimeError("Undefined parameter container.")
+        if "prefix" not in event.params:
+            raise RuntimeError("Undefined parameter prefix.")
+        if "accessKey" not in event.params:
+            raise RuntimeError("Undefined parameter accessKey.")
+        if "secretKey" not in event.params:
+            raise RuntimeError("Undefined parameter secretKey.")
+
+        # do_backup_configuration( event.params["storage-type"],
+        #                          event.params["provider"],
+        #                          event.params["provider"],
+        #                          event.params["volume-type"],
+        #                          event.params["endpoint"],
+        #                          event.params["container"],
+        #                          event.params["prefix"],
+        #                          event.params["accessKey"],
+        #                          event.params["secretKey"]
+        # )
+        return
 
     # =======================
     #  Helpers
