@@ -224,9 +224,7 @@ class MySQLOperatorCharm(CharmBase):
         event.set_results(
             {
                 "cluster-admin-username": CLUSTER_ADMIN_USERNAME,
-                "cluster-admin-password": self._peers.data[self.app].get(
-                    "cluster-admin-password", "<to_be_generated>"
-                ),
+                "cluster-admin-password": self._get_secret("app", "cluster-admin-password"),
             }
         )
 
@@ -235,9 +233,7 @@ class MySQLOperatorCharm(CharmBase):
         event.set_results(
             {
                 "server-config-username": SERVER_CONFIG_USERNAME,
-                "server-config-password": self._peers.data[self.app].get(
-                    "server-config-password", "<to_be_generated>"
-                ),
+                "server-config-password": self._get_secret("app", "server-config-password"),
             }
         )
 
@@ -246,9 +242,7 @@ class MySQLOperatorCharm(CharmBase):
         event.set_results(
             {
                 "root-username": "root",
-                "root-password": self._peers.data[self.app].get(
-                    "root-password", "<to_be_generated>"
-                ),
+                "root-password": self._get_secret("app", "root-password"),
             }
         )
 
@@ -268,11 +262,11 @@ class MySQLOperatorCharm(CharmBase):
         return MySQL(
             self.model.get_binding(PEER).network.bind_address,
             peer_data["cluster-name"],
-            peer_data["root-password"],
+            self._get_secret("app", "root-password"),
             SERVER_CONFIG_USERNAME,
-            peer_data["server-config-password"],
+            self._get_secret("app", "server-config-password"),
             CLUSTER_ADMIN_USERNAME,
-            peer_data["cluster-admin-password"],
+            self._get_secret("app", "cluster-admin-password"),
         )
 
     @property
@@ -287,9 +281,9 @@ class MySQLOperatorCharm(CharmBase):
 
         return (
             peer_data.get("cluster-name")
-            and peer_data.get("root-password")
-            and peer_data.get("server-config-password")
-            and peer_data.get("cluster-admin-password")
+            and self._get_secret("app", "root-password")
+            and self._get_secret("app", "server-config-password")
+            and self._get_secret("app", "cluster-admin-password")
         )
 
     @property
