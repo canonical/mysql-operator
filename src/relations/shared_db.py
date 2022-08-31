@@ -169,7 +169,6 @@ class SharedDBRelation(Object):
         departing_unit = event.departing_unit.name
         local_unit_data = event.relation.data[self._charm.unit]
         local_app_data = event.relation.data[self._charm.app]
-        # from ipdb import set_trace; set_trace()
 
         current_allowed_units = local_unit_data.get("allowed_units", "")
 
