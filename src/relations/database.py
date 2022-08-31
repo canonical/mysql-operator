@@ -121,7 +121,7 @@ class DatabaseRelation(Object):
             # run once by the leader
             return
 
-        if len(self.charm._peers.units) == 0:
+        if self.charm._peers.data[self.charm.unit].get("unit-status", None) == "removing":
             # safeguard against relation broken being triggered for
             # a unit being torn down (instead of un-related)
             # https://github.com/canonical/mysql-operator/issues/32

@@ -214,6 +214,9 @@ class MySQLOperatorCharm(CharmBase):
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
         self._mysql.remove_instance(unit_label)
 
+        # Inform other hooks of current status
+        self._peers.data[self.unit]["unit-status"] = "removing"
+
     # =======================
     #  Custom Action Handlers
     # =======================
