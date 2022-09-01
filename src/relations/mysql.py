@@ -9,7 +9,7 @@ import logging
 from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUsersForUnitError,
-    MysqlGetClusterPrimaryAddressError,
+    MySQLGetClusterPrimaryAddressError,
 )
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
@@ -131,7 +131,7 @@ class MySQLRelation(Object):
 
         except (
             MySQLCreateApplicationDatabaseAndScopedUserError,
-            MysqlGetClusterPrimaryAddressError,
+            MySQLGetClusterPrimaryAddressError,
         ):
             self._charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
             return

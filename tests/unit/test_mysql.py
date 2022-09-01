@@ -23,6 +23,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLUpgradeUserForMySQLRouterError,
 )
 
 
@@ -97,7 +98,7 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
         _run_mysqlcli_script.assert_called_once_with(
-            "\n".join(user_existence_command), password="password"
+            "\n".join(user_existence_command), user="serverconfig", password="serverconfigpassword"
         )
 
         # Reset the mock
@@ -110,7 +111,7 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.2")
         _run_mysqlcli_script.assert_called_once_with(
-            "\n".join(user_existence_command), password="password"
+            "\n".join(user_existence_command), user="serverconfig", password="serverconfigpassword"
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -793,6 +794,58 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
         self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_upgrade_user_for_mysqlrouter(self, _run_mysqlsh_script):
+        """Test the successful execution of upgrade_user_for_mysqlrouter."""
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                'cluster.setup_router_account(\'test_user@%\', {"update": "true"})',
+            )
+        )
+
+        self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
+
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_upgrade_user_for_mysqlrouter_exception(self, _run_mysqlsh_script):
+        """Test an exception during the execution of upgrade_user_for_mysqlrouter."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error upgrading user")
+
+        with self.assertRaises(MySQLUpgradeUserForMySQLRouterError):
+            self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_grant_privileges_to_user(self, _run_mysqlsh_script):
+        """Test the successful execution of grant_privileges_to_user."""
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_user'@'%' WITH GRANT OPTION\")",
+            )
+        )
+
+        self.mysql.grant_privileges_to_user(
+            "test_user", "%", ["CREATE USER"], with_grant_option=True
+        )
+
+        _run_mysqlsh_script.assert_called_with(expected_commands)
+
+        _run_mysqlsh_script.reset_mock()
+
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "session.run_sql(\"GRANT SELECT, UPDATE ON *.* TO 'test_user'@'%'\")",
+            )
+        )
+
+        self.mysql.grant_privileges_to_user("test_user", "%", ["SELECT", "UPDATE"])
+
+        _run_mysqlsh_script.assert_called_with(expected_commands)
 
     def test_abstract_methods(self):
         """Test abstract methods."""
