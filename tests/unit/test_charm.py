@@ -174,3 +174,47 @@ class TestCharm(unittest.TestCase):
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_leader_elected")
+    def test_get_secret(self, _):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert self.charm._get_secret("app", "password") is None
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.app.name, {"password": "test-password"}
+        )
+        assert self.charm._get_secret("app", "password") == "test-password"
+
+        # Test unit scope.
+        assert self.charm._get_secret("unit", "password") is None
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.unit.name, {"password": "test-password"}
+        )
+        assert self.charm._get_secret("unit", "password") == "test-password"
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_leader_elected")
+    def test_set_secret(self, _):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.app.name
+        )
+        self.charm._set_secret("app", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.peer_relation_id, self.charm.app.name)["password"]
+            == "test-password"
+        )
+
+        # Test unit scope.
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.unit.name
+        )
+        self.charm._set_secret("unit", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)["password"]
+            == "test-password"
+        )
