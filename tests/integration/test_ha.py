@@ -23,9 +23,9 @@ from tests.integration.helpers import (
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path('./metadata.yaml').read_text())
-APP_NAME = METADATA['name']
-ANOTHER_APP_NAME = f'second{APP_NAME}'
+METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+APP_NAME = METADATA["name"]
+ANOTHER_APP_NAME = f"second{APP_NAME}"
 
 
 @pytest.mark.order(1)
@@ -42,7 +42,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             return
 
     # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm('.')
+    charm = await ops_test.build_charm(".")
     await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
     # variable used to avoid rebuilding the charm
     global another_charm
@@ -56,14 +56,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         )
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
         assert len(ops_test.model.applications[APP_NAME].units) == 3
 
         for unit in ops_test.model.applications[APP_NAME].units:
-            assert unit.workload_status == 'active'
+            assert unit.workload_status == "active"
 
 
 @pytest.mark.order(2)
@@ -84,22 +84,22 @@ async def test_consistent_data_replication_across_cluster(
         random_unit,
         app,
         cluster,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
     )
     primary_unit_address = await primary_unit.get_public_address()
 
     random_chars = generate_random_string(40)
     create_records_sql = [
-        'CREATE DATABASE IF NOT EXISTS test',
-        'CREATE TABLE IF NOT EXISTS test.data_replication_table (id varchar(40), primary key(id))',
+        "CREATE DATABASE IF NOT EXISTS test",
+        "CREATE TABLE IF NOT EXISTS test.data_replication_table (id varchar(40), primary key(id))",
         f"INSERT INTO test.data_replication_table VALUES ('{random_chars}')",
     ]
 
     await execute_commands_on_unit(
         primary_unit_address,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
         create_records_sql,
         commit=True,
     )
@@ -117,8 +117,8 @@ async def test_consistent_data_replication_across_cluster(
 
         output = await execute_commands_on_unit(
             unit_address,
-            server_config_credentials['username'],
-            server_config_credentials['password'],
+            server_config_credentials["username"],
+            server_config_credentials["password"],
             select_data_sql,
         )
         assert random_chars in output
@@ -142,8 +142,8 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
         random_unit,
         app,
         cluster,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
     )
     primary_unit_name = primary_unit.name
 
@@ -155,7 +155,7 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
         await ops_test.model.block_until(lambda: len(application.units) == 2)
         await ops_test.model.wait_for_idle(
             apps=[app],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
@@ -167,8 +167,8 @@ async def test_primary_reelection(ops_test: OpsTest) -> None:
         random_unit,
         app,
         cluster,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
     )
 
     assert primary_unit_name != new_primary_unit.name
@@ -196,22 +196,22 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
         random_unit,
         app,
         cluster,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
     )
     primary_unit_address = await primary_unit.get_public_address()
 
     random_chars = generate_random_string(40)
     create_records_sql = [
-        'CREATE DATABASE IF NOT EXISTS test',
-        'CREATE TABLE IF NOT EXISTS test.instance_state_replication (id varchar(40), primary key(id))',
+        "CREATE DATABASE IF NOT EXISTS test",
+        "CREATE TABLE IF NOT EXISTS test.instance_state_replication (id varchar(40), primary key(id))",
         f"INSERT INTO test.instance_state_replication VALUES ('{random_chars}')",
     ]
 
     await execute_commands_on_unit(
         primary_unit_address,
-        server_config_credentials['username'],
-        server_config_credentials['password'],
+        server_config_credentials["username"],
+        server_config_credentials["password"],
         create_records_sql,
         commit=True,
     )
@@ -233,8 +233,8 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
         unit_address = await unit.get_public_address()
         output = await execute_commands_on_unit(
             unit_address,
-            server_config_credentials['username'],
-            server_config_credentials['password'],
+            server_config_credentials["username"],
+            server_config_credentials["password"],
             select_data_sql,
         )
         assert random_chars in output
@@ -245,7 +245,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
         await ops_test.model.block_until(lambda: len(ops_test.model.applications[app].units) == 3)
         await ops_test.model.wait_for_idle(
             apps=[app],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
@@ -255,8 +255,8 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
         unit_address = await unit.get_public_address()
         output = await execute_commands_on_unit(
             unit_address,
-            server_config_credentials['username'],
-            server_config_credentials['password'],
+            server_config_credentials["username"],
+            server_config_credentials["password"],
             select_data_sql,
         )
         assert random_chars in output
@@ -270,7 +270,7 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
-    charm = another_charm or await ops_test.build_charm('.')
+    charm = another_charm or await ops_test.build_charm(".")
     await ops_test.model.deploy(charm, application_name=ANOTHER_APP_NAME, num_units=1)
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
@@ -278,7 +278,7 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
         )
         await ops_test.model.wait_for_idle(
             apps=[ANOTHER_APP_NAME],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
@@ -294,31 +294,31 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
             random_unit,
             application,
             cluster,
-            server_config_credentials['username'],
-            server_config_credentials['password'],
+            server_config_credentials["username"],
+            server_config_credentials["password"],
         )
 
         primary_unit_address = await primary_unit.get_public_address()
 
         connection_data[application] = {
-            'host': primary_unit_address,
-            'username': server_config_credentials['username'],
-            'password': server_config_credentials['password'],
+            "host": primary_unit_address,
+            "username": server_config_credentials["username"],
+            "password": server_config_credentials["password"],
         }
 
     # write single distinct record to each cluster
     for application in apps:
         create_records_sql = [
-            'CREATE DATABASE IF NOT EXISTS test',
-            'DROP TABLE IF EXISTS test.cluster_isolation_table',
-            'CREATE TABLE test.cluster_isolation_table (id varchar(40), primary key(id))',
+            "CREATE DATABASE IF NOT EXISTS test",
+            "DROP TABLE IF EXISTS test.cluster_isolation_table",
+            "CREATE TABLE test.cluster_isolation_table (id varchar(40), primary key(id))",
             f"INSERT INTO test.cluster_isolation_table VALUES ('{application}')",
         ]
 
         await execute_commands_on_unit(
-            connection_data[application]['host'],
-            connection_data[application]['username'],
-            connection_data[application]['password'],
+            connection_data[application]["host"],
+            connection_data[application]["username"],
+            connection_data[application]["password"],
             create_records_sql,
             commit=True,
         )
@@ -326,15 +326,15 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
     result = list()
     # read single record from each cluster
     for application in apps:
-        read_records_sql = ['SELECT id FROM test.cluster_isolation_table']
+        read_records_sql = ["SELECT id FROM test.cluster_isolation_table"]
 
         output = await execute_commands_on_unit(
-            connection_data[application]['host'],
-            connection_data[application]['username'],
-            connection_data[application]['password'],
+            connection_data[application]["host"],
+            connection_data[application]["username"],
+            connection_data[application]["password"],
             read_records_sql,
             commit=False,
         )
         result.append(output[0])
 
-    assert result[0] != result[1], 'Writes from one cluster are replicated to another cluster.'
+    assert result[0] != result[1], "Writes from one cluster are replicated to another cluster."

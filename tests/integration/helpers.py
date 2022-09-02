@@ -31,10 +31,10 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
     # workaround for https://github.com/juju/python-libjuju/issues/707
     action = await unit.run(command)
     result = await action.wait()
-    code = str(result.results.get('Code') or result.results.get('return-code'))
-    stdout = result.results.get('Stdout') or result.results.get('stdout')
-    stderr = result.results.get('Stderr') or result.results.get('stderr')
-    assert code == '0', f'{command} failed ({code}): {stderr or stdout}'
+    code = str(result.results.get("Code") or result.results.get("return-code"))
+    stdout = result.results.get("Stdout") or result.results.get("stdout")
+    stderr = result.results.get("Stderr") or result.results.get("stderr")
+    assert code == "0", f"{command} failed ({code}): {stderr or stdout}"
     return stdout
 
 
@@ -48,7 +48,7 @@ def generate_random_string(length: int) -> str:
         A random string comprised of letters and digits
     """
     choices = string.ascii_letters + string.digits
-    return ''.join([secrets.choice(choices) for i in range(length)])
+    return "".join([secrets.choice(choices) for i in range(length)])
 
 
 async def scale_application(
@@ -81,7 +81,7 @@ async def scale_application(
         )
         await ops_test.model.wait_for_idle(
             apps=[application_name],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
@@ -99,7 +99,7 @@ async def scale_application(
     if count > 0:
         await ops_test.model.wait_for_idle(
             apps=[application_name],
-            status='active',
+            status="active",
             raise_on_blocked=True,
             timeout=1000,
         )
@@ -127,18 +127,18 @@ async def get_primary_unit(
         A juju unit that is a MySQL primary
     """
     commands = [
-        'mysqlsh',
-        '--python',
-        f'{server_config_username}:{server_config_password}@127.0.0.1',
-        '-e',
+        "mysqlsh",
+        "--python",
+        f"{server_config_username}:{server_config_password}@127.0.0.1",
+        "-e",
         f"\"print('<CLUSTER_STATUS>' + dba.get_cluster('{cluster_name}').status().__repr__() + '</CLUSTER_STATUS>')\"",
     ]
-    raw_output = await run_command_on_unit(unit, ' '.join(commands))
+    raw_output = await run_command_on_unit(unit, " ".join(commands))
 
     if not raw_output:
         return None
 
-    matches = re.search('<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>', raw_output)
+    matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
     if not matches:
         return None
 
@@ -146,9 +146,9 @@ async def get_primary_unit(
 
     primary_name = [
         label
-        for label, member in cluster_status['defaultReplicaSet']['topology'].items()
-        if member['mode'] == 'R/W'
-    ][0].replace('-', '/')
+        for label, member in cluster_status["defaultReplicaSet"]["topology"].items()
+        if member["mode"] == "R/W"
+    ][0].replace("-", "/")
 
     for unit in ops_test.model.applications[app_name].units:
         if unit.name == primary_name:
@@ -166,12 +166,12 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the server config username and password
     """
-    action = await unit.run_action('get-server-config-credentials')
+    action = await unit.run_action("get-server-config-credentials")
     result = await action.wait()
 
     return {
-        'username': result.results['server-config-username'],
-        'password': result.results['server-config-password'],
+        "username": result.results["server-config-username"],
+        "password": result.results["server-config-password"],
     }
 
 
@@ -184,7 +184,7 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the credentials
     """
-    action = await unit.run_action('get-legacy-mysql-credentials')
+    action = await unit.run_action("get-legacy-mysql-credentials")
     result = await action.wait()
 
     return result.results
@@ -210,10 +210,10 @@ async def execute_commands_on_unit(
         A list of rows that were potentially queried
     """
     config = {
-        'user': username,
-        'password': password,
-        'host': unit_address,
-        'raise_on_warnings': False,
+        "user": username,
+        "password": password,
+        "host": unit_address,
+        "raise_on_warnings": False,
     }
 
     with MysqlConnector(config, commit) as cursor:
@@ -262,15 +262,15 @@ def is_connection_possible(credentials: Dict) -> bool:
         credentials: A dictionary with the credentials to test
     """
     config = {
-        'user': credentials['username'],
-        'password': credentials['password'],
-        'host': credentials['host'],
-        'raise_on_warnings': False,
+        "user": credentials["username"],
+        "password": credentials["password"],
+        "host": credentials["host"],
+        "raise_on_warnings": False,
     }
 
     try:
         with MysqlConnector(config) as cursor:
-            cursor.execute('SELECT 1')
+            cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
     except (InterfaceError, OperationalError, ProgrammingError):
         # Errors raised when the connection is not possible
@@ -286,9 +286,9 @@ def instance_ip(model: str, instance: str) -> str:
     Returns:
         The (str) IP address of the instance
     """
-    output = subprocess.check_output(f'juju machines --model {model}'.split())
+    output = subprocess.check_output(f"juju machines --model {model}".split())
 
-    for line in output.decode('utf8').splitlines():
+    for line in output.decode("utf8").splitlines():
         if instance in line:
             return line.split()[2]
 
@@ -305,14 +305,14 @@ async def app_name(ops_test: OpsTest) -> str:
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mysql" but instead takes the form
         # of `local:focal/mysql-6`
-        if 'mysql' in status['applications'][app]['charm']:
+        if "mysql" in status["applications"][app]["charm"]:
             return app
 
     return None
 
 
 def cluster_name(unit: Unit, model_name: str) -> str:
-    """Returns the name MySQL cluster name.
+    """Returns the MySQL cluster name.
 
     Args:
         unit: A unit to get data from
@@ -322,13 +322,13 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     """
     output = subprocess.check_output(
         [
-            'juju',
-            'show-unit',
+            "juju",
+            "show-unit",
             unit.name,
-            '--format=json',
-            f'--model={model_name}',
+            "--format=json",
+            f"--model={model_name}",
         ]
     )
-    output = json.loads(output.decode('utf-8'))
+    output = json.loads(output.decode("utf-8"))
 
-    return output[unit.name]['relation-info'][0]['application-data']['cluster-name']
+    return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
