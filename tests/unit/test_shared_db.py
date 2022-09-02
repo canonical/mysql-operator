@@ -2,10 +2,9 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
 from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
-from ops.charm import RelationDepartedEvent
 from ops.model import BlockedStatus
 from ops.testing import Harness
 

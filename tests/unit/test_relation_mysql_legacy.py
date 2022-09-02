@@ -2,9 +2,8 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
-from ops.charm import RelationDepartedEvent
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
