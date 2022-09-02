@@ -6,7 +6,6 @@
 import logging
 import time
 from pathlib import Path
-from unittest import result
 
 import pytest
 import yaml
