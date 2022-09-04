@@ -265,7 +265,12 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
 @pytest.mark.order(5)
 @pytest.mark.ha_tests
 async def test_cluster_isolation(ops_test: OpsTest) -> None:
-    """Test for cluster data isolation."""
+    """Test for cluster data isolation.
+
+    This test creates a new cluster, create a new table on both cluster, write a single record with
+    the application name for each cluster, retrieve and compare these records, asserting they are 
+    not the same.
+    """
     app = await app_name(ops_test)
     apps = [app, ANOTHER_APP_NAME]
 
@@ -335,6 +340,8 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
             read_records_sql,
             commit=False,
         )
+
+        assert len(output) == 1, "Just one record must exist on the test table"
         result.append(output[0])
 
     assert result[0] != result[1], "Writes from one cluster are replicated to another cluster."
