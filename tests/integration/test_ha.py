@@ -268,7 +268,7 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
     """Test for cluster data isolation.
 
     This test creates a new cluster, create a new table on both cluster, write a single record with
-    the application name for each cluster, retrieve and compare these records, asserting they are 
+    the application name for each cluster, retrieve and compare these records, asserting they are
     not the same.
     """
     app = await app_name(ops_test)
