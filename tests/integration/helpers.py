@@ -291,3 +291,44 @@ def instance_ip(model: str, instance: str) -> str:
     for line in output.decode("utf8").splitlines():
         if instance in line:
             return line.split()[2]
+
+
+async def app_name(ops_test: OpsTest) -> str:
+    """Returns the name of the application running MySQL.
+
+    This is important since not all deployments of the MySQL charm have the application name
+    "mysql".
+
+    Note: if multiple clusters are running MySQL this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        # note that format of the charm field is not exactly "mysql" but instead takes the form
+        # of `local:focal/mysql-6`
+        if "mysql" in status["applications"][app]["charm"]:
+            return app
+
+    return None
+
+
+def cluster_name(unit: Unit, model_name: str) -> str:
+    """Returns the MySQL cluster name.
+
+    Args:
+        unit: A unit to get data from
+        model_name: The current model name
+    Returns:
+        The (str) mysql cluster name
+    """
+    output = subprocess.check_output(
+        [
+            "juju",
+            "show-unit",
+            unit.name,
+            "--format=json",
+            f"--model={model_name}",
+        ]
+    )
+    output = json.loads(output.decode("utf-8"))
+
+    return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
