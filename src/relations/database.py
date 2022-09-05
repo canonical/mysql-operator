@@ -19,7 +19,7 @@ from charms.mysql.v0.mysql import (
     MySQLGrantPrivilegesToUserError,
     MySQLUpgradeUserForMySQLRouterError,
 )
-from ops.charm import RelationDepartedEvent
+from ops.charm import RelationBrokenEvent
 from ops.framework import Object
 from ops.model import BlockedStatus
 
@@ -121,13 +121,19 @@ class DatabaseRelation(Object):
             logger.exception("Failed to set up database relation", exc_info=e)
             self.charm.unit.status = BlockedStatus("Failed to set up relation")
 
-    def _on_database_broken(self, event: RelationDepartedEvent) -> None:
+    def _on_database_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the removal of database relation.
 
         Remove user, keeping database intact.
         """
         if not self.charm.unit.is_leader():
             # run once by the leader
+            return
+
+        if self.charm._peers.data[self.charm.unit].get("unit-status", None) == "removing":
+            # safeguard against relation broken being triggered for
+            # a unit being torn down (instead of un-related)
+            # https://github.com/canonical/mysql-operator/issues/32
             return
 
         try:
