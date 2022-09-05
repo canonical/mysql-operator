@@ -240,7 +240,6 @@ class DatabaseRelation(Object):
         if not self.charm.unit.is_leader():
             # run once by the leader
             return
-<<<<<<< HEAD
 
         if self.charm._peers.data[self.charm.unit].get("unit-status", None) == "removing":
             # safeguard against relation broken being triggered for
@@ -248,9 +247,7 @@ class DatabaseRelation(Object):
             # https://github.com/canonical/mysql-operator/issues/32
             return
 
-=======
         logger.info(f"On database broken!")
->>>>>>> Correctlt update the read-only-endpoints when a unit is added or removed
         try:
             relation_id = event.relation.id
             self.charm._mysql.delete_user_for_relation(relation_id)

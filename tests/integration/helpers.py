@@ -7,8 +7,10 @@ import json
 import re
 import secrets
 import string
+import yaml
+import logging
 import subprocess
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from connector import MysqlConnector
 from juju.unit import Unit
@@ -18,6 +20,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
+logger = logging.getLogger(__name__)
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
     """Run a command in one Juju unit.
@@ -92,6 +95,7 @@ async def scale_application(
 
     # Scale down
     units_to_destroy = [unit.name for unit in application.units[count:]]
+    logger.info(f"Units to be destroyed: {units_to_destroy}")
 
     for unit_to_destroy in units_to_destroy:
         await ops_test.model.destroy_units(unit_to_destroy)
@@ -372,3 +376,75 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     output = json.loads(output.decode("utf-8"))
 
     return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+
+async def get_relation_data(
+    ops_test: OpsTest,
+    application_name: str,
+    relation_name: str,
+) -> list:
+    """Returns a that contains the relation-data
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+        relation_name: name of the relation to get connection data from
+    Returns:
+        a dictionary that contains the relation-data
+    """
+    unit_name = f"{application_name}/0"
+    raw_data = (await ops_test.juju("show-unit", unit_name))[1]
+    if not raw_data:
+        raise ValueError(f"no unit info could be grabbed for {unit_name}")
+    data = yaml.safe_load(raw_data)
+    # Filter the data based on the relation name.
+    relation_data = [v for v in data[unit_name]["relation-info"] if v["endpoint"] == relation_name]
+    if len(relation_data) == 0:
+        raise ValueError(
+            f"no relation data could be grabbed on relation with endpoint {relation_name}"
+        )
+    logger.info(f"Relation data: {relation_data} with type: {type(relation_data)}")
+    
+    return relation_data
+
+def get_read_only_endpoints(relation_data: list) -> Set[str]:
+    """Returns the read-only-endpoints from the relation data
+    Args:
+        relation_data: The dictionary that contains the info
+    Returns:
+        a set that contains the read-only-endpoints
+    """
+    related_units = relation_data[0]['related-units']
+    roe = set()
+    for _, r_data in related_units.items():
+        assert 'data' in r_data
+        data = r_data['data']['data']
+
+        try:
+            j_data = json.loads(data)
+            if 'read-only-endpoints' in j_data:
+                read_only_endpoints = j_data['read-only-endpoints']
+                if read_only_endpoints.strip() == '':
+                    continue
+                for ep in read_only_endpoints.split(','):
+                    roe.add(ep)
+        except json.JSONDecodeError:
+            raise ValueError("Relation data are not valid JSON.")
+        
+    return roe
+
+async def get_unit_hostname(ops_test: OpsTest, app_name: str, units: List[str]) -> List[str]:
+    """Retrieves hostnames of given application units."""
+    unit_hostname = {}
+    status = await ops_test.model.get_status()  # noqa: F821
+    machine_hostname = {}
+
+    for machine_id, v in status["machines"].items():
+        machine_hostname[machine_id] = v["hostname"]
+
+    unit_machine = {}
+    for unit in units:     
+        unit_machine[unit] = status["applications"][app_name]["units"][f"{unit}"]["machine"]
+    
+    for unit, machine in unit_machine.items():
+        if machine in machine_hostname:
+            unit_hostname[unit] = machine_hostname[machine]
+    return unit_hostname
