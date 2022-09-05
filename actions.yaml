@@ -12,7 +12,6 @@ get-password:
       type: string
       description: The username, the default value 'operator'.
         Possible values - operator, backup, replication.
-  required: [username]
 
 set-password:
   description: Change the system user's password, which is used by charm.
@@ -25,4 +24,3 @@ set-password:
     password:
       type: string
       description: The password will be auto-generated if this option is not specified.
-  required: [username]
