@@ -254,6 +254,7 @@ class DatabaseRelation(Object):
             # https://github.com/canonical/mysql-operator/issues/32
             return
 
+
         logger.info(f"On database broken!")
         try:
             relation_id = event.relation.id
