@@ -65,6 +65,13 @@ class DatabaseRelation(Object):
             logger.debug("Waiting cluster to be initialized")
             return
         
+        logger.info(f"self charm: {self.charm.unit.name} and departing unit: {event.departing_unit.name}")
+        # check if the leader is departing
+        logger.info(f"is leader leaving: {self.charm.unit.name == event.departing_unit.name}")
+        if self.charm.unit.name == event.departing_unit.name:
+            event.defer()
+            return
+
         # get unit name that departed
         dep_unit_name = event.departing_unit.name.replace("/", "-")
         
@@ -140,7 +147,7 @@ class DatabaseRelation(Object):
                 }
             )
             self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
-            logger.debug(f"Updateed endpoints for {remote_app}")
+            logger.debug(f"Updated endpoints for {remote_app}")
 
         except MySQLCreateApplicationDatabaseAndScopedUserError:
             logger.error(f"Failed to create scoped user for app {remote_app}")
