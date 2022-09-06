@@ -381,6 +381,7 @@ async def get_relation_data(
     ops_test: OpsTest,
     application_name: str,
     relation_name: str,
+    unit_id: int = 0
 ) -> list:
     """Returns a that contains the relation-data
     Args:
@@ -390,7 +391,7 @@ async def get_relation_data(
     Returns:
         a dictionary that contains the relation-data
     """
-    unit_name = f"{application_name}/0"
+    unit_name = f"{application_name}/{unit_id}"
     raw_data = (await ops_test.juju("show-unit", unit_name))[1]
     if not raw_data:
         raise ValueError(f"no unit info could be grabbed for {unit_name}")
