@@ -226,10 +226,7 @@ class MySQLOperatorCharm(CharmBase):
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Action used to retrieve the system user's password."""
-        username = ROOT_USERNAME
-
-        if "username" in event.params:
-            username = event.params["username"]
+        username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
             raise RuntimeError("Invalid username.")
@@ -250,10 +247,7 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             raise RuntimeError("set-password action can only be run on the leader unit.")
 
-        username = ROOT_USERNAME
-
-        if "username" in event.params:
-            username = event.params["username"]
+        username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
             raise RuntimeError("Invalid username.")
@@ -267,14 +261,9 @@ class MySQLOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Invalid username.")
 
-        new_password = None
-        if "password" not in event.params or event.params["password"] == "":
-            new_password = generate_random_password(PASSWORD_LENGTH)
-        else:
-            new_password = event.params["password"]
+        new_password = event.params.get("password") or generate_random_password(PASSWORD_LENGTH)
 
-        current_server_config_password = self._get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
-        self._mysql.update_user_password(username, new_password, current_server_config_password)
+        self._mysql.update_user_password(username, new_password)
 
         self._set_secret("app", secret_key, new_password)
 
