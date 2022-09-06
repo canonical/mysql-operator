@@ -12,6 +12,7 @@ from pytest_operator.plugin import OpsTest
 
 from constants import PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
 from tests.integration.helpers import (
+    execute_commands_on_unit,
     fetch_credentials,
     get_primary_unit,
     rotate_credentials,
@@ -96,6 +97,7 @@ async def test_password_rotation(ops_test: OpsTest):
 
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
+    # get primary unit first, need that to invoke set-password action
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
@@ -119,18 +121,17 @@ async def test_password_rotation(ops_test: OpsTest):
     assert updated_credentials["password"] != old_credentials["password"]
     assert updated_credentials["password"] == new_password
 
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        DATABASE_APP_NAME,
-        CLUSTER_NAME,
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
+        show_tables_sql,
     )
-    primary_unit_address = await primary_unit.get_public_address()
-    logger.debug(
-        "Test succeeded Primary unit detected after password rotation is %s", primary_unit_address
-    )
+    assert len(output) > 0, "query with new password failed, no databases found"
 
 
 @pytest.mark.order(3)
@@ -142,6 +143,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
 
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
+    # get primary unit first, need that to invoke set-password action
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
@@ -160,18 +162,17 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     updated_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
     assert updated_credentials["password"] != old_credentials["password"]
 
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        DATABASE_APP_NAME,
-        CLUSTER_NAME,
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
+        show_tables_sql,
     )
-    primary_unit_address = await primary_unit.get_public_address()
-    logger.debug(
-        "Test succeeded Primary unit detected after password rotation is %s", primary_unit_address
-    )
+    assert len(output) > 0, "query with new password failed, no databases found"
 
 
 @pytest.mark.order(4)
@@ -187,6 +188,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     old_credentials = await fetch_credentials(random_unit)
     assert old_credentials["password"] == root_credentials["password"]
 
+    # get primary unit first, need that to invoke set-password action
     primary_unit = await get_primary_unit(
         ops_test,
         random_unit,
@@ -207,6 +209,18 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
 
     updated_root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
     assert updated_credentials["password"] == updated_root_credentials["password"]
+
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
+        updated_credentials["username"],
+        updated_credentials["password"],
+        show_tables_sql,
+    )
+    assert len(output) > 0, "query with new password failed, no databases found"
 
 
 @pytest.mark.order(5)
