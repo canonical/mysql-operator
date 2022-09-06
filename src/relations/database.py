@@ -20,11 +20,12 @@ from charms.mysql.v0.mysql import (
     MySQLUpgradeUserForMySQLRouterError,
 )
 
-from ops.charm import RelationDepartedEvent, RelationJoinedEvent, RelationEvent, RelationBrokenEvent
+from ops.charm import RelationDepartedEvent, RelationJoinedEvent, RelationBrokenEvent
 from ops.framework import Object
 from ops.model import BlockedStatus
 
 from constants import DB_RELATION_NAME, PASSWORD_LENGTH, PEER
+from tests.integration.helpers import app_name
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,36 @@ class DatabaseRelation(Object):
         self.framework.observe(
             self.charm.on[PEER].relation_departed, self._on_relation_departed
         )
-    
+
+        self.framework.observe(
+            self.charm.on.leader_elected, self._on_leader_elected
+        )
+
+    def _on_leader_elected(self, _ ):
+        logger.info(f"On leader elected!")
+        
+        if not self.charm.unit.is_leader():
+            return
+        # get all relations involving the database relation
+        relations = list(self.model.relations[DB_RELATION_NAME])
+        # check if there are relations in place
+        if len(relations) == 0:
+            return
+
+        if not self.charm.cluster_initialized:
+            logger.debug("Waiting cluster to be initialized")
+            return
+        
+        relation_data = self.database.fetch_relation_data()
+        # for all relations update the read-only-endpoints
+        for relation in relations:
+            # check if the on_database_requested has been executed
+            if relation.id not in relation_data:
+                logger.info("On database requested not happened yet! Nothing to do in this case")
+                continue
+            self._update_endpoints(relation_id=relation.id, app_name=self.charm.unit.name)
+
+        
     def _on_relation_departed(self, event: RelationDepartedEvent):
         """Handle the peer relation departed event for the database relation."""
         if not self.charm.unit.is_leader():
@@ -125,15 +155,13 @@ class DatabaseRelation(Object):
             self._update_endpoints(relation.id, event)
 
 
-    def _update_endpoints(self, relation_id: int, event: RelationEvent):
+    def _update_endpoints(self, relation_id: int, remote_app: str):
         """Update the read-only-endpoints
 
         Args:
             relation_id (int): The id of the relation 
-            event (RelationEvent): the triggered event
-
+            remote_app (str): The name of the remote application
         """
-        remote_app = event.app.name
         logger.info("Start endpoint update: ")
         try:
 
