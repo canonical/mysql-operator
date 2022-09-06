@@ -92,8 +92,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 @pytest.mark.database_tests
 async def test_password_rotation(ops_test: OpsTest):
     """Rotate password and confirm changes."""
-    num_units = len(ops_test.model.applications[DATABASE_APP_NAME].units)
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[num_units - 1]
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
 
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
@@ -139,8 +138,7 @@ async def test_password_rotation(ops_test: OpsTest):
 @pytest.mark.database_tests
 async def test_password_rotation_silent(ops_test: OpsTest):
     """Rotate password and confirm changes."""
-    num_units = len(ops_test.model.applications[DATABASE_APP_NAME].units)
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[num_units - 1]
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
 
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
@@ -181,8 +179,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
 @pytest.mark.database_tests
 async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     """Rotate password and confirm changes."""
-    num_units = len(ops_test.model.applications[DATABASE_APP_NAME].units)
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[num_units - 1]
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
 
     root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
     server_config_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
