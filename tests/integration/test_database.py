@@ -7,10 +7,22 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import is_relation_broken, is_relation_joined
+from helpers import (
+    get_read_only_endpoint_hostnames,
+    get_relation_data,
+    get_unit_hostname,
+    is_relation_broken,
+    is_relation_joined,
+    scale_application,
+)
 from pytest_operator.plugin import OpsTest
 
-from constants import PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
+from constants import (
+    DB_RELATION_NAME,
+    PASSWORD_LENGTH,
+    ROOT_USERNAME,
+    SERVER_CONFIG_USERNAME,
+)
 from tests.integration.helpers import (
     execute_commands_on_unit,
     fetch_credentials,
@@ -239,6 +251,124 @@ async def test_relation_creation(ops_test: OpsTest):
 
 
 @pytest.mark.order(6)
+@pytest.mark.abort_on_fail
+@pytest.mark.database_tests
+async def test_ready_only_endpoints(ops_test: OpsTest):
+    """TODO."""
+
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+    assert len(relation_data) == 1
+    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    # check correct number of read-only-endpoint is correct
+    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
+        read_only_endpoints
+    )
+    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
+    logger.info(f"Hostnames from status: {app_hostnames}")
+    logger.info(f"Read-only-endpoints: {read_only_endpoints}")
+    # check that endpoints are the one of the application
+    for r_endpoint in read_only_endpoints:
+        assert r_endpoint in app_hostnames
+
+    logger.info("Scale to 4 unit")
+    # increase the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 4)
+    # check update for read-only-endpoints
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    logger.info(
+        f"Read-only-endpoitns: {read_only_endpoints} --- number of units: {len(ops_test.model.applications[DATABASE_APP_NAME].units)}"
+    )
+    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
+        read_only_endpoints
+    )
+    logger.info(
+        f"Read-only-endpoints after unit addition: {read_only_endpoints} [{len(read_only_endpoints)}]"
+    )
+    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
+    # check that endpoints are the one of the application
+    for r_endpoint in read_only_endpoints:
+        assert r_endpoint in app_hostnames
+
+    logger.info("Scale to 2 units")
+    # increase the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+    # check update for read-only-endpoints
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    logger.info(
+        f"Read-only-endpoitns: {read_only_endpoints} --- number of units: {len(ops_test.model.applications[DATABASE_APP_NAME].units)}"
+    )
+    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
+        read_only_endpoints
+    )
+    logger.info(
+        f"Read-only-endpoints after unit addition: {read_only_endpoints} [{len(read_only_endpoints)}]"
+    )
+    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
+    # check that endpoints are the one of the application
+    for r_endpoint in read_only_endpoints:
+        assert r_endpoint in app_hostnames
+
+    logger.info("Scale up to 3 units and delete the leader unit ")
+    # increase the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 3)
+
+    leader_unit = None
+    for app_unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+        is_leader = await app_unit.is_leader_from_status()
+        if is_leader:
+            leader_unit = app_unit.name
+
+    units_to_destroy = [leader_unit]
+    logger.info(f"Units to be destroyed: {units_to_destroy}")
+
+    for unit_to_destroy in units_to_destroy:
+        await ops_test.model.destroy_units(unit_to_destroy)
+
+    count = 2
+
+    application = ops_test.model.applications[DATABASE_APP_NAME]
+    await ops_test.model.block_until(lambda: len(application.units) == count)
+
+    if count > 0:
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    logger.info(
+        f"Read-only-endpoitns: {read_only_endpoints} --- number of units: {len(ops_test.model.applications[DATABASE_APP_NAME].units)}"
+    )
+    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
+        read_only_endpoints
+    )
+    logger.info(
+        f"Read-only-endpoints after unit addition: {read_only_endpoints} [{len(read_only_endpoints)}]"
+    )
+    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
+    # check that endpoints are the one of the application
+    for r_endpoint in read_only_endpoints:
+        assert r_endpoint in app_hostnames
+
+    logger.info(f"Done with read-only-endpoints test!")
+
+
+@pytest.mark.order(7)
 @pytest.mark.abort_on_fail
 @pytest.mark.database_tests
 async def test_relation_broken(ops_test: OpsTest):
