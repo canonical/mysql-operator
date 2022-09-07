@@ -217,7 +217,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
 
         result = await asyncio.gather(
-            build_and_deploy_mysql(ops_test, 3),
+            build_and_deploy_mysql(ops_test, 1),
             # Deploy and test the first deployment of keystone
             deploy_and_relate_keystone_with_mysqlrouter(
                 ops_test, KEYSTONE_APP_NAME, KEYSTONE_MYSQLROUTER_APP_NAME, 2
@@ -264,34 +264,6 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             ops_test.model.remove_application(
                 ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
             ),
-        )
-
-        await check_keystone_users_existence(
-            ops_test, server_config_credentials, keystone_users, another_keystone_users
-        )
-
-        db_unit = ops_test.model.applications[APP_NAME].units[0]
-        # Scale down the primary unit of mysql
-        primary_unit = await get_primary_unit(
-            ops_test,
-            db_unit,
-            APP_NAME,
-            CLUSTER_NAME,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-        )
-        primary_unit_name = primary_unit.name
-
-        await ops_test.model.destroy_units(primary_unit_name)
-
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 2
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=FAST_WAIT_TIMEOUT,
         )
 
         await check_keystone_users_existence(
