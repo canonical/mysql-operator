@@ -26,8 +26,8 @@ KEYSTONE_APP_NAME = "keystone"
 KEYSTONE_MYSQLROUTER_APP_NAME = "keystone-mysql-router"
 ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
 ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME = "another-keystone-mysql-router"
-SLOW_WAIT_TIMEOUT = 25 * 60
-FAST_WAIT_TIMEOUT = 15 * 60
+SLOW_WAIT_TIMEOUT = 45 * 60
+FAST_WAIT_TIMEOUT = 30 * 60
 
 
 async def check_successful_keystone_migration(
