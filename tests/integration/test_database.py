@@ -10,6 +10,15 @@ import yaml
 from helpers import is_relation_broken, is_relation_joined
 from pytest_operator.plugin import OpsTest
 
+from constants import PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
+from tests.integration.helpers import (
+    execute_commands_on_unit,
+    fetch_credentials,
+    get_primary_unit,
+    rotate_credentials,
+)
+from utils import generate_random_password
+
 logger = logging.getLogger(__name__)
 
 DB_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -82,6 +91,141 @@ async def test_build_and_deploy(ops_test: OpsTest):
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
 @pytest.mark.database_tests
+async def test_password_rotation(ops_test: OpsTest):
+    """Rotate password and confirm changes."""
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
+
+    old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+
+    # get primary unit first, need that to invoke set-password action
+    primary_unit = await get_primary_unit(
+        ops_test,
+        random_unit,
+        DATABASE_APP_NAME,
+        CLUSTER_NAME,
+        old_credentials["username"],
+        old_credentials["password"],
+    )
+    primary_unit_address = await primary_unit.get_public_address()
+    logger.debug(
+        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
+    )
+
+    new_password = generate_random_password(PASSWORD_LENGTH)
+
+    await rotate_credentials(
+        unit=primary_unit, username=SERVER_CONFIG_USERNAME, password=new_password
+    )
+
+    updated_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+    assert updated_credentials["password"] != old_credentials["password"]
+    assert updated_credentials["password"] == new_password
+
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
+        updated_credentials["username"],
+        updated_credentials["password"],
+        show_tables_sql,
+    )
+    assert len(output) > 0, "query with new password failed, no databases found"
+
+
+@pytest.mark.order(3)
+@pytest.mark.abort_on_fail
+@pytest.mark.database_tests
+async def test_password_rotation_silent(ops_test: OpsTest):
+    """Rotate password and confirm changes."""
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
+
+    old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+
+    # get primary unit first, need that to invoke set-password action
+    primary_unit = await get_primary_unit(
+        ops_test,
+        random_unit,
+        DATABASE_APP_NAME,
+        CLUSTER_NAME,
+        old_credentials["username"],
+        old_credentials["password"],
+    )
+    primary_unit_address = await primary_unit.get_public_address()
+    logger.debug(
+        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
+    )
+
+    await rotate_credentials(unit=primary_unit, username=SERVER_CONFIG_USERNAME)
+
+    updated_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+    assert updated_credentials["password"] != old_credentials["password"]
+
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
+        updated_credentials["username"],
+        updated_credentials["password"],
+        show_tables_sql,
+    )
+    assert len(output) > 0, "query with new password failed, no databases found"
+
+
+@pytest.mark.order(4)
+@pytest.mark.abort_on_fail
+@pytest.mark.database_tests
+async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
+    """Rotate password and confirm changes."""
+    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
+
+    root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
+    server_config_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+
+    old_credentials = await fetch_credentials(random_unit)
+    assert old_credentials["password"] == root_credentials["password"]
+
+    # get primary unit first, need that to invoke set-password action
+    primary_unit = await get_primary_unit(
+        ops_test,
+        random_unit,
+        DATABASE_APP_NAME,
+        CLUSTER_NAME,
+        server_config_credentials["username"],
+        server_config_credentials["password"],
+    )
+    primary_unit_address = await primary_unit.get_public_address()
+    logger.debug(
+        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
+    )
+
+    await rotate_credentials(unit=primary_unit)
+
+    updated_credentials = await fetch_credentials(random_unit)
+    assert updated_credentials["password"] != old_credentials["password"]
+
+    updated_root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
+    assert updated_credentials["password"] == updated_root_credentials["password"]
+
+    # verify that the new password actually works by querying the db
+    show_tables_sql = [
+        "SHOW DATABASES",
+    ]
+    output = await execute_commands_on_unit(
+        primary_unit_address,
+        updated_credentials["username"],
+        updated_credentials["password"],
+        show_tables_sql,
+    )
+    assert len(output) > 0, "query with new password failed, no databases found"
+
+
+@pytest.mark.order(5)
+@pytest.mark.abort_on_fail
+@pytest.mark.database_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
@@ -94,7 +238,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
-@pytest.mark.order(3)
+@pytest.mark.order(6)
 @pytest.mark.abort_on_fail
 @pytest.mark.database_tests
 async def test_relation_broken(ops_test: OpsTest):

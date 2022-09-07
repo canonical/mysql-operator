@@ -29,7 +29,9 @@ from constants import (
     CLUSTER_ADMIN_USERNAME,
     PASSWORD_LENGTH,
     PEER,
+    REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
+    ROOT_USERNAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
@@ -59,15 +61,9 @@ class MySQLOperatorCharm(CharmBase):
 
         self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
-
-        self.framework.observe(
-            self.on.get_cluster_admin_credentials_action, self._on_get_cluster_admin_credentials
-        )
-        self.framework.observe(
-            self.on.get_server_config_credentials_action, self._on_get_server_config_credentials
-        )
-        self.framework.observe(self.on.get_root_credentials_action, self._on_get_root_credentials)
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
+        self.framework.observe(self.on.get_password_action, self._on_get_password)
+        self.framework.observe(self.on.set_password_action, self._on_set_password)
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
@@ -227,37 +223,52 @@ class MySQLOperatorCharm(CharmBase):
     # =======================
     #  Custom Action Handlers
     # =======================
-
-    def _on_get_cluster_admin_credentials(self, event: ActionEvent) -> None:
-        """Action used to retrieve the cluster admin credentials."""
-        event.set_results(
-            {
-                "cluster-admin-username": CLUSTER_ADMIN_USERNAME,
-                "cluster-admin-password": self._get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
-            }
-        )
-
-    def _on_get_server_config_credentials(self, event: ActionEvent) -> None:
-        """Action used to retrieve the server config credentials."""
-        event.set_results(
-            {
-                "server-config-username": SERVER_CONFIG_USERNAME,
-                "server-config-password": self._get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
-            }
-        )
-
-    def _on_get_root_credentials(self, event: ActionEvent) -> None:
-        """Action used to retrieve the root credentials."""
-        event.set_results(
-            {
-                "root-username": "root",
-                "root-password": self._get_secret("app", ROOT_PASSWORD_KEY),
-            }
-        )
-
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used to retrieve the cluster status."""
         event.set_results(self._mysql.get_cluster_status())
+
+    def _on_get_password(self, event: ActionEvent) -> None:
+        """Action used to retrieve the system user's password."""
+        username = event.params.get("username") or ROOT_USERNAME
+
+        if username not in REQUIRED_USERNAMES:
+            raise RuntimeError("Invalid username.")
+
+        if username == ROOT_USERNAME:
+            secret_key = ROOT_PASSWORD_KEY
+        elif username == SERVER_CONFIG_USERNAME:
+            secret_key = SERVER_CONFIG_PASSWORD_KEY
+        elif username == CLUSTER_ADMIN_USERNAME:
+            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        else:
+            raise RuntimeError("Invalid username.")
+
+        event.set_results({"username": username, "password": self._get_secret("app", secret_key)})
+
+    def _on_set_password(self, event: ActionEvent) -> None:
+        """Action used to update/rotate the system user's password."""
+        if not self.unit.is_leader():
+            raise RuntimeError("set-password action can only be run on the leader unit.")
+
+        username = event.params.get("username") or ROOT_USERNAME
+
+        if username not in REQUIRED_USERNAMES:
+            raise RuntimeError("Invalid username.")
+
+        if username == ROOT_USERNAME:
+            secret_key = ROOT_PASSWORD_KEY
+        elif username == SERVER_CONFIG_USERNAME:
+            secret_key = SERVER_CONFIG_PASSWORD_KEY
+        elif username == CLUSTER_ADMIN_USERNAME:
+            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        else:
+            raise RuntimeError("Invalid username.")
+
+        new_password = event.params.get("password") or generate_random_password(PASSWORD_LENGTH)
+
+        self._mysql.update_user_password(username, new_password)
+
+        self._set_secret("app", secret_key, new_password)
 
     # =======================
     #  Helpers
