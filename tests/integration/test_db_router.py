@@ -121,7 +121,9 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     charm = await ops_test.build_charm(".")
     config = {"cluster-name": CLUSTER_NAME}
 
-    await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=1)
+    mysql_app = await ops_test.model.deploy(
+        charm, application_name=APP_NAME, config=config, num_units=1
+    )
 
     # Deploy keystone
     # Explicitly setting the series to 'focal' as it defaults to 'xenial'
@@ -147,18 +149,21 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
 
         await asyncio.gather(
-            ops_test.model.wait_for_idle(
-                apps=[APP_NAME],
-                status="active",
-                raise_on_blocked=True,
-                timeout=FAST_WAIT_TIMEOUT,
+            ops_test.model.block_until(
+                lambda: mysql_app.status in ("active", "error"), timeout=SLOW_WAIT_TIMEOUT
             ),
-            ops_test.model.wait_for_idle(
-                apps=[KEYSTONE_APP_NAME, KEYSTONE_MYSQLROUTER_APP_NAME],
-                status="blocked",
-                raise_on_blocked=False,
+            ops_test.model.block_until(
+                lambda: keystone_app.status in ("waiting", "error"), timeout=SLOW_WAIT_TIMEOUT
+            ),
+            ops_test.model.block_until(
+                lambda: keystone_mysqlrouter_app.status in ("blocked", "error"),
                 timeout=SLOW_WAIT_TIMEOUT,
             ),
+        )
+        assert (
+            mysql_app.status == "active"
+            and keystone_app.status == "error"
+            and keystone_mysqlrouter_app.status == "error"
         )
 
         # Relate mysqlrouter to mysql
@@ -208,13 +213,6 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         await ops_test.model.relate(
             f"{ANOTHER_KEYSTONE_APP_NAME}:shared-db",
             f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
-        )
-
-        await ops_test.model.wait_for_idle(
-            apps=[ANOTHER_KEYSTONE_APP_NAME, ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME],
-            status="blocked",
-            raise_on_blocked=False,
-            timeout=SLOW_WAIT_TIMEOUT,
         )
 
         # Relate mysqlrouter to mysql
