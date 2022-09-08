@@ -131,7 +131,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         "keystone",
         series="focal",
         application_name=KEYSTONE_APP_NAME,
-        num_units=1,
+        num_units=2,
     )
 
     # Deploy mysqlrouter and relate it to keystone
@@ -162,8 +162,8 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         )
         assert (
             mysql_app.status == "active"
-            and keystone_app.status == "error"
-            and keystone_mysqlrouter_app.status == "error"
+            and keystone_app.status == "waiting"
+            and keystone_mysqlrouter_app.status == "blocked"
         )
 
         # Relate mysqlrouter to mysql
@@ -201,7 +201,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             "keystone",
             series="focal",
             application_name=ANOTHER_KEYSTONE_APP_NAME,
-            num_units=1,
+            num_units=2,
         )
 
         # Deploy mysqlrouter and relate it to keystone
