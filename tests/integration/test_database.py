@@ -2,10 +2,9 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
-from email.mime import application
 import logging
-from pathlib import Path
 import time
+from pathlib import Path
 
 import pytest
 import yaml
@@ -258,7 +257,6 @@ async def test_relation_creation(ops_test: OpsTest):
 @pytest.mark.database_tests
 async def test_ready_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
-
     relation_data = await get_relation_data(
         ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
@@ -293,7 +291,7 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
     # decrease the number of units
     async with ops_test.fast_forward():
         await scale_application(ops_test, DATABASE_APP_NAME, 2)
-    
+
     # wait for the update of the endpoints
     time.sleep(2 * 60)
     # check update for read-only-endpoints
@@ -313,9 +311,9 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await scale_application(ops_test, DATABASE_APP_NAME, 3)
 
-    # remove the leader unit 
+    # remove the leader unit
     await remove_leader_unit(ops_test=ops_test, application_name=DATABASE_APP_NAME)
-    
+
     # wait for the update of the endpoints
     time.sleep(2 * 60)
     relation_data = await get_relation_data(

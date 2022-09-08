@@ -4,7 +4,6 @@
 
 import itertools
 import json
-import logging
 import re
 import secrets
 import string
@@ -456,6 +455,7 @@ def get_read_only_endpoint_hostnames(relation_data: list) -> List[str]:
             raise ValueError("Malformed endpoint")
     return roe_hostnames
 
+
 async def remove_leader_unit(ops_test: OpsTest, application_name: str):
     """Removes the leader unit of a specified application.
 
@@ -486,15 +486,16 @@ async def remove_leader_unit(ops_test: OpsTest, application_name: str):
             raise_on_blocked=True,
             timeout=1000,
         )
-    
 
 
 async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
     """Retrieves hostnames of given application units.
-    
+
     Args:
         ops_test: The ops test framework instance
-        application_name: The name of the application
+        app_name: The name of the application
+    Returns:
+        a list that contains the hostnames of a given application
     """
     units = [app_unit.name for app_unit in ops_test.model.applications[app_name].units]
     status = await ops_test.model.get_status()  # noqa: F821

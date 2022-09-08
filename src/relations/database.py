@@ -50,7 +50,6 @@ class DatabaseRelation(Object):
 
     def _on_leader_elected(self, _):
         """Handle on leader elected event for the database relation."""
-
         if not self.charm.unit.is_leader():
             return
         # get all relations involving the database relation
@@ -147,7 +146,6 @@ class DatabaseRelation(Object):
             relation_id (int): The id of the relation
             remote_app (str): The name of the remote application
         """
-
         try:
 
             primary_endpoint = self.charm._mysql.get_cluster_primary_address()
