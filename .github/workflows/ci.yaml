@@ -86,9 +86,13 @@ jobs:
   build-upterm:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup upterm session
-      uses: lhotari/action-upterm@v1
-      with:
-        limit-access-to-actor: true
-        limit-access-to-users: shayancanonical
+      - uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+          limit-access-to-users: shayancanonical
