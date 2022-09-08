@@ -50,7 +50,6 @@ class DatabaseRelation(Object):
 
     def _on_leader_elected(self, _):
         """Handle on leader elected event for the database relation."""
-        logger.info("On leader elected!")
 
         if not self.charm.unit.is_leader():
             return
@@ -69,9 +68,9 @@ class DatabaseRelation(Object):
         for relation in relations:
             # check if the on_database_requested has been executed
             if relation.id not in relation_data:
-                logger.info("On database requested not happened yet! Nothing to do in this case")
+                logger.debug("On database requested not happened yet! Nothing to do in this case")
                 continue
-            self._update_endpoints(relation_id=relation.id, app_name=self.charm.unit.name)
+            self._update_endpoints(relation.id, self.charm.unit.name)
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
         """Handle the peer relation departed event for the database relation."""
@@ -79,7 +78,6 @@ class DatabaseRelation(Object):
             return
         # get all relations involving the database relation
         relations = list(self.model.relations[DB_RELATION_NAME])
-        logger.info(f"Number of relations: {len(relations)}")
         if len(relations) == 0:
             return
 
@@ -87,11 +85,7 @@ class DatabaseRelation(Object):
             logger.debug("Waiting cluster to be initialized")
             return
 
-        logger.info(
-            f"self charm: {self.charm.unit.name} and departing unit: {event.departing_unit.name}"
-        )
         # check if the leader is departing
-        logger.info(f"is leader leaving: {self.charm.unit.name == event.departing_unit.name}")
         if self.charm.unit.name == event.departing_unit.name:
             event.defer()
             return
@@ -101,7 +95,7 @@ class DatabaseRelation(Object):
 
         # differ if the added unit is still in the cluster
         if self.charm._mysql.is_instance_in_cluster(dep_unit_name):
-            logger.info(f"Departing unit {dep_unit_name} is still in the cluster!")
+            logger.debug(f"Departing unit {dep_unit_name} is still in the cluster!")
             event.defer()
             return
 
@@ -110,10 +104,10 @@ class DatabaseRelation(Object):
         for relation in relations:
             # check if the on_database_requested has been executed
             if relation.id not in relation_data:
-                logger.info("On database requested not happened yet! Nothing to do in this case")
+                logger.debug("On database requested not happened yet! Nothing to do in this case")
                 continue
             # update the endpoints
-            self._update_endpoints(relation.id, event)
+            self._update_endpoints(relation.id, event.app.name)
 
     def _on_relation_joined(self, event: RelationJoinedEvent):
         """Handle the peer relation joined event for the database relation."""
@@ -121,7 +115,7 @@ class DatabaseRelation(Object):
             return
         # get all relations involving the database relation
         relations = list(self.model.relations[DB_RELATION_NAME])
-        logger.info(f"Number of relations: {len(relations)}")
+
         if len(relations) == 0:
             return
 
@@ -134,7 +128,6 @@ class DatabaseRelation(Object):
 
         # differ if the added unit is not in the cluster
         if not self.charm._mysql.is_instance_in_cluster(event_unit_label):
-            logger.info(f"Added unit {event_unit_label} it is not part of the cluster: differ!")
             event.defer()
             return
         relation_data = self.database.fetch_relation_data()
@@ -142,19 +135,19 @@ class DatabaseRelation(Object):
         for relation in relations:
             # check if the on_database_requested has been executed
             if relation.id not in relation_data:
-                logger.info("On database requested not happened yet! Nothing to do in this case")
+                logger.debug("On database requested not happened yet! Nothing to do in this case")
                 continue
             # update the endpoints
-            self._update_endpoints(relation.id, event)
+            self._update_endpoints(relation.id, event.app.name)
 
     def _update_endpoints(self, relation_id: int, remote_app: str):
-        """Update the read-only-endpoints.
+        """Updates the read-only-endpoints.
 
         Args:
             relation_id (int): The id of the relation
             remote_app (str): The name of the remote application
         """
-        logger.info("Start endpoint update: ")
+
         try:
 
             primary_endpoint = self.charm._mysql.get_cluster_primary_address()
@@ -274,7 +267,6 @@ class DatabaseRelation(Object):
             # https://github.com/canonical/mysql-operator/issues/32
             return
 
-        logger.info("On database broken!")
         try:
             relation_id = event.relation.id
             self.charm._mysql.delete_user_for_relation(relation_id)
