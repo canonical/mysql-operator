@@ -380,14 +380,14 @@ async def get_relation_data(
     application_name: str,
     relation_name: str,
 ) -> list:
-    """Returns a that contains the relation-data.
+    """Returns a list that contains the relation-data.
 
     Args:
         ops_test: The ops test framework instance
         application_name: The name of the application
         relation_name: name of the relation to get connection data from
     Returns:
-        a dictionary that contains the relation-data
+        a list that contains the relation-data
     """
     # get available unit id for the desidered application
     units_ids = [
@@ -410,7 +410,7 @@ async def get_relation_data(
     return relation_data
 
 
-def get_read_only_endpoint(relation_data: list) -> Set[str]:
+def get_read_only_endpoints(relation_data: list) -> Set[str]:
     """Returns the read-only-endpoints from the relation data.
 
     Args:
@@ -419,23 +419,23 @@ def get_read_only_endpoint(relation_data: list) -> Set[str]:
         a set that contains the read-only-endpoints
     """
     related_units = relation_data[0]["related-units"]
-    roe = set()
-    for _, r_data in related_units.items():
-        assert "data" in r_data
-        data = r_data["data"]["data"]
+    read_only_endpoints = set()
+    for _, relation_data in related_units.items():
+        assert "data" in relation_data
+        data = relation_data["data"]["data"]
 
         try:
             j_data = json.loads(data)
             if "read-only-endpoints" in j_data:
-                read_only_endpoints = j_data["read-only-endpoints"]
-                if read_only_endpoints.strip() == "":
+                read_only_endpoint_field = j_data["read-only-endpoints"]
+                if read_only_endpoint_field.strip() == "":
                     continue
-                for ep in read_only_endpoints.split(","):
-                    roe.add(ep)
+                for ep in read_only_endpoint_field.split(","):
+                    read_only_endpoints.add(ep)
         except json.JSONDecodeError:
             raise ValueError("Relation data are not valid JSON.")
 
-    return roe
+    return read_only_endpoints
 
 
 def get_read_only_endpoint_hostnames(relation_data: list) -> List[str]:
@@ -446,14 +446,14 @@ def get_read_only_endpoint_hostnames(relation_data: list) -> List[str]:
     Returns:
         a set that contains the read-only-endpoint hostnames
     """
-    roe = get_read_only_endpoint(relation_data)
-    roe_hostnames = []
-    for r in roe:
-        if ":" in r:
-            roe_hostnames.append(r.split(":")[0])
+    read_only_endpoints = get_read_only_endpoints(relation_data)
+    read_only_endpoint_hostnames = []
+    for read_only_endpoint in read_only_endpoints:
+        if ":" in read_only_endpoint:
+            read_only_endpoint_hostnames.append(read_only_endpoint.split(":")[0])
         else:
             raise ValueError("Malformed endpoint")
-    return roe_hostnames
+    return read_only_endpoint_hostnames
 
 
 async def remove_leader_unit(ops_test: OpsTest, application_name: str):
@@ -469,10 +469,7 @@ async def remove_leader_unit(ops_test: OpsTest, application_name: str):
         if is_leader:
             leader_unit = app_unit.name
 
-    units_to_destroy = [leader_unit]
-
-    for unit_to_destroy in units_to_destroy:
-        await ops_test.model.destroy_units(unit_to_destroy)
+    await ops_test.model.destroy_units(leader_unit)
 
     count = len(ops_test.model.applications[application_name].units)
 
@@ -498,7 +495,7 @@ async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
         a list that contains the hostnames of a given application
     """
     units = [app_unit.name for app_unit in ops_test.model.applications[app_name].units]
-    status = await ops_test.model.get_status()  # noqa: F821
+    status = await ops_test.model.get_status()
     machine_hostname = {}
 
     for machine_id, v in status["machines"].items():
@@ -512,3 +509,24 @@ async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
         if machine in machine_hostname:
             hostnames.append(machine_hostname[machine])
     return hostnames
+
+
+async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_name: str):
+    """Checks that read-only-endpoints are correctly set.
+
+    Args:
+        ops_test: The ops test framework instance
+        app_name: The name of the application
+        relation_name: The name of the relation
+    """
+    # check update for read-only-endpoints
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=app_name, relation_name=relation_name
+    )
+    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    # check that the number of read-only-endpoints is correct
+    assert len(ops_test.model.applications[app_name].units) - 1 == len(read_only_endpoints)
+    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=app_name)
+    # check that endpoints are the one of the application
+    for r_endpoint in read_only_endpoints:
+        assert r_endpoint in app_hostnames

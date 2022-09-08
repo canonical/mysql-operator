@@ -69,7 +69,7 @@ class DatabaseRelation(Object):
             if relation.id not in relation_data:
                 logger.debug("On database requested not happened yet! Nothing to do in this case")
                 continue
-            self._update_endpoints(relation.id, self.charm.unit.name)
+            self._update_endpoints(relation.id, self.charm.app.name)
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
         """Handle the peer relation departed event for the database relation."""
@@ -86,13 +86,12 @@ class DatabaseRelation(Object):
 
         # check if the leader is departing
         if self.charm.unit.name == event.departing_unit.name:
-            event.defer()
             return
 
         # get unit name that departed
         dep_unit_name = event.departing_unit.name.replace("/", "-")
 
-        # differ if the added unit is still in the cluster
+        # defer if the added unit is still in the cluster
         if self.charm._mysql.is_instance_in_cluster(dep_unit_name):
             logger.debug(f"Departing unit {dep_unit_name} is still in the cluster!")
             event.defer()
@@ -125,7 +124,7 @@ class DatabaseRelation(Object):
         # get unit name that joined
         event_unit_label = event.unit.name.replace("/", "-")
 
-        # differ if the added unit is not in the cluster
+        # defer if the added unit is not in the cluster
         if not self.charm._mysql.is_instance_in_cluster(event_unit_label):
             event.defer()
             return
@@ -160,12 +159,6 @@ class DatabaseRelation(Object):
             self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
             logger.debug(f"Updated endpoints for {remote_app}")
 
-        except MySQLCreateApplicationDatabaseAndScopedUserError:
-            logger.error(f"Failed to create scoped user for app {remote_app}")
-            self.charm.unit.status = BlockedStatus("Failed to create scoped user")
-        except MySQLGetMySQLVersionError as e:
-            logger.exception("Failed to get MySQL version", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get MySQL version")
         except MySQLGetClusterMembersAddressesError as e:
             logger.exception("Failed to get cluster members", exc_info=e)
             self.charm.unit.status = BlockedStatus("Failed to get cluster members")

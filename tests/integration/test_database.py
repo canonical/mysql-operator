@@ -3,21 +3,20 @@
 # See LICENSE file for licensing details.
 import asyncio
 import logging
-import time
 from pathlib import Path
 
 import pytest
 import yaml
 from helpers import (
-    get_read_only_endpoint_hostnames,
+    check_read_only_endpoints,
     get_relation_data,
-    get_unit_hostname,
     is_relation_broken,
     is_relation_joined,
     remove_leader_unit,
     scale_application,
 )
 from pytest_operator.plugin import OpsTest
+from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
 
 from constants import (
     DB_RELATION_NAME,
@@ -261,51 +260,31 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
         ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
     assert len(relation_data) == 1
-    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
-    # check correct number of read-only-endpoint is correct
-    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
-        read_only_endpoints
+    check_read_only_endpoints(
+        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
-    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
-    # check that endpoints are the one of the application
-    for r_endpoint in read_only_endpoints:
-        assert r_endpoint in app_hostnames
 
     # increase the number of units
     async with ops_test.fast_forward():
         await scale_application(ops_test, DATABASE_APP_NAME, 4)
-    # check update for read-only-endpoints
-    relation_data = await get_relation_data(
-        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    check_read_only_endpoints(
+        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
-    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
-    # check that the number of read-only-endpoints is correct
-    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
-        read_only_endpoints
-    )
-    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
-    # check that endpoints are the one of the application
-    for r_endpoint in read_only_endpoints:
-        assert r_endpoint in app_hostnames
 
     # decrease the number of units
     async with ops_test.fast_forward():
         await scale_application(ops_test, DATABASE_APP_NAME, 2)
 
     # wait for the update of the endpoints
-    time.sleep(2 * 60)
-    # check update for read-only-endpoints
-    relation_data = await get_relation_data(
-        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-    )
-    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
-    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
-        read_only_endpoints
-    )
-    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
-    # check that endpoints are the one of the application
-    for r_endpoint in read_only_endpoints:
-        assert r_endpoint in app_hostnames
+    try:
+        for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
+            with attempt:
+                # check update for read-only-endpoints
+                check_read_only_endpoints(
+                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+                )
+    except RetryError:
+        assert False
 
     # increase the number of units
     async with ops_test.fast_forward():
@@ -315,19 +294,15 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
     await remove_leader_unit(ops_test=ops_test, application_name=DATABASE_APP_NAME)
 
     # wait for the update of the endpoints
-    time.sleep(2 * 60)
-    relation_data = await get_relation_data(
-        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-    )
-
-    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
-    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) - 1 == len(
-        read_only_endpoints
-    )
-    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=DATABASE_APP_NAME)
-    # check that endpoints are the one of the application
-    for r_endpoint in read_only_endpoints:
-        assert r_endpoint in app_hostnames
+    try:
+        for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
+            with attempt:
+                # check update for read-only-endpoints
+                check_read_only_endpoints(
+                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+                )
+    except RetryError:
+        assert False
 
 
 @pytest.mark.order(7)
