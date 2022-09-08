@@ -129,7 +129,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         "keystone",
         series="focal",
         application_name=KEYSTONE_APP_NAME,
-        num_units=2,
+        num_units=1,
     )
 
     # Deploy mysqlrouter and relate it to keystone
@@ -196,7 +196,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             "keystone",
             series="focal",
             application_name=ANOTHER_KEYSTONE_APP_NAME,
-            num_units=2,
+            num_units=1,
         )
 
         # Deploy mysqlrouter and relate it to keystone
