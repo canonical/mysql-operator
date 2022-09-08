@@ -20,8 +20,6 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
-logger = logging.getLogger(__name__)
-
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
     """Run a command in one Juju unit.
@@ -96,7 +94,6 @@ async def scale_application(
 
     # Scale down
     units_to_destroy = [unit.name for unit in application.units[count:]]
-    logger.info(f"Units to be destroyed: {units_to_destroy}")
 
     for unit_to_destroy in units_to_destroy:
         await ops_test.model.destroy_units(unit_to_destroy)
@@ -410,7 +407,6 @@ async def get_relation_data(
         raise ValueError(
             f"no relation data could be grabbed on relation with endpoint {relation_name}"
         )
-    logger.info(f"Relation data: {relation_data} with type: {type(relation_data)}")
 
     return relation_data
 
@@ -460,9 +456,46 @@ def get_read_only_endpoint_hostnames(relation_data: list) -> List[str]:
             raise ValueError("Malformed endpoint")
     return roe_hostnames
 
+async def remove_leader_unit(ops_test: OpsTest, application_name: str):
+    """Removes the leader unit of a specified application.
+
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+    """
+    leader_unit = None
+    for app_unit in ops_test.model.applications[application_name].units:
+        is_leader = await app_unit.is_leader_from_status()
+        if is_leader:
+            leader_unit = app_unit.name
+
+    units_to_destroy = [leader_unit]
+
+    for unit_to_destroy in units_to_destroy:
+        await ops_test.model.destroy_units(unit_to_destroy)
+
+    count = len(ops_test.model.applications[application_name].units)
+
+    application = ops_test.model.applications[application_name]
+    await ops_test.model.block_until(lambda: len(application.units) == count)
+
+    if count > 0:
+        await ops_test.model.wait_for_idle(
+            apps=[application_name],
+            status="active",
+            raise_on_blocked=True,
+            timeout=1000,
+        )
+    
+
 
 async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
-    """Retrieves hostnames of given application units."""
+    """Retrieves hostnames of given application units.
+    
+    Args:
+        ops_test: The ops test framework instance
+        application_name: The name of the application
+    """
     units = [app_unit.name for app_unit in ops_test.model.applications[app_name].units]
     status = await ops_test.model.get_status()  # noqa: F821
     machine_hostname = {}
