@@ -137,7 +137,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     # Deploy mysqlrouter and relate it to keystone
     keystone_mysqlrouter_app = await ops_test.model.deploy(
         "mysql-router",
-        channel="8.0/stable",
+        channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
         application_name=KEYSTONE_MYSQLROUTER_APP_NAME,
     )
 
@@ -208,7 +208,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         # Deploy mysqlrouter and relate it to keystone
         another_keystone_mysqlrouter_app = await ops_test.model.deploy(
             "mysql-router",
-            channel="8.0/stable",
+            channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
             application_name=ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
         )
 
