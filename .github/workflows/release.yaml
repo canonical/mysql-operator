@@ -102,6 +102,18 @@ jobs:
           provider: lxd
       - name: Run integration database tests
         run: tox -e integration-mysql-interface
+  integration-test-self-healing:
+    name: Integration tests for self healing scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Run integration database tests
+        run: tox -e integration-healing
 
   release-to-charmhub:
     name: Release to CharmHub
@@ -114,6 +126,7 @@ jobs:
       - integration-test-lxd-shared-db
       - integration-test-lxd-database
       - integration-test-lxd-mysql
+      - integration-test-self-healing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
