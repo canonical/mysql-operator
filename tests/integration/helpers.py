@@ -9,10 +9,17 @@ import secrets
 import string
 import subprocess
 from typing import Dict, List, Optional
+from xmlrpc.client import boolean
 
+import yaml
 from connector import MysqlConnector
 from juju.unit import Unit
-from mysql.connector.errors import InterfaceError, OperationalError, ProgrammingError
+from mysql.connector.errors import (
+    DatabaseError,
+    InterfaceError,
+    OperationalError,
+    ProgrammingError,
+)
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -144,7 +151,10 @@ async def get_primary_unit(
     if not matches:
         return None
 
-    cluster_status = json.loads(matches.group(1).strip())
+    # strip and remove escape characters `\`
+    string_output = matches.group(1).strip().replace("\\", "")
+
+    cluster_status = json.loads(string_output)
 
     primary_name = [
         label
@@ -230,6 +240,21 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     return result.results
 
 
+async def get_system_user_password(unit: Unit, user: str) -> Dict:
+    """Helper to run an action to retrieve system user password.
+
+    Args:
+        unit: The juju unit on which to run the get-password action
+
+    Returns:
+        A dictionary with the credentials
+    """
+    action = await unit.run_action("get-password", username=user)
+    result = await action.wait()
+
+    return result.results.get("password")
+
+
 async def execute_commands_on_unit(
     unit_address: str,
     username: str,
@@ -306,14 +331,16 @@ def is_connection_possible(credentials: Dict) -> bool:
         "password": credentials["password"],
         "host": credentials["host"],
         "raise_on_warnings": False,
+        "connection_timeout": 15,
     }
 
     try:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except (InterfaceError, OperationalError, ProgrammingError):
+    except (DatabaseError, InterfaceError, OperationalError, ProgrammingError) as e:
         # Errors raised when the connection is not possible
+        print(e)
         return False
 
 
@@ -372,3 +399,121 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     output = json.loads(output.decode("utf-8"))
 
     return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+
+
+async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
+    """Return the pid of a process running in a given unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit
+        process: The process name to search for
+    Returns:
+        A integer for the process id
+    """
+    try:
+        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", process)
+        pid = int(raw_pid.strip())
+
+        return pid
+    except Exception:
+        return None
+
+
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> boolean:
+    """Check is unit is online in the cluster.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+        action_unit_name: a different unit to run get status action
+    Returns:
+        A boolean
+    """
+    _, raw_status, _ = await ops_test.juju(
+        "run-action", action_unit_name, "get-cluster-status", "--format=yaml", "--wait"
+    )
+
+    status = yaml.safe_load(raw_status.strip())
+
+    try:
+        cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"][
+            "topology"
+        ]
+    except KeyError:
+        return False
+
+    for k, v in cluster_topology.items():
+        if k.replace("-", "/") == unit_name and v.get("status") == "online":
+            return True
+    raise TimeoutError
+
+
+def cut_network_from_unit(machine_name: str) -> None:
+    """Cut network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # apply a mask (device type `none`)
+    cut_network_command = f"lxc config device add {machine_name} eth0 none"
+    subprocess.check_call(cut_network_command.split())
+
+
+def restore_network_for_unit(machine_name: str) -> None:
+    """Restore network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # remove mask from eth0
+    restore_network_command = f"lxc config device remove {machine_name} eth0"
+    subprocess.check_call(restore_network_command.split())
+
+
+async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
+    """Get hostname for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    Returns:
+        The machine/container hostname
+    """
+    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
+    return raw_hostname.strip()
+
+
+@retry(stop=stop_after_attempt(4), wait=wait_fixed(15))
+def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
+    """Wait until network is restored.
+
+    Args:
+        model_name: The name of the model
+        hostname: The name of the instance
+        old_ip: old registered IP address
+    """
+    if instance_ip(model_name, hostname) == old_ip:
+        raise Exception
+
+
+async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
+    """Gracefully stop server.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    # send TERM signal to mysql daemon, which trigger shutdown process
+    await ops_test.juju("ssh", unit_name, "sudo", "pkill", "-15", "mysqld")
+
+
+async def start_server(ops_test: OpsTest, unit_name: str) -> None:
+    """Start a previously stopped machine.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    await ops_test.juju("ssh", unit_name, "sudo", "systemctl", "restart", "mysql")
