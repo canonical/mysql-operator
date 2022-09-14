@@ -7,10 +7,23 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import is_relation_broken, is_relation_joined
+from helpers import (
+    check_read_only_endpoints,
+    get_relation_data,
+    is_relation_broken,
+    is_relation_joined,
+    remove_leader_unit,
+    scale_application,
+)
 from pytest_operator.plugin import OpsTest
+from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
 
-from constants import PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
+from constants import (
+    DB_RELATION_NAME,
+    PASSWORD_LENGTH,
+    ROOT_USERNAME,
+    SERVER_CONFIG_USERNAME,
+)
 from tests.integration.helpers import (
     execute_commands_on_unit,
     fetch_credentials,
@@ -239,6 +252,60 @@ async def test_relation_creation(ops_test: OpsTest):
 
 
 @pytest.mark.order(6)
+@pytest.mark.abort_on_fail
+@pytest.mark.database_tests
+async def test_ready_only_endpoints(ops_test: OpsTest):
+    """Check read-only-endpoints are correctly updated."""
+    relation_data = await get_relation_data(
+        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+    assert len(relation_data) == 1
+    check_read_only_endpoints(
+        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+
+    # increase the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 4)
+    check_read_only_endpoints(
+        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+    )
+
+    # decrease the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+
+    # wait for the update of the endpoints
+    try:
+        for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
+            with attempt:
+                # check update for read-only-endpoints
+                check_read_only_endpoints(
+                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+                )
+    except RetryError:
+        assert False
+
+    # increase the number of units
+    async with ops_test.fast_forward():
+        await scale_application(ops_test, DATABASE_APP_NAME, 3)
+
+    # remove the leader unit
+    await remove_leader_unit(ops_test=ops_test, application_name=DATABASE_APP_NAME)
+
+    # wait for the update of the endpoints
+    try:
+        for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
+            with attempt:
+                # check update for read-only-endpoints
+                check_read_only_endpoints(
+                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+                )
+    except RetryError:
+        assert False
+
+
+@pytest.mark.order(7)
 @pytest.mark.abort_on_fail
 @pytest.mark.database_tests
 async def test_relation_broken(ops_test: OpsTest):

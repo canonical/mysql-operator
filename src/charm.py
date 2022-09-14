@@ -176,6 +176,13 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        # Safeguard against event deferall
+        if self._mysql.is_instance_in_cluster(event_unit_label):
+            logger.debug(
+                f"Unit {event_unit_label} is already part of the cluster, don't try to add it again."
+            )
+            return
+
         # Add the instance to the cluster. This operation uses locks to ensure that
         # only one instance is added to the cluster at a time
         # (so only one instance is involved in a state transfer at a time)
