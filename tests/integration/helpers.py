@@ -485,7 +485,7 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     return raw_hostname.strip()
 
 
-@retry(stop=stop_after_attempt(4), wait=wait_fixed(15))
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15))
 def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """Wait until network is restored.
 
