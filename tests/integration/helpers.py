@@ -420,7 +420,7 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
         return None
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+@retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
 async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> boolean:
     """Check is unit is online in the cluster.
 
