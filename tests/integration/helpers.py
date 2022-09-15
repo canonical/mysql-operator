@@ -709,14 +709,30 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
 
 
 async def get_controller_machine(ops_test: OpsTest) -> str:
+    """Return controller machine hostname.
+
+    Args:
+        ops_test: The ops test framework instance
+    Returns:
+        Controller hostname (str)
+    """
     _, raw_controller, _ = await ops_test.juju("show-controller")
 
-    controller = yaml.safe_load(raw_controller.decode("utf8").strip())
+    controller = yaml.safe_load(raw_controller.strip())
 
-    return [m for m in controller[ops_test.model.info.name]["controller-machines"].values()][0]
+    return [
+        machine.get("instance-id")
+        for machine in controller[ops_test.controller_name]["controller-machines"].values()
+    ][0]
 
 
 def is_machine_reachable_from(origin_machine: str, target_machine: str) -> boolean:
+    """Test network reachability between hosts.
+
+    Args:
+        origin_machine: hostname of the machine to test connection from
+        target_machine: hostname of the machine to test connection to
+    """
     try:
         subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
         return True
