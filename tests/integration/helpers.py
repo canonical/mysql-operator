@@ -21,7 +21,7 @@ from mysql.connector.errors import (
     ProgrammingError,
 )
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed, Retrying, RetryError
 
 from constants import SERVER_CONFIG_USERNAME
 
@@ -114,6 +114,7 @@ async def scale_application(
         )
 
 
+@retry(stop=stop_after_attempt(12), wait=wait_fixed(5), reraise=True)
 async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
@@ -319,7 +320,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
+@retry(stop=stop_after_attempt(6), wait=wait_fixed(5), reraise=True)
 def is_connection_possible(credentials: Dict) -> bool:
     """Test a connection to a MySQL server.
 
@@ -331,16 +332,15 @@ def is_connection_possible(credentials: Dict) -> bool:
         "password": credentials["password"],
         "host": credentials["host"],
         "raise_on_warnings": False,
-        "connection_timeout": 15,
+        "connection_timeout": 10,
     }
 
     try:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except (DatabaseError, InterfaceError, OperationalError, ProgrammingError) as e:
+    except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
         # Errors raised when the connection is not possible
-        print(e)
         return False
 
 
@@ -437,12 +437,7 @@ async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name
 
     status = yaml.safe_load(raw_status.strip())
 
-    try:
-        cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"][
-            "topology"
-        ]
-    except KeyError:
-        return False
+    cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"]["topology"]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
@@ -508,6 +503,15 @@ async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
     # send TERM signal to mysql daemon, which trigger shutdown process
     await ops_test.juju("ssh", unit_name, "sudo", "pkill", "-15", "mysqld")
 
+    # hold execution until process is stopped
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+            with attempt:
+                if await get_process_pid(ops_test, unit_name, "mysqld"):
+                    raise Exception
+    except RetryError as e:
+        raise Exception("Failed to gracefully stop server.")
+
 
 async def start_server(ops_test: OpsTest, unit_name: str) -> None:
     """Start a previously stopped machine.
@@ -517,3 +521,29 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         unit_name: The name of the unit to be tested
     """
     await ops_test.juju("ssh", unit_name, "sudo", "systemctl", "restart", "mysql")
+
+    # hold execution until process is started
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+            with attempt:
+                if not await get_process_pid(ops_test, unit_name, "mysqld"):
+                    raise Exception
+    except RetryError as e:
+        raise Exception("Failed to gracefully stop server.")
+
+
+async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
+    """Wrapper for getting primary."""
+    unit = ops_test.model.applications[app_name].units[0]
+    cluster = cluster_name(unit, ops_test.model.info.name)
+
+    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
+
+    return await get_primary_unit(
+        ops_test, unit, app_name, cluster, SERVER_CONFIG_USERNAME, server_config_password
+    )
+
+
+async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
+    """Wrapper for getting unit ip."""
+    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
