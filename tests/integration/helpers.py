@@ -8,9 +8,8 @@ import re
 import secrets
 import string
 import subprocess
-from typing import Dict, List, Optional
-from xmlrpc.client import boolean
 from typing import Dict, List, Optional, Set
+from xmlrpc.client import boolean
 
 import yaml
 from connector import MysqlConnector
@@ -22,7 +21,7 @@ from mysql.connector.errors import (
     ProgrammingError,
 )
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed, Retrying, RetryError
+from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
@@ -510,7 +509,7 @@ async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
             with attempt:
                 if await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
-    except RetryError as e:
+    except RetryError:
         raise Exception("Failed to gracefully stop server.")
 
 
@@ -529,7 +528,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
             with attempt:
                 if not await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
-    except RetryError as e:
+    except RetryError:
         raise Exception("Failed to gracefully stop server.")
 
 
@@ -538,7 +537,7 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
 
     Args:
         ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
+        app_name: The name of the application
     Returns:
         The primary Unit object
     """
@@ -553,7 +552,14 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
 
 
 async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
-    """Wrapper for getting unit ip."""
+    """Wrapper for getting unit ip.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    Returns:
+        The (str) ip of the unit
+    """
     return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
 
 
