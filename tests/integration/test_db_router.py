@@ -13,7 +13,6 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
     execute_commands_on_unit,
-    get_primary_unit,
     get_server_config_credentials,
     scale_application,
 )
@@ -27,69 +26,8 @@ KEYSTONE_APP_NAME = "keystone"
 KEYSTONE_MYSQLROUTER_APP_NAME = "keystone-mysql-router"
 ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
 ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME = "another-keystone-mysql-router"
-SLOW_WAIT_TIMEOUT = 25 * 60
-FAST_WAIT_TIMEOUT = 15 * 60
-
-
-async def deploy_and_relate_keystone_with_mysqlrouter(
-    ops_test: OpsTest,
-    keystone_application_name: str,
-    keystone_mysqlrouter_application_name: str,
-    number_of_units: int,
-) -> None:
-    """Helper function to deploy and relate keystone with mysqlrouter.
-
-    Args:
-        ops_test: The ops test framework
-        keystone_application_name: The name of the keystone application to deploy
-        keystone_mysqlrouter_application_name: The name of the mysqlrouter application for keystone
-        number_of_units: The number of keystone units to deploy
-    """
-    # Deploy keystone
-    # Explicitly setting the series to 'focal' as it defaults to 'xenial'
-    keystone_app = await ops_test.model.deploy(
-        "keystone",
-        series="focal",
-        application_name=keystone_application_name,
-        num_units=number_of_units,
-    )
-
-    # Deploy mysqlrouter and relate it to keystone
-    keystone_mysqlrouter_app = await ops_test.model.deploy(
-        "mysql-router",
-        application_name=keystone_mysqlrouter_application_name,
-    )
-
-    await ops_test.model.relate(
-        f"{keystone_application_name}:shared-db",
-        f"{keystone_mysqlrouter_application_name}:shared-db",
-    )
-
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            apps=[keystone_application_name],
-            status="blocked",
-            raise_on_blocked=False,
-            timeout=SLOW_WAIT_TIMEOUT,
-        ),
-        ops_test.model.wait_for_idle(
-            apps=[keystone_mysqlrouter_application_name],
-            status="blocked",
-            raise_on_blocked=False,
-            timeout=SLOW_WAIT_TIMEOUT,
-        ),
-    )
-
-    # Relate mysqlrouter to mysql
-    await ops_test.model.relate(
-        f"{keystone_mysqlrouter_application_name}:db-router", f"{APP_NAME}:db-router"
-    )
-    await ops_test.model.block_until(
-        lambda: keystone_app.status in ("active", "error")
-        and keystone_mysqlrouter_app.status in ("active", "error"),
-        timeout=SLOW_WAIT_TIMEOUT,
-    )
-    assert keystone_app.status == "active" and keystone_mysqlrouter_app.status == "active"
+SLOW_WAIT_TIMEOUT = 45 * 60
+FAST_WAIT_TIMEOUT = 30 * 60
 
 
 async def check_successful_keystone_migration(
@@ -171,39 +109,6 @@ async def check_keystone_users_existence(
         assert user not in output, "User(s) that should not exist are in the database"
 
 
-async def build_and_deploy_mysql(ops_test: OpsTest, units: int) -> Dict:
-    """Build and deploy mysql charm.
-
-    Args:
-        ops_test: The ops test framework
-        units: The number of units to deploy
-    Returns:
-        The server config credentials for the mysql charm
-    """
-    charm = await ops_test.build_charm(".")
-    config = {"cluster-name": CLUSTER_NAME}
-    await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=units)
-    await ops_test.model.block_until(
-        lambda: len(ops_test.model.applications[APP_NAME].units) == units
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=FAST_WAIT_TIMEOUT,
-    )
-    assert (
-        len(ops_test.model.applications[APP_NAME].units) == units
-    ), "Not all mysql units deployed"
-
-    for unit in ops_test.model.applications[APP_NAME].units:
-        assert unit.workload_status == "active", "Unit is not active"
-
-    # Get the server config credentials
-    db_unit = ops_test.model.applications[APP_NAME].units[0]
-    return await get_server_config_credentials(db_unit)
-
-
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.db_router_tests
@@ -213,18 +118,70 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     Args:
         ops_test: The ops test framework
     """
+    charm = await ops_test.build_charm(".")
+    config = {"cluster-name": CLUSTER_NAME}
+
+    mysql_app = await ops_test.model.deploy(
+        charm, application_name=APP_NAME, config=config, num_units=1
+    )
+
+    # Deploy keystone
+    # Explicitly setting the series to 'focal' as it defaults to 'xenial'
+    keystone_app = await ops_test.model.deploy(
+        "keystone",
+        series="focal",
+        application_name=KEYSTONE_APP_NAME,
+        num_units=2,
+    )
+
+    # Deploy mysqlrouter and relate it to keystone
+    keystone_mysqlrouter_app = await ops_test.model.deploy(
+        "mysql-router",
+        channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
+        application_name=KEYSTONE_MYSQLROUTER_APP_NAME,
+    )
+
+    await ops_test.model.relate(
+        f"{KEYSTONE_APP_NAME}:shared-db",
+        f"{KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
+    )
+
     # Reduce the update_status frequency for the duration of the test
     async with ops_test.fast_forward():
 
-        result = await asyncio.gather(
-            build_and_deploy_mysql(ops_test, 3),
-            # Deploy and test the first deployment of keystone
-            deploy_and_relate_keystone_with_mysqlrouter(
-                ops_test, KEYSTONE_APP_NAME, KEYSTONE_MYSQLROUTER_APP_NAME, 2
+        await asyncio.gather(
+            ops_test.model.block_until(
+                lambda: mysql_app.status in ("active", "error"), timeout=SLOW_WAIT_TIMEOUT
+            ),
+            ops_test.model.block_until(
+                lambda: keystone_app.status in ("waiting", "error"), timeout=SLOW_WAIT_TIMEOUT
+            ),
+            ops_test.model.block_until(
+                lambda: keystone_mysqlrouter_app.status in ("blocked", "error"),
+                timeout=SLOW_WAIT_TIMEOUT,
             ),
         )
+        assert (
+            mysql_app.status == "active"
+            and keystone_app.status == "waiting"
+            and keystone_mysqlrouter_app.status == "blocked"
+        )
 
-        server_config_credentials = result[0]
+        # Relate mysqlrouter to mysql
+        await ops_test.model.relate(
+            f"{KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router"
+        )
+        await ops_test.model.block_until(
+            lambda: keystone_app.status in ("active", "error")
+            and keystone_mysqlrouter_app.status in ("active", "error"),
+            timeout=SLOW_WAIT_TIMEOUT,
+        )
+        assert keystone_app.status == "active" and keystone_mysqlrouter_app.status == "active"
+
+        # Get the server config credentials
+        db_unit = ops_test.model.applications[APP_NAME].units[0]
+        server_config_credentials = await get_server_config_credentials(db_unit)
+
         await check_successful_keystone_migration(ops_test, server_config_credentials)
 
         keystone_users = []
@@ -239,9 +196,41 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
         )
 
         # Deploy and test another deployment of keystone
-        await deploy_and_relate_keystone_with_mysqlrouter(
-            ops_test, ANOTHER_KEYSTONE_APP_NAME, ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, 2
+        # Deploy keystone
+        # Explicitly setting the series to 'focal' as it defaults to 'xenial'
+        another_keystone_app = await ops_test.model.deploy(
+            "keystone",
+            series="focal",
+            application_name=ANOTHER_KEYSTONE_APP_NAME,
+            num_units=2,
         )
+
+        # Deploy mysqlrouter and relate it to keystone
+        another_keystone_mysqlrouter_app = await ops_test.model.deploy(
+            "mysql-router",
+            channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
+            application_name=ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
+        )
+
+        await ops_test.model.relate(
+            f"{ANOTHER_KEYSTONE_APP_NAME}:shared-db",
+            f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
+        )
+
+        # Relate mysqlrouter to mysql
+        await ops_test.model.relate(
+            f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router"
+        )
+        await ops_test.model.block_until(
+            lambda: another_keystone_app.status in ("active", "error")
+            and another_keystone_mysqlrouter_app.status in ("active", "error"),
+            timeout=SLOW_WAIT_TIMEOUT,
+        )
+        assert (
+            another_keystone_app.status == "active"
+            and another_keystone_mysqlrouter_app.status == "active"
+        )
+
         await check_successful_keystone_migration(ops_test, server_config_credentials)
 
         another_keystone_users = []
@@ -264,34 +253,6 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
             ops_test.model.remove_application(
                 ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
             ),
-        )
-
-        await check_keystone_users_existence(
-            ops_test, server_config_credentials, keystone_users, another_keystone_users
-        )
-
-        db_unit = ops_test.model.applications[APP_NAME].units[0]
-        # Scale down the primary unit of mysql
-        primary_unit = await get_primary_unit(
-            ops_test,
-            db_unit,
-            APP_NAME,
-            CLUSTER_NAME,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-        )
-        primary_unit_name = primary_unit.name
-
-        await ops_test.model.destroy_units(primary_unit_name)
-
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 2
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=FAST_WAIT_TIMEOUT,
         )
 
         await check_keystone_users_existence(
