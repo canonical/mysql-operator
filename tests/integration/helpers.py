@@ -706,3 +706,19 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
     # check that endpoints are the one of the application
     for r_endpoint in read_only_endpoints:
         assert r_endpoint in app_hostnames
+
+
+async def get_controller_machine(ops_test: OpsTest) -> str:
+    _, raw_controller, _ = await ops_test.juju("show-controller")
+
+    controller = yaml.safe_load(raw_controller.decode("utf8").strip())
+
+    return [m for m in controller[ops_test.model.info.name]["controller-machines"].values()][0]
+
+
+def is_machine_reachable_from(origin_machine: str, target_machine: str) -> boolean:
+    try:
+        subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
+        return True
+    except subprocess.CalledProcessError:
+        return False

@@ -12,6 +12,7 @@ from helpers import (
     cut_network_from_unit,
     execute_commands_on_unit,
     generate_random_string,
+    get_controller_machine,
     get_primary_unit_wrapper,
     get_process_pid,
     get_system_user_password,
@@ -19,6 +20,7 @@ from helpers import (
     graceful_stop_server,
     instance_ip,
     is_connection_possible,
+    is_machine_reachable_from,
     is_unit_in_cluster,
     restore_network_for_unit,
     scale_application,
@@ -158,7 +160,8 @@ async def test_network_cut(ops_test: OpsTest):
     """Completely cut and restore network."""
     app = await app_name(ops_test)
     primary_unit = await get_primary_unit_wrapper(ops_test, app)
-    another_unit = (set(ops_test.model.applications[app].units) - {primary_unit}).pop()
+    all_units = ops_test.model.applications[app].units
+    another_unit = (set(all_units) - {primary_unit}).pop()
 
     # get unit hostname
     primary_hostname = await unit_hostname(ops_test, primary_unit.name)
@@ -181,6 +184,19 @@ async def test_network_cut(ops_test: OpsTest):
 
     logger.info(f"Cutting network for {primary_hostname}")
     cut_network_from_unit(primary_hostname)
+
+    # verify machine is not reachable from peer units
+    for unit in set(all_units) - {primary_unit}:
+        hostname = await unit_hostname(ops_test, unit.name)
+        assert not is_machine_reachable_from(
+            hostname, primary_hostname
+        ), "❌ unit is reachable from peer"
+
+    # verify machine is not reachable from controller
+    controller = await get_controller_machine(ops_test)
+    assert not is_machine_reachable_from(
+        controller, primary_hostname
+    ), "❌ unit is reachable from controller"
 
     # verify that connection is not possible
     assert not is_connection_possible(config), "❌ Connection is possible after network cut"
