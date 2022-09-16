@@ -11,6 +11,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
 )
@@ -35,7 +36,7 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
-from mysqlsh_helpers import MySQL
+from mysqlsh_helpers import MySQL, instance_hostname
 from relations.database import DatabaseRelation
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
@@ -55,6 +56,7 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.update_status, self._on_update_status)
         self.framework.observe(
             self.on.database_storage_detaching, self._on_database_storage_detaching
         )
@@ -132,6 +134,7 @@ class MySQLOperatorCharm(CharmBase):
             self._mysql.wait_until_mysql_connection()
             workload_version = self._mysql.get_mysql_version()
             self.unit.set_workload_version(workload_version)
+            self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
@@ -159,7 +162,7 @@ class MySQLOperatorCharm(CharmBase):
 
         self._peers.data[self.app]["units-added-to-cluster"] = "1"
 
-        self.unit.status = ActiveStatus()
+        self.unit.status = ActiveStatus("R/W")
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the peer relation joined event."""
@@ -226,6 +229,51 @@ class MySQLOperatorCharm(CharmBase):
 
         # Inform other hooks of current status
         self._peers.data[self.unit]["unit-status"] = "removing"
+
+    def _on_update_status(self, _) -> None:
+        """Handle update status."""
+        if not self.cluster_initialized:
+            return
+
+        # retrieve workload status in the cluster
+        try:
+            state, role = self._mysql.get_member_state()
+        except MySQLGetMemberStateError:
+            self.unit.status = ActiveStatus("offline")
+            logger.debug("Failed to get member state. MySQLD down?")
+            return
+
+        # persist state for every unit
+        self.unit_peer_data["member-role"] = role or "UNKNOWN"
+        self.unit_peer_data["member-state"] = state
+
+        if state == "ONLINE":
+            # server is an active member of a group and in a fully functioning state
+            self.unit.status = ActiveStatus("R/W" if role == "PRIMARY" else "")
+            return
+
+        if state == "RECOVERING":
+            # server is in the process of becoming an active member
+            self.unit.status = MaintenanceStatus("recovering")
+            return
+
+        if state == "OFFLINE":
+            # Group Replication is active but the member does not belong to any group
+            self.unit.status = ActiveStatus("offline")
+            all_states = {self._peers.data[unit]["member-state"] for unit in self._peers.units}
+
+            if all_states == {"OFFLINE"}:
+                # All instance are off, try to reboot cluster from outage
+                # only by the leader unit
+                if self.unit.is_leader():
+                    logger.debug("Attempting reboot from complete outage.")
+                    # fetch instance names to rejoin
+                    # to allow non-interactive process
+                    rejoin_instances = {
+                        self._peers.data[unit]["instance-hostname"] for unit in self._peers.units
+                    }
+                    logger.debug(f"Rejoining instances: {rejoin_instances}")
+                    self._mysql.reboot_from_complete_outage(rejoin_instances)
 
     # =======================
     #  Custom Action Handlers

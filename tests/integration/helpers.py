@@ -320,7 +320,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(6), wait=wait_fixed(5), reraise=True)
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 def is_connection_possible(credentials: Dict) -> bool:
     """Test a connection to a MySQL server.
 
@@ -529,7 +529,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
                 if not await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
     except RetryError:
-        raise Exception("Failed to gracefully stop server.")
+        raise Exception("Failed to start server.")
 
 
 async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
@@ -738,3 +738,36 @@ def is_machine_reachable_from(origin_machine: str, target_machine: str) -> boole
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit) -> str:
+    """Writes to common test table.
+
+    Args:
+        ops_test: The ops test framework instance
+        primary_unit: the R/W unit to write the data
+    Returns:
+        The random chars(str) written to test table.
+    """
+    create_records_sql = [
+        "CREATE DATABASE IF NOT EXISTS test",
+        "DROP TABLE IF EXISTS test.data_replication_table",
+        "CREATE TABLE test.data_replication_table (id varchar(40), primary key(id))",
+        (
+            "INSERT INTO test.data_replication_table"
+            f" VALUES ('{(random_chars:=generate_random_string(40))}')"
+        ),
+    ]
+
+    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
+
+    await execute_commands_on_unit(
+        primary_unit_ip,
+        SERVER_CONFIG_USERNAME,
+        server_config_password,
+        create_records_sql,
+        commit=True,
+    )
+
+    return random_chars

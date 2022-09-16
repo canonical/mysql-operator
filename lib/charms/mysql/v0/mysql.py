@@ -1034,7 +1034,7 @@ class MySQLBase(ABC):
             output = self._run_mysqlsh_script("\n".join(member_state_commands))
         except MySQLClientError as e:
             logger.exception(
-                f"Failed to retrieve member state.",
+                "Failed to retrieve member state.",
                 exc_info=e,
             )
             raise MySQLGetMemberStateError(e.message)
@@ -1062,7 +1062,7 @@ class MySQLBase(ABC):
             self._run_mysqlsh_script("\n".join(rejoin_command))
         except MySQLClientError as e:
             logger.exception(
-                f"Failed to reboot cluster",
+                "Failed to reboot cluster",
                 exc_info=e,
             )
             raise MySQLRebootFromCompleteOutageError(e.message)
