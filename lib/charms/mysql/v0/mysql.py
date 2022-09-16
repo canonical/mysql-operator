@@ -69,7 +69,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
 
@@ -185,6 +185,14 @@ class MySQLUpgradeUserForMySQLRouterError(Error):
 
 class MySQLGrantPrivilegesToUserError(Error):
     """Exception raised when there is an issue granting privileges to user."""
+
+
+class MySQLGetMemberStateError(Error):
+    """Exception raised when there is an issue getting member state."""
+
+
+class MySQLRebootFromCompleteOutageError(Error):
+    """Exception raised when there is an issue rebooting from complete outage."""
 
 
 class MySQLBase(ABC):
@@ -1005,6 +1013,59 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLCheckUserExistenceError(e.message)
+
+    def get_member_state(self) -> Tuple[str, str]:
+        """Get member status in cluster.
+
+        Returns:
+            A tuple(str) with the MEMBER_STATE and MEMBER_ROLE within the cluster.
+        """
+        member_state_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            (
+                "raw_result=session.run_sql('SELECT MEMBER_STATE, MEMBER_ROLE FROM"
+                " performance_schema.replication_group_members WHERE MEMBER_ID = @@server_uuid;')"
+            ),
+            "result=raw_result.fetch_one()",
+            "print(result[0],result[1])",
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(member_state_commands))
+        except MySQLClientError as e:
+            logger.exception(
+                f"Failed to retrieve member state.",
+                exc_info=e,
+            )
+            raise MySQLGetMemberStateError(e.message)
+
+        results = output.split()
+        if len(results) == 2:
+            return output.split()[0], output.split()[1]
+        else:
+            return output.split()[0], None
+
+    def reboot_from_complete_outage(self, instance_names: Set[str]) -> None:
+        """Wrapper for reboot_cluster_from_complete_outage command.
+
+        Args:
+            instance_names: set of instance names (e.g. `juju-e3f183-4:3306`)
+        """
+        options = {"rejoinInstances": list(instance_names)}
+
+        rejoin_command = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}', {json.dumps(options)} )",
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(rejoin_command))
+        except MySQLClientError as e:
+            logger.exception(
+                f"Failed to reboot cluster",
+                exc_info=e,
+            )
+            raise MySQLRebootFromCompleteOutageError(e.message)
 
     @abstractmethod
     def wait_until_mysql_connection(self) -> None:

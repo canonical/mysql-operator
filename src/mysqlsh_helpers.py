@@ -201,3 +201,14 @@ class MySQL(MySQLBase):
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
         except subprocess.CalledProcessError as e:
             raise MySQLClientError(e.stderr)
+
+
+def instance_hostname():
+    """Retrieve machine hostname."""
+    try:
+        raw_hostname = subprocess.check_output(["hostname"])
+
+        return raw_hostname.decode("utf8").strip()
+    except subprocess.CalledProcessError as e:
+        logger.exception("Failed to retrieve hostname", e)
+        return None
