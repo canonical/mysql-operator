@@ -43,11 +43,8 @@ MYSQL_DAEMON = "mysqld"
 async def build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy."""
     if app := await app_name(ops_test):
-        if len(ops_test.model.applications[app].units) == 3:
-            return
-        else:
-            async with ops_test.fast_forward():
-                await scale_application(ops_test, app, 3)
+        async with ops_test.fast_forward():
+            await scale_application(ops_test, app, 3)
             return
 
     # Build and deploy charm from local source folder
@@ -100,7 +97,7 @@ async def test_kill_db_process(ops_test: OpsTest) -> None:
     logger.info(f"New process id is {new_pid}")
 
     # verify that mysqld instance is not the killed one
-    assert new_pid != pid, "❌ PID for mysql daemon did not changed"
+    assert new_pid != pid, "❌ PID for mysql daemon did not change"
 
     # verify daemon restarted via connection
     assert is_connection_possible(config), f"❌ Daemon did not restart on unit {primary_unit.name}"
