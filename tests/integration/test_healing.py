@@ -285,7 +285,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
 
 @pytest.mark.order(5)
 @pytest.mark.abort_on_fail
-@pytest.mark.dev
+@pytest.mark.healing_tests
 async def test_cluster_pause(ops_test: OpsTest):
     """Pause test.
 
@@ -361,3 +361,61 @@ async def test_cluster_pause(ops_test: OpsTest):
                         assert random_chars in output, "❌ Data was not synced"
             except RetryError:
                 assert False, "❌ Data was not synced"
+
+
+@pytest.mark.order(5)
+@pytest.mark.abort_on_fail
+@pytest.mark.healing_tests
+async def test_sst_test(ops_test: OpsTest) -> None:
+    """The SST test.
+
+    A forceful restart instance with deleted data and without transaction logs (forced clone).
+    """
+    app = await app_name(ops_test)
+    primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+    # copy data dir content removal script
+    await ops_test.juju("scp", "tests/integration/clean-data-dir.sh", f"{primary_unit.name}:/tmp")
+
+    logger.info(f"Stopping server on unit {primary_unit.name}")
+    await graceful_stop_server(ops_test, primary_unit.name)
+
+    logger.info("Removing data directory")
+    # data removal run within a script
+    # so it allow `*` expansion
+    return_code, _, _ = await ops_test.juju(
+        "ssh",
+        primary_unit.name,
+        "sudo",
+        "/tmp/clean-data-dir.sh",
+    )
+
+    assert return_code == 0, "❌ Failed to remove data directory"
+
+    async with ops_test.fast_forward():
+        # Wait for unit switch to maintenance status
+        logger.info("Waiting unit to enter in maintenance.")
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "maintenance",
+            timeout=300,
+        )
+
+        # Wait for unit switch back to active status, this is where self-healing happens
+        logger.info("Waiting unit to be back online.")
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "active",
+            timeout=300,
+        )
+
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+    # verify new primary
+    assert primary_unit.name != new_primary_unit.name, "❌ Primary hasn't changed."
+
+    # verify instance is part of the cluster
+    logger.info("Check if instance in cluster")
+    assert await is_unit_in_cluster(
+        ops_test, primary_unit.name, new_primary_unit.name
+    ), "❌ Unit not online in the cluster"
+
+    # check latest data from non affected unit

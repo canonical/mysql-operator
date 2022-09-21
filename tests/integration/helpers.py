@@ -114,7 +114,7 @@ async def scale_application(
         )
 
 
-@retry(stop=stop_after_attempt(12), wait=wait_fixed(5), reraise=True)
+@retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
 async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
@@ -505,7 +505,7 @@ async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
 
     # hold execution until process is stopped
     try:
-        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
             with attempt:
                 if await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
@@ -577,7 +577,7 @@ async def get_relation_data(
     Returns:
         a list that contains the relation-data
     """
-    # get available unit id for the desidered application
+    # get available unit id for the desired application
     units_ids = [
         app_unit.name.split("/")[1]
         for app_unit in ops_test.model.applications[application_name].units
