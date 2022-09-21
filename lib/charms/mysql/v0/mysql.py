@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -543,7 +543,9 @@ class MySQLBase(ABC):
             )
             raise MySQLInitializeJujuOperationsTableError(e.message)
 
-    def add_instance_to_cluster(self, instance_address: str, instance_unit_label: str) -> None:
+    def add_instance_to_cluster(
+        self, instance_address: str, instance_unit_label: str, from_instance: Optional[str] = None
+    ) -> None:
         """Add an instance to the InnoDB cluster.
 
         This method is only called from the juju leader unit (thus locks are
@@ -555,6 +557,7 @@ class MySQLBase(ABC):
         Args:
             instance_address: address of the instance to add to the cluster
             instance_unit_label: the label/name of the unit
+            from_instance: address of the adding instance, e.g. primary
         """
         options = {
             "password": self.cluster_admin_password,
@@ -562,7 +565,10 @@ class MySQLBase(ABC):
         }
 
         connect_commands = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            (
+                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
+                f"@{from_instance or self.instance_address}')"
+            ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
         )
 
@@ -623,6 +629,26 @@ class MySQLBase(ABC):
                 f"Failed to confirm instance configuration for {instance_address} with error {e.message}",
             )
             return False
+
+    def remove_obsoletes_instance(self, from_instance: Optional[str] = None) -> None:
+        """Purge obsoletes instances from cluster metadata.
+
+        Args:
+            from_instance: member instance to run the command from (fallback to current one)
+        """
+        auto_remove_command = (
+            (
+                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@"
+                f"{from_instance or self.instance_address}')"
+            ),
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "cluster.rescan({'removeInstances':'auto'})",
+        )
+        try:
+            logger.debug("Removing obsolete instances")
+            self._run_mysqlsh_script("\n".join(auto_remove_command))
+        except MySQLClientError:
+            logger.warning("No instance removed")
 
     def is_instance_in_cluster(self, unit_label: str) -> bool:
         """Confirm if instance is in the cluster.
@@ -969,7 +995,7 @@ class MySQLBase(ABC):
 
         Args:
             username: The username of user to grant privileges to
-            hostname: The hostname of user to grant priviliges to
+            hostname: The hostname of user to grant privileges to
             privileges: A list of privileges to grant to the user
             with_grant_option: Indicating whether to provide with grant option to user
 
@@ -1033,17 +1059,14 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlsh_script("\n".join(member_state_commands))
         except MySQLClientError as e:
-            logger.exception(
-                "Failed to retrieve member state.",
-                exc_info=e,
+            logger.error(
+                "Failed to get member state: mysqld daemon is down or unaccessible",
             )
             raise MySQLGetMemberStateError(e.message)
 
-        results = output.split()
-        if len(results) == 2:
-            return output.split()[0], output.split()[1]
-        else:
-            return output.split()[0], None
+        results = output.lower().split()
+        # MEMBER_ROLE is empty if member is not in a group
+        return results[0], results[1] if len(results) == 2 else "unknown"
 
     def reboot_from_complete_outage(self, instance_names: Set[str]) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command.
