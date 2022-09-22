@@ -421,7 +421,7 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
 
 
 @retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> boolean:
+async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> bool:
     """Check is unit is online in the cluster.
 
     Args:
@@ -726,7 +726,7 @@ async def get_controller_machine(ops_test: OpsTest) -> str:
     ][0]
 
 
-def is_machine_reachable_from(origin_machine: str, target_machine: str) -> boolean:
+def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
     """Test network reachability between hosts.
 
     Args:
