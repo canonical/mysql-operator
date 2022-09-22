@@ -203,7 +203,7 @@ class MySQLOperatorCharm(CharmBase):
         try:
             self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
         except MySQLAddInstanceToClusterError:
-            # wont fail leader due to issues in instance
+            # won't fail leader due to issues in instance
             return
 
         # Update 'units-added-to-cluster' counter in the peer relation databag
