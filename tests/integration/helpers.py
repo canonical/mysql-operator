@@ -9,7 +9,6 @@ import secrets
 import string
 import subprocess
 from typing import Dict, List, Optional, Set
-from xmlrpc.client import boolean
 
 import yaml
 from connector import MysqlConnector
