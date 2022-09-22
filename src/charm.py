@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Optional
 
 from charms.mysql.v0.mysql import (
+    MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
@@ -155,6 +156,7 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             self.unit.status = WaitingStatus("Waiting to join the cluster")
             self.unit_peer_data["member-role"] = "secondary"
+            self.unit_peer_data["member-state"] = "waiting"
             return
 
         try:
@@ -198,7 +200,11 @@ class MySQLOperatorCharm(CharmBase):
         # Add the instance to the cluster. This operation uses locks to ensure that
         # only one instance is added to the cluster at a time
         # (so only one instance is involved in a state transfer at a time)
-        self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
+        try:
+            self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
+        except MySQLAddInstanceToClusterError:
+            # wont fail leader due to issues in instance
+            return
 
         # Update 'units-added-to-cluster' counter in the peer relation databag
         # in order to trigger a relation_changed event which will move the added unit
@@ -254,6 +260,9 @@ class MySQLOperatorCharm(CharmBase):
             self.unit_peer_data["member-role"] = role
             self.unit_peer_data["member-state"] = state
         except MySQLGetMemberStateError:
+            if self.unit_peer_data.get("member-state") == "waiting":
+                # avoid changing status while in initialisation
+                return
             role = self.unit_peer_data["member-role"] = "unknown"
             state = self.unit_peer_data["member-state"] = "unreachable"
         logger.info(f"Unit workload member-state is {state} with member-role {role}")
@@ -272,7 +281,9 @@ class MySQLOperatorCharm(CharmBase):
 
         if state == "offline":
             # Group Replication is active but the member does not belong to any group
-            all_states = {self._peers.data[unit]["member-state"] for unit in self._peers.units}
+            all_states = {
+                self._peers.data[unit].get("member-state", "unknown") for unit in self._peers.units
+            }
 
             if all_states == {"offline"}:
                 # All instance are off, reboot cluster from outage from the leader unit
