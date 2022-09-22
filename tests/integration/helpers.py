@@ -13,9 +13,14 @@ from typing import Dict, List, Optional, Set
 import yaml
 from connector import MysqlConnector
 from juju.unit import Unit
-from mysql.connector.errors import InterfaceError, OperationalError, ProgrammingError
+from mysql.connector.errors import (
+    DatabaseError,
+    InterfaceError,
+    OperationalError,
+    ProgrammingError,
+)
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
@@ -108,6 +113,7 @@ async def scale_application(
         )
 
 
+@retry(stop=stop_after_attempt(12), wait=wait_fixed(5), reraise=True)
 async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
@@ -145,7 +151,10 @@ async def get_primary_unit(
     if not matches:
         return None
 
-    cluster_status = json.loads(matches.group(1).strip())
+    # strip and remove escape characters `\`
+    string_output = matches.group(1).strip().replace("\\", "")
+
+    cluster_status = json.loads(string_output)
 
     primary_name = [
         label
@@ -231,6 +240,21 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     return result.results
 
 
+async def get_system_user_password(unit: Unit, user: str) -> Dict:
+    """Helper to run an action to retrieve system user password.
+
+    Args:
+        unit: The juju unit on which to run the get-password action
+
+    Returns:
+        A dictionary with the credentials
+    """
+    action = await unit.run_action("get-password", username=user)
+    result = await action.wait()
+
+    return result.results.get("password")
+
+
 async def execute_commands_on_unit(
     unit_address: str,
     username: str,
@@ -295,7 +319,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
+@retry(stop=stop_after_attempt(6), wait=wait_fixed(5), reraise=True)
 def is_connection_possible(credentials: Dict) -> bool:
     """Test a connection to a MySQL server.
 
@@ -307,13 +331,14 @@ def is_connection_possible(credentials: Dict) -> bool:
         "password": credentials["password"],
         "host": credentials["host"],
         "raise_on_warnings": False,
+        "connection_timeout": 10,
     }
 
     try:
         with MysqlConnector(config) as cursor:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
-    except (InterfaceError, OperationalError, ProgrammingError):
+    except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
         # Errors raised when the connection is not possible
         return False
 
@@ -373,6 +398,168 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     output = json.loads(output.decode("utf-8"))
 
     return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+
+
+async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
+    """Return the pid of a process running in a given unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit
+        process: The process name to search for
+    Returns:
+        A integer for the process id
+    """
+    try:
+        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", process)
+        pid = int(raw_pid.strip())
+
+        return pid
+    except Exception:
+        return None
+
+
+@retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
+async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> bool:
+    """Check is unit is online in the cluster.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+        action_unit_name: a different unit to run get status action
+    Returns:
+        A boolean
+    """
+    _, raw_status, _ = await ops_test.juju(
+        "run-action", action_unit_name, "get-cluster-status", "--format=yaml", "--wait"
+    )
+
+    status = yaml.safe_load(raw_status.strip())
+
+    cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"]["topology"]
+
+    for k, v in cluster_topology.items():
+        if k.replace("-", "/") == unit_name and v.get("status") == "online":
+            return True
+    raise TimeoutError
+
+
+def cut_network_from_unit(machine_name: str) -> None:
+    """Cut network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # apply a mask (device type `none`)
+    cut_network_command = f"lxc config device add {machine_name} eth0 none"
+    subprocess.check_call(cut_network_command.split())
+
+
+def restore_network_for_unit(machine_name: str) -> None:
+    """Restore network from a lxc container.
+
+    Args:
+        machine_name: lxc container hostname
+    """
+    # remove mask from eth0
+    restore_network_command = f"lxc config device remove {machine_name} eth0"
+    subprocess.check_call(restore_network_command.split())
+
+
+async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
+    """Get hostname for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    Returns:
+        The machine/container hostname
+    """
+    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
+    return raw_hostname.strip()
+
+
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15))
+def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
+    """Wait until network is restored.
+
+    Args:
+        model_name: The name of the model
+        hostname: The name of the instance
+        old_ip: old registered IP address
+    """
+    if instance_ip(model_name, hostname) == old_ip:
+        raise Exception
+
+
+async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
+    """Gracefully stop server.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    # send TERM signal to mysql daemon, which trigger shutdown process
+    await ops_test.juju("ssh", unit_name, "sudo", "pkill", "-15", "mysqld")
+
+    # hold execution until process is stopped
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+            with attempt:
+                if await get_process_pid(ops_test, unit_name, "mysqld"):
+                    raise Exception
+    except RetryError:
+        raise Exception("Failed to gracefully stop server.")
+
+
+async def start_server(ops_test: OpsTest, unit_name: str) -> None:
+    """Start a previously stopped machine.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    await ops_test.juju("ssh", unit_name, "sudo", "systemctl", "restart", "mysql")
+
+    # hold execution until process is started
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+            with attempt:
+                if not await get_process_pid(ops_test, unit_name, "mysqld"):
+                    raise Exception
+    except RetryError:
+        raise Exception("Failed to gracefully stop server.")
+
+
+async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
+    """Wrapper for getting primary.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        app_name: The name of the application
+    Returns:
+        The primary Unit object
+    """
+    unit = ops_test.model.applications[app_name].units[0]
+    cluster = cluster_name(unit, ops_test.model.info.name)
+
+    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
+
+    return await get_primary_unit(
+        ops_test, unit, app_name, cluster, SERVER_CONFIG_USERNAME, server_config_password
+    )
+
+
+async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
+    """Wrapper for getting unit ip.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    Returns:
+        The (str) ip of the unit
+    """
+    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
 
 
 async def get_relation_data(
@@ -495,20 +682,8 @@ async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
         a list that contains the hostnames of a given application
     """
     units = [app_unit.name for app_unit in ops_test.model.applications[app_name].units]
-    status = await ops_test.model.get_status()
-    machine_hostname = {}
 
-    for machine_id, v in status["machines"].items():
-        machine_hostname[machine_id] = v["hostname"]
-
-    unit_machine = {}
-    for unit in units:
-        unit_machine[unit] = status["applications"][app_name]["units"][f"{unit}"]["machine"]
-    hostnames = []
-    for unit, machine in unit_machine.items():
-        if machine in machine_hostname:
-            hostnames.append(machine_hostname[machine])
-    return hostnames
+    return [await unit_hostname(ops_test, unit_name) for unit_name in units]
 
 
 async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_name: str):
@@ -530,3 +705,35 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
     # check that endpoints are the one of the application
     for r_endpoint in read_only_endpoints:
         assert r_endpoint in app_hostnames
+
+
+async def get_controller_machine(ops_test: OpsTest) -> str:
+    """Return controller machine hostname.
+
+    Args:
+        ops_test: The ops test framework instance
+    Returns:
+        Controller hostname (str)
+    """
+    _, raw_controller, _ = await ops_test.juju("show-controller")
+
+    controller = yaml.safe_load(raw_controller.strip())
+
+    return [
+        machine.get("instance-id")
+        for machine in controller[ops_test.controller_name]["controller-machines"].values()
+    ][0]
+
+
+def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
+    """Test network reachability between hosts.
+
+    Args:
+        origin_machine: hostname of the machine to test connection from
+        target_machine: hostname of the machine to test connection to
+    """
+    try:
+        subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
+        return True
+    except subprocess.CalledProcessError:
+        return False
