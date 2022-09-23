@@ -269,7 +269,7 @@ class MySQLOperatorCharm(CharmBase):
 
         # set unit status based on member-{state,role}
         self.unit.status = (
-            ActiveStatus("R/W" if role == "primary" else "")
+            ActiveStatus(f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}")
             if state == "online"
             else MaintenanceStatus(state)
         )
