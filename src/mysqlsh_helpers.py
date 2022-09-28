@@ -24,6 +24,7 @@ MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
 MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
 MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
+MYSQL_SYSTEM_USER = "mysql"
 
 
 class MySQLServiceNotRunningError(Error):
@@ -201,3 +202,19 @@ class MySQL(MySQLBase):
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
         except subprocess.CalledProcessError as e:
             raise MySQLClientError(e.stderr)
+
+
+def write_content_to_file(
+    path: str,
+    content: str,
+    owner: str = MYSQL_SYSTEM_USER,
+    group: str = MYSQL_SYSTEM_USER,
+    permission: int = 0o640,
+) -> None:
+    """Write content to file."""
+    # TODO: check permission and error handling
+    with open(path, "w") as fd:
+        fd.write(content)
+
+    shutil.chown(path, owner, group)
+    os.chmod(path, mode=permission)

@@ -14,6 +14,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
 )
+
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -98,7 +99,7 @@ class MySQLOperatorCharm(CharmBase):
 
         for required_password in required_passwords:
             if not self._get_secret("app", required_password):
-                self._set_secret(
+                self.set_secret(
                     "app", required_password, generate_random_password(PASSWORD_LENGTH)
                 )
 
@@ -275,7 +276,7 @@ class MySQLOperatorCharm(CharmBase):
 
         self._mysql.update_user_password(username, new_password)
 
-        self._set_secret("app", secret_key, new_password)
+        self.set_secret("app", secret_key, new_password)
 
     # =======================
     #  Helpers
@@ -343,7 +344,7 @@ class MySQLOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Unknown secret scope.")
 
-    def _set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+    def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
         """Set secret in the secret storage."""
         if scope == "unit":
             if not value:
