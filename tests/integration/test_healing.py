@@ -11,7 +11,6 @@ from helpers import (
     app_name,
     cut_network_from_unit,
     execute_commands_on_unit,
-    generate_random_string,
     get_controller_machine,
     get_primary_unit_wrapper,
     get_process_pid,
@@ -27,6 +26,7 @@ from helpers import (
     start_server,
     unit_hostname,
     wait_network_restore,
+    write_random_chars_to_test_table,
 )
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
@@ -249,24 +249,9 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     logger.info("Get new primary")
     new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
-    new_primary_unit_ip = await get_unit_ip(ops_test, new_primary_unit.name)
-
-    random_chars = generate_random_string(40)
-    create_records_sql = [
-        "CREATE DATABASE IF NOT EXISTS test",
-        "DROP TABLE IF EXISTS test.data_replication_table",
-        "CREATE TABLE test.data_replication_table (id varchar(40), primary key(id))",
-        f"INSERT INTO test.data_replication_table VALUES ('{random_chars}')",
-    ]
 
     logger.info("Write to new primary")
-    await execute_commands_on_unit(
-        new_primary_unit_ip,
-        SERVER_CONFIG_USERNAME,
-        server_config_password,
-        create_records_sql,
-        commit=True,
-    )
+    random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
 
     # restart server on old primary
     logger.info(f"Re starting server on unit {primary_unit.name}")
@@ -293,3 +278,139 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
                 assert random_chars in output, "❌ Data was not synced"
     except RetryError:
         assert False, "❌ Data was not synced"
+
+
+@pytest.mark.order(5)
+@pytest.mark.abort_on_fail
+@pytest.mark.healing_tests
+async def test_cluster_pause(ops_test: OpsTest):
+    """Pause test.
+
+    A graceful simultaneous restart of all instances,
+    check primary election after the start, write and read data
+    """
+    app = await app_name(ops_test)
+    all_units = ops_test.model.applications[app].units
+
+    config = {
+        "username": CLUSTER_ADMIN_USERNAME,
+        "password": await get_system_user_password(all_units[0], CLUSTER_ADMIN_USERNAME),
+    }
+
+    # stop all instances
+    logger.info("Stopping all instances")
+    for unit in all_units:
+        await graceful_stop_server(ops_test, unit.name)
+
+    # verify connection is not possible to any instance
+    for unit in all_units:
+        unit_ip = await get_unit_ip(ops_test, unit.name)
+        config["host"] = unit_ip
+        assert not is_connection_possible(
+            config
+        ), f"❌ connection to unit {unit.name} is still possible"
+
+    # restart all instances
+    logger.info("Starting all instances")
+    for unit in all_units:
+        await start_server(ops_test, unit.name)
+
+    async with ops_test.fast_forward():
+        # trigger update status asap
+        # which in has self healing handler
+
+        # verify all instances are accessible
+        for unit in all_units:
+            unit_ip = await get_unit_ip(ops_test, unit.name)
+            config["host"] = unit_ip
+            assert is_connection_possible(
+                config
+            ), f"❌ connection to unit {unit.name} is not possible"
+
+        # retrieve primary
+        primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+        # write to primary
+        random_chars = await write_random_chars_to_test_table(ops_test, primary_unit)
+        server_config_password = await get_system_user_password(
+            primary_unit, SERVER_CONFIG_USERNAME
+        )
+
+        # read from secondaries
+        for unit in set(all_units) - {primary_unit}:
+            # read and verify data
+            select_data_sql = [
+                f"SELECT * FROM test.data_replication_table WHERE id = '{random_chars}'",
+            ]
+
+            unit_ip = await get_unit_ip(ops_test, unit.name)
+
+            # allow some time for sync
+            try:
+                for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+                    with attempt:
+                        output = await execute_commands_on_unit(
+                            unit_ip,
+                            SERVER_CONFIG_USERNAME,
+                            server_config_password,
+                            select_data_sql,
+                        )
+                        assert random_chars in output, "❌ Data was not synced"
+            except RetryError:
+                assert False, "❌ Data was not synced"
+
+
+@pytest.mark.order(5)
+@pytest.mark.abort_on_fail
+@pytest.mark.healing_tests
+async def test_sst_test(ops_test: OpsTest) -> None:
+    """The SST test.
+
+    A forceful restart instance with deleted data and without transaction logs (forced clone).
+    """
+    app = await app_name(ops_test)
+    primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+    # copy data dir content removal script
+    await ops_test.juju("scp", "tests/integration/clean-data-dir.sh", f"{primary_unit.name}:/tmp")
+
+    logger.info(f"Stopping server on unit {primary_unit.name}")
+    await graceful_stop_server(ops_test, primary_unit.name)
+
+    logger.info("Removing data directory")
+    # data removal run within a script
+    # so it allow `*` expansion
+    return_code, _, _ = await ops_test.juju(
+        "ssh",
+        primary_unit.name,
+        "sudo",
+        "/tmp/clean-data-dir.sh",
+    )
+
+    assert return_code == 0, "❌ Failed to remove data directory"
+
+    async with ops_test.fast_forward():
+        # Wait for unit switch to maintenance status
+        logger.info("Waiting unit to enter in maintenance.")
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "maintenance",
+            timeout=300,
+        )
+
+        # Wait for unit switch back to active status, this is where self-healing happens
+        logger.info("Waiting unit to be back online.")
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "active",
+            timeout=300,
+        )
+
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+    # verify new primary
+    assert primary_unit.name != new_primary_unit.name, "❌ Primary hasn't changed."
+
+    # verify instance is part of the cluster
+    logger.info("Check if instance in cluster")
+    assert await is_unit_in_cluster(
+        ops_test, primary_unit.name, new_primary_unit.name
+    ), "❌ Unit not online in the cluster"
