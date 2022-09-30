@@ -290,9 +290,16 @@ def write_content_to_file(
     group: str = MYSQL_SYSTEM_USER,
     permission: int = 0o640,
 ) -> None:
-    """Write content to file."""
-    # TODO: check permission and error handling
-    with open(path, "w") as fd:
+    """Write content to file.
+
+    Args:
+        path: filesystem full path (with filename)
+        content: string content to write
+        owner: file owner
+        group: file group
+        permission: file permission
+    """
+    with open(path, "w", encoding="utf-8") as fd:
         fd.write(content)
 
     shutil.chown(path, owner, group)

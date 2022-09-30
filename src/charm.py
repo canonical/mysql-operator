@@ -17,10 +17,12 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
 )
 from charms.operator_libs_linux.v0.systemd import (
+    service_restart,
     service_running,
     service_start,
     service_stop,
 )
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -53,6 +55,7 @@ from mysqlsh_helpers import MySQL, MySQLReconfigureError, instance_hostname
 from relations.database import DatabaseRelation
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
+from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
@@ -84,6 +87,10 @@ class MySQLOperatorCharm(CharmBase):
         self.db_router_relation = DBRouterRelation(self)
         self.database_relation = DatabaseRelation(self)
         self.mysql_relation = MySQLRelation(self)
+        self.tls = MySQLTLS(self)
+        self.restart_manager = RollingOpsManager(
+            charm=self, relation="restart", callback=self._restart
+        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -112,7 +119,7 @@ class MySQLOperatorCharm(CharmBase):
         ]
 
         for required_password in required_passwords:
-            if not self._get_secret("app", required_password):
+            if not self.get_secret("app", required_password):
                 self.set_secret(
                     "app", required_password, generate_random_password(PASSWORD_LENGTH)
                 )
@@ -124,7 +131,7 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # Set the cluster name in the peer relation databag if it is not already set
-        peer_data = self._peers.data[self.app]
+        peer_data = self.peers.data[self.app]
 
         if not peer_data.get("cluster-name"):
             peer_data["cluster-name"] = (
@@ -170,10 +177,10 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
             return
 
-        self._peers.data[self.app]["units-added-to-cluster"] = "1"
+        self.peers.data[self.app]["units-added-to-cluster"] = "1"
 
         self.unit_peer_data["member-role"] = "primary"
-        self.unit.status = ActiveStatus("R/W")
+        self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the peer relation joined event."""
@@ -209,8 +216,8 @@ class MySQLOperatorCharm(CharmBase):
         # Update 'units-added-to-cluster' counter in the peer relation databag
         # in order to trigger a relation_changed event which will move the added unit
         # into ActiveStatus
-        units_started = int(self._peers.data[self.app]["units-added-to-cluster"])
-        self._peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
+        units_started = int(self.peers.data[self.app]["units-added-to-cluster"])
+        self.peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
@@ -224,7 +231,7 @@ class MySQLOperatorCharm(CharmBase):
         if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
             unit_label
         ):
-            self.unit.status = ActiveStatus()
+            self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
@@ -243,7 +250,7 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.remove_instance(unit_label)
 
         # Inform other hooks of current status
-        self._peers.data[self.unit]["unit-status"] = "removing"
+        self.peers.data[self.unit]["unit-status"] = "removing"
 
     def _on_update_status(self, _) -> None:
         """Handle update status.
@@ -269,7 +276,7 @@ class MySQLOperatorCharm(CharmBase):
 
         # set unit status based on member-{state,role}
         self.unit.status = (
-            ActiveStatus(f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}")
+            ActiveStatus(self.active_status_message)
             if state == "online"
             else MaintenanceStatus(state)
         )
@@ -282,7 +289,7 @@ class MySQLOperatorCharm(CharmBase):
         if state == "offline":
             # Group Replication is active but the member does not belong to any group
             all_states = {
-                self._peers.data[unit].get("member-state", "unknown") for unit in self._peers.units
+                self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
             }
 
             if all_states == {"offline"}:
@@ -291,7 +298,7 @@ class MySQLOperatorCharm(CharmBase):
                     logger.debug("Attempting reboot from complete outage.")
                     # fetch instance names to rejoin allowing non-interactive process
                     rejoin_instances = {
-                        self._peers.data[unit]["instance-hostname"] for unit in self._peers.units
+                        self.peers.data[unit]["instance-hostname"] for unit in self.peers.units
                     }
                     logger.debug(f"Reboot cluster rejoining instances: {rejoin_instances}")
                     self._mysql.reboot_from_complete_outage(rejoin_instances)
@@ -326,7 +333,7 @@ class MySQLOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Invalid username.")
 
-        event.set_results({"username": username, "password": self._get_secret("app", secret_key)})
+        event.set_results({"username": username, "password": self.get_secret("app", secret_key)})
 
     def _on_set_password(self, event: ActionEvent) -> None:
         """Action used to update/rotate the system user's password."""
@@ -360,57 +367,57 @@ class MySQLOperatorCharm(CharmBase):
     @property
     def _mysql(self):
         """Returns an instance of the MySQL object from mysqlsh_helpers."""
-        peer_data = self._peers.data[self.app]
+        peer_data = self.peers.data[self.app]
 
         return MySQL(
             self.model.get_binding(PEER).network.bind_address,
             peer_data["cluster-name"],
-            self._get_secret("app", ROOT_PASSWORD_KEY),
+            self.get_secret("app", ROOT_PASSWORD_KEY),
             SERVER_CONFIG_USERNAME,
-            self._get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
+            self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
             CLUSTER_ADMIN_USERNAME,
-            self._get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
+            self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
         )
 
     @property
-    def _peers(self):
+    def peers(self):
         """Retrieve the peer relation (`ops.model.Relation`)."""
         return self.model.get_relation(PEER)
 
     @property
     def _is_peer_data_set(self):
         """Returns True if the peer relation data is set."""
-        peer_data = self._peers.data[self.app]
+        peer_data = self.peers.data[self.app]
 
         return (
             peer_data.get("cluster-name")
-            and self._get_secret("app", ROOT_PASSWORD_KEY)
-            and self._get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
-            and self._get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY)
+            and self.get_secret("app", ROOT_PASSWORD_KEY)
+            and self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
+            and self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY)
         )
 
     @property
     def cluster_initialized(self):
         """Returns True if the cluster is initialized."""
-        return self._peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
+        return self.peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
 
     @property
     def app_peer_data(self) -> Dict:
         """Application peer relation data object."""
-        if self._peers is None:
+        if self.peers is None:
             return {}
 
-        return self._peers.data[self.app]
+        return self.peers.data[self.app]
 
     @property
     def unit_peer_data(self) -> Dict:
         """Unit peer relation data object."""
-        if self._peers is None:
+        if self.peers is None:
             return {}
 
-        return self._peers.data[self.unit]
+        return self.peers.data[self.unit]
 
-    def _get_secret(self, scope: str, key: str) -> Optional[str]:
+    def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
             return self.unit_peer_data.get(key, None)
@@ -433,6 +440,12 @@ class MySQLOperatorCharm(CharmBase):
             self.app_peer_data.update({key: value})
         else:
             raise RuntimeError("Unknown secret scope.")
+
+    @property
+    def active_status_message(self):
+        """Active status message."""
+        role = self.unit_peer_data.get("member-role")
+        return f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}"
 
     def _workload_initialise(self):
         """Workload initialisation commands.
@@ -484,13 +497,21 @@ class MySQLOperatorCharm(CharmBase):
         except MySQLConfigureInstanceError:
             return BlockedStatus("Failed to re-configure instance for InnoDB")
 
-        return ActiveStatus()
+        return ActiveStatus(self.active_status_message)
 
     def _get_primary_address_from_peers(self) -> str:
         """Retrieve primary address based on peer data."""
-        for unit in self._peers.units:
-            if self._peers.data[unit]["member-role"] == "primary":
-                return self._peers.data[unit]["instance-hostname"]
+        for unit in self.peers.units:
+            if self.peers.data[unit]["member-role"] == "primary":
+                return self.peers.data[unit]["instance-hostname"]
+
+    def _restart(self, _) -> None:
+        if service_restart(SERVICE_NAME):
+            self._mysql.wait_until_mysql_connection()
+            self.unit.status = ActiveStatus(self.active_status_message)
+            return
+
+        self.unit.status = BlockedStatus("Failed to restart mysqld")
 
 
 if __name__ == "__main__":
