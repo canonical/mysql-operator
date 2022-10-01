@@ -18,11 +18,6 @@ from charms.mysql.v0.mysql import (
     MySQLRebootFromCompleteOutageError,
 )
 from charms.operator_libs_linux.v0.systemd import (
-    service_running,
-    service_start,
-    service_stop,
-)
-from charms.operator_libs_linux.v0.systemd import (
     service_restart,
     service_running,
     service_start,
@@ -303,64 +298,6 @@ class MySQLOperatorCharm(CharmBase):
                 self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
             }
 
-            if all_states == {"offline"}:
-                # All instance are off, reboot cluster from outage from the leader unit
-                if self.unit.is_leader():
-                    logger.debug("Attempting reboot from complete outage.")
-                    # fetch instance names to rejoin allowing non-interactive process
-                    rejoin_instances = {
-                        self.peers.data[unit]["instance-hostname"] for unit in self.peers.units
-                    }
-                    logger.debug(f"Reboot cluster rejoining instances: {rejoin_instances}")
-                    self._mysql.reboot_from_complete_outage(rejoin_instances)
-
-        if state == "unreachable" and (
-            service_running(SERVICE_NAME) or not service_start(SERVICE_NAME)
-        ):
-            # mysqld access not possible with daemon running or start fails
-            # force reset necessary
-            self.unit.status = self._workload_reset(force=True)
-
-    def _on_update_status(self, _) -> None:
-        """Handle update status.
-
-        Takes care of workload health checks.
-        """
-        if not self.cluster_initialized or not self.unit_peer_data.get("member-role"):
-            # health checks only after cluster and member are initialised
-            return
-
-        # retrieve and persist state for every unit
-        try:
-            state, role = self._mysql.get_member_state()
-            self.unit_peer_data["member-role"] = role
-            self.unit_peer_data["member-state"] = state
-        except MySQLGetMemberStateError:
-            if self.unit_peer_data.get("member-state") == "waiting":
-                # avoid changing status while in initialisation
-                return
-            role = self.unit_peer_data["member-role"] = "unknown"
-            state = self.unit_peer_data["member-state"] = "unreachable"
-        logger.info(f"Unit workload member-state is {state} with member-role {role}")
-
-        # set unit status based on member-{state,role}
-        self.unit.status = (
-            ActiveStatus(f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}")
-            if state == "online"
-            else MaintenanceStatus(state)
-        )
-
-        if state == "recovering":
-            # server is in the process of becoming an active member
-            logger.info("Instance is being recovered")
-            return
-
-        if state == "offline":
-            # Group Replication is active but the member does not belong to any group
-            all_states = {
-                self._peers.data[unit].get("member-state", "unknown") for unit in self._peers.units
-            }
-
             if all_states == {"offline"} and self.unit.is_leader():
                 # All instance are off, reboot cluster from outage from the leader unit
 
@@ -578,12 +515,6 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = BlockedStatus("Failed to restart mysqld")
-
-    def _get_primary_address_from_peers(self) -> str:
-        """Retrieve primary address based on peer data."""
-        for unit in self._peers.units:
-            if self._peers.data[unit]["member-role"] == "primary":
-                return self._peers.data[unit]["instance-hostname"]
 
 
 if __name__ == "__main__":
