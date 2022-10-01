@@ -36,6 +36,10 @@ class MySQLReconfigureError(Error):
     """Exception raised when the MySQL server fails to bootstrap."""
 
 
+class MySQLDataPurgeError(Error):
+    """Exception raised when there's an error purging data dir."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -253,6 +257,7 @@ class MySQL(MySQLBase):
                     shutil.rmtree(file_path)
         except OSError:
             logger.error(f"Failed to remove {file_path}")
+            raise MySQLDataPurgeError("Failed to purge data")
 
     def reconfigure_mysqld(self) -> None:
         """Reconfigure mysql-server package.

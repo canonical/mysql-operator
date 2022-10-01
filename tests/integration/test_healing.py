@@ -394,14 +394,14 @@ async def test_sst_test(ops_test: OpsTest) -> None:
         logger.info("Waiting unit to enter in maintenance.")
         await ops_test.model.block_until(
             lambda: primary_unit.workload_status == "maintenance",
-            timeout=300,
+            timeout=5 * 60,
         )
 
         # Wait for unit switch back to active status, this is where self-healing happens
         logger.info("Waiting unit to be back online.")
         await ops_test.model.block_until(
             lambda: primary_unit.workload_status == "active",
-            timeout=300,
+            timeout=5 * 60,
         )
 
     new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
