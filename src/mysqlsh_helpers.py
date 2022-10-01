@@ -24,12 +24,19 @@ MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
 MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
 MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
+MYSQL_DATA_DIR = "/var/lib/mysql"
 
 
 class MySQLServiceNotRunningError(Error):
     """Exception raised when the MySQL service is not running."""
 
-    pass
+
+class MySQLReconfigureError(Error):
+    """Exception raised when the MySQL server fails to bootstrap."""
+
+
+class MySQLDataPurgeError(Error):
+    """Exception raised when there's an error purging data dir."""
 
 
 class MySQL(MySQLBase):
@@ -201,3 +208,80 @@ class MySQL(MySQLBase):
             return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
         except subprocess.CalledProcessError as e:
             raise MySQLClientError(e.stderr)
+
+    def is_data_dir_initialised(self) -> bool:
+        """Check if data dir is initialised.
+
+        Returns:
+            A bool for an initialised and integral data dir.
+        """
+        try:
+            content = os.listdir(MYSQL_DATA_DIR)
+
+            # minimal expected content for an integral mysqld data-dir
+            expected_content = {
+                "mysql",
+                "public_key.pem",
+                "sys",
+                "ca.pem",
+                "client-key.pem",
+                "mysql.ibd",
+                "auto.cnf",
+                "server-cert.pem",
+                "ib_buffer_pool",
+                "server-key.pem",
+                "undo_002",
+                "#innodb_redo",
+                "undo_001",
+                "#innodb_temp",
+                "private_key.pem",
+                "client-cert.pem",
+                "ca-key.pem",
+                "performance_schema",
+            }
+
+            return expected_content <= set(content)
+        except FileNotFoundError:
+            return False
+
+    def reset_data_dir(self) -> None:
+        """Reset a data directory to a pristine state."""
+        logger.info("Purge data directory")
+        try:
+            for file_name in os.listdir(MYSQL_DATA_DIR):
+                file_path = os.path.join(MYSQL_DATA_DIR, file_name)
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+        except OSError:
+            logger.error(f"Failed to remove {file_path}")
+            raise MySQLDataPurgeError("Failed to purge data")
+
+    def reconfigure_mysqld(self) -> None:
+        """Reconfigure mysql-server package.
+
+        Reconfiguring mysql-package recreates data structures as if it was newly installed.
+
+        Raises:
+            MySQLReconfigureError: Error occurred when reconfiguring server package.
+        """
+        bootstrap_command = ["dpkg-reconfigure", MYSQL_APT_PACKAGE_NAME]
+
+        logger.info("Reconfiguring mysql-server package")
+        try:
+            subprocess.check_call(bootstrap_command)
+        except subprocess.CalledProcessError:
+            logger.debug("Failed to reconfigure package")
+            raise MySQLReconfigureError("Failed to reconfigure mysql-server")
+
+
+def instance_hostname():
+    """Retrieve machine hostname."""
+    try:
+        raw_hostname = subprocess.check_output(["hostname"])
+
+        return raw_hostname.decode("utf8").strip()
+    except subprocess.CalledProcessError as e:
+        logger.exception("Failed to retrieve hostname", e)
+        return None
