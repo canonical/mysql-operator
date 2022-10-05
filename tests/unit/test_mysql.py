@@ -195,8 +195,8 @@ class TestMySQLBase(unittest.TestCase):
         _expected_create_scoped_user_commands = "\n".join(
             (
                 "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                "session.run_sql(\"CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY 'test-password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
-                "session.run_sql(\"GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;\")",
+                'session.run_sql("CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY \'test-password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
+                'session.run_sql("GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;")',
                 'session.run_sql("GRANT ALL PRIVILEGES ON `test-database`.* TO `test-username`@`1.1.1.1`;")',
             )
         )

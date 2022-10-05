@@ -387,7 +387,7 @@ class MySQLBase(ABC):
             create_scoped_user_commands = (
                 f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f"session.run_sql(\"CREATE USER `{username}`@`{hostname}` IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_user_attributes}';\")",
-                f"session.run_sql(\"GRANT USAGE ON *.* TO `{username}`@`{hostname}`;\")",
+                f'session.run_sql("GRANT USAGE ON *.* TO `{username}`@`{hostname}`;")',
                 f'session.run_sql("GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`;")',
             )
 
