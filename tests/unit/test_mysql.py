@@ -188,21 +188,21 @@ class TestMySQLBase(unittest.TestCase):
         _expected_create_database_commands = "\n".join(
             (
                 "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                'session.run_sql("CREATE DATABASE IF NOT EXISTS test_database;")',
+                'session.run_sql("CREATE DATABASE IF NOT EXISTS `test-database`;")',
             )
         )
 
         _expected_create_scoped_user_commands = "\n".join(
             (
                 "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
-                "session.run_sql(\"GRANT USAGE ON *.* TO 'test_username'@`1.1.1.1`;\")",
-                'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
+                "session.run_sql(\"CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY 'test-password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
+                "session.run_sql(\"GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;\")",
+                'session.run_sql("GRANT ALL PRIVILEGES ON `test-database`.* TO `test-username`@`1.1.1.1`;")',
             )
         )
 
         self.mysql.create_application_database_and_scoped_user(
-            "test_database", "test_username", "test_password", "1.1.1.1", "app/0"
+            "test-database", "test-username", "test-password", "1.1.1.1", "app/0"
         )
 
         self.assertEqual(_run_mysqlsh_script.call_count, 2)
