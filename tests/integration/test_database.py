@@ -260,14 +260,14 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
         ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
     assert len(relation_data) == 1
-    check_read_only_endpoints(
+    await check_read_only_endpoints(
         ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
 
     # increase the number of units
     async with ops_test.fast_forward():
         await scale_application(ops_test, DATABASE_APP_NAME, 4)
-    check_read_only_endpoints(
+    await check_read_only_endpoints(
         ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
 
@@ -280,7 +280,7 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
         for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
             with attempt:
                 # check update for read-only-endpoints
-                check_read_only_endpoints(
+                await check_read_only_endpoints(
                     ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
                 )
     except RetryError:
@@ -298,7 +298,7 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
         for attempt in AsyncRetrying(stop=stop_after_delay(5), wait=wait_fixed(20)):
             with attempt:
                 # check update for read-only-endpoints
-                check_read_only_endpoints(
+                await check_read_only_endpoints(
                     ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
                 )
     except RetryError:
@@ -315,7 +315,7 @@ async def test_relation_broken(ops_test: OpsTest):
     )
 
     await ops_test.model.block_until(
-        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
+        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True
     )
 
     async with ops_test.fast_forward():
