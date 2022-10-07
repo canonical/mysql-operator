@@ -14,11 +14,11 @@ from typing import List, Optional, Tuple
 
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
+    CertificateExpiringEvent,
     TLSCertificatesRequiresV1,
     generate_csr,
     generate_private_key,
 )
-from cryptography.x509.extensions import ExtensionType
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.model import MaintenanceStatus
@@ -56,7 +56,7 @@ class MySQLTLS(Object):
         )
 
         self.framework.observe(self.certs.on.certificate_available, self._on_certificate_available)
-        # self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
+        self.framework.observe(self.certs.on.certificate_expiring, self._on_certificate_expiring)
 
     # =======================
     #  Event Handlers
@@ -94,6 +94,26 @@ class MySQLTLS(Object):
         # trigger rolling restart
         self.charm.on[self.charm.restart_manager.name].acquire_lock.emit()
 
+    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
+        """Request the new certificate when old certificate is expiring."""
+        if event.certificate != self.charm.get_secret(SCOPE, "cert"):
+            logger.error("An unknown certificate expiring.")
+            return
+
+        key = self.charm.get_secret(SCOPE, "key").encode("utf-8")
+        old_csr = self.charm.get_secret(SCOPE, "csr").encode("utf-8")
+        new_csr = generate_csr(
+            private_key=key,
+            subject=self.charm.get_hostname_by_unit(self.charm.unit.name),
+            organization=self.charm.app.name,
+            sans=self._get_sans(),
+        )
+        self.certs.request_certificate_renewal(
+            old_certificate_signing_request=old_csr,
+            new_certificate_signing_request=new_csr,
+        )
+        self.charm.set_secret(SCOPE, "csr", new_csr.decode("utf-8"))
+
     def _on_tls_relation_broken(self, _) -> None:
         """Disable TLS when TLS relation broken."""
         self.charm.set_secret(SCOPE, "ca", None)
@@ -120,7 +140,6 @@ class MySQLTLS(Object):
             subject=self.charm.unit_peer_data["instance-hostname"].split(":")[0],
             organization=self.charm.app.name,
             sans=self._get_sans(),
-            additional_critical_extensions=self._get_tls_extensions(),
         )
 
         # store secrets
@@ -153,11 +172,6 @@ class MySQLTLS(Object):
             socket.getfqdn(),
             str(self.charm.model.get_binding(self.charm.peers).network.bind_address),
         ]
-
-    @staticmethod
-    def _get_tls_extensions() -> Optional[List[ExtensionType]]:
-        # TODO: verify extensions need
-        return None
 
     def get_tls_content(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """Retrieve TLS content.
