@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -387,15 +387,15 @@ class MySQLBase(ABC):
             # Using server_config_user as we are sure it has create database grants
             create_database_commands = (
                 f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
-                f'session.run_sql("CREATE DATABASE IF NOT EXISTS {database_name};")',
+                f'session.run_sql("CREATE DATABASE IF NOT EXISTS `{database_name}`;")',
             )
 
             escaped_user_attributes = json.dumps({"unit_name": unit_name}).replace('"', r"\"")
             # Using server_config_user as we are sure it has create user grants
             create_scoped_user_commands = (
                 f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
-                f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_user_attributes}';\")",
-                f"session.run_sql(\"GRANT USAGE ON *.* TO '{username}'@`{hostname}`;\")",
+                f"session.run_sql(\"CREATE USER `{username}`@`{hostname}` IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_user_attributes}';\")",
+                f'session.run_sql("GRANT USAGE ON *.* TO `{username}`@`{hostname}`;")',
                 f'session.run_sql("GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`;")',
             )
 
