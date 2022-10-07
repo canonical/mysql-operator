@@ -25,6 +25,9 @@ jobs:
         run: tox -e unit
   integration-test-lxd-ha:
     name: Integration tests for HA (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,6 +40,9 @@ jobs:
         run: tox -e integration-ha
   integration-test-lxd-db-router:
     name: Integration tests for db-router relation (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,6 +55,9 @@ jobs:
         run: tox -e integration-db-router
   integration-test-lxd-shared-db:
     name: Integration tests for shared-db relation (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -61,6 +70,9 @@ jobs:
         run: tox -e integration-shared-db
   integration-test-lxd-database:
     name: Integration tests for database relation (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -73,6 +85,9 @@ jobs:
         run: tox -e integration-database
   integration-test-lxd-mysql:
     name: Integration tests for mysql interface (lxd)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -85,6 +100,9 @@ jobs:
         run: tox -e integration-mysql-interface
   integration-test-self-healing:
     name: Integration tests for self healing scenarios
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
