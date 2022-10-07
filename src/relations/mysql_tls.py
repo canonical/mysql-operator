@@ -19,7 +19,6 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from cryptography.x509.extensions import ExtensionType
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.model import MaintenanceStatus
@@ -106,8 +105,8 @@ class MySQLTLS(Object):
         new_csr = generate_csr(
             private_key=key,
             subject=self.charm.get_hostname_by_unit(self.charm.unit.name),
+            organization=self.charm.app.name,
             sans=self._get_sans(),
-            additional_critical_extensions=self._get_tls_extensions(),
         )
         self.certs.request_certificate_renewal(
             old_certificate_signing_request=old_csr,
@@ -141,7 +140,6 @@ class MySQLTLS(Object):
             subject=self.charm.unit_peer_data["instance-hostname"].split(":")[0],
             organization=self.charm.app.name,
             sans=self._get_sans(),
-            additional_critical_extensions=self._get_tls_extensions(),
         )
 
         # store secrets
@@ -174,11 +172,6 @@ class MySQLTLS(Object):
             socket.getfqdn(),
             str(self.charm.model.get_binding(self.charm.peers).network.bind_address),
         ]
-
-    @staticmethod
-    def _get_tls_extensions() -> Optional[List[ExtensionType]]:
-        # TODO: verify extensions need
-        return None
 
     def get_tls_content(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """Retrieve TLS content.
