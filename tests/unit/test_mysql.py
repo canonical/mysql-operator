@@ -336,7 +336,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         create_cluster_commands = (
             "shell.connect('serverconfig:serverconfigpassword@127.0.0.1')",
-            "cluster = dba.create_cluster('test_cluster', {\"communicationStack\": \"MySQL\"})",
+            'cluster = dba.create_cluster(\'test_cluster\', {"communicationStack": "MySQL"})',
             "cluster.set_instance_option('127.0.0.1', 'label', 'mysql-0')",
         )
 
