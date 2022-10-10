@@ -798,3 +798,23 @@ async def get_tls_ca(
     if len(relation_data) == 0:
         return ""
     return json.loads(relation_data[0]["application-data"]["certificates"])[0].get("ca")
+
+
+async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> str:
+    """Return md5 hash for given file.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+        file_path: The path to the file
+
+    Returns:
+        md5sum hash string
+    """
+    try:
+        _, md5sum_raw, _ = await ops_test.juju("ssh", unit_name, "sudo", "md5sum", file_path)
+
+        return md5sum_raw.strip().split()[0]
+
+    except Exception:
+        return None
