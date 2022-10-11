@@ -261,7 +261,7 @@ class MySQLOperatorCharm(CharmBase):
     def _on_update_status(self, _) -> None:
         """Handle update status.
 
-        Takes care of workload health checks and.
+        Takes care of workload health checks.
         """
         if not self.cluster_initialized or not self.unit_peer_data.get("member-role"):
             # health checks only after cluster and member are initialised
