@@ -326,7 +326,21 @@ class MySQLOperatorCharm(CharmBase):
     # =======================
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used to retrieve the cluster status."""
-        event.set_results(self._mysql.get_cluster_status())
+        status = self._mysql.get_cluster_status()
+        if status:
+            event.set_results(
+                {
+                    "success": True,
+                    "status": status,
+                }
+            )
+        else:
+            event.set_results(
+                {
+                    "success": False,
+                    "message": "Failed to read cluster status.  See logs for more information.",
+                }
+            )
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Action used to retrieve the system user's password."""
