@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -498,9 +498,15 @@ class MySQLBase(ABC):
 
         Raises MySQLCreateClusterError if there was an issue creating the cluster.
         """
+        # defaulting group replication communication stack to MySQL instead of XCOM
+        # since it will encrypt gr members communication by default
+        options = {
+            "communicationStack": "MySQL",
+        }
+
         commands = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
-            f"cluster = dba.create_cluster('{self.cluster_name}')",
+            f"cluster = dba.create_cluster('{self.cluster_name}', {json.dumps(options)})",
             f"cluster.set_instance_option('{self.instance_address}', 'label', '{unit_label}')",
         )
 
