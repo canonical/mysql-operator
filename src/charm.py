@@ -543,6 +543,9 @@ class MySQLOperatorCharm(CharmBase):
             except RetryError:
                 logger.error("Unable to rejoin mysqld instance to the cluster.")
                 self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
+        else:
+            logger.error("Failed to restart mysqld on rolling restart")
+            self.unit.status = BlockedStatus("Failed to restart mysqld")
 
 
 if __name__ == "__main__":
