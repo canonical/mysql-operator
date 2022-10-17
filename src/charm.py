@@ -39,6 +39,7 @@ from ops.model import (
     StatusBase,
     WaitingStatus,
 )
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -325,7 +326,21 @@ class MySQLOperatorCharm(CharmBase):
     # =======================
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used to retrieve the cluster status."""
-        event.set_results(self._mysql.get_cluster_status())
+        status = self._mysql.get_cluster_status()
+        if status:
+            event.set_results(
+                {
+                    "success": True,
+                    "status": status,
+                }
+            )
+        else:
+            event.set_results(
+                {
+                    "success": False,
+                    "message": "Failed to read cluster status.  See logs for more information.",
+                }
+            )
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Action used to retrieve the system user's password."""
@@ -509,12 +524,28 @@ class MySQLOperatorCharm(CharmBase):
                 return self.peers.data[unit]["instance-hostname"]
 
     def _restart(self, _) -> None:
-        if service_restart(SERVICE_NAME):
-            self._mysql.wait_until_mysql_connection()
-            self.unit.status = ActiveStatus(self.active_status_message)
-            return
+        """Restart server rolling ops callback function.
 
-        self.unit.status = BlockedStatus("Failed to restart mysqld")
+        Hold execution until server is back in the cluster.
+        Used exclusively for rolling restarts.
+        """
+        logger.debug("Restarting mysqld daemon")
+        if service_restart(SERVICE_NAME):
+            unit_label = self.unit.name.replace("/", "-")
+
+            try:
+                for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
+                    with attempt:
+                        if self._mysql.is_instance_in_cluster(unit_label):
+                            self.unit.status = ActiveStatus(self.active_status_message)
+                            return
+                        raise Exception
+            except RetryError:
+                logger.error("Unable to rejoin mysqld instance to the cluster.")
+                self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
+        else:
+            logger.error("Failed to restart mysqld on rolling restart")
+            self.unit.status = BlockedStatus("Failed to restart mysqld")
 
 
 if __name__ == "__main__":

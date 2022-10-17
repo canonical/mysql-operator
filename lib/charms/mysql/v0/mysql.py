@@ -683,14 +683,15 @@ class MySQLBase(ABC):
             )
             return False
 
-    def get_cluster_status(self) -> dict:
+    def get_cluster_status(self) -> Optional[dict]:
         """Get the cluster status.
 
         Executes script to retrieve cluster status.
         Won't raise errors.
 
         Returns:
-            Cluster status as a dictionary
+            Cluster status as a dictionary,
+            or None if running the status script fails.
         """
         status_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
