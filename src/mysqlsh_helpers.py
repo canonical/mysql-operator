@@ -332,4 +332,7 @@ def alternate_install_mysql_shell():
     ) as out_file:
         shutil.copyfileobj(r, out_file)
 
+    # install package
     subprocess.check_call("sudo dpkg -i mysql-shell.deb".split())
+    # emulate snap directory
+    os.makedirs(MYSQL_SHELL_COMMON_DIRECTORY)
