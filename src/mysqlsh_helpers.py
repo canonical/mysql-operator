@@ -9,8 +9,8 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
-import urllib3
 
+import urllib3
 from charms.mysql.v0.mysql import Error, MySQLBase, MySQLClientError
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
