@@ -399,7 +399,10 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     )
     output = json.loads(output.decode("utf-8"))
 
-    return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+    for relation in output[unit.name]["relation-info"]:
+        if relation["endpoint"] == "database-peers":
+            return relation["application-data"]["cluster-name"]
+    raise ValueError("Failed to retrieve cluster name")
 
 
 async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
