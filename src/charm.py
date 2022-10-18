@@ -305,7 +305,7 @@ class MySQLOperatorCharm(CharmBase):
                 logger.debug("Attempting reboot from complete outage.")
                 # fetch instance names to rejoin allowing non-interactive process
                 rejoin_instances = {
-                    self._peers.data[unit]["instance-hostname"] for unit in self._peers.units
+                    self.peers.data[unit]["instance-hostname"] for unit in self.peers.units
                 }
                 logger.debug(f"Reboot cluster rejoining instances: {rejoin_instances}")
                 try:
