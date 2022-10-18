@@ -4,6 +4,7 @@
 
 import logging
 from pathlib import Path
+from time import sleep
 
 import pytest
 import yaml
@@ -158,6 +159,9 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     # set key using auto-generated key for each unit
     for unit in ops_test.model.applications[app].units:
         action = await unit.run_action(action_name="set-tls-private-key")
+        # action.wait not always await action status to change
+        # adding some time to address finicky CI test
+        sleep(4)
         action = await action.wait()
         assert action.status == "completed", "❌ setting key failed"
 
