@@ -161,10 +161,10 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         action = await unit.run_action(action_name="set-tls-private-key")
         # action.wait not always await action status to change
         # retry to address finicky CI test
-        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(2)):
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
             with attempt:
-                action = await action.wait()
-                assert action.status == "completed", "❌ setting key failed"
+                action_run = await action.wait()
+                assert action_run.status == "completed", "❌ setting key failed"
 
     # Wait for hooks start reconfiguring app
     await ops_test.model.block_until(
