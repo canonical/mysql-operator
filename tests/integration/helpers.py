@@ -441,7 +441,9 @@ async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name
 
     status = yaml.safe_load(raw_status.strip())
 
-    cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"]["topology"]
+    cluster_topology = status[list(status.keys())[0]]["results"]["status"]["defaultreplicaset"][
+        "topology"
+    ]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
