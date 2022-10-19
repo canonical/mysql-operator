@@ -1,7 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import itertools
 import json
 import re
@@ -538,9 +537,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         raise Exception("Failed to start server.")
 
 
-async def get_primary_unit_wrapper(
-    ops_test: OpsTest, app_name: str, unit_excluded: Optional[Unit] = None
-) -> Unit:
+async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
     """Wrapper for getting primary.
 
     Args:
@@ -553,7 +550,13 @@ async def get_primary_unit_wrapper(
     if unit_excluded:
         # if defined, exclude unit from available unit to run command on
         # useful when the workload is stopped on unit
-        unit = ({ops_test.model.applications[app_name].units} - {unit_excluded}).pop()
+        unit = (
+            {
+                unit
+                for unit in ops_test.model.applications[app_name].units
+                if unit.name != unit_excluded.name
+            }
+        ).pop()
     else:
         unit = ops_test.model.applications[app_name].units[0]
     cluster = cluster_name(unit, ops_test.model.info.name)
