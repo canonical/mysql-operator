@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 from tests.integration.helpers import (
