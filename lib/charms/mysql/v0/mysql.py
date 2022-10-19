@@ -1075,17 +1075,12 @@ class MySQLBase(ABC):
         # MEMBER_ROLE is empty if member is not in a group
         return results[0], results[1] if len(results) == 2 else "unknown"
 
-    def reboot_from_complete_outage(self, instance_names: Set[str]) -> None:
-        """Wrapper for reboot_cluster_from_complete_outage command.
-
-        Args:
-            instance_names: set of instance names (e.g. `juju-e3f183-4:3306`)
-        """
-        options = {"rejoinInstances": list(instance_names)}
+    def reboot_from_complete_outage(self) -> None:
+        """Wrapper for reboot_cluster_from_complete_outage command."""
 
         rejoin_command = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}', {json.dumps(options)} )",
+            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
         )
 
         try:
