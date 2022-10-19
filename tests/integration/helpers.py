@@ -539,7 +539,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
 
 
 async def get_primary_unit_wrapper(
-    ops_test: OpsTest, app_name: str, unit_excluded: Optional[Unit]
+    ops_test: OpsTest, app_name: str, unit_excluded: Optional[Unit] = None
 ) -> Unit:
     """Wrapper for getting primary.
 
