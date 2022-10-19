@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import tempfile
 
-import urllib3
 from charms.mysql.v0.mysql import Error, MySQLBase, MySQLClientError
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
@@ -121,8 +120,14 @@ class MySQL(MySQLBase):
             logger.debug("Installing mysql server")
             apt.add_package(MYSQL_APT_PACKAGE_NAME)
 
-            # install mysql-shell
-            alternate_install_mysql_shell()
+            # install mysql shell if not already installed
+            logger.debug("Retrieving snap cache")
+            cache = snap.SnapCache()
+            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
+
+            if not mysql_shell.present:
+                logger.debug("Installing mysql shell snap")
+                mysql_shell.ensure(snap.SnapState.Latest, channel="edge")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
@@ -305,27 +310,3 @@ def write_content_to_file(
     shutil.chown(path, owner, group)
     os.chmod(path, mode=permission)
 
-
-def alternate_install_mysql_shell():
-    """Install mysql-shell from alternate sources.
-
-    Intended as workaround while mysql-shell snap is not updated.
-    Exceptions are intentionally not treated
-    """
-    deb_file = "mysql-shell_8.0.31-1ubuntu20.04_amd64.deb"
-    url = f"https://dev.mysql.com/get/Downloads/MySQL-Shell/{deb_file}"
-
-    if proxy := os.environ.get("http_proxy"):
-        http = urllib3.ProxyManager(proxy)
-    else:
-        http = urllib3.PoolManager()
-
-    logger.debug("Downloading mysql-shell package")
-    with http.request("GET", url, preload_content=False) as r, open(deb_file, "wb") as out_file:
-        shutil.copyfileobj(r, out_file)
-
-    # install deb package
-    logger.debug("Installing mysql-shell package")
-    subprocess.check_call(["sudo", "dpkg", "-i", deb_file])
-    # emulate snap directory to keep changes to a minimal
-    os.makedirs(MYSQL_SHELL_COMMON_DIRECTORY)
