@@ -309,4 +309,3 @@ def write_content_to_file(
 
     shutil.chown(path, owner, group)
     os.chmod(path, mode=permission)
-

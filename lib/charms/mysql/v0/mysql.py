@@ -69,7 +69,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
 
@@ -1077,7 +1077,6 @@ class MySQLBase(ABC):
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""
-
         rejoin_command = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
