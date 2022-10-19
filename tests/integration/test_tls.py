@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 from tests.integration.helpers import (
@@ -161,10 +161,13 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         action = await unit.run_action(action_name="set-tls-private-key")
         # action.wait not always await action status to change
         # retry to address finicky CI test
-        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
-            with attempt:
-                action_run = await action.wait()
-                assert action_run.status == "completed", "❌ setting key failed"
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+                with attempt:
+                    action_run = await action.wait()
+                    assert action_run.status == "completed", "❌ setting key failed"
+        except RetryError:
+            assert False, f"❌ Failed to rotate key in for {unit.name}"
 
     # Wait for hooks start reconfiguring app
     await ops_test.model.block_until(
