@@ -538,16 +538,24 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         raise Exception("Failed to start server.")
 
 
-async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
+async def get_primary_unit_wrapper(
+    ops_test: OpsTest, app_name: str, unit_excluded: Optional[Unit]
+) -> Unit:
     """Wrapper for getting primary.
 
     Args:
         ops_test: The ops test object passed into every test case
         app_name: The name of the application
+        unit_excluded: excluded unit to run command on
     Returns:
         The primary Unit object
     """
-    unit = ops_test.model.applications[app_name].units[0]
+    if unit_excluded:
+        # if defined, exclude unit from available unit to run command on
+        # useful when the workload is stopped on unit
+        unit = ({ops_test.model.applications[app_name].units} - {unit_excluded}).pop()
+    else:
+        unit = ops_test.model.applications[app_name].units[0]
     cluster = cluster_name(unit, ops_test.model.info.name)
 
     server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)

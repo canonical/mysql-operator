@@ -251,7 +251,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     # get primary to write to it
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     logger.info("Get new primary")
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, app, unit_excluded=primary_unit)
 
     logger.info("Write to new primary")
     random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
