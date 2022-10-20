@@ -1,7 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import itertools
 import json
 import re
@@ -320,11 +319,12 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
 
 
 @retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
-def is_connection_possible(credentials: Dict) -> bool:
+def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
     """Test a connection to a MySQL server.
 
     Args:
         credentials: A dictionary with the credentials to test
+        extra_opts: extra options for mysql connection
     """
     config = {
         "user": credentials["username"],
@@ -332,6 +332,7 @@ def is_connection_possible(credentials: Dict) -> bool:
         "host": credentials["host"],
         "raise_on_warnings": False,
         "connection_timeout": 10,
+        **extra_opts,
     }
 
     try:
@@ -397,7 +398,10 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     )
     output = json.loads(output.decode("utf-8"))
 
-    return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+    for relation in output[unit.name]["relation-info"]:
+        if relation["endpoint"] == "database-peers":
+            return relation["application-data"]["cluster-name"]
+    raise ValueError("Failed to retrieve cluster name")
 
 
 async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
@@ -436,7 +440,9 @@ async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name
 
     status = yaml.safe_load(raw_status.strip())
 
-    cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"]["topology"]
+    cluster_topology = status[list(status.keys())[0]]["results"]["status"]["defaultreplicaset"][
+        "topology"
+    ]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
@@ -531,16 +537,28 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         raise Exception("Failed to start server.")
 
 
-async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
+async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
     """Wrapper for getting primary.
 
     Args:
         ops_test: The ops test object passed into every test case
         app_name: The name of the application
+        unit_excluded: excluded unit to run command on
     Returns:
         The primary Unit object
     """
-    unit = ops_test.model.applications[app_name].units[0]
+    if unit_excluded:
+        # if defined, exclude unit from available unit to run command on
+        # useful when the workload is stopped on unit
+        unit = (
+            {
+                unit
+                for unit in ops_test.model.applications[app_name].units
+                if unit.name != unit_excluded.name
+            }
+        ).pop()
+    else:
+        unit = ops_test.model.applications[app_name].units[0]
     cluster = cluster_name(unit, ops_test.model.info.name)
 
     server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
@@ -770,3 +788,49 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
     )
 
     return random_chars
+
+
+async def get_tls_ca(
+    ops_test: OpsTest,
+    unit_name: str,
+) -> str:
+    """Returns the TLS CA used by the unit.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+
+    Returns:
+        TLS CA or an empty string if there is no CA.
+    """
+    raw_data = (await ops_test.juju("show-unit", unit_name))[1]
+    if not raw_data:
+        raise ValueError(f"no unit info could be grabbed for {unit_name}")
+    data = yaml.safe_load(raw_data)
+    # Filter the data based on the relation name.
+    relation_data = [
+        v for v in data[unit_name]["relation-info"] if v["endpoint"] == "certificates"
+    ]
+    if len(relation_data) == 0:
+        return ""
+    return json.loads(relation_data[0]["application-data"]["certificates"])[0].get("ca")
+
+
+async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> str:
+    """Return md5 hash for given file.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+        file_path: The path to the file
+
+    Returns:
+        md5sum hash string
+    """
+    try:
+        _, md5sum_raw, _ = await ops_test.juju("ssh", unit_name, "sudo", "md5sum", file_path)
+
+        return md5sum_raw.strip().split()[0]
+
+    except Exception:
+        return None

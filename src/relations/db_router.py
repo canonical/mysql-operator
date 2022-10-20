@@ -53,7 +53,7 @@ class DBRouterRelation(Object):
         Returns:
             a string representing the password for the mysql user
         """
-        peer_databag = self.charm._peers.data[self.charm.app]
+        peer_databag = self.charm.peers.data[self.charm.app]
 
         if peer_databag.get(f"{username}_password"):
             return peer_databag.get(f"{username}_password")

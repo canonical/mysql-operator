@@ -24,6 +24,7 @@ MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
 MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
 MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
 MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
+MYSQL_SYSTEM_USER = "mysql"
 MYSQL_DATA_DIR = "/var/lib/mysql"
 
 
@@ -126,7 +127,7 @@ class MySQL(MySQLBase):
 
             if not mysql_shell.present:
                 logger.debug("Installing mysql shell snap")
-                mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
+                mysql_shell.ensure(snap.SnapState.Latest, channel="edge")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
@@ -285,3 +286,26 @@ def instance_hostname():
     except subprocess.CalledProcessError as e:
         logger.exception("Failed to retrieve hostname", e)
         return None
+
+
+def write_content_to_file(
+    path: str,
+    content: str,
+    owner: str = MYSQL_SYSTEM_USER,
+    group: str = MYSQL_SYSTEM_USER,
+    permission: int = 0o640,
+) -> None:
+    """Write content to file.
+
+    Args:
+        path: filesystem full path (with filename)
+        content: string content to write
+        owner: file owner
+        group: file group
+        permission: file permission
+    """
+    with open(path, "w", encoding="utf-8") as fd:
+        fd.write(content)
+
+    shutil.chown(path, owner, group)
+    os.chmod(path, mode=permission)

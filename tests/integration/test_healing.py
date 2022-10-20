@@ -237,6 +237,9 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
         config
     ), f"❌ Connection to host {primary_unit_ip} is not possible"
 
+    # it's necessary to inhibit update-status-hook to stop the service
+    # since the charm will restart the service on the hook
+    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
     logger.info(f"Stopping server on unit {primary_unit.name}")
     await graceful_stop_server(ops_test, primary_unit.name)
 
@@ -248,7 +251,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     # get primary to write to it
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     logger.info("Get new primary")
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, app, unit_excluded=primary_unit)
 
     logger.info("Write to new primary")
     random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
@@ -256,6 +259,9 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     # restart server on old primary
     logger.info(f"Re starting server on unit {primary_unit.name}")
     await start_server(ops_test, primary_unit.name)
+
+    # restore standard interval
+    await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
     # verify/wait availability
     assert is_connection_possible(config), "❌ Connection not possible after restart"

@@ -220,7 +220,6 @@ class DatabaseRelation(Object):
             self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
             # TODO:
             # add setup of tls, tls_ca and status
-            # add extra roles parsing from relation data
             self.charm._mysql.create_application_database_and_scoped_user(
                 db_name, db_user, db_pass, "%", remote_app
             )
@@ -252,7 +251,7 @@ class DatabaseRelation(Object):
             # run once by the leader
             return
 
-        if self.charm._peers.data[self.charm.unit].get("unit-status", None) == "removing":
+        if self.charm.peers.data[self.charm.unit].get("unit-status", None) == "removing":
             # safeguard against relation broken being triggered for
             # a unit being torn down (instead of un-related)
             # https://github.com/canonical/mysql-operator/issues/32

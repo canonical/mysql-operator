@@ -19,6 +19,8 @@ maintainers:
 peers:
   database-peers:
     interface: mysql-peers
+  restart:
+    interface: rolling_op
 provides:
   db-router:
     interface: mysql-router
@@ -28,9 +30,12 @@ provides:
     interface: mysql_client
   mysql:
     interface: mysql
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
 storage:
   database:
     type: filesystem
     description: Persistent storage for MySQL data
     location: /var/lib/mysql
-
