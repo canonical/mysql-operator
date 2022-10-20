@@ -127,7 +127,7 @@ class MySQL(MySQLBase):
 
             if not mysql_shell.present:
                 logger.debug("Installing mysql shell snap")
-                mysql_shell.ensure(snap.SnapState.Latest, channel="stable")
+                mysql_shell.ensure(snap.SnapState.Latest, channel="edge")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):

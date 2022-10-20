@@ -1,7 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import itertools
 import json
 import re
@@ -399,7 +398,10 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     )
     output = json.loads(output.decode("utf-8"))
 
-    return output[unit.name]["relation-info"][0]["application-data"]["cluster-name"]
+    for relation in output[unit.name]["relation-info"]:
+        if relation["endpoint"] == "database-peers":
+            return relation["application-data"]["cluster-name"]
+    raise ValueError("Failed to retrieve cluster name")
 
 
 async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
@@ -438,7 +440,9 @@ async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name
 
     status = yaml.safe_load(raw_status.strip())
 
-    cluster_topology = status[list(status.keys())[0]]["results"]["defaultreplicaset"]["topology"]
+    cluster_topology = status[list(status.keys())[0]]["results"]["status"]["defaultreplicaset"][
+        "topology"
+    ]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
@@ -533,16 +537,28 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         raise Exception("Failed to start server.")
 
 
-async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str) -> Unit:
+async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
     """Wrapper for getting primary.
 
     Args:
         ops_test: The ops test object passed into every test case
         app_name: The name of the application
+        unit_excluded: excluded unit to run command on
     Returns:
         The primary Unit object
     """
-    unit = ops_test.model.applications[app_name].units[0]
+    if unit_excluded:
+        # if defined, exclude unit from available unit to run command on
+        # useful when the workload is stopped on unit
+        unit = (
+            {
+                unit
+                for unit in ops_test.model.applications[app_name].units
+                if unit.name != unit_excluded.name
+            }
+        ).pop()
+    else:
+        unit = ops_test.model.applications[app_name].units[0]
     cluster = cluster_name(unit, ops_test.model.info.name)
 
     server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
