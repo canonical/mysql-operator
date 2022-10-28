@@ -117,6 +117,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, series: str) -> None
 
     Args:
         ops_test: The ops test framework
+        series: The series for the database machine
     """
     charm = await ops_test.build_charm(".")
     config = {"cluster-name": CLUSTER_NAME}

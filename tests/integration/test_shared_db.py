@@ -152,6 +152,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None
 
     Args:
         ops_test: The ops test framework
+        series: The series for the database machine
     """
     # Build and deploy the mysql charm
     charm = await ops_test.build_charm(".")
