@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -111,7 +112,7 @@ async def test_kill_db_process(ops_test: OpsTest) -> None:
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
+@pytest.mark.dev
 async def test_freeze_db_process(ops_test: OpsTest):
     """Freeze and unfreeze process and check for auto cluster recovery."""
     app = await app_name(ops_test)
@@ -303,10 +304,17 @@ async def test_cluster_pause(ops_test: OpsTest):
         "password": await get_system_user_password(all_units[0], CLUSTER_ADMIN_USERNAME),
     }
 
+    # ensure update status won't run to avoid self healing
+    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
+
     # stop all instances
     logger.info("Stopping all instances")
-    for unit in all_units:
-        await graceful_stop_server(ops_test, unit.name)
+
+    await asyncio.gather(
+        graceful_stop_server(ops_test, all_units[0].name),
+        graceful_stop_server(ops_test, all_units[1].name),
+        graceful_stop_server(ops_test, all_units[2].name),
+    )
 
     # verify connection is not possible to any instance
     for unit in all_units:
@@ -364,6 +372,8 @@ async def test_cluster_pause(ops_test: OpsTest):
                         assert random_chars in output, "❌ Data was not synced"
             except RetryError:
                 assert False, "❌ Data was not synced"
+    # return to default
+    await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
 @pytest.mark.order(5)
