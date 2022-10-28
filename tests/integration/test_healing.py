@@ -73,9 +73,9 @@ async def build_and_deploy(ops_test: OpsTest, series: str) -> None:
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_kill_db_process(ops_test: OpsTest) -> None:
+async def test_kill_db_process(ops_test: OpsTest, series: str) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
-    await build_and_deploy(ops_test)
+    await build_and_deploy(ops_test, series)
 
     app = await app_name(ops_test)
 
