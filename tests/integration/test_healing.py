@@ -40,7 +40,7 @@ APP_NAME = METADATA["name"]
 MYSQL_DAEMON = "mysqld"
 
 
-async def build_and_deploy(ops_test: OpsTest) -> None:
+async def build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build and deploy."""
     if app := await app_name(ops_test):
         async with ops_test.fast_forward():
@@ -52,7 +52,12 @@ async def build_and_deploy(ops_test: OpsTest) -> None:
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
+        await ops_test.model.deploy(
+            charm,
+            application_name=APP_NAME,
+            num_units=3,
+            series=series,
+        )
 
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[APP_NAME].units) == 3

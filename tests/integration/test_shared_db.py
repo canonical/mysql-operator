@@ -147,7 +147,7 @@ async def check_keystone_users_existence(
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.shared_db_tests
-async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
+async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
 
     Args:
@@ -156,7 +156,13 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
     # Build and deploy the mysql charm
     charm = await ops_test.build_charm(".")
     config = {"cluster-name": CLUSTER_NAME}
-    await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
+    await ops_test.model.deploy(
+        charm,
+        application_name=APP_NAME,
+        config=config,
+        num_units=3,
+        series=series,
+    )
 
     # Reduce the update_status frequency for the duration of the test
     async with ops_test.fast_forward():

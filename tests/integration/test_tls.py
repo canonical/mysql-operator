@@ -32,7 +32,7 @@ TLS_APP_NAME = "tls-certificates-operator"
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.tls_tests
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
         if len(ops_test.model.applications[app].units) == 3:
@@ -44,7 +44,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Build and deploy charm from local source folder
     charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
+    await ops_test.model.deploy(
+        charm,
+        application_name=APP_NAME,
+        num_units=3,
+        series=series,
+    )
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward():

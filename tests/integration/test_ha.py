@@ -31,7 +31,7 @@ ANOTHER_APP_NAME = f"second{APP_NAME}"
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
         if len(ops_test.model.applications[app].units) == 3:
@@ -43,7 +43,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     # Build and deploy charm from local source folder
     charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
+    await ops_test.model.deploy(
+        charm,
+        application_name=APP_NAME,
+        num_units=3,
+        series=series,
+    )
     # variable used to avoid rebuilding the charm
     global another_charm
     another_charm = charm
@@ -264,7 +269,7 @@ async def test_cluster_preserves_data_on_delete(ops_test: OpsTest) -> None:
 
 @pytest.mark.order(5)
 @pytest.mark.ha_tests
-async def test_cluster_isolation(ops_test: OpsTest) -> None:
+async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     """Test for cluster data isolation.
 
     This test creates a new cluster, create a new table on both cluster, write a single record with
@@ -276,7 +281,12 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
 
     # Build and deploy secondary charm
     charm = another_charm or await ops_test.build_charm(".")
-    await ops_test.model.deploy(charm, application_name=ANOTHER_APP_NAME, num_units=1)
+    await ops_test.model.deploy(
+        charm,
+        application_name=ANOTHER_APP_NAME,
+        num_units=1,
+        series=series,
+    )
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[ANOTHER_APP_NAME].units) == 1

@@ -38,7 +38,7 @@ TEST_DATABASE = "testdb"
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 @pytest.mark.mysql_interface_tests
-async def test_build_and_deploy(ops_test: OpsTest):
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charms from local source folders
 
@@ -49,7 +49,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+            db_charm,
+            application_name=DATABASE_APP_NAME,
+            config=config,
+            num_units=3,
+            series=series,
         ),
         ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )

@@ -112,7 +112,7 @@ async def check_keystone_users_existence(
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.db_router_tests
-async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
+async def test_keystone_bundle_db_router(ops_test: OpsTest, series: str) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation.
 
     Args:
@@ -122,7 +122,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     config = {"cluster-name": CLUSTER_NAME}
 
     mysql_app = await ops_test.model.deploy(
-        charm, application_name=APP_NAME, config=config, num_units=1
+        charm, application_name=APP_NAME, config=config, num_units=1, series=series
     )
 
     # Deploy keystone
