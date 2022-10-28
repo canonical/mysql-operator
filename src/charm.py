@@ -526,6 +526,18 @@ class MySQLOperatorCharm(CharmBase):
         """
         logger.debug("Restarting mysqld daemon")
         if service_restart(SERVICE_NAME):
+
+            # when restart done right after cluster creation (e.g bundles)
+            # or for single unit deployments, it's necessary reboot the
+            # cluster from outage to restore unit as primary
+            if self.app_peer_data["units-added-to-cluster"] == "1":
+                try:
+                    self._mysql.reboot_from_complete_outage()
+                except MySQLRebootFromCompleteOutageError:
+                    logger.error("Failed to restart single node cluster")
+                    self.unit.status = BlockedStatus("Failed to restart primary")
+                    return
+
             unit_label = self.unit.name.replace("/", "-")
 
             try:

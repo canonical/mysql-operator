@@ -35,14 +35,8 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    # workaround for https://github.com/juju/python-libjuju/issues/707
     action = await unit.run(command)
-    result = await action.wait()
-    code = str(result.results.get("Code") or result.results.get("return-code"))
-    stdout = result.results.get("Stdout") or result.results.get("stdout")
-    stderr = result.results.get("Stderr") or result.results.get("stderr")
-    assert code == "0", f"{command} failed ({code}): {stderr or stdout}"
-    return stdout
+    return action.results.get("Stdout", None)
 
 
 def generate_random_string(length: int) -> str:
@@ -144,11 +138,11 @@ async def get_primary_unit(
     raw_output = await run_command_on_unit(unit, " ".join(commands))
 
     if not raw_output:
-        return None
+        raise ValueError("Command return nothing")
 
     matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
     if not matches:
-        return None
+        raise ValueError("Cluster status not found")
 
     # strip and remove escape characters `\`
     string_output = matches.group(1).strip().replace("\\", "")
@@ -239,6 +233,7 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     return result.results
 
 
+@retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
 async def get_system_user_password(unit: Unit, user: str) -> Dict:
     """Helper to run an action to retrieve system user password.
 
@@ -563,9 +558,11 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
 
     server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
 
-    return await get_primary_unit(
+    primary_unit = await get_primary_unit(
         ops_test, unit, app_name, cluster, SERVER_CONFIG_USERNAME, server_config_password
     )
+
+    return primary_unit
 
 
 async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
