@@ -47,7 +47,7 @@ class MySQLRelation(Object):
         Returns:
             a string representing the password for the mysql user
         """
-        peer_databag = self.charm.peers.data[self.charm.app]
+        peer_databag = self.charm.app_peer_data
 
         if peer_databag.get(f"{username}_password"):
             return peer_databag.get(f"{username}_password")
@@ -68,7 +68,7 @@ class MySQLRelation(Object):
             return
 
         relation_data = json.loads(
-            self.charm.peers.data[self.charm.app].get("mysql_relation_data", "{}")
+            self.charm.app_peer_data.get("mysql_relation_data", "{}")
         )
 
         for relation in self.charm.model.relations.get(LEGACY_MYSQL, []):
@@ -141,14 +141,14 @@ class MySQLRelation(Object):
             "host": primary_address,
             "password": password,
             "port": "3306",
-            "root_password": self.charm.peers.data[self.charm.app]["root-password"],
+            "root_password": self.charm.app_peer_data["root-password"],
             "user": username,
         }
 
         event.relation.data[self.charm.unit].update(updates)
 
         # Store the relation data into the peer relation databag
-        self.charm.peers.data[self.charm.app]["mysql_relation_data"] = json.dumps(updates)
+        self.charm.app_peer_data["mysql_relation_data"] = json.dumps(updates)
 
     def _on_mysql_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the 'mysql' legacy relation broken event.
