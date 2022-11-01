@@ -59,9 +59,9 @@ from mysql_vm_helpers import (
     MySQLReconfigureError,
     instance_hostname,
 )
-from relations.mysql_provider import MySQLProvider
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
+from relations.mysql_provider import MySQLProvider
 from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password

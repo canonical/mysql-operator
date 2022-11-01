@@ -31,7 +31,9 @@ class TestDatase(unittest.TestCase):
     )
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2:3306")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
-    @patch("relations.database.generate_random_password", return_value="super_secure_password")
+    @patch(
+        "relations.mysql_provider.generate_random_password", return_value="super_secure_password"
+    )
     def test_database_requested(
         self,
         _generate_random_password,
