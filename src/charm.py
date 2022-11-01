@@ -53,7 +53,7 @@ from constants import (
     SERVER_CONFIG_USERNAME,
     SERVICE_NAME,
 )
-from mysqlsh_helpers import (
+from mysql_vm_helpers import (
     MySQL,
     MySQLDataPurgeError,
     MySQLReconfigureError,
@@ -384,8 +384,7 @@ class MySQLOperatorCharm(CharmBase):
 
     @property
     def _mysql(self):
-        """Returns an instance of the MySQL object from mysqlsh_helpers."""
-
+        """Returns an instance of the MySQL object."""
         return MySQL(
             self.model.get_binding(PEER).network.bind_address,
             self.app_peer_data["cluster-name"],
@@ -404,7 +403,6 @@ class MySQLOperatorCharm(CharmBase):
     @property
     def _is_peer_data_set(self):
         """Returns True if the peer relation data is set."""
-
         return (
             self.app_peer_data.get("cluster-name")
             and self.get_secret("app", ROOT_PASSWORD_KEY)

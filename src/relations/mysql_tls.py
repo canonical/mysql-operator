@@ -24,7 +24,7 @@ from ops.framework import Object
 from ops.model import MaintenanceStatus
 
 from constants import TLS_RELATION, TLS_SSL_CA_FILE, TLS_SSL_CERT_FILE, TLS_SSL_KEY_FILE
-from mysqlsh_helpers import (
+from mysql_vm_helpers import (
     MYSQL_DATA_DIR,
     MYSQLD_CONFIG_DIRECTORY,
     write_content_to_file,

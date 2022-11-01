@@ -67,9 +67,7 @@ class MySQLRelation(Object):
         if not self.charm._is_peer_data_set:
             return
 
-        relation_data = json.loads(
-            self.charm.app_peer_data.get("mysql_relation_data", "{}")
-        )
+        relation_data = json.loads(self.charm.app_peer_data.get("mysql_relation_data", "{}"))
 
         for relation in self.charm.model.relations.get(LEGACY_MYSQL, []):
             relation_databag = relation.data
