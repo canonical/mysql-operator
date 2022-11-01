@@ -59,7 +59,7 @@ from mysql_vm_helpers import (
     MySQLReconfigureError,
     instance_hostname,
 )
-from relations.database import DatabaseRelation
+from relations.mysql_provider import MySQLProvider
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
 from relations.mysql_tls import MySQLTLS
@@ -92,7 +92,7 @@ class MySQLOperatorCharm(CharmBase):
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
-        self.database_relation = DatabaseRelation(self)
+        self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
         self.restart_manager = RollingOpsManager(
