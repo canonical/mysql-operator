@@ -15,17 +15,17 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
+from constants import (
+    MYSQL_APT_PACKAGE_NAME,
+    MYSQL_DATA_DIR,
+    MYSQL_SHELL_COMMON_DIRECTORY,
+    MYSQL_SHELL_SNAP_NAME,
+    MYSQL_SYSTEM_USER,
+    MYSQLD_CONFIG_DIRECTORY,
+    MYSQLD_SOCK_FILE,
+)
+
 logger = logging.getLogger(__name__)
-
-
-# TODO: determine if version locking is needed for both mysql-shell and mysql-server
-MYSQL_SHELL_SNAP_NAME = "mysql-shell"
-MYSQL_APT_PACKAGE_NAME = "mysql-server-8.0"
-MYSQL_SHELL_COMMON_DIRECTORY = "/root/snap/mysql-shell/common"
-MYSQLD_SOCK_FILE = "/var/run/mysqld/mysqld.sock"
-MYSQLD_CONFIG_DIRECTORY = "/etc/mysql/mysql.conf.d"
-MYSQL_SYSTEM_USER = "mysql"
-MYSQL_DATA_DIR = "/var/lib/mysql"
 
 
 class MySQLServiceNotRunningError(Error):
