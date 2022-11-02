@@ -23,12 +23,15 @@ from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.model import MaintenanceStatus
 
-from constants import TLS_RELATION, TLS_SSL_CA_FILE, TLS_SSL_CERT_FILE, TLS_SSL_KEY_FILE
-from mysql_vm_helpers import (
+from constants import (
     MYSQL_DATA_DIR,
     MYSQLD_CONFIG_DIRECTORY,
-    write_content_to_file,
+    TLS_RELATION,
+    TLS_SSL_CA_FILE,
+    TLS_SSL_CERT_FILE,
+    TLS_SSL_KEY_FILE,
 )
+from mysql_vm_helpers import write_content_to_file
 
 logger = logging.getLogger(__name__)
 
