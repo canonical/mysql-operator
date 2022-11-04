@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import subprocess
 from pathlib import Path
 from typing import Dict, List
 
@@ -16,6 +17,7 @@ from tests.integration.helpers import (
     get_server_config_credentials,
     scale_application,
 )
+from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -119,11 +121,17 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, series: str) -> None
         ops_test: The ops test framework
         series: The series for the database machine
     """
-    charm = await ops_test.build_charm(".")
+    # Build and deploy charm from local source folder
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
     config = {"cluster-name": CLUSTER_NAME}
 
     mysql_app = await ops_test.model.deploy(
-        charm, application_name=APP_NAME, config=config, num_units=1, series=series
+        charm_url, application_name=APP_NAME, config=config, num_units=1, series=series
     )
 
     # Deploy keystone

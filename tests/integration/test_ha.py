@@ -4,6 +4,7 @@
 
 
 import logging
+import subprocess
 import time
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from tests.integration.helpers import (
     get_server_config_credentials,
     scale_application,
 )
+from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +44,21 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
             return
 
     # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
     await ops_test.model.deploy(
-        charm,
+        charm_url,
         application_name=APP_NAME,
         num_units=3,
         series=series,
     )
     # variable used to avoid rebuilding the charm
-    global another_charm
-    another_charm = charm
+    global another_charm_url
+    another_charm_url = charm_url
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward():
@@ -280,9 +287,16 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
-    charm = another_charm or await ops_test.build_charm(".")
+    charm_url = another_charm_url
+    if not charm_url:
+        # Manually call charmcraft pack because ops_test.build_charm() does not support
+        # multiple bases in the charmcraft file
+        charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+        subprocess.check_output(charmcraft_pack_commands)
+        charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
     await ops_test.model.deploy(
-        charm,
+        charm_url,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
         series=series,

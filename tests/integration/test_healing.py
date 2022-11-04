@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from src.constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
+from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +51,16 @@ async def build_and_deploy(ops_test: OpsTest, series: str) -> None:
             return
 
     # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
-            charm,
+            charm_url,
             application_name=APP_NAME,
             num_units=3,
             series=series,
