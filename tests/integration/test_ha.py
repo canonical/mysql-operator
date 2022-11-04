@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     # Build and deploy charm from local source folder
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = ["charmcraft", "pack"]
     subprocess.check_output(charmcraft_pack_commands)
     charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
@@ -291,7 +291,7 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     if not charm_url:
         # Manually call charmcraft pack because ops_test.build_charm() does not support
         # multiple bases in the charmcraft file
-        charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+        charmcraft_pack_commands = ["charmcraft", "pack"]
         subprocess.check_output(charmcraft_pack_commands)
         charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
