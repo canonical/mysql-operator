@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import subprocess
 from pathlib import Path
 from typing import Dict, List
 
@@ -16,6 +17,7 @@ from tests.integration.helpers import (
     get_server_config_credentials,
     scale_application,
 )
+from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -147,16 +149,28 @@ async def check_keystone_users_existence(
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.shared_db_tests
-async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
+async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
 
     Args:
         ops_test: The ops test framework
+        series: The series for the database machine
     """
-    # Build and deploy the mysql charm
-    charm = await ops_test.build_charm(".")
+    # Build and deploy charm from local source folder
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
     config = {"cluster-name": CLUSTER_NAME}
-    await ops_test.model.deploy(charm, application_name=APP_NAME, config=config, num_units=3)
+    await ops_test.model.deploy(
+        charm_url,
+        application_name=APP_NAME,
+        config=config,
+        num_units=3,
+        series=series,
+    )
 
     # Reduce the update_status frequency for the duration of the test
     async with ops_test.fast_forward():

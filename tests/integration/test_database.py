@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 import asyncio
 import logging
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -30,6 +32,7 @@ from tests.integration.helpers import (
     get_primary_unit,
     rotate_credentials,
 )
+from tests.integration.integration_constants import SERIES_TO_VERSION
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -52,17 +55,26 @@ ENDPOINT = "database"
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 @pytest.mark.database_tests
-async def test_build_and_deploy(ops_test: OpsTest):
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charm from local source folder
-    db_charm = await ops_test.build_charm(".")
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
     app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm, application_name=DATABASE_APP_NAME, config=config, num_units=3
+            db_charm_url,
+            application_name=DATABASE_APP_NAME,
+            config=config,
+            num_units=3,
+            series=series,
         ),
         ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )

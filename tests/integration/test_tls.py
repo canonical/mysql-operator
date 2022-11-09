@@ -3,6 +3,7 @@
 
 
 import logging
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ from tests.integration.helpers import (
     scale_application,
     unit_file_md5,
 )
+from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ TLS_APP_NAME = "tls-certificates-operator"
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.tls_tests
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
         if len(ops_test.model.applications[app].units) == 3:
@@ -43,8 +45,18 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             return
 
     # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
-    await ops_test.model.deploy(charm, application_name=APP_NAME, num_units=3)
+    # Manually call charmcraft pack because ops_test.build_charm() does not support
+    # multiple bases in the charmcraft file
+    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    subprocess.check_output(charmcraft_pack_commands)
+    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+
+    await ops_test.model.deploy(
+        charm_url,
+        application_name=APP_NAME,
+        num_units=3,
+        series=series,
+    )
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward():
