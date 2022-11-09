@@ -53,15 +53,15 @@ from constants import (
     SERVER_CONFIG_USERNAME,
     SERVICE_NAME,
 )
-from mysqlsh_helpers import (
+from mysql_vm_helpers import (
     MySQL,
     MySQLDataPurgeError,
     MySQLReconfigureError,
     instance_hostname,
 )
-from relations.database import DatabaseRelation
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
+from relations.mysql_provider import MySQLProvider
 from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
@@ -92,7 +92,7 @@ class MySQLOperatorCharm(CharmBase):
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
-        self.database_relation = DatabaseRelation(self)
+        self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
         self.restart_manager = RollingOpsManager(
@@ -138,10 +138,8 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # Set the cluster name in the peer relation databag if it is not already set
-        peer_data = self.peers.data[self.app]
-
-        if not peer_data.get("cluster-name"):
-            peer_data["cluster-name"] = (
+        if not self.app_peer_data.get("cluster-name"):
+            self.app_peer_data["cluster-name"] = (
                 self.config.get("cluster-name") or f"cluster_{generate_random_hash()}"
             )
 
@@ -184,7 +182,7 @@ class MySQLOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
             return
 
-        self.peers.data[self.app]["units-added-to-cluster"] = "1"
+        self.app_peer_data["units-added-to-cluster"] = "1"
 
         self.unit_peer_data["member-role"] = "primary"
         self.unit.status = ActiveStatus(self.active_status_message)
@@ -223,8 +221,8 @@ class MySQLOperatorCharm(CharmBase):
         # Update 'units-added-to-cluster' counter in the peer relation databag
         # in order to trigger a relation_changed event which will move the added unit
         # into ActiveStatus
-        units_started = int(self.peers.data[self.app]["units-added-to-cluster"])
-        self.peers.data[self.app]["units-added-to-cluster"] = str(units_started + 1)
+        units_started = int(self.app_peer_data["units-added-to-cluster"])
+        self.app_peer_data["units-added-to-cluster"] = str(units_started + 1)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
@@ -257,7 +255,7 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.remove_instance(unit_label)
 
         # Inform other hooks of current status
-        self.peers.data[self.unit]["unit-status"] = "removing"
+        self.unit_peer_data["unit-status"] = "removing"
 
     def _on_update_status(self, _) -> None:
         """Handle update status.
@@ -386,12 +384,10 @@ class MySQLOperatorCharm(CharmBase):
 
     @property
     def _mysql(self):
-        """Returns an instance of the MySQL object from mysqlsh_helpers."""
-        peer_data = self.peers.data[self.app]
-
+        """Returns an instance of the MySQL object."""
         return MySQL(
             self.model.get_binding(PEER).network.bind_address,
-            peer_data["cluster-name"],
+            self.app_peer_data["cluster-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
             SERVER_CONFIG_USERNAME,
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
@@ -407,10 +403,8 @@ class MySQLOperatorCharm(CharmBase):
     @property
     def _is_peer_data_set(self):
         """Returns True if the peer relation data is set."""
-        peer_data = self.peers.data[self.app]
-
         return (
-            peer_data.get("cluster-name")
+            self.app_peer_data.get("cluster-name")
             and self.get_secret("app", ROOT_PASSWORD_KEY)
             and self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
             and self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY)
@@ -419,7 +413,7 @@ class MySQLOperatorCharm(CharmBase):
     @property
     def cluster_initialized(self):
         """Returns True if the cluster is initialized."""
-        return self.peers.data[self.app].get("units-added-to-cluster", "0") >= "1"
+        return self.app_peer_data.get("units-added-to-cluster", "0") >= "1"
 
     @property
     def app_peer_data(self) -> Dict:

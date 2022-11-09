@@ -25,9 +25,9 @@ class TestSharedDBRelation(unittest.TestCase):
         self.charm = self.harness.charm
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
-    @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_changed(
         self,
         _create_application_database_and_scoped_user,
@@ -81,7 +81,7 @@ class TestSharedDBRelation(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("utils.generate_random_password", return_value="super_secure_password")
-    @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_changed_error_on_user_creation(
         self, _create_application_database_and_scoped_user, _generate_random_password
     ):
@@ -106,10 +106,10 @@ class TestSharedDBRelation(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
-    @patch("mysqlsh_helpers.MySQL.delete_users_for_unit")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
+    @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
-    @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_departed(
         self,
         _create_application_database_and_scoped_user,

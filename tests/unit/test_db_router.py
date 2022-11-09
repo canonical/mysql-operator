@@ -29,10 +29,10 @@ class TestDBRouter(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
-    @patch("mysqlsh_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
-    @patch("mysqlsh_helpers.MySQL.does_mysql_user_exist", return_value=False)
-    @patch("mysqlsh_helpers.MySQL.configure_mysqlrouter_user")
-    @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
+    @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
+    @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
+    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_db_router_relation_changed(
         self,
         _create_application_database_and_scoped_user,
@@ -113,9 +113,9 @@ class TestDBRouter(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
-    @patch("mysqlsh_helpers.MySQL.does_mysql_user_exist", return_value=False)
-    @patch("mysqlsh_helpers.MySQL.configure_mysqlrouter_user")
-    @patch("mysqlsh_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
+    @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
+    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_db_router_relation_changed_exceptions(
         self,
         _create_application_database_and_scoped_user,

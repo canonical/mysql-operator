@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from charms.mysql.v0.mysql import MySQLClientError
 
-from mysqlsh_helpers import MySQL, MySQLServiceNotRunningError
+from mysql_vm_helpers import MySQL, MySQLServiceNotRunningError
 
 
 class TestMySQL(unittest.TestCase):
@@ -78,7 +78,7 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script("script")
 
-    @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
     @patch("os.path.exists", return_value=False)
     def test_wait_until_mysql_connection(self, _exists, _stop):
         """Test a failed execution of wait_until_mysql_connection."""

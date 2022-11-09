@@ -28,14 +28,14 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
-    @patch("mysqlsh_helpers.MySQL.install_and_configure_mysql_dependencies")
+    @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
     def test_on_install(self, _install_and_configure_mysql_dependencies):
         self.charm.on.install.emit()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
     @patch(
-        "mysqlsh_helpers.MySQL.install_and_configure_mysql_dependencies", side_effect=Exception()
+        "mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies", side_effect=Exception()
     )
     def test_on_install_exception(self, _install_and_configure_mysql_dependencies):
         self.charm.on.install.emit()
@@ -104,12 +104,12 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysqlsh_helpers.MySQL.get_mysql_version", return_value="8.0.0")
-    @patch("mysqlsh_helpers.MySQL.wait_until_mysql_connection")
-    @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
-    @patch("mysqlsh_helpers.MySQL.configure_instance")
-    @patch("mysqlsh_helpers.MySQL.initialize_juju_units_operations_table")
-    @patch("mysqlsh_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
+    @patch("mysql_vm_helpers.MySQL.configure_instance")
+    @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
+    @patch("mysql_vm_helpers.MySQL.create_cluster")
     def test_on_start(
         self,
         _create_cluster,
@@ -128,10 +128,10 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysqlsh_helpers.MySQL.configure_mysql_users")
-    @patch("mysqlsh_helpers.MySQL.configure_instance")
-    @patch("mysqlsh_helpers.MySQL.initialize_juju_units_operations_table")
-    @patch("mysqlsh_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
+    @patch("mysql_vm_helpers.MySQL.configure_instance")
+    @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
+    @patch("mysql_vm_helpers.MySQL.create_cluster")
     def test_on_start_exceptions(
         self,
         _create_cluster,

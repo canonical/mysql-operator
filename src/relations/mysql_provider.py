@@ -29,7 +29,7 @@ from utils import generate_random_password
 logger = logging.getLogger(__name__)
 
 
-class DatabaseRelation(Object):
+class MySQLProvider(Object):
     """Standard database relation class."""
 
     def __init__(self, charm):
@@ -251,7 +251,7 @@ class DatabaseRelation(Object):
             # run once by the leader
             return
 
-        if self.charm.peers.data[self.charm.unit].get("unit-status", None) == "removing":
+        if self.charm.unit_peer_data.get("unit-status", None) == "removing":
             # safeguard against relation broken being triggered for
             # a unit being torn down (instead of un-related)
             # https://github.com/canonical/mysql-operator/issues/32
