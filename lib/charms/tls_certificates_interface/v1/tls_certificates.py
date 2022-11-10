@@ -222,12 +222,15 @@ import json
 import logging
 import uuid
 from datetime import datetime, timedelta
+from ipaddress import IPv4Address
 from typing import Dict, List, Optional
 
 from cryptography import x509
+from cryptography.hazmat._oid import ExtensionOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.x509.extensions import Extension, ExtensionNotFound
 from jsonschema import exceptions, validate  # type: ignore[import]
 from ops.charm import CharmBase, CharmEvents, RelationChangedEvent, UpdateStatusEvent
 from ops.framework import EventBase, EventSource, Handle, Object
@@ -240,7 +243,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 10
 
 REQUIRER_JSON_SCHEMA = {
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -548,7 +551,7 @@ def generate_certificate(
     ca_key: bytes,
     ca_key_password: Optional[bytes] = None,
     validity: int = 365,
-    alt_names: list = None,
+    alt_names: List[str] = None,
 ) -> bytes:
     """Generates a TLS certificate based on a CSR.
 
@@ -558,7 +561,7 @@ def generate_certificate(
         ca_key (bytes): CA private key
         ca_key_password: CA private key password
         validity (int): Certificate validity (in days)
-        alt_names: Certificate Subject alternative names
+        alt_names (list): List of alt names to put on cert - prefer putting SANs in CSR
 
     Returns:
         bytes: Certificate
@@ -577,13 +580,36 @@ def generate_certificate(
         .not_valid_before(datetime.utcnow())
         .not_valid_after(datetime.utcnow() + timedelta(days=validity))
     )
+
+    extensions_list = csr_object.extensions
+    san_ext: Optional[x509.Extension] = None
     if alt_names:
-        names = [x509.DNSName(n) for n in alt_names]
+        full_sans_dns = alt_names.copy()
+        try:
+            loaded_san_ext = csr_object.extensions.get_extension_for_class(
+                x509.SubjectAlternativeName
+            )
+            full_sans_dns.extend(loaded_san_ext.value.get_values_for_type(x509.DNSName))
+        except ExtensionNotFound:
+            pass
+        finally:
+            san_ext = Extension(
+                ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
+                False,
+                x509.SubjectAlternativeName([x509.DNSName(name) for name in full_sans_dns]),
+            )
+            if not extensions_list:
+                extensions_list = x509.Extensions([san_ext])
+
+    for extension in extensions_list:
+        if extension.value.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME and san_ext:
+            extension = san_ext
+
         certificate_builder = certificate_builder.add_extension(
-            x509.SubjectAlternativeName(names),
-            critical=False,
+            extension.value,
+            critical=extension.critical,
         )
-    certificate_builder._version = x509.Version.v1
+    certificate_builder._version = x509.Version.v3
     cert = certificate_builder.sign(private_key, hashes.SHA256())  # type: ignore[arg-type]
     return cert.public_bytes(serialization.Encoding.PEM)
 
@@ -658,6 +684,9 @@ def generate_csr(
     country_name: str = None,
     private_key_password: Optional[bytes] = None,
     sans: Optional[List[str]] = None,
+    sans_oid: Optional[List[str]] = None,
+    sans_ip: Optional[List[str]] = None,
+    sans_dns: Optional[List[str]] = None,
     additional_critical_extensions: Optional[List] = None,
 ) -> bytes:
     """Generates a CSR using private key and subject.
@@ -672,7 +701,11 @@ def generate_csr(
         email_address (str): Email address.
         country_name (str): Country Name.
         private_key_password (bytes): Private key password
-        sans (list): List of subject alternative names
+        sans (list): Use sans_dns - this will be deprecated in a future release
+            List of DNS subject alternative names (keeping it for now for backward compatibility)
+        sans_oid (list): List of registered ID SANs
+        sans_dns (list): List of DNS subject alternative names (similar to the arg: sans)
+        sans_ip (list): List of IP subject alternative names
         additional_critical_extensions (list): List if critical additional extension objects.
             Object must be a x509 ExtensionType.
 
@@ -693,13 +726,23 @@ def generate_csr(
     if country_name:
         subject_name.append(x509.NameAttribute(x509.NameOID.COUNTRY_NAME, country_name))
     csr = x509.CertificateSigningRequestBuilder(subject_name=x509.Name(subject_name))
+
+    _sans: List[x509.GeneralName] = []
+    if sans_oid:
+        _sans.extend([x509.RegisteredID(x509.ObjectIdentifier(san)) for san in sans_oid])
+    if sans_ip:
+        _sans.extend([x509.IPAddress(IPv4Address(san)) for san in sans_ip])
     if sans:
-        csr = csr.add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(san) for san in sans]), critical=False
-        )
+        _sans.extend([x509.DNSName(san) for san in sans])
+    if sans_dns:
+        _sans.extend([x509.DNSName(san) for san in sans_dns])
+    if _sans:
+        csr = csr.add_extension(x509.SubjectAlternativeName(set(_sans)), critical=False)
+
     if additional_critical_extensions:
         for extension in additional_critical_extensions:
             csr = csr.add_extension(extension, critical=True)
+
     signed_certificate = csr.sign(signing_key, hashes.SHA256())  # type: ignore[arg-type]
     return signed_certificate.public_bytes(serialization.Encoding.PEM)
 
@@ -828,6 +871,14 @@ class TLSCertificatesProvidesV1(Object):
         except exceptions.ValidationError:
             return False
 
+    def revoke_all_certificates(self) -> None:
+        """Revokes all certificates of this provider.
+
+        This method is meant to be used when the Root CA has changed.
+        """
+        for relation in self.model.relations[self.relationship_name]:
+            relation.data[self.model.app]["certificates"] = json.dumps([])
+
     def set_relation_certificate(
         self,
         certificate: str,
@@ -895,6 +946,7 @@ class TLSCertificatesProvidesV1(Object):
         Returns:
             None
         """
+        assert event.unit is not None
         requirer_relation_data = _load_relation_data(event.relation.data[event.unit])
         provider_relation_data = _load_relation_data(event.relation.data[self.charm.app])
         if not self._relation_data_is_valid(requirer_relation_data):
@@ -1146,7 +1198,7 @@ class TLSCertificatesRequiresV1(Object):
         if not self._relation_data_is_valid(provider_relation_data):
             logger.warning(
                 f"Provider relation data did not pass JSON Schema validation: "
-                f"{event.relation.data[event.app]}"
+                f"{event.relation.data[relation.app]}"
             )
             return
         requirer_csrs = [
