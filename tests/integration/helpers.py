@@ -3,6 +3,7 @@
 
 import itertools
 import json
+import logging
 import re
 import secrets
 import string
@@ -22,6 +23,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
+
+logger = logging.getLogger(__name__)
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
@@ -249,7 +252,7 @@ async def get_system_user_password(unit: Unit, user: str) -> Dict:
     return result.results.get("password")
 
 
-async def execute_commands_on_unit(
+async def execute_queries_on_unit(
     unit_address: str,
     username: str,
     password: str,
@@ -542,6 +545,7 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
     Returns:
         The primary Unit object
     """
+    logger.info("Retrieving primary unit")
     if unit_excluded:
         # if defined, exclude unit from available unit to run command on
         # useful when the workload is stopped on unit
@@ -570,7 +574,7 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
 
     Args:
         ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
+        unit_name: The name of the unit to get the address
     Returns:
         The (str) ip of the unit
     """
@@ -776,7 +780,7 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
 
-    await execute_commands_on_unit(
+    await execute_queries_on_unit(
         primary_unit_ip,
         SERVER_CONFIG_USERNAME,
         server_config_password,
@@ -831,3 +835,18 @@ async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> st
 
     except Exception:
         return None
+
+
+async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
+    """Get the cluster status by running the get-cluster-status action.
+
+    Args:
+        ops_test: The ops test framework
+        unit: The unit on which to execute the action on
+
+    Returns:
+        A dictionary representing the cluster status
+    """
+    get_cluster_status_action = await unit.run_action("get-cluster-status")
+    cluster_status_results = await get_cluster_status_action.wait()
+    return cluster_status_results.results
