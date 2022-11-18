@@ -27,7 +27,7 @@ DATABASE_APP_NAME = DB_METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 
 APP_METADATA = yaml.safe_load(
-    Path("./tests/integration/application-charm/metadata.yaml").read_text()
+    Path("./tests/integration/relations/application-charm/metadata.yaml").read_text()
 )
 APPLICATION_APP_NAME = APP_METADATA["name"]
 
@@ -52,7 +52,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     subprocess.check_output(charmcraft_pack_commands)
     db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
-    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
+    app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
