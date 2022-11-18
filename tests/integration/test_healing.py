@@ -12,7 +12,7 @@ import yaml
 from helpers import (
     app_name,
     cut_network_from_unit,
-    execute_commands_on_unit,
+    execute_queries_on_unit,
     get_controller_machine,
     get_primary_unit_wrapper,
     get_process_pid,
@@ -123,7 +123,7 @@ async def test_kill_db_process(ops_test: OpsTest, series: str) -> None:
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.dev
+@pytest.mark.healing_tests
 async def test_freeze_db_process(ops_test: OpsTest):
     """Freeze and unfreeze process and check for auto cluster recovery."""
     app = await app_name(ops_test)
@@ -287,7 +287,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     try:
         for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
             with attempt:
-                output = await execute_commands_on_unit(
+                output = await execute_queries_on_unit(
                     primary_unit_ip,
                     SERVER_CONFIG_USERNAME,
                     server_config_password,
@@ -374,7 +374,7 @@ async def test_cluster_pause(ops_test: OpsTest):
             try:
                 for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
                     with attempt:
-                        output = await execute_commands_on_unit(
+                        output = await execute_queries_on_unit(
                             unit_ip,
                             SERVER_CONFIG_USERNAME,
                             server_config_password,

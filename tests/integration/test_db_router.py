@@ -13,7 +13,7 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
-    execute_commands_on_unit,
+    execute_queries_on_unit,
     get_server_config_credentials,
     scale_application,
 )
@@ -52,7 +52,7 @@ async def check_successful_keystone_migration(
         unit_address = await unit.get_public_address()
 
         # Ensure 'keystone' database exists in mysql
-        output = await execute_commands_on_unit(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],
@@ -61,7 +61,7 @@ async def check_successful_keystone_migration(
         assert "keystone" in output, "keystone database not found in mysql"
 
         # Ensure that keystone tables exist in the 'keystone' database
-        output = await execute_commands_on_unit(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],
@@ -95,7 +95,7 @@ async def check_keystone_users_existence(
     unit_address = await unit.get_public_address()
 
     # Retrieve all users in the database
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         unit_address,
         server_config_credentials["username"],
         server_config_credentials["password"],

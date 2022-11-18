@@ -27,7 +27,7 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from tests.integration.helpers import (
-    execute_commands_on_unit,
+    execute_queries_on_unit,
     fetch_credentials,
     get_primary_unit,
     rotate_credentials,
@@ -150,7 +150,7 @@ async def test_password_rotation(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
@@ -191,7 +191,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
@@ -239,7 +239,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
