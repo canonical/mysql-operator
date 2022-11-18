@@ -205,7 +205,7 @@ class MySQLOperatorCharm(CharmBase):
         # Safeguard against event deferral
         if self._mysql.is_instance_in_cluster(event_unit_label):
             logger.debug(
-                f"Unit {event_unit_label} is already part of the cluster, don't try to add it again."
+                f"Unit {event_unit_label} is already part of the cluster, skipping add to cluster."
             )
             return
 
