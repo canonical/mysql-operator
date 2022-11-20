@@ -14,6 +14,7 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUserForRelationError,
+    MySQLGetClusterEndpointsError,
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
     MySQLGrantPrivilegesToUserError,
@@ -46,10 +47,11 @@ class MySQLProvider(Object):
         self.framework.observe(self.charm.on[PEER].relation_joined, self._on_relation_joined)
         self.framework.observe(self.charm.on[PEER].relation_departed, self._on_relation_departed)
 
-        self.framework.observe(self.charm.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self.charm.on.leader_elected, self._update_endpoints_all_relations)
+        self.framework.observe(self.charm.on.update_status, self._update_endpoints_all_relations)
 
-    def _on_leader_elected(self, _):
-        """Handle on leader elected event for the database relation."""
+    def _update_endpoints_all_relations(self, _):
+        """Update endpoints for all relations."""
         if not self.charm.unit.is_leader():
             return
         # get all relations involving the database relation
@@ -69,7 +71,7 @@ class MySQLProvider(Object):
             if relation.id not in relation_data:
                 logger.debug("On database requested not happened yet! Nothing to do in this case")
                 continue
-            self._update_endpoints(relation.id, self.charm.app.name)
+            self._update_endpoints(relation.id, relation.app.name)
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
         """Handle the peer relation departed event for the database relation."""
@@ -139,32 +141,31 @@ class MySQLProvider(Object):
             self._update_endpoints(relation.id, event.app.name)
 
     def _update_endpoints(self, relation_id: int, remote_app: str):
-        """Updates the read-only-endpoints.
+        """Updates the endpoints, checking for necessity.
 
         Args:
             relation_id (int): The id of the relation
             remote_app (str): The name of the remote application
         """
         try:
+            rw_endpoints, ro_endpoints = self.charm._mysql.get_cluster_endpoints()
 
-            primary_endpoint = self.charm._mysql.get_cluster_primary_address()
-            self.database.set_endpoints(relation_id, primary_endpoint)
-            # get read only endpoints by removing primary from all members
-            read_only_endpoints = sorted(
-                self.charm._mysql.get_cluster_members_addresses()
-                - {
-                    primary_endpoint,
-                }
-            )
-            self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
+            # check if endpoints need to be updated
+            relation = self.model.get_relation(DB_RELATION_NAME, relation_id)
+            relation_data = relation.data[self.charm.app]
+            if (
+                relation_data.get("endpoints") == rw_endpoints
+                and relation_data.get("read-only-endpoints") == ro_endpoints
+            ):
+                return
+
+            self.database.set_endpoints(relation_id, rw_endpoints)
+            self.database.set_read_only_endpoints(relation_id, ro_endpoints)
             logger.debug(f"Updated endpoints for {remote_app}")
 
-        except MySQLGetClusterMembersAddressesError as e:
+        except MySQLGetClusterEndpointsError as e:
             logger.exception("Failed to get cluster members", exc_info=e)
             self.charm.unit.status = BlockedStatus("Failed to get cluster members")
-        except MySQLClientError as e:
-            logger.exception("Failed to get primary", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get primary")
 
     def _get_or_set_password(self, relation) -> str:
         """Retrieve password from cache or generate a new one.
