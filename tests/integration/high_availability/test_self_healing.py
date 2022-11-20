@@ -4,12 +4,22 @@
 
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
-from helpers import (
+from high_availability_helpers import (
+    clean_up_database_and_table,
+    ensure_all_units_continuous_writes_incrementing,
+    ensure_n_online_mysql_members,
+    high_availability_test_setup,
+    insert_data_into_mysql_and_validate_replication,
+)
+from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+
+from src.constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
+from tests.integration.helpers import (
     app_name,
     cut_network_from_unit,
     execute_queries_on_unit,
@@ -24,17 +34,11 @@ from helpers import (
     is_machine_reachable_from,
     is_unit_in_cluster,
     restore_network_for_unit,
-    scale_application,
     start_server,
     unit_hostname,
     wait_network_restore,
     write_random_chars_to_test_table,
 )
-from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-
-from src.constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
-from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -43,53 +47,30 @@ APP_NAME = METADATA["name"]
 MYSQL_DAEMON = "mysqld"
 
 
-async def build_and_deploy(ops_test: OpsTest, series: str) -> None:
-    """Build and deploy."""
-    if app := await app_name(ops_test):
-        async with ops_test.fast_forward():
-            await scale_application(ops_test, app, 3)
-            return
-
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
-    subprocess.check_output(charmcraft_pack_commands)
-    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
-
-    # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm_url,
-            application_name=APP_NAME,
-            num_units=3,
-            series=series,
-        )
-
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=1000,
-        )
-
-
 @pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_kill_db_process(ops_test: OpsTest, series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
+    """Build and deploy."""
+    await high_availability_test_setup(ops_test, series)
+
+
+@pytest.mark.order(2)
+@pytest.mark.abort_on_fail
+@pytest.mark.dev
+async def test_kill_db_process(ops_test: OpsTest, series: str, continuous_writes) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
-    await build_and_deploy(ops_test, series)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
 
-    app = await app_name(ops_test)
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
-    primary_unit = await get_primary_unit_wrapper(ops_test, app)
-    another_unit = (set(ops_test.model.applications[app].units) - {primary_unit}).pop()
-
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+
+    # ensure all units in the cluster are online
+    assert await ensure_n_online_mysql_members(
+        ops_test, 3
+    ), "The deployed mysql application is not fully online"
 
     # get running mysqld PID
     pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
@@ -114,14 +95,17 @@ async def test_kill_db_process(ops_test: OpsTest, series: str) -> None:
     # verify daemon restarted via connection
     assert is_connection_possible(config), f"❌ Daemon did not restart on unit {primary_unit.name}"
 
-    # verify instance is part of the cluster
-    logger.info("Check if instance back in cluster")
-    assert await is_unit_in_cluster(
-        ops_test, primary_unit.name, another_unit.name
-    ), " Unit not online in the cluster"
+    # ensure continuous writes still incrementing for all units
+    async with ops_test.fast_forward():
+        await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-kill-db-process", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(2)
+@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_freeze_db_process(ops_test: OpsTest):
@@ -162,7 +146,7 @@ async def test_freeze_db_process(ops_test: OpsTest):
     ), "❌ Unit not online in the cluster"
 
 
-@pytest.mark.order(3)
+@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_network_cut(ops_test: OpsTest):
@@ -229,7 +213,7 @@ async def test_network_cut(ops_test: OpsTest):
     ), "Unit not online in the cluster"
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(5)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_replicate_data_on_restart(ops_test: OpsTest):
@@ -298,7 +282,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
         assert False, "❌ Data was not synced"
 
 
-@pytest.mark.order(5)
+@pytest.mark.order(6)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_cluster_pause(ops_test: OpsTest):
@@ -387,7 +371,7 @@ async def test_cluster_pause(ops_test: OpsTest):
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
-@pytest.mark.order(5)
+@pytest.mark.order(7)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_sst_test(ops_test: OpsTest) -> None:
