@@ -83,7 +83,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -189,6 +189,10 @@ class MySQLGrantPrivilegesToUserError(Error):
 
 class MySQLGetMemberStateError(Error):
     """Exception raised when there is an issue getting member state."""
+
+
+class MySQLGetClusterEndpointsError(Error):
+    """Exception raised when there is an issue getting cluster endpoints."""
 
 
 class MySQLRebootFromCompleteOutageError(Error):
@@ -705,6 +709,24 @@ class MySQLBase(ABC):
             return output_dict
         except MySQLClientError as e:
             logger.exception(f"Failed to get cluster status for {self.cluster_name}", exc_info=e)
+
+    def get_cluster_endpoints(self) -> Tuple[str, str]:
+        """Use get_cluster_status to return endpoints tuple.
+
+        Returns:
+            A tuple with endpoints and read-only-endpoints strings.
+        """
+        status = self.get_cluster_status()
+
+        if not status:
+            raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+
+        topology = status["defaultreplicaset"]["topology"]
+
+        ro_endpoints = {v["address"] for v in topology.values() if v["mode"] == "r/o"}
+        rw_endpoints = {v["address"] for v in topology.values() if v["mode"] == "r/w"}
+
+        return ",".join(rw_endpoints), ",".join(ro_endpoints)
 
     @retry(
         retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
