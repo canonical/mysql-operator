@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import yaml
-from helpers import (
+from juju.unit import Unit
+from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+from tests.integration.helpers import (
     execute_queries_on_unit,
     generate_random_string,
     get_cluster_status,
@@ -17,10 +21,6 @@ from helpers import (
     is_relation_joined,
     scale_application,
 )
-from juju.unit import Unit
-from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
-
 from tests.integration.integration_constants import SERIES_TO_VERSION
 
 # Copied these values from high_availability.application_charm.src.charm

@@ -11,7 +11,6 @@ import subprocess
 from typing import Dict, List, Optional, Set
 
 import yaml
-from connector import MysqlConnector
 from juju.unit import Unit
 from mysql.connector.errors import (
     DatabaseError,
@@ -23,6 +22,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
+from tests.integration.connector import MysqlConnector
 
 logger = logging.getLogger(__name__)
 
