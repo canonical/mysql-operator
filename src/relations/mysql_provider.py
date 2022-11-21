@@ -140,7 +140,7 @@ class MySQLProvider(Object):
             # update the endpoints
             self._update_endpoints(relation.id, event.app.name)
 
-    def _update_endpoints(self, relation_id: int, remote_app: str):
+    def _update_endpoints(self, relation_id: int, remote_app: str) -> None:
         """Updates the endpoints, checking for necessity.
 
         Args:
@@ -150,7 +150,7 @@ class MySQLProvider(Object):
         try:
             rw_endpoints, ro_endpoints = self.charm._mysql.get_cluster_endpoints()
 
-            # check if endpoints need to be updated
+            # check if endpoints need update
             relation = self.model.get_relation(DB_RELATION_NAME, relation_id)
             relation_data = relation.data[self.charm.app]
             if (
@@ -165,7 +165,6 @@ class MySQLProvider(Object):
 
         except MySQLGetClusterEndpointsError as e:
             logger.exception("Failed to get cluster members", exc_info=e)
-            self.charm.unit.status = BlockedStatus("Failed to get cluster members")
 
     def _get_or_set_password(self, relation) -> str:
         """Retrieve password from cache or generate a new one.
