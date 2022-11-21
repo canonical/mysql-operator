@@ -120,8 +120,9 @@ def pack_charm(series: str) -> str:
         series: charm series
     """
     charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
-    charm_path = Path(charm_url)
+    charm_path = Path(charm_url.split(":")[1])
     if charm_path.exists() and charm_path.is_file():
+        logger.info("Skipping build, charm file encountered")
         return charm_url
 
     # Build and deploy charm from local source folder

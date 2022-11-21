@@ -351,7 +351,7 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     async with ops_test.fast_forward():
         logger.info("Waiting units to be back online.")
         await ops_test.model.block_until(
-            lambda: {unit.workload_status for unit in all_units.units} == {"active"},
+            lambda: {unit.workload_status for unit in all_units} == {"active"},
             timeout=5 * 60,
         )
 

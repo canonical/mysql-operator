@@ -80,7 +80,8 @@ class ContinuousWritesApplication(CharmBase):
         if None in [username, password, endpoints]:
             return {}
 
-        [host, port] = endpoints.split(":")
+        host = endpoints.split(":")[0]
+        port = endpoints.split(":")[1]
 
         return {
             "user": username,
