@@ -57,8 +57,8 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.dev
-async def test_kill_db_process(ops_test: OpsTest, series: str, continuous_writes) -> None:
+@pytest.mark.healing_tests
+async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
 
@@ -108,12 +108,13 @@ async def test_kill_db_process(ops_test: OpsTest, series: str, continuous_writes
 @pytest.mark.order(3)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_freeze_db_process(ops_test: OpsTest):
+async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
     """Freeze and unfreeze process and check for auto cluster recovery."""
-    app = await app_name(ops_test)
-    primary_unit = await get_primary_unit_wrapper(ops_test, app)
-    another_unit = (set(ops_test.model.applications[app].units) - {primary_unit}).pop()
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    # ensure continuous writes still incrementing for all units
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
 
     # get running mysqld PID
@@ -139,22 +140,27 @@ async def test_freeze_db_process(ops_test: OpsTest):
     # verify that connection is possible
     assert is_connection_possible(config), "❌ Mysqld is paused"
 
-    # verify instance is part of the cluster
-    logger.info("Check if instance in cluster")
-    assert await is_unit_in_cluster(
-        ops_test, primary_unit.name, another_unit.name
-    ), "❌ Unit not online in the cluster"
+    # ensure continuous writes still incrementing for all units
+    async with ops_test.fast_forward():
+        await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-freeze-db-process", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
 @pytest.mark.order(4)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_network_cut(ops_test: OpsTest):
+async def test_network_cut(ops_test: OpsTest, continuous_writes):
     """Completely cut and restore network."""
-    app = await app_name(ops_test)
-    primary_unit = await get_primary_unit_wrapper(ops_test, app)
-    all_units = ops_test.model.applications[app].units
-    another_unit = (set(all_units) - {primary_unit}).pop()
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
+    all_units = ops_test.model.applications[mysql_application_name].units
+
+    # ensure continuous writes still incrementing for all units
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # get unit hostname
     primary_hostname = await unit_hostname(ops_test, primary_unit.name)
@@ -206,20 +212,27 @@ async def test_network_cut(ops_test: OpsTest):
     # verify that connection is possible
     assert is_connection_possible(config), "❌ Connection is not possible after network restore"
 
-    # verify instance is part of the cluster
-    logger.info("Check if instance in cluster")
-    assert await is_unit_in_cluster(
-        ops_test, primary_unit.name, another_unit.name
-    ), "Unit not online in the cluster"
+    # ensure continuous writes still incrementing for all units
+    async with ops_test.fast_forward():
+        await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-network-cut", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
 @pytest.mark.order(5)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_replicate_data_on_restart(ops_test: OpsTest):
+async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     """Stop server, write data, start and validate replication."""
-    app = await app_name(ops_test)
-    primary_unit = await get_primary_unit_wrapper(ops_test, app)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+
+    # ensure continuous writes still incrementing for all units
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
 
     config = {
@@ -247,7 +260,9 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     # get primary to write to it
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     logger.info("Get new primary")
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, app, unit_excluded=primary_unit)
+    new_primary_unit = await get_primary_unit_wrapper(
+        ops_test, mysql_application_name, unit_excluded=primary_unit
+    )
 
     logger.info("Write to new primary")
     random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
@@ -281,18 +296,27 @@ async def test_replicate_data_on_restart(ops_test: OpsTest):
     except RetryError:
         assert False, "❌ Data was not synced"
 
+    # ensure continuous writes still incrementing for all units
+    async with ops_test.fast_forward():
+        await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-replicate-data-restart", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
+
 
 @pytest.mark.order(6)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_cluster_pause(ops_test: OpsTest):
+async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     """Pause test.
 
     A graceful simultaneous restart of all instances,
     check primary election after the start, write and read data
     """
-    app = await app_name(ops_test)
-    all_units = ops_test.model.applications[app].units
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    all_units = ops_test.model.applications[mysql_application_name].units
 
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
@@ -325,48 +349,20 @@ async def test_cluster_pause(ops_test: OpsTest):
         await start_server(ops_test, unit.name)
 
     async with ops_test.fast_forward():
-        # trigger update status asap
-        # which in has self healing handler
-
-        # verify all instances are accessible
-        for unit in all_units:
-            unit_ip = await get_unit_ip(ops_test, unit.name)
-            config["host"] = unit_ip
-            assert is_connection_possible(
-                config
-            ), f"❌ connection to unit {unit.name} is not possible"
-
-        # retrieve primary
-        primary_unit = await get_primary_unit_wrapper(ops_test, app)
-
-        # write to primary
-        random_chars = await write_random_chars_to_test_table(ops_test, primary_unit)
-        server_config_password = await get_system_user_password(
-            primary_unit, SERVER_CONFIG_USERNAME
+        logger.info("Waiting units to be back online.")
+        await ops_test.model.block_until(
+            lambda: {unit.workload_status for unit in all_units.units} == {"active"},
+            timeout=5 * 60,
         )
 
-        # read from secondaries
-        for unit in set(all_units) - {primary_unit}:
-            # read and verify data
-            select_data_sql = [
-                f"SELECT * FROM test.data_replication_table WHERE id = '{random_chars}'",
-            ]
+    # ensure continuous writes still incrementing for all units
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
-            unit_ip = await get_unit_ip(ops_test, unit.name)
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-cluster-pause", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
 
-            # allow some time for sync
-            try:
-                for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
-                    with attempt:
-                        output = await execute_queries_on_unit(
-                            unit_ip,
-                            SERVER_CONFIG_USERNAME,
-                            server_config_password,
-                            select_data_sql,
-                        )
-                        assert random_chars in output, "❌ Data was not synced"
-            except RetryError:
-                assert False, "❌ Data was not synced"
     # return to default
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
@@ -374,13 +370,16 @@ async def test_cluster_pause(ops_test: OpsTest):
 @pytest.mark.order(7)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
-async def test_sst_test(ops_test: OpsTest) -> None:
+async def test_sst_test(ops_test: OpsTest, continuous_writes):
     """The SST test.
 
     A forceful restart instance with deleted data and without transaction logs (forced clone).
     """
     app = await app_name(ops_test)
     primary_unit = await get_primary_unit_wrapper(ops_test, app)
+
+    # ensure continuous writes still incrementing for all units
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # copy data dir content removal script
     await ops_test.juju("scp", "tests/integration/clean-data-dir.sh", f"{primary_unit.name}:/tmp")
@@ -425,3 +424,10 @@ async def test_sst_test(ops_test: OpsTest) -> None:
     assert await is_unit_in_cluster(
         ops_test, primary_unit.name, new_primary_unit.name
     ), "❌ Unit not online in the cluster"
+
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+    # ensure that we are able to insert data into the primary and have it replicated to all units
+    database_name, table_name = "test-forceful-restart", "data"
+    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
+    await clean_up_database_and_table(ops_test, database_name, table_name)
