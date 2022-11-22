@@ -400,8 +400,8 @@ async def test_sst_test(ops_test: OpsTest, continuous_writes):
 
     assert return_code == 0, "❌ Failed to remove data directory"
 
-    # Purge bin logs on remaining units
-    purge_bin_log_sql = ["PURGE BINARY LOGS BEFORE NOW()"]
+    # Flush and purge bin logs on remaining units
+    purge_bin_log_sql = ["FLUSH LOGS", "PURGE BINARY LOGS BEFORE NOW()"]
     for unit in all_units:
         if unit.name != primary_unit.name:
             logger.info(f"Purge binlogs on unit {unit.name}")
