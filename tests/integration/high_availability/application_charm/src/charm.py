@@ -81,7 +81,7 @@ class ContinuousWritesApplication(CharmBase):
             return {}
 
         host = endpoints.split(":")[0]
-        port = endpoints.split(":")[1]
+        port = endpoints.split(":")[1].split(",")[0]
 
         return {
             "user": username,
