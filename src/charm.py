@@ -312,6 +312,7 @@ class MySQLOperatorCharm(CharmBase):
         ):
             # mysqld access not possible with daemon running or start fails
             # force reset necessary
+            self.unit.status = MaintenanceStatus("Workload reset")
             self.unit.status = self._workload_reset()
 
     # =======================
@@ -483,12 +484,15 @@ class MySQLOperatorCharm(CharmBase):
             A `StatusBase` to be set by the caller
         """
         try:
+            primary_address = self._get_primary_address_from_peers()
+            if not primary_address:
+                logger.debug("Primary not yet defined on peers. Skipping workload reset")
+                return MaintenanceStatus("Workload reset")
             service_stop(SERVICE_NAME)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
             unit_label = self.unit.name.replace("/", "-")
-            primary_address = self._get_primary_address_from_peers()
             # On a full reset, member must firstly be removed from cluster metadata
             self._mysql.remove_obsoletes_instance(from_instance=primary_address)
             # Re-add the member as if it's the first time

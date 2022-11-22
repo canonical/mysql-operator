@@ -20,7 +20,6 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from src.constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 from tests.integration.helpers import (
-    app_name,
     cut_network_from_unit,
     execute_queries_on_unit,
     get_controller_machine,
@@ -375,8 +374,10 @@ async def test_sst_test(ops_test: OpsTest, continuous_writes):
 
     A forceful restart instance with deleted data and without transaction logs (forced clone).
     """
-    app = await app_name(ops_test)
-    primary_unit = await get_primary_unit_wrapper(ops_test, app)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
+    server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
+    all_units = ops_test.model.applications[mysql_application_name].units
 
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -399,6 +400,16 @@ async def test_sst_test(ops_test: OpsTest, continuous_writes):
 
     assert return_code == 0, "❌ Failed to remove data directory"
 
+    # Purge bin logs on remaining units
+    purge_bin_log_sql = ["PURGE BINARY LOGS BEFORE NOW()"]
+    for unit in all_units:
+        if unit.name != primary_unit.name:
+            logger.info(f"Purge binlogs on unit {unit.name}")
+            unit_ip = await get_unit_ip(ops_test, unit.name)
+            await execute_queries_on_unit(
+                unit_ip, SERVER_CONFIG_USERNAME, server_config_password, purge_bin_log_sql, True
+            )
+
     async with ops_test.fast_forward():
         # Wait for unit switch to maintenance status
         logger.info("Waiting unit to enter in maintenance.")
@@ -414,7 +425,7 @@ async def test_sst_test(ops_test: OpsTest, continuous_writes):
             timeout=5 * 60,
         )
 
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, app)
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
     # verify new primary
     assert primary_unit.name != new_primary_unit.name, "❌ Primary hasn't changed."
