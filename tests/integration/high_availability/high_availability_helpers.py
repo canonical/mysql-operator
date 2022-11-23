@@ -31,7 +31,7 @@ CLUSTER_NAME = "test_cluster"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 MYSQL_DEFAULT_APP_NAME = METADATA["name"]
 APPLICATION_DEFAULT_APP_NAME = "application"
-TIMEOUT = 15 * 60
+TIMEOUT = 20 * 60
 
 mysql_charm, application_charm = None, None
 
@@ -172,7 +172,6 @@ async def deploy_and_scale_mysql(
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name],
             status="active",
-            raise_on_blocked=True,
             timeout=TIMEOUT,
         )
 
@@ -403,7 +402,7 @@ async def ensure_all_units_continuous_writes_incrementing(
     server_config_credentials = await get_server_config_credentials(mysql_units[0])
 
     async with ops_test.fast_forward():
-        for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(10)):
+        for attempt in Retrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
             with attempt:
                 # ensure that all units are up to date (including the previous primary)
                 for unit in mysql_units:
