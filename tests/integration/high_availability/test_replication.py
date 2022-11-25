@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 ANOTHER_APP_NAME = f"second{APP_NAME}"
+TIMEOUT = 17 * 60
 
 
 @pytest.mark.order(1)
@@ -89,7 +90,7 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
             apps=[mysql_application_name],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
     # Wait for unit to be destroyed and confirm that the new primary unit is different
@@ -178,7 +179,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
             apps=[app],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
     # Ensure that the data still exists in all the units
@@ -228,7 +229,7 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
             apps=[ANOTHER_APP_NAME],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
     # retrieve connection data for each cluster

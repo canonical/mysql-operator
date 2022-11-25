@@ -49,6 +49,7 @@ APPLICATION_APP_NAME = APP_METADATA["name"]
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 
 ENDPOINT = "database"
+TIMEOUT = 15 * 60
 
 
 @pytest.mark.order(1)
@@ -95,13 +96,13 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 apps=[DATABASE_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
             ops_test.model.wait_for_idle(
                 apps=[APPLICATION_APP_NAME],
                 status="waiting",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
         )
 

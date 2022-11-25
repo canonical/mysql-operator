@@ -214,7 +214,7 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
-        # allow extra time for relation data to be updated, acomodating CI lag
+        # allow extra time for relation data to be updated, accommodating CI lag
         sleep(60)
         await ensure_all_units_continuous_writes_incrementing(ops_test)
 
