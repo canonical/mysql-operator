@@ -71,7 +71,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Iterable, List, Optional, Tuple
 
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed, wait_random
 
 logger = logging.getLogger(__name__)
 
@@ -1069,6 +1069,7 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
+    @retry(reraise=True, stop=stop_after_attempt(10), wait=wait_fixed(5))
     def get_member_state(self) -> Tuple[str, str]:
         """Get member status in cluster.
 
