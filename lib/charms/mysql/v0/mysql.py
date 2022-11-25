@@ -1087,7 +1087,7 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(member_state_commands))
+            output = self._run_mysqlsh_script("\n".join(member_state_commands), timeout=10)
         except MySQLClientError as e:
             logger.error(
                 "Failed to get member state: mysqld daemon is down or unaccessible",
@@ -1095,7 +1095,7 @@ class MySQLBase(ABC):
             raise MySQLGetMemberStateError(e.message)
 
         results = output.lower().split()
-        # MEMBER_ROLE is empty if member is not in a group
+        # MEMBER_ROLE is empty if member is not in a group/offline
         return results[0], results[1] if len(results) == 2 else "unknown"
 
     def reboot_from_complete_outage(self) -> None:
@@ -1123,13 +1123,14 @@ class MySQLBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _run_mysqlsh_script(self, script: str) -> str:
+    def _run_mysqlsh_script(self, script: str, timeout: Optional[int] = None) -> str:
         """Execute a MySQL shell script.
 
         Raises MySQLClientError if script execution fails.
 
         Args:
             script: Mysqlsh script string
+            timeout: Optional timeout for script execution
 
         Returns:
             String representing the output of the mysqlsh command
