@@ -157,6 +157,7 @@ class MySQLProvider(Object):
                 relation_data.get("endpoints") == rw_endpoints
                 and relation_data.get("read-only-endpoints") == ro_endpoints
             ):
+                logger.debug(f"Endpoints haven't changed for {remote_app}, skip update.")
                 return
 
             self.database.set_endpoints(relation_id, rw_endpoints)
