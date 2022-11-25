@@ -402,10 +402,10 @@ async def ensure_all_units_continuous_writes_incrementing(
     server_config_credentials = await get_server_config_credentials(mysql_units[0])
 
     async with ops_test.fast_forward():
-        for attempt in Retrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
-            with attempt:
-                # ensure that all units are up to date (including the previous primary)
-                for unit in mysql_units:
+        for unit in mysql_units:
+            for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
+                with attempt:
+                    # ensure that all units are up to date (including the previous primary)
                     unit_address = await get_unit_ip(ops_test, unit.name)
 
                     # ensure the max written value is incrementing (continuous writes is active)
