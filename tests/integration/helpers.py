@@ -26,6 +26,9 @@ from tests.integration.connector import MysqlConnector
 
 logger = logging.getLogger(__name__)
 
+TIMEOUT = 16 * 60
+TIMEOUT_BIG = 25 * 60
+
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
     """Run a command in one Juju unit.
@@ -81,13 +84,13 @@ async def scale_application(
 
         await ops_test.model.block_until(
             lambda: len(application.units) == count,
-            timeout=1500,
+            timeout=TIMEOUT_BIG,
         )
         await ops_test.model.wait_for_idle(
             apps=[application_name],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
         return
@@ -105,7 +108,7 @@ async def scale_application(
             apps=[application_name],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
 
@@ -687,7 +690,7 @@ async def remove_leader_unit(ops_test: OpsTest, application_name: str):
             apps=[application_name],
             status="active",
             raise_on_blocked=True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
 

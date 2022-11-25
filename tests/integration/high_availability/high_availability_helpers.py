@@ -403,7 +403,9 @@ async def ensure_all_units_continuous_writes_incrementing(
 
     async with ops_test.fast_forward():
         for unit in mysql_units:
-            for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
+            for attempt in Retrying(
+                reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)
+            ):
                 with attempt:
                     # ensure that all units are up to date (including the previous primary)
                     unit_address = await get_unit_ip(ops_test, unit.name)

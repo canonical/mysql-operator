@@ -76,7 +76,8 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
         )
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2, timeout=TIMEOUT
+            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2,
+            timeout=TIMEOUT,
         )
 
         await asyncio.gather(
