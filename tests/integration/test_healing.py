@@ -123,7 +123,7 @@ async def test_kill_db_process(ops_test: OpsTest, series: str) -> None:
 
 @pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.dev
+@pytest.mark.healing_tests
 async def test_freeze_db_process(ops_test: OpsTest):
     """Freeze and unfreeze process and check for auto cluster recovery."""
     app = await app_name(ops_test)
