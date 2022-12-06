@@ -262,8 +262,8 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         if self.unit_peer_data.get("unit-initialized"):
-            # Skip setting initialisation flag when alredy done
-            # and excute an update_status call
+            # Skip setting initialisation flag when already done
+            # and execute an update_status call
             self._on_update_status(None)
             return
 
