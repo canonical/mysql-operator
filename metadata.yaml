@@ -6,7 +6,7 @@ display-name: MySQL
 description: |
   MySQL charm for machines
 summary: |
-  MySQL is  a widely used, open-source relational database management system
+  MySQL is a widely used, open-source relational database management system
   (RDBMS). MySQL InnoDB cluster provides a complete high availability solution
   for MySQL via Group Replication.
 source: https://github.com/canonical/mysql-operator
@@ -39,3 +39,5 @@ storage:
     type: filesystem
     description: Persistent storage for MySQL data
     location: /var/lib/mysql
+assumes:
+  - juju
