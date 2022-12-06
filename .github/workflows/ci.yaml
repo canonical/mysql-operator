@@ -43,8 +43,6 @@ jobs:
         with:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Run integration HA tests
         run: tox -e integration-ha -- --series=${{ matrix.series }}
 
