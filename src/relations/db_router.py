@@ -13,8 +13,14 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUsersForUnitError,
+    MySQLGetClusterPrimaryAddressError,
 )
-from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
+from ops.charm import (
+    CharmBase,
+    LeaderElectedEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 from ops.framework import Object
 from ops.model import BlockedStatus, RelationDataContent
 
@@ -152,7 +158,7 @@ class DBRouterRelation(Object):
 
         return user_passwords, requested_user_applications
 
-    def _on_leader_elected(self, _) -> None:
+    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader elected event.
 
         Copy data from the relation's application databag to the leader unit databag
@@ -163,7 +169,19 @@ class DBRouterRelation(Object):
         if not self.charm._is_peer_data_set:
             return
 
-        for relation in self.charm.model.relations.get(LEGACY_DB_ROUTER, []):
+        relations = self.charm.model.relations.get(LEGACY_DB_ROUTER, [])
+        if not relations:
+            # Bypass run if no relation
+            return
+
+        try:
+            primary_address = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+        except MySQLGetClusterPrimaryAddressError:
+            logger.error("Can't get primary address. Deferring")
+            event.defer()
+            return
+
+        for relation in relations:
             relation_databag = relation.data
 
             # Copy data from the application databag into the leader unit's databag
@@ -172,7 +190,6 @@ class DBRouterRelation(Object):
                     relation_databag[self.charm.unit][key] = value
 
             # Update the db host as the cluster primary may have changed
-            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
             relation_databag[self.charm.unit]["db_host"] = json.dumps(primary_address)
             relation_databag[self.charm.app]["db_host"] = json.dumps(primary_address)
 

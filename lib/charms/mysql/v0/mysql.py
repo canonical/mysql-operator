@@ -1075,7 +1075,7 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
-    @retry(reraise=True, stop=stop_after_attempt(10), wait=wait_fixed(5))
+    @retry(reraise=True, stop=stop_after_attempt(12), wait=wait_fixed(10))
     def get_member_state(self) -> Tuple[str, str]:
         """Get member status in cluster.
 
@@ -1096,7 +1096,7 @@ class MySQLBase(ABC):
             output = self._run_mysqlsh_script("\n".join(member_state_commands), timeout=10)
         except MySQLClientError as e:
             logger.error(
-                "Failed to get member state: mysqld daemon is down or unaccessible",
+                "Failed to get member state: mysqld daemon is down",
             )
             raise MySQLGetMemberStateError(e.message)
 
@@ -1104,11 +1104,16 @@ class MySQLBase(ABC):
         # MEMBER_ROLE is empty if member is not in a group/offline
         return results[0], results[1] if len(results) == 2 else "unknown"
 
-    def reboot_from_complete_outage(self) -> None:
-        """Wrapper for reboot_cluster_from_complete_outage command."""
+    def reboot_from_complete_outage(self, force: bool = False) -> None:
+        """Wrapper for reboot_cluster_from_complete_outage command.
+
+        Args:
+            force: If instance should reboot even when can't reach metadata peers
+        """
+        options = {"force": "true" if force else "false"}
         rejoin_command = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
+            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}', {json.dumps(options)})",
         )
 
         try:

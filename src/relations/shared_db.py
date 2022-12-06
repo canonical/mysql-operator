@@ -6,8 +6,16 @@
 
 import logging
 
-from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
-from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
+from charms.mysql.v0.mysql import (
+    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLGetClusterPrimaryAddressError,
+)
+from ops.charm import (
+    CharmBase,
+    LeaderElectedEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 from ops.framework import Object
 from ops.model import BlockedStatus
 
@@ -53,7 +61,7 @@ class SharedDBRelation(Object):
         self._peers.data[self._charm.app][f"{username}_password"] = password
         return password
 
-    def _on_leader_elected(self, _) -> None:
+    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         # Ensure that the leader unit contains the latest data.
         # Legacy apps will consume data from leader unit.
 
@@ -61,9 +69,20 @@ class SharedDBRelation(Object):
             # Bypass run on initial deployment leader elected event.
             return
 
-        db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+        relations = self.model.relations.get(LEGACY_DB_SHARED, [])
 
-        for relation in self.model.relations.get(LEGACY_DB_SHARED, []):
+        if not relations:
+            # Bypass run if no relation
+            return
+
+        try:
+            db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+        except MySQLGetClusterPrimaryAddressError:
+            logger.error("Can't get primary address. Deferring")
+            event.defer()
+            return
+
+        for relation in relations:
             logger.debug(f"Syncing data from leader unit for relation {relation.id}")
             for key, value in relation.data[self._charm.app].items():
                 if key == "db_host":

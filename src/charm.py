@@ -151,7 +151,13 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
-        self.unit.status = MaintenanceStatus("Setting up database cluster")
+        if self.unit_peer_data.get("unit-initialized") == "True":
+            # if receiving on start after unit initialization
+            logger.debug("Delegate status update for start handler on initialized unit.")
+            self._on_update_status(None)
+            return
+
+        self.unit.status = MaintenanceStatus("Setting up cluster node")
 
         try:
             self._workload_initialise()
@@ -183,7 +189,7 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.app_peer_data["units-added-to-cluster"] = "1"
-
+        self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
         self.unit.status = ActiveStatus(self.active_status_message)
 
@@ -236,6 +242,7 @@ class MySQLOperatorCharm(CharmBase):
         if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
             unit_label
         ):
+            self.unit_peer_data["unit-initialized"] = "True"
             self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_database_storage_detaching(self, _) -> None:
@@ -265,6 +272,13 @@ class MySQLOperatorCharm(CharmBase):
         if not self.cluster_initialized or not self.unit_peer_data.get("member-role"):
             # health checks only after cluster and member are initialised
             return
+        if (
+            self.unit_peer_data.get("member-state") == "waiting"
+            and not self.unit_peer_data.get("unit-initialized")
+            and not self.unit.is_leader()
+        ):
+            # avoid changing status while in initialisation
+            return
 
         # retrieve and persist state for every unit
         try:
@@ -272,9 +286,6 @@ class MySQLOperatorCharm(CharmBase):
             self.unit_peer_data["member-role"] = role
             self.unit_peer_data["member-state"] = state
         except MySQLGetMemberStateError:
-            if self.unit_peer_data.get("member-state") == "waiting":
-                # avoid changing status while in initialisation
-                return
             role = self.unit_peer_data["member-role"] = "unknown"
             state = self.unit_peer_data["member-state"] = "unreachable"
         logger.info(f"Unit workload member-state is {state} with member-role {role}")
@@ -297,12 +308,13 @@ class MySQLOperatorCharm(CharmBase):
                 self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
             }
 
-            if all_states == {"offline"} and self.unit.is_leader():
-                # All instance are off, reboot cluster from outage from the leader unit
-
+            if all_states in [{"offline"}, set()] and self.unit.is_leader():
+                # All instance are off or its a single unit cluster
+                # reboot cluster from outage from the leader unit
                 logger.debug("Attempting reboot from complete outage.")
                 try:
-                    self._mysql.reboot_from_complete_outage()
+                    # reboot from outage forcing it when it a single unit
+                    self._mysql.reboot_from_complete_outage(force=all_states == set())
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
@@ -486,8 +498,8 @@ class MySQLOperatorCharm(CharmBase):
         try:
             primary_address = self._get_primary_address_from_peers()
             if not primary_address:
-                logger.debug("Primary not yet defined on peers. Skipping workload reset")
-                return MaintenanceStatus("Workload reset")
+                logger.debug("Primary not defined on peers. skipping workload reset")
+                return WaitingStatus("waiting for update status")
             service_stop(SERVICE_NAME)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
