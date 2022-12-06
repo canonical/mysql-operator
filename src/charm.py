@@ -58,6 +58,8 @@ from mysql_vm_helpers import (
     MySQLDataPurgeError,
     MySQLReconfigureError,
     instance_hostname,
+    is_data_dir_attached,
+    reboot_system,
 )
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
@@ -103,9 +105,17 @@ class MySQLOperatorCharm(CharmBase):
     #  Charm Lifecycle Hooks
     # =======================
 
-    def _on_install(self, _) -> None:
+    def _on_install(self, event) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
+
+        if not is_data_dir_attached():
+            # workaround for lxd containers
+            # not getting storage attached on startups
+            event.defer()
+            logger.error("Data directory not attached. Reboot unit.")
+            reboot_system()
+            return
 
         # Initial setup operations like installing dependencies, and creating users and groups.
         try:
@@ -149,6 +159,15 @@ class MySQLOperatorCharm(CharmBase):
         # Safeguard unit starting before leader unit sets peer data
         if not self._is_peer_data_set:
             event.defer()
+            return
+
+        if not is_data_dir_attached():
+            # workaround for lxd containers
+            # not getting storage attached on startups
+            event.defer()
+            logger.debug("Data directory not attached. Reboot unit.")
+            self.unit.status = WaitingStatus("Data directory not attached")
+            reboot_system()
             return
 
         if self.unit_peer_data.get("unit-initialized") == "True":
@@ -199,6 +218,11 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
+        # Defer if the unit is not initialised
+        if not self.unit_peer_data.get("unit-initialized"):
+            event.defer()
+            return
+
         # Defer if the instance is not configured for use in an InnoDB cluster
         # Every instance gets configured for use in an InnoDB cluster on start
         event_unit_address = event.relation.data[event.unit]["private-address"]
@@ -237,6 +261,12 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        if self.unit_peer_data.get("unit-initialized"):
+            # Skip setting initialisation flag when alredy done
+            # and excute an update_status call
+            self._on_update_status(None)
+            return
+
         # Update the unit's status to ActiveStatus if it was added to the cluster
         unit_label = self.unit.name.replace("/", "-")
         if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
@@ -269,7 +299,11 @@ class MySQLOperatorCharm(CharmBase):
 
         Takes care of workload health checks.
         """
-        if not self.cluster_initialized or not self.unit_peer_data.get("member-role"):
+        if (
+            not self.cluster_initialized
+            or not self.unit_peer_data.get("member-role")
+            or not is_data_dir_attached()
+        ):
             # health checks only after cluster and member are initialised
             return
         if (
@@ -319,10 +353,8 @@ class MySQLOperatorCharm(CharmBase):
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
 
-        if state == "unreachable" and (
-            service_running(SERVICE_NAME) or not service_start(SERVICE_NAME)
-        ):
-            # mysqld access not possible with daemon running or start fails
+        if state == "unreachable" and not service_restart(SERVICE_NAME):
+            # mysqld access not possible and daemon restart fails
             # force reset necessary
             self.unit.status = MaintenanceStatus("Workload reset")
             self.unit.status = self._workload_reset()
