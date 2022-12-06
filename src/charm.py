@@ -17,12 +17,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
 )
-from charms.operator_libs_linux.v0.systemd import (
-    service_restart,
-    service_running,
-    service_start,
-    service_stop,
-)
+from charms.operator_libs_linux.v0.systemd import service_restart, service_stop
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
