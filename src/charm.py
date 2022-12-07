@@ -160,7 +160,7 @@ class MySQLOperatorCharm(CharmBase):
             # workaround for lxd containers
             # not getting storage attached on startups
             event.defer()
-            logger.debug("Data directory not attached. Reboot unit.")
+            logger.error("Data directory not attached. Reboot unit.")
             self.unit.status = WaitingStatus("Data directory not attached")
             reboot_system()
             return
