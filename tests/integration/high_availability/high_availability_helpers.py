@@ -21,7 +21,7 @@ from tests.integration.helpers import (
     is_relation_joined,
     scale_application,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import SERIES_TO_VERSION, SERIES_TO_BASEINDEX
 
 # Copied these values from high_availability.application_charm.src.charm
 DATABASE_NAME = "continuous_writes_database"
@@ -128,8 +128,13 @@ def pack_charm(series: str) -> str:
     # Build and deploy charm from local source folder
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
-    subprocess.check_output(charmcraft_pack_commands)
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASEINDEX[series]}",
+    ]
+    subprocess.check_call(charmcraft_pack_commands)
     return charm_url
 
 
@@ -167,6 +172,7 @@ async def deploy_and_scale_mysql(
             application_name=mysql_application_name,
             config=config,
             num_units=3,
+            series=series,
         )
 
         await ops_test.model.wait_for_idle(
