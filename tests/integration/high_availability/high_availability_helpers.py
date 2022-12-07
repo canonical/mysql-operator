@@ -21,7 +21,10 @@ from tests.integration.helpers import (
     is_relation_joined,
     scale_application,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION, SERIES_TO_BASEINDEX
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 
 # Copied these values from high_availability.application_charm.src.charm
 DATABASE_NAME = "continuous_writes_database"
@@ -132,7 +135,7 @@ def pack_charm(series: str) -> str:
         "sg",
         "lxd",
         "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASEINDEX[series]}",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
     ]
     subprocess.check_call(charmcraft_pack_commands)
     return charm_url

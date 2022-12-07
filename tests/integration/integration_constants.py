@@ -8,7 +8,7 @@ SERIES_TO_VERSION = {
     "jammy": "22.04",
 }
 
-SERIES_TO_BASEINDEX = {
-        "focal": 0,
-        "jammy": 1,
+SERIES_TO_BASE_INDEX = {
+    "focal": 0,
+    "jammy": 1,
 }
