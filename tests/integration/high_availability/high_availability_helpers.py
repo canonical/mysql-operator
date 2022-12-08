@@ -49,6 +49,7 @@ async def get_max_written_value_in_database(
     Args:
         ops_test: The ops test framework
         unit: The MySQL unit on which to execute queries on
+        credentials: Database credentials to use
     """
     unit_address = await get_unit_ip(ops_test, unit.name)
 
