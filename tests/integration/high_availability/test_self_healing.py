@@ -5,7 +5,6 @@
 import asyncio
 import logging
 from pathlib import Path
-from time import sleep
 
 import pytest
 import yaml
@@ -65,7 +64,6 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
 
     # ensure all units in the cluster are online
     assert await ensure_n_online_mysql_members(
@@ -79,21 +77,12 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     logger.info(f"Killing process id {pid}")
     await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-9", pid)
 
-    config = {
-        "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": primary_unit_ip,
-    }
-
     # retrieve new PID
     new_pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
     logger.info(f"New process id is {new_pid}")
 
     # verify that mysqld instance is not the killed one
     assert new_pid != pid, "❌ PID for mysql daemon did not change"
-
-    # verify daemon restarted via connection
-    assert is_connection_possible(config), f"❌ Daemon did not restart on unit {primary_unit.name}"
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
@@ -214,8 +203,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
-        # allow extra time for relation data to be updated, accommodating CI lag
-        sleep(60)
         await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # ensure that we are able to insert data into the primary and have it replicated to all units
@@ -286,7 +273,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
 
     # allow some time for sync
     try:
-        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
             with attempt:
                 output = await execute_queries_on_unit(
                     primary_unit_ip,
@@ -351,6 +338,11 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
         await start_server(ops_test, unit.name)
 
     async with ops_test.fast_forward():
+        logger.info("Waiting units to enter maintenance.")
+        await ops_test.model.block_until(
+            lambda: {unit.workload_status for unit in all_units} == {"maintenance"},
+            timeout=5 * 60,
+        )
         logger.info("Waiting units to be back online.")
         await ops_test.model.block_until(
             lambda: {unit.workload_status for unit in all_units} == {"active"},

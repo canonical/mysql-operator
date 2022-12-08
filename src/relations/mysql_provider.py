@@ -262,6 +262,6 @@ class MySQLProvider(Object):
             relation_id = event.relation.id
             self.charm._mysql.delete_user_for_relation(relation_id)
             logger.info(f"Removed user for relation {relation_id}")
-        except MySQLDeleteUserForRelationError:
+        except (MySQLDeleteUserForRelationError, KeyError):
             logger.error(f"Failed to delete user for relation {relation_id}")
             return

@@ -112,7 +112,7 @@ async def scale_application(
         )
 
 
-@retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
+@retry(stop=stop_after_attempt(30), wait=wait_fixed(5), reraise=True)
 async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,

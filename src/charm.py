@@ -156,6 +156,9 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        if self._has_blocked_status:
+            return
+
         if not is_data_dir_attached():
             # workaround for lxd containers
             # not getting storage attached on startups
@@ -471,6 +474,11 @@ class MySQLOperatorCharm(CharmBase):
 
         return self.peers.data[self.unit]
 
+    @property
+    def _has_blocked_status(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
@@ -525,8 +533,8 @@ class MySQLOperatorCharm(CharmBase):
         try:
             primary_address = self._get_primary_address_from_peers()
             if not primary_address:
-                logger.debug("Primary not defined on peers. skipping workload reset")
-                return WaitingStatus("waiting for update status")
+                logger.debug("Primary not yet defined on peers. Waiting new primary.")
+                return MaintenanceStatus("Workload reset: waiting new primary")
             service_stop(SERVICE_NAME)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
