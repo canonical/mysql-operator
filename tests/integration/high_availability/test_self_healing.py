@@ -203,8 +203,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
-        # allow extra time for relation data to be updated, accommodating CI lag
-        sleep(60)
         await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # ensure that we are able to insert data into the primary and have it replicated to all units
@@ -275,7 +273,7 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
 
     # allow some time for sync
     try:
-        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
             with attempt:
                 output = await execute_queries_on_unit(
                     primary_unit_ip,
