@@ -35,6 +35,9 @@ def continuous_writes(database_config: Dict, table_name: str, starting_number: i
                 cursor.execute(
                     f"INSERT INTO `{table_name}`(number) VALUES ({next_value_to_insert})"
                 )
+        except mysql.connector.errors.IntegrityError:
+            next_value_to_insert += 1
+            continue
         except mysql.connector.errors.DatabaseError as e:
             # errno 2003: can't connect to mysql database
             if e.errno != 2003:

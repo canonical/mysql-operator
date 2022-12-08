@@ -41,22 +41,23 @@ mysql_charm, application_charm = None, None
 logger = logging.getLogger(__name__)
 
 
-async def get_max_written_value_in_database(ops_test: OpsTest, unit: Unit) -> int:
+async def get_max_written_value_in_database(
+    ops_test: OpsTest, unit: Unit, credentials: dict
+) -> int:
     """Retrieve the max written value in the MySQL database.
 
     Args:
         ops_test: The ops test framework
         unit: The MySQL unit on which to execute queries on
     """
-    server_config_credentials = await get_server_config_credentials(unit)
     unit_address = await get_unit_ip(ops_test, unit.name)
 
     select_max_written_value_sql = [f"SELECT MAX(number) FROM `{DATABASE_NAME}`.`{TABLE_NAME}`;"]
 
     output = await execute_queries_on_unit(
         unit_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
+        credentials["username"],
+        credentials["password"],
         select_max_written_value_sql,
     )
 
@@ -405,10 +406,13 @@ async def ensure_all_units_continuous_writes_incrementing(
 
     primary = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
-    last_max_written_value = await get_max_written_value_in_database(ops_test, primary)
+    server_config_credentials = await get_server_config_credentials(mysql_units[0])
+
+    last_max_written_value = await get_max_written_value_in_database(
+        ops_test, primary, server_config_credentials
+    )
 
     select_all_continuous_writes_sql = [f"SELECT * FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
-    server_config_credentials = await get_server_config_credentials(mysql_units[0])
 
     async with ops_test.fast_forward():
         for unit in mysql_units:
@@ -420,7 +424,9 @@ async def ensure_all_units_continuous_writes_incrementing(
                     unit_address = await get_unit_ip(ops_test, unit.name)
 
                     # ensure the max written value is incrementing (continuous writes is active)
-                    max_written_value = await get_max_written_value_in_database(ops_test, unit)
+                    max_written_value = await get_max_written_value_in_database(
+                        ops_test, unit, server_config_credentials
+                    )
                     assert (
                         max_written_value > last_max_written_value
                     ), "Continuous writes not incrementing"
