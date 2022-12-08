@@ -494,8 +494,8 @@ class MySQLOperatorCharm(CharmBase):
         try:
             primary_address = self._get_primary_address_from_peers()
             if not primary_address:
-                logger.debug("Primary not yet defined on peers. Skipping workload reset")
-                return MaintenanceStatus("Workload reset")
+                logger.debug("Primary not yet defined on peers. Waiting new primary.")
+                return MaintenanceStatus("Workload reset: waiting new primary")
             service_stop(SERVICE_NAME)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
