@@ -39,11 +39,9 @@ def continuous_writes(database_config: Dict, table_name: str, starting_number: i
             # errno 2003: can't connect to mysql database
             if e.errno != 2003:
                 raise
-            continue
         except Exception as e:
             if e.errno != 2013 or e.msg != "Lost connection to MySQL server during query":
                 raise
-            continue
 
         next_value_to_insert += 1
 
