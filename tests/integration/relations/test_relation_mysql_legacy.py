@@ -18,7 +18,10 @@ from helpers import (
 )
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,12 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
+    ]
     subprocess.check_output(charmcraft_pack_commands)
     db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
