@@ -151,6 +151,9 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        if self._has_blocked_status:
+            return
+
         self.unit.status = MaintenanceStatus("Setting up database cluster")
 
         try:
@@ -431,6 +434,11 @@ class MySQLOperatorCharm(CharmBase):
             return {}
 
         return self.peers.data[self.unit]
+
+    @property
+    def _has_blocked_status(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
