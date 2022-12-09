@@ -204,12 +204,13 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
         # wait for the unit to be ready
-        logger.info(f"Waiting for {primary_unit.name} to be ready")
+        logger.info(f"Waiting for {primary_unit.name} to enter maintenance")
         await ops_test.model.block_until(
-            lambda: primary_unit.workload_status == "maintenance", timeout=5 * 60
+            lambda: primary_unit.workload_status == "maintenance", timeout=10 * 60
         )
+        logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
-            lambda: primary_unit.workload_status == "active", timeout=5 * 60
+            lambda: primary_unit.workload_status == "active", timeout=10 * 60
         )
 
         await ensure_all_units_continuous_writes_incrementing(ops_test)
