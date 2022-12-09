@@ -203,6 +203,15 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
+        # wait for the unit to be ready
+        logger.info(f"Waiting for {primary_unit.name} to be ready")
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "maintenance", timeout=5 * 60
+        )
+        await ops_test.model.block_until(
+            lambda: primary_unit.workload_status == "active", timeout=5 * 60
+        )
+
         await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # ensure that we are able to insert data into the primary and have it replicated to all units
