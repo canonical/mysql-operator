@@ -210,7 +210,7 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
         )
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
-            lambda: primary_unit.workload_status == "active", timeout=20 * 60
+            lambda: primary_unit.workload_status == "active", timeout=40 * 60
         )
 
         await ensure_all_units_continuous_writes_incrementing(ops_test)
