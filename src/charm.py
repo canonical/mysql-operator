@@ -314,13 +314,12 @@ class MySQLOperatorCharm(CharmBase):
             all_states.add("offline")
 
             if all_states == {"offline"} and self.unit.is_leader():
-            if all_states in [{"offline"}, set()] and self.unit.is_leader():
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
                 logger.debug("Attempting reboot from complete outage.")
                 try:
                     # reboot from outage forcing it when it a single unit
-                    self._mysql.reboot_from_complete_outage(force=all_states == set())
+                    self._mysql.reboot_from_complete_outage()
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")

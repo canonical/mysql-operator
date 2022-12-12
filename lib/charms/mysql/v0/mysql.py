@@ -1104,16 +1104,11 @@ class MySQLBase(ABC):
         # MEMBER_ROLE is empty if member is not in a group/offline
         return results[0], results[1] if len(results) == 2 else "unknown"
 
-    def reboot_from_complete_outage(self, force: bool = False) -> None:
-        """Wrapper for reboot_cluster_from_complete_outage command.
-
-        Args:
-            force: If instance should reboot even when can't reach metadata peers
-        """
-        options = {"force": "true" if force else "false"}
+    def reboot_from_complete_outage(self) -> None:
+        """Wrapper for reboot_cluster_from_complete_outage command."""
         rejoin_command = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}', {json.dumps(options)})",
+            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
         )
 
         try:
