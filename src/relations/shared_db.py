@@ -75,6 +75,11 @@ class SharedDBRelation(Object):
             # Bypass run if no relation
             return
 
+        if not self._charm.unit_peer_date.get("unit-initialized"):
+            # Defer run if the unit has not been initialized
+            event.defer()
+            return
+
         try:
             db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
         except MySQLGetClusterPrimaryAddressError:
