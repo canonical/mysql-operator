@@ -156,7 +156,7 @@ class MySQL(MySQLBase):
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError()
 
-    def _run_mysqlsh_script(self, script: str) -> str:
+    def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
@@ -177,8 +177,10 @@ class MySQL(MySQLBase):
             command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
 
             try:
-                return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
-            except subprocess.CalledProcessError as e:
+                return subprocess.check_output(
+                    command, stderr=subprocess.PIPE, timeout=timeout
+                ).decode("utf-8")
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 raise MySQLClientError(e.stderr)
 
     def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:

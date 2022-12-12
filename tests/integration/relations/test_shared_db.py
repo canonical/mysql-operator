@@ -12,12 +12,15 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
-    execute_commands_on_unit,
+    execute_queries_on_unit,
     get_primary_unit,
     get_server_config_credentials,
     scale_application,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +90,7 @@ async def check_successful_keystone_migration(
         unit_address = await unit.get_public_address()
 
         # Ensure 'keystone' database exists in mysql
-        output = await execute_commands_on_unit(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],
@@ -96,7 +99,7 @@ async def check_successful_keystone_migration(
         assert "keystone" in output
 
         # Ensure that keystone tables exist in the 'keystone' database
-        output = await execute_commands_on_unit(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],
@@ -130,7 +133,7 @@ async def check_keystone_users_existence(
     unit_address = await unit.get_public_address()
 
     # Retrieve all users in the database
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         unit_address,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -159,7 +162,12 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None
     # Build and deploy charm from local source folder
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
+    ]
     subprocess.check_output(charmcraft_pack_commands)
     charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 

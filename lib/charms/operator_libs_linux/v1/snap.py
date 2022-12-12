@@ -52,7 +52,7 @@ try:
     if nextcloud.get("mode") != "production":
         nextcloud.set({"mode": "production"})
 except snap.SnapError as e:
-    logger.error("An exception occurred when installing snaps. Reason: %s", e.message)
+    logger.error("An exception occurred when installing snaps. Reason: %s" % e.message)
 ```
 """
 
@@ -67,9 +67,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Mapping
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from subprocess import CalledProcessError
-from typing import Dict, Iterable, List, Optional, Union
+from subprocess import CalledProcessError, CompletedProcess
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 5
 
 
 def _cache_init(func):
@@ -91,6 +92,39 @@ def _cache_init(func):
         return func(*args, **kwargs)
 
     return inner
+
+
+# recursive hints seems to error out pytest
+JSONType = Union[Dict[str, Any], List[Any], str, int, float]
+
+
+class SnapService:
+    """Data wrapper for snap services."""
+
+    def __init__(
+        self,
+        daemon: Optional[str] = None,
+        daemon_scope: Optional[str] = None,
+        enabled: bool = False,
+        active: bool = False,
+        activators: List[str] = [],
+        **kwargs
+    ):
+        self.daemon = daemon
+        self.daemon_scope = kwargs.get("daemon-scope", None) or daemon_scope
+        self.enabled = enabled
+        self.active = active
+        self.activators = activators
+
+    def as_dict(self) -> Dict:
+        """Returns instance representation as dict."""
+        return {
+            "daemon": self.daemon,
+            "daemon_scope": self.daemon_scope,
+            "enabled": self.enabled,
+            "active": self.active,
+            "activators": self.activators,
+        }
 
 
 class MetaCache(type):
@@ -161,7 +195,7 @@ class SnapState(Enum):
 
 
 class SnapError(Error):
-    """Raised when there's an error installing or removing a snap."""
+    """Raised when there's an error running snap control commands."""
 
 
 class SnapNotFoundError(Error):
@@ -186,6 +220,7 @@ class Snap(object):
         channel: str,
         revision: str,
         confinement: str,
+        apps: Optional[List[Dict[str, str]]] = None,
         cohort: Optional[str] = "",
     ) -> None:
         self._name = name
@@ -194,6 +229,8 @@ class Snap(object):
         self._revision = revision
         self._confinement = confinement
         self._cohort = cohort
+        self._apps = apps or []
+        self._snap_client = SnapClient()
 
     def __eq__(self, other) -> bool:
         """Equality for comparison."""
@@ -236,7 +273,30 @@ class Snap(object):
         try:
             return subprocess.check_output(_cmd, universal_newlines=True)
         except CalledProcessError as e:
-            raise SnapError("Could not %s snap [%s]: %s", _cmd, self._name, e.output)
+            raise SnapError(
+                "Snap: {!r}; command {!r} failed with output = {!r}".format(
+                    self._name, _cmd, e.output
+                )
+            )
+
+    def _snap_daemons(
+        self,
+        command: List[str],
+        services: Optional[List[str]] = None,
+    ) -> CompletedProcess:
+
+        if services:
+            # an attempt to keep the command constrained to the snap instance's services
+            services = ["{}.{}".format(self._name, service) for service in services]
+        else:
+            services = [self._name]
+
+        _cmd = ["snap", *command, *services]
+
+        try:
+            return subprocess.run(_cmd, universal_newlines=True, check=True, capture_output=True)
+        except CalledProcessError as e:
+            raise SnapError("Could not {} for snap [{}]: {}".format(_cmd, self._name, e.stderr))
 
     def get(self, key) -> str:
         """Gets a snap configuration value.
@@ -263,6 +323,51 @@ class Snap(object):
             key: the key to unset
         """
         return self._snap("unset", [key])
+
+    def start(self, services: Optional[List[str]] = None, enable: Optional[bool] = False) -> None:
+        """Starts a snap's services.
+
+        Args:
+            services (list): (optional) list of individual snap services to start (otherwise all)
+            enable (bool): (optional) flag to enable snap services on start. Default `false`
+        """
+        args = ["start", "--enable"] if enable else ["start"]
+        self._snap_daemons(args, services)
+
+    def stop(self, services: Optional[List[str]] = None, disable: Optional[bool] = False) -> None:
+        """Stops a snap's services.
+
+        Args:
+            services (list): (optional) list of individual snap services to stop (otherwise all)
+            disable (bool): (optional) flag to disable snap services on stop. Default `False`
+        """
+        args = ["stop", "--disable"] if disable else ["stop"]
+        self._snap_daemons(args, services)
+
+    def logs(self, services: Optional[List[str]] = None, num_lines: Optional[int] = 10) -> str:
+        """Shows a snap services' logs.
+
+        Args:
+            services (list): (optional) list of individual snap services to show logs from
+                (otherwise all)
+            num_lines (int): (optional) integer number of log lines to return. Default `10`
+        """
+        args = ["logs", "-n={}".format(num_lines)] if num_lines else ["logs"]
+        return self._snap_daemons(args, services).stdout
+
+    def restart(
+        self, services: Optional[List[str]] = None, reload: Optional[bool] = False
+    ) -> None:
+        """Restarts a snap's services.
+
+        Args:
+            services (list): (optional) list of individual snap services to show logs from.
+                (otherwise all)
+            reload (bool): (optional) flag to use the service reload command, if available.
+                Default `False`
+        """
+        args = ["restart", "--reload"] if reload else ["restart"]
+        self._snap_daemons(args, services)
 
     def _install(self, channel: Optional[str] = "", cohort: Optional[str] = "") -> None:
         """Add a snap to the system.
@@ -310,7 +415,7 @@ class Snap(object):
 
         self._snap("refresh", args)
 
-    def _remove(self) -> None:
+    def _remove(self) -> str:
         """Removes a snap from the system."""
         return self._snap("remove")
 
@@ -356,7 +461,16 @@ class Snap(object):
                 # The snap is installed, but we are changing it (e.g., switching channels).
                 self._refresh(channel, cohort)
 
+        self._update_snap_apps()
         self._state = state
+
+    def _update_snap_apps(self) -> None:
+        """Updates a snap's apps after snap changes state."""
+        try:
+            self._apps = self._snap_client.get_installed_snap_apps(self._name)
+        except SnapAPIError:
+            logger.debug("Unable to retrieve snap apps for {}".format(self._name))
+            self._apps = []
 
     @property
     def present(self) -> bool:
@@ -401,6 +515,23 @@ class Snap(object):
     def confinement(self) -> str:
         """Returns the confinement for a snap."""
         return self._confinement
+
+    @property
+    def apps(self) -> List:
+        """Returns (if any) the installed apps of the snap."""
+        self._update_snap_apps()
+        return self._apps
+
+    @property
+    def services(self) -> Dict:
+        """Returns (if any) the installed services of the snap."""
+        self._update_snap_apps()
+        services = {}
+        for app in self._apps:
+            if "daemon" in app:
+                services[app["name"]] = SnapService(**app).as_dict()
+
+        return services
 
 
 class _UnixSocketConnection(http.client.HTTPConnection):
@@ -481,7 +612,7 @@ class SnapClient:
         path: str,
         query: Dict = None,
         body: Dict = None,
-    ) -> Dict:
+    ) -> JSONType:
         """Make a JSON request to the Snapd server with the given HTTP method and path.
 
         If query dict is provided, it is encoded and appended as a query string
@@ -539,6 +670,10 @@ class SnapClient:
     def get_snap_information(self, name: str) -> Dict:
         """Query the snap server for information about single snap."""
         return self._request("GET", "find", {"name": name})[0]
+
+    def get_installed_snap_apps(self, name: str) -> List:
+        """Query the snap server for apps belonging to a named, currently installed snap."""
+        return self._request("GET", "apps", {"names": name, "select": "service"})
 
 
 class SnapCache(Mapping):
@@ -611,11 +746,12 @@ class SnapCache(Mapping):
 
         for i in installed:
             snap = Snap(
-                i["name"],
-                SnapState.Latest,
-                i["channel"],
-                i["revision"],
-                i["confinement"],
+                name=i["name"],
+                state=SnapState.Latest,
+                channel=i["channel"],
+                revision=i["revision"],
+                confinement=i["confinement"],
+                apps=i.get("apps", None),
             )
             self._snap_map[snap.name] = snap
 
@@ -628,11 +764,12 @@ class SnapCache(Mapping):
         info = self._snap_client.get_snap_information(name)
 
         return Snap(
-            info["name"],
-            SnapState.Available,
-            info["channel"],
-            info["revision"],
-            info["confinement"],
+            name=info["name"],
+            state=SnapState.Available,
+            channel=info["channel"],
+            revision=info["revision"],
+            confinement=info["confinement"],
+            apps=None,
         )
 
 
@@ -748,7 +885,7 @@ def _wrap_snap_operations(
 
 
 def install_local(
-    self, filename: str, classic: Optional[bool] = False, dangerous: Optional[bool] = False
+    filename: str, classic: Optional[bool] = False, dangerous: Optional[bool] = False
 ) -> Snap:
     """Perform a snap operation.
 
@@ -764,9 +901,11 @@ def install_local(
         "snap",
         "install",
         filename,
-        "--classic" if classic else "",
-        "--dangerous" if dangerous else "",
     ]
+    if classic:
+        _cmd.append("--classic")
+    if dangerous:
+        _cmd.append("--dangerous")
     try:
         result = subprocess.check_output(_cmd, universal_newlines=True).splitlines()[0]
         snap_name, _ = result.split(" ", 1)
@@ -775,4 +914,42 @@ def install_local(
 
         return c[snap_name]
     except CalledProcessError as e:
-        raise SnapError("Could not install snap [%s]: %s", _cmd, filename, e.output)
+        raise SnapError("Could not install snap {}: {}".format(filename, e.output))
+
+
+def _system_set(config_item: str, value: str) -> None:
+    """Helper for setting snap system config values.
+
+    Args:
+        config_item: name of snap system setting. E.g. 'refresh.hold'
+        value: value to assign
+    """
+    _cmd = ["snap", "set", "system", "{}={}".format(config_item, value)]
+    try:
+        subprocess.check_call(_cmd, universal_newlines=True)
+    except CalledProcessError:
+        raise SnapError("Failed setting system config '{}' to '{}'".format(config_item, value))
+
+
+def hold_refresh(days: int = 90) -> bool:
+    """Set the system-wide snap refresh hold.
+
+    Args:
+        days: number of days to hold system refreshes for. Maximum 90. Set to zero to remove hold.
+    """
+    # Currently the snap daemon can only hold for a maximum of 90 days
+    if not isinstance(days, int) or days > 90:
+        raise ValueError("days must be an int between 1 and 90")
+    elif days == 0:
+        _system_set("refresh.hold", "")
+        logger.info("Removed system-wide snap refresh hold")
+    else:
+        # Add the number of days to current time
+        target_date = datetime.now(timezone.utc).astimezone() + timedelta(days=days)
+        # Format for the correct datetime format
+        hold_date = target_date.strftime("%Y-%m-%dT%H:%M:%S%z")
+        # Python dumps the offset in format '+0100', we need '+01:00'
+        hold_date = "{0}:{1}".format(hold_date[:-2], hold_date[-2:])
+        # Actually set the hold date
+        _system_set("refresh.hold", hold_date)
+        logger.info("Set system-wide snap refresh hold to: %s", hold_date)

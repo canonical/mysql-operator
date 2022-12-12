@@ -21,7 +21,10 @@ from tests.integration.helpers import (
     scale_application,
     unit_file_md5,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,12 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     # Build and deploy charm from local source folder
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
+    ]
     subprocess.check_output(charmcraft_pack_commands)
     charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
@@ -114,7 +122,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     logger.info("Deploy TLS operator")
     async with ops_test.fast_forward():
         tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_APP_NAME, channel="edge", config=tls_config)
+        await ops_test.model.deploy(TLS_APP_NAME, channel="beta", config=tls_config)
         await ops_test.model.wait_for_idle(apps=[TLS_APP_NAME], status="active", timeout=15 * 60)
 
     # Relate with TLS charm

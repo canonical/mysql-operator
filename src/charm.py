@@ -151,6 +151,9 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
+        if self._has_blocked_status:
+            return
+
         self.unit.status = MaintenanceStatus("Setting up database cluster")
 
         try:
@@ -205,7 +208,7 @@ class MySQLOperatorCharm(CharmBase):
         # Safeguard against event deferral
         if self._mysql.is_instance_in_cluster(event_unit_label):
             logger.debug(
-                f"Unit {event_unit_label} is already part of the cluster, don't try to add it again."
+                f"Unit {event_unit_label} is already part of the cluster, skipping add to cluster."
             )
             return
 
@@ -312,6 +315,7 @@ class MySQLOperatorCharm(CharmBase):
         ):
             # mysqld access not possible with daemon running or start fails
             # force reset necessary
+            self.unit.status = MaintenanceStatus("Workload reset")
             self.unit.status = self._workload_reset()
 
     # =======================
@@ -431,6 +435,11 @@ class MySQLOperatorCharm(CharmBase):
 
         return self.peers.data[self.unit]
 
+    @property
+    def _has_blocked_status(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
@@ -483,12 +492,15 @@ class MySQLOperatorCharm(CharmBase):
             A `StatusBase` to be set by the caller
         """
         try:
+            primary_address = self._get_primary_address_from_peers()
+            if not primary_address:
+                logger.debug("Primary not yet defined on peers. Waiting new primary.")
+                return MaintenanceStatus("Workload reset: waiting new primary")
             service_stop(SERVICE_NAME)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
             unit_label = self.unit.name.replace("/", "-")
-            primary_address = self._get_primary_address_from_peers()
             # On a full reset, member must firstly be removed from cluster metadata
             self._mysql.remove_obsoletes_instance(from_instance=primary_address)
             # Re-add the member as if it's the first time

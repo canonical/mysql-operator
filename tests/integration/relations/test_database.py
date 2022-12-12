@@ -27,12 +27,15 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from tests.integration.helpers import (
-    execute_commands_on_unit,
+    execute_queries_on_unit,
     fetch_credentials,
     get_primary_unit,
     rotate_credentials,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -42,13 +45,14 @@ DATABASE_APP_NAME = DB_METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 
 APP_METADATA = yaml.safe_load(
-    Path("./tests/integration/application-charm/metadata.yaml").read_text()
+    Path("./tests/integration/relations/application-charm/metadata.yaml").read_text()
 )
 APPLICATION_APP_NAME = APP_METADATA["name"]
 
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 
 ENDPOINT = "database"
+TIMEOUT = 15 * 60
 
 
 @pytest.mark.order(1)
@@ -60,11 +64,16 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     # Build and deploy charm from local source folder
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
+    ]
     subprocess.check_output(charmcraft_pack_commands)
     db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
-    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
+    app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
@@ -95,13 +104,13 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 apps=[DATABASE_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
             ops_test.model.wait_for_idle(
                 apps=[APPLICATION_APP_NAME],
                 status="waiting",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
         )
 
@@ -150,7 +159,7 @@ async def test_password_rotation(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
@@ -191,7 +200,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
@@ -239,7 +248,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     show_tables_sql = [
         "SHOW DATABASES",
     ]
-    output = await execute_commands_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],

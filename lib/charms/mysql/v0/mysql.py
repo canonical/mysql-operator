@@ -71,7 +71,13 @@ import re
 from abc import ABC, abstractmethod
 from typing import Iterable, List, Optional, Tuple
 
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_random
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +89,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -189,6 +195,10 @@ class MySQLGrantPrivilegesToUserError(Error):
 
 class MySQLGetMemberStateError(Error):
     """Exception raised when there is an issue getting member state."""
+
+
+class MySQLGetClusterEndpointsError(Error):
+    """Exception raised when there is an issue getting cluster endpoints."""
 
 
 class MySQLRebootFromCompleteOutageError(Error):
@@ -706,6 +716,24 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.exception(f"Failed to get cluster status for {self.cluster_name}", exc_info=e)
 
+    def get_cluster_endpoints(self) -> Tuple[str, str]:
+        """Use get_cluster_status to return endpoints tuple.
+
+        Returns:
+            A tuple with endpoints and read-only-endpoints strings.
+        """
+        status = self.get_cluster_status()
+
+        if not status:
+            raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+
+        topology = status["defaultreplicaset"]["topology"]
+
+        ro_endpoints = {v["address"] for v in topology.values() if v["mode"] == "r/o"}
+        rw_endpoints = {v["address"] for v in topology.values() if v["mode"] == "r/w"}
+
+        return ",".join(rw_endpoints), ",".join(ro_endpoints)
+
     @retry(
         retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
         stop=stop_after_attempt(15),
@@ -1047,6 +1075,7 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
+    @retry(reraise=True, stop=stop_after_attempt(10), wait=wait_fixed(5))
     def get_member_state(self) -> Tuple[str, str]:
         """Get member status in cluster.
 
@@ -1064,7 +1093,7 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(member_state_commands))
+            output = self._run_mysqlsh_script("\n".join(member_state_commands), timeout=10)
         except MySQLClientError as e:
             logger.error(
                 "Failed to get member state: mysqld daemon is down or unaccessible",
@@ -1072,7 +1101,7 @@ class MySQLBase(ABC):
             raise MySQLGetMemberStateError(e.message)
 
         results = output.lower().split()
-        # MEMBER_ROLE is empty if member is not in a group
+        # MEMBER_ROLE is empty if member is not in a group/offline
         return results[0], results[1] if len(results) == 2 else "unknown"
 
     def reboot_from_complete_outage(self) -> None:
@@ -1100,13 +1129,14 @@ class MySQLBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _run_mysqlsh_script(self, script: str) -> str:
+    def _run_mysqlsh_script(self, script: str, timeout: Optional[int] = None) -> str:
         """Execute a MySQL shell script.
 
         Raises MySQLClientError if script execution fails.
 
         Args:
             script: Mysqlsh script string
+            timeout: Optional timeout for script execution
 
         Returns:
             String representing the output of the mysqlsh command

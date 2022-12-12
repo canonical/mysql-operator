@@ -18,7 +18,10 @@ from helpers import (
 )
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import (
+    SERIES_TO_BASE_INDEX,
+    SERIES_TO_VERSION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,7 @@ DATABASE_APP_NAME = DB_METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 
 APP_METADATA = yaml.safe_load(
-    Path("./tests/integration/application-charm/metadata.yaml").read_text()
+    Path("./tests/integration/relations/application-charm/metadata.yaml").read_text()
 )
 APPLICATION_APP_NAME = APP_METADATA["name"]
 
@@ -36,6 +39,7 @@ ENDPOINT = "mysql"
 
 TEST_USER = "testuser"
 TEST_DATABASE = "testdb"
+TIMEOUT = 15 * 60
 
 
 @pytest.mark.order(1)
@@ -48,11 +52,16 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
     # Manually call charmcraft pack because ops_test.build_charm() does not support
     # multiple bases in the charmcraft file
-    charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
+    charmcraft_pack_commands = [
+        "sg",
+        "lxd",
+        "-c",
+        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
+    ]
     subprocess.check_output(charmcraft_pack_commands)
     db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
 
-    app_charm = await ops_test.build_charm("./tests/integration/application-charm/")
+    app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
@@ -71,11 +80,12 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     async with ops_test.fast_forward():
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3, timeout=1000
+            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3, timeout=TIMEOUT
         )
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2, timeout=1000
+            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2,
+            timeout=TIMEOUT,
         )
 
         await asyncio.gather(
@@ -83,13 +93,13 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 apps=[DATABASE_APP_NAME],
                 status="active",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
             ops_test.model.wait_for_idle(
                 apps=[APPLICATION_APP_NAME],
                 status="waiting",
                 raise_on_blocked=True,
-                timeout=1000,
+                timeout=TIMEOUT,
             ),
         )
 
@@ -117,7 +127,7 @@ async def test_relation_creation(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
             lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) is True,
-            timeout=1000,
+            timeout=TIMEOUT,
         )
 
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
@@ -139,7 +149,7 @@ async def test_relation_broken(ops_test: OpsTest):
 
     await ops_test.model.block_until(
         lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True,
-        timeout=1000,
+        timeout=TIMEOUT,
     )
 
     async with ops_test.fast_forward():
