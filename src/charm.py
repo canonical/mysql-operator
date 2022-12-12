@@ -22,6 +22,7 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    InstallEvent,
     RelationChangedEvent,
     RelationJoinedEvent,
     StartEvent,
@@ -100,16 +101,12 @@ class MySQLOperatorCharm(CharmBase):
     #  Charm Lifecycle Hooks
     # =======================
 
-    def _on_install(self, event) -> None:
+    def _on_install(self, event: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
         if not is_data_dir_attached():
-            # workaround for lxd containers
-            # not getting storage attached on startups
-            event.defer()
-            logger.error("Data directory not attached. Reboot unit.")
-            reboot_system()
+            self._reboot_on_detached_storage(event)
             return
 
         # Initial setup operations like installing dependencies, and creating users and groups.
@@ -149,29 +146,11 @@ class MySQLOperatorCharm(CharmBase):
             )
 
     def _on_start(self, event: StartEvent) -> None:
-        """Handle the start event."""
-        # Configure MySQL users and the instance for use in an InnoDB cluster
-        # Safeguard unit starting before leader unit sets peer data
-        if not self._is_peer_data_set:
-            event.defer()
-            return
+        """Handle the start event.
 
-        if self._has_blocked_status:
-            return
-
-        if not is_data_dir_attached():
-            # workaround for lxd containers
-            # not getting storage attached on startups
-            event.defer()
-            logger.error("Data directory not attached. Reboot unit.")
-            self.unit.status = WaitingStatus("Data directory not attached")
-            reboot_system()
-            return
-
-        if self.unit_peer_data.get("unit-initialized") == "True":
-            # if receiving on start after unit initialization
-            logger.debug("Delegate status update for start handler on initialized unit.")
-            self._on_update_status(None)
+        Configure MySQL users and the instance for use in an InnoDB cluster.
+        """
+        if not self._can_start(event):
             return
 
         self.unit.status = MaintenanceStatus("Setting up cluster node")
@@ -187,28 +166,21 @@ class MySQLOperatorCharm(CharmBase):
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
 
-        # Create the cluster on the juju leader unit
         if not self.unit.is_leader():
+            # Wait to be joined and set flags
             self.unit.status = WaitingStatus("Waiting to join the cluster")
             self.unit_peer_data["member-role"] = "secondary"
             self.unit_peer_data["member-state"] = "waiting"
             return
 
         try:
-            unit_label = self.unit.name.replace("/", "-")
-            self._mysql.create_cluster(unit_label)
-            self._mysql.initialize_juju_units_operations_table()
+            # Create the cluster from the leader unit
+            self._create_cluster()
+            self.unit.status = ActiveStatus(self.active_status_message)
         except MySQLCreateClusterError:
             self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
-            return
         except MySQLInitializeJujuOperationsTableError:
             self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
-            return
-
-        self.app_peer_data["units-added-to-cluster"] = "1"
-        self.unit_peer_data["unit-initialized"] = "True"
-        self.unit_peer_data["member-role"] = "primary"
-        self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the peer relation joined event."""
@@ -509,7 +481,7 @@ class MySQLOperatorCharm(CharmBase):
         role = self.unit_peer_data.get("member-role")
         return f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}"
 
-    def _workload_initialise(self):
+    def _workload_initialise(self) -> None:
         """Workload initialisation commands.
 
         Create users and configuration to setup instance as an Group Replication node.
@@ -518,9 +490,49 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
+        self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         workload_version = self._mysql.get_mysql_version()
         self.unit.set_workload_version(workload_version)
-        self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
+
+    def _create_cluster(self) -> None:
+        """Create cluster commands.
+
+        Create a cluster from the current unit and initialise operations database.
+        """
+        unit_label = self.unit.name.replace("/", "-")
+        self._mysql.create_cluster(unit_label)
+        self._mysql.initialize_juju_units_operations_table()
+        self.app_peer_data["units-added-to-cluster"] = "1"
+        self.unit_peer_data["unit-initialized"] = "True"
+        self.unit_peer_data["member-role"] = "primary"
+
+    def _can_start(self, event: StartEvent) -> bool:
+        """Check if the unit can start.
+
+        Args:
+            event: StartEvent
+        """
+        # Safeguard unit starting before leader unit sets peer data
+        if not self._is_peer_data_set:
+            event.defer()
+            return False
+
+        # Safeguard against error on install hook
+        if self._has_blocked_status:
+            return False
+
+        # Safeguard against storage not attached
+        if not is_data_dir_attached():
+            self._reboot_on_detached_storage(event)
+            return False
+
+        # Safeguard if receiving on start after unit initialization
+        if self.unit_peer_data.get("unit-initialized") == "True":
+            logger.debug("Delegate status update for start handler on initialized unit.")
+            self._on_update_status(None)
+            return False
+
+        return True
 
     def _workload_reset(self) -> StatusBase:
         """Reset an errored workload.
@@ -598,6 +610,19 @@ class MySQLOperatorCharm(CharmBase):
         else:
             logger.error("Failed to restart mysqld on rolling restart")
             self.unit.status = BlockedStatus("Failed to restart mysqld")
+
+    def _reboot_on_detached_storage(self, event) -> None:
+        """Reboot on detached storage.
+
+        Workaround for lxd containers not getting storage attached on startups.
+
+        Args:
+            event: the event that triggered this handler
+        """
+        event.defer()
+        logger.error("Data directory not attached. Reboot unit.")
+        self.unit.status = WaitingStatus("Data directory not attached")
+        reboot_system()
 
 
 if __name__ == "__main__":
