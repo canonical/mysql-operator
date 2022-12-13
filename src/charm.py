@@ -247,8 +247,8 @@ class MySQLOperatorCharm(CharmBase):
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
-        # Only execute if peer relation data contains cluster config values
-        if not self._is_peer_data_set:
+        # Only executes if the unit was initialised
+        if not self.unit_peer_data.get("unit-initialized"):
             return
 
         unit_label = self.unit.name.replace("/", "-")
