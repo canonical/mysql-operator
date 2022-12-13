@@ -602,7 +602,7 @@ class MySQLOperatorCharm(CharmBase):
                 for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
                     with attempt:
                         if self._mysql.is_instance_in_cluster(unit_label):
-                            self.unit.status = ActiveStatus(self.active_status_message)
+                            self._on_update_status(None)
                             return
                         raise Exception
             except RetryError:
