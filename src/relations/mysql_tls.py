@@ -75,7 +75,7 @@ class MySQLTLS(Object):
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
         if not self.unit_peer_data.get("unit-initialized"):
-            logger.debug("Unit not initialized yet, deffering TLS configuration.")
+            logger.debug("Unit not initialized yet, deferring TLS configuration.")
             event.defer()
             return
 
