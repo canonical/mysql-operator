@@ -1,7 +1,8 @@
 name: Tests
+
 on:
-  pull_request:
-  workflow_call:
+  - pull_request
+  - workflow_call
 
 jobs:
   lint:
@@ -22,15 +23,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: python -m pip install tox
+        run: python3 -m pip install tox
       - name: Run tests
         run: tox -e unit
 
-  integration-test-lxd-ha:
+  integration-test:
     strategy:
       matrix:
+        tox-environments:
+          - integration-ha
+          - integration-db-router
+          - integration-shared-db
+          - integration-database
+          - integration-mysql-interface
+          # TODO: re-enable when stable (currently flaky)
+          # - integration-healing
+          - integration-tls
         series: [focal, jammy]
-    name: Integration tests for HA (lxd)
+    name: ${{ matrix.tox-environments }} tests on Ubuntu ${{ matrix.series }}
     needs:
       - lint
       - unit-test
@@ -43,126 +53,5 @@ jobs:
         with:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration HA tests
-        run: tox -e integration-ha -- --series=${{ matrix.series }}
-
-  integration-test-lxd-db-router:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for db-router relation (lxd)
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration db-router tests
-        run: tox -e integration-db-router -- --series=${{ matrix.series }}
-
-  integration-test-lxd-shared-db:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for shared-db relation (lxd)
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration shared-db tests
-        run: tox -e integration-shared-db -- --series=${{ matrix.series }}
-
-  integration-test-lxd-database:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for database relation (lxd)
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration database tests
-        run: tox -e integration-database -- --series=${{ matrix.series }}
-
-  integration-test-lxd-mysql:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for mysql interface (lxd)
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration database tests
-        run: tox -e integration-mysql-interface -- --series=${{ matrix.series }}
-
-# TODO: re-enable when stable (currently flaky)
-#  integration-test-self-healing:
-#    strategy:
-#      matrix:
-#        series: [focal, jammy]
-#    name: Integration tests for self healing scenarios
-#    needs:
-#      - lint
-#      - unit-test
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#      - name: Setup operator environment
-#        uses: charmed-kubernetes/actions-operator@main
-#        with:
-#          provider: lxd
-#          bootstrap-options: "--agent-version 2.9.29"
-#      - name: Run integration database tests
-#        run: tox -e integration-healing -- --series=${{ matrix.series }}
-
-  integration-test-tls:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for tls support
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration database tests
-        run: tox -e integration-tls -- --series=${{ matrix.series }}
+      - name: Run integration tests
+        run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
