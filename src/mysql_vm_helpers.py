@@ -279,6 +279,23 @@ class MySQL(MySQLBase):
             raise MySQLReconfigureError("Failed to reconfigure mysql-server")
 
 
+def is_data_dir_attached() -> bool:
+    """Returns if data directory is attached."""
+    try:
+        subprocess.check_call(["mountpoint", "-q", MYSQL_DATA_DIR])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def reboot_system() -> None:
+    """Reboot host machine."""
+    try:
+        subprocess.check_call(["systemctl", "reboot"])
+    except subprocess.CalledProcessError:
+        pass
+
+
 def instance_hostname():
     """Retrieve machine hostname."""
     try:

@@ -28,16 +28,24 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
+    @patch("subprocess.check_call")
+    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(self, _install_and_configure_mysql_dependencies):
+    def test_on_install(
+        self, _install_and_configure_mysql_dependencies, _is_data_dir_attached, _check_call
+    ):
         self.charm.on.install.emit()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
+    @patch("subprocess.check_call")
+    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch(
         "mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies", side_effect=Exception()
     )
-    def test_on_install_exception(self, _install_and_configure_mysql_dependencies):
+    def test_on_install_exception(
+        self, _install_and_configure_mysql_dependencies, _is_data_dir_attached, _check_call
+    ):
         self.charm.on.install.emit()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
@@ -104,6 +112,8 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("subprocess.check_call")
+    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
@@ -118,6 +128,8 @@ class TestCharm(unittest.TestCase):
         _configure_mysql_users,
         _wait_until_mysql_connection,
         _get_mysql_version,
+        _is_data_dir_attached,
+        _check_call,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -128,6 +140,8 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("subprocess.check_call")
+    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
@@ -138,6 +152,8 @@ class TestCharm(unittest.TestCase):
         _initialize_juju_units_operations_table,
         _configure_instance,
         _configure_mysql_users,
+        _is_data_dir_attached,
+        _check_call,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)

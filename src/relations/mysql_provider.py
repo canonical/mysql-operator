@@ -60,8 +60,10 @@ class MySQLProvider(Object):
         if len(relations) == 0:
             return
 
-        if not self.charm.cluster_initialized:
-            logger.debug("Waiting cluster to be initialized")
+        if not self.charm.cluster_initialized or not self.charm.unit_peer_data.get(
+            "unit-initialized"
+        ):
+            logger.debug("Waiting cluster/unit to be initialized")
             return
 
         relation_data = self.database.fetch_relation_data()

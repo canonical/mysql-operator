@@ -1075,7 +1075,7 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
-    @retry(reraise=True, stop=stop_after_attempt(10), wait=wait_fixed(5))
+    @retry(reraise=True, stop=stop_after_attempt(6), wait=wait_fixed(10))
     def get_member_state(self) -> Tuple[str, str]:
         """Get member status in cluster.
 
@@ -1096,7 +1096,7 @@ class MySQLBase(ABC):
             output = self._run_mysqlsh_script("\n".join(member_state_commands), timeout=10)
         except MySQLClientError as e:
             logger.error(
-                "Failed to get member state: mysqld daemon is down or unaccessible",
+                "Failed to get member state: mysqld daemon is down",
             )
             raise MySQLGetMemberStateError(e.message)
 
