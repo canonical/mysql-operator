@@ -174,7 +174,7 @@ class DBRouterRelation(Object):
             # Bypass run if no relation
             return
 
-        if not self.charm.unit_peer_date.get("unit-initialized"):
+        if not self.charm.unit_peer_data.get("unit-initialized"):
             # Defer run if the unit has not been initialized
             event.defer()
             return
