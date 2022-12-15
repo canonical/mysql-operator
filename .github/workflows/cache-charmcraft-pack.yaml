@@ -20,19 +20,24 @@ jobs:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
       - name: Cache `charmcraft pack` LXC instance(s)
-        id: container-cache
         uses: actions/cache@v3
         with:
-          path: ~/ga-cache/**
-          key: ${{ runner.os }}-${{ hashFiles('charmcraft.yaml') }}
-      - if: ${{ steps.container-cache.outputs.cache-hit }}
-        name: Import cached container(s)
+          path: ~/ga-charmcraft-cache/**
+          key: ${{ runner.os }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ hashFiles('charmcraft.yaml') }}-
+      - name: Import cached container(s)
         run: |
+          if [ ! -d ~/ga-charmcraft-cache/ ]
+          then
+            echo No cached containers to import
+            exit 0
+          fi
           # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
           lxc project create charmcraft
           lxc --project default profile show default | lxc --project charmcraft profile edit default
           charm_repository_directory_inode=$(stat --format "%i" .)
-          for container_tarball in ~/ga-cache/*
+          for container_tarball in ~/ga-charmcraft-cache/*
           do
             lxc --project charmcraft import $container_tarball
             container_name_without_inode=$(basename --suffix .tar.gz $container_tarball)
@@ -44,7 +49,7 @@ jobs:
         run: charmcraft pack
       - name: Export `charmcraft pack` container(s) to cache
         run: |
-          mkdir -p ~/ga-cache
+          mkdir -p ~/ga-charmcraft-cache
           charm_repository_directory_inode=$(stat --format "%i" .)
           for container_name_with_inode in $(lxc --project charmcraft list --columns n --format csv)
           do
@@ -52,5 +57,85 @@ jobs:
             container_name_without_inode=$(echo $container_name_with_inode | sed "s/$charm_repository_directory_inode/INODE/")
             lxc --project charmcraft move $container_name_with_inode $container_name_without_inode
             # Use GitHub actions/cache compression
-            lxc --project charmcraft export --optimized-storage --compression none $container_name_without_inode ~/ga-cache/$container_name_without_inode.tar.gz
+            lxc --project charmcraft export --optimized-storage --compression none $container_name_without_inode ~/ga-charmcraft-cache/$container_name_without_inode.tar.gz
           done
+      - name: Prune cache from previous runs
+        # GitHub actions cache is limited to 10 GiB per repository
+        # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
+        shell: python
+        run: |
+          import json
+          import logging
+          import subprocess
+          import sys
+          
+          
+          def run_gh_cli(*args, json_response=True):
+              """Run command with GitHub CLI"""
+              output = subprocess.check_output(
+                  ["gh", "api", "-H", "Accept: application/vnd.github+json", *args]
+              )
+              if json_response:
+                  return json.loads(output)
+              return output
+          
+          
+          def delete_cache(cache_: dict) -> None:
+              logging.info(f"Deleting cache id {cache_['id']} on {cache_['ref']} with key {cache_['key']}")
+              run_gh_cli(
+                  "--method",
+                  "DELETE",
+                  "/repos/{owner}/{repo}/actions/caches/" + str(cache_["id"]),
+                  json_response=False,
+              )
+              global bytes_used
+              bytes_used -= cache["size_in_bytes"]
+          
+          
+          logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+          caches = run_gh_cli(
+              "--method",
+              "GET",
+              "/repos/{owner}/{repo}/actions/caches",
+              "--raw-field",
+              "sort=created_at",
+              "--raw-field",
+              "direction=desc",  # Most recently created first
+          )["actions_caches"]
+          if not caches:
+              logging.info("No caches")
+              exit()
+          # Updated about every 5 minutes
+          # https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#get-github-actions-cache-usage-for-a-repository
+          bytes_used = run_gh_cli("--method", "GET", "/repos/{owner}/{repo}/actions/cache/usage")[
+              "active_caches_size_in_bytes"
+          ]
+          fresh_caches = {}  # Last created cache for a ref (branch or PR)
+          for cache in caches:
+              if (ref := cache["ref"]) not in fresh_caches:
+                  fresh_caches[ref] = cache
+              else:
+                  # Cache is stale (no longer in use); delete it
+                  delete_cache(cache)
+          
+          CURRENT_REF = "${{ github.ref }}"
+          expected_cache_size = (fresh_caches.get(CURRENT_REF) or list(fresh_caches.values())[0])[
+              "size_in_bytes"
+          ]
+          # Move current ref cache to end of fresh_caches insertion order
+          if current_ref_cache := fresh_caches.pop(CURRENT_REF, None):
+              fresh_caches[CURRENT_REF] = current_ref_cache
+          fresh_caches = list(fresh_caches.items())
+          bytes_required = int(expected_cache_size * 1.2)  # Add 20% margin
+          GIBIBYTE = 1073741824  # 1 GiB
+          while (bytes_available := 10 * GIBIBYTE - bytes_used) < bytes_required:
+              logging.info(
+                  f"{bytes_available/GIBIBYTE:.1f} GiB available, {bytes_required/GIBIBYTE:.1f} GiB required"
+              )
+              # Delete current ref cache if it exists or delete the oldest cache
+              ref, cache = fresh_caches.pop(-1)
+              if ref == "refs/heads/main":
+                  continue
+              delete_cache(cache)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
