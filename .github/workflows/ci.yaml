@@ -40,7 +40,7 @@ jobs:
           # - integration-healing
           - integration-tls
         series: [focal, jammy]
-    name: ${{ matrix.tox-environments }} tests on Ubuntu ${{ matrix.series }}
+    name: ${{ matrix.tox-environments }} / ${{ matrix.series }}
     needs:
       - lint
       - unit-test
