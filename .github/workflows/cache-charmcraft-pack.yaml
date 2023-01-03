@@ -19,13 +19,17 @@ jobs:
         with:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
+      - name: Get charmcraft version
+        id: charmcraft-version
+        # Major and minor versions (e.g. "2.1")
+        run: echo "VERSION=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
       - name: Cache `charmcraft pack` LXC instance(s)
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          key: ${{ runner.os }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
+          key: ${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-${{ hashFiles('charmcraft.yaml') }}-
+            ${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-
       - name: Import cached container(s)
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
