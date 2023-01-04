@@ -91,6 +91,12 @@ jobs:
           charm_repository_directory_inode=$(stat --format "%i" .)
           for container_name_with_inode in $(lxc --project charmcraft list --columns n --format csv)
           do
+            # TODO cleanup
+            # skip application charm LXC container
+            if [[ $container_name_with_inode =~ "application" ]]
+            then
+              continue
+            fi
             # Replace inode with placeholder text "INODE"
             container_name_without_inode=$(echo $container_name_with_inode | sed "s/$charm_repository_directory_inode/INODE/")
             lxc --project charmcraft move $container_name_with_inode $container_name_without_inode
