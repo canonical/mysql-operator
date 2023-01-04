@@ -114,7 +114,6 @@ async def check_keystone_users_existence(
         assert user not in output, "User(s) that should not exist are in the database"
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.db_router_tests
 async def test_keystone_bundle_db_router(ops_test: OpsTest, series: str) -> None:
