@@ -3,7 +3,6 @@
 
 """Library containing the implementation of the standard relation."""
 
-
 import logging
 
 from charms.data_platform_libs.v0.database_provides import (

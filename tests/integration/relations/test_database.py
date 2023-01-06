@@ -9,14 +9,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import (
-    check_read_only_endpoints,
-    get_relation_data,
-    is_relation_broken,
-    is_relation_joined,
-    remove_leader_unit,
-    scale_application,
-)
 from pytest_operator.plugin import OpsTest
 from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
 
@@ -27,10 +19,16 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from tests.integration.helpers import (
+    check_read_only_endpoints,
     execute_queries_on_unit,
     fetch_credentials,
     get_primary_unit,
+    get_relation_data,
+    is_relation_broken,
+    is_relation_joined,
+    remove_leader_unit,
     rotate_credentials,
+    scale_application,
 )
 from tests.integration.integration_constants import (
     SERIES_TO_BASE_INDEX,
