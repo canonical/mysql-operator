@@ -1,8 +1,11 @@
 name: Tests
 
 on:
-  - pull_request
-  - workflow_call
+  pull_request:
+  workflow_call:
+  push:
+    branches:
+      - main
 
 jobs:
   lint:
@@ -27,20 +30,8 @@ jobs:
       - name: Run tests
         run: tox -e unit
 
-  integration-test:
-    strategy:
-      matrix:
-        tox-environments:
-          - integration-ha
-          - integration-db-router
-          - integration-shared-db
-          - integration-database
-          - integration-mysql-interface
-          # TODO: re-enable when stable (currently flaky)
-          # - integration-healing
-          - integration-tls
-        series: [focal, jammy]
-    name: ${{ matrix.tox-environments }} / ${{ matrix.series }}
+  build:
+    name: Build charm
     needs:
       - lint
       - unit-test
@@ -49,6 +40,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup operator environment
+        # TODO: optimize
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
@@ -83,8 +75,15 @@ jobs:
             container_name_with_inode=$(echo $container_name_without_inode | sed "s/INODE/$charm_repository_directory_inode/")
             lxc --project charmcraft move $container_name_without_inode $container_name_with_inode
           done
-      - name: Run integration tests
-        run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
+      - name: Pack charm
+        # TODO: add application charm?
+        run: charmcraft pack
+      - name: Upload packed charm(s)
+        # TODO: multiple ubuntu versions?
+        uses: actions/upload-artifact@v3
+        with:
+          name: packed-charm
+          path: '*.charm'
       - name: Export `charmcraft pack` container(s) to cache
         run: |
           mkdir -p ~/ga-charmcraft-cache
@@ -183,3 +182,34 @@ jobs:
               delete_cache(cache)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  integration-test:
+    strategy:
+      matrix:
+        tox-environments:
+          - integration-ha
+          - integration-healing
+        series: [focal, jammy]
+    name: ${{ matrix.tox-environments }} / ${{ matrix.series }}
+    needs:
+      - lint
+      - unit-test
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Download packed charm(s)
+        # TODO: multiple ubuntu versions?
+        uses: actions/download-artifact@v3
+        with:
+          name: packed-charm
+          path: '*.charm'
+      - name: Run integration tests
+        # TODO: use .charm instead of packing
+        run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
