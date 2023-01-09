@@ -39,12 +39,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup operator environment
+      - name: Setup environment
+        run: |
+          sudo snap refresh lxd --channel=latest/stable
+          sudo adduser $USER lxd
+          newgrp lxd
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo chmod a+wr /var/snap/lxd/common/lxd/unix.socket
+          sudo snap install charmcraft --classic
         # TODO: optimize
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
       - name: Get charmcraft version
         id: charmcraft-version
         # Major and minor versions (e.g. "2.1")
