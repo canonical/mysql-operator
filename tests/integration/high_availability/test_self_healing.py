@@ -46,7 +46,6 @@ APP_NAME = METADATA["name"]
 MYSQL_DAEMON = "mysqld"
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
@@ -54,7 +53,6 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     await high_availability_test_setup(ops_test, series)
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
@@ -94,7 +92,6 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
@@ -139,7 +136,6 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_network_cut(ops_test: OpsTest, continuous_writes):
@@ -221,7 +217,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(5)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
@@ -305,7 +300,6 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(6)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
@@ -371,7 +365,6 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
-@pytest.mark.order(7)
 @pytest.mark.abort_on_fail
 @pytest.mark.healing_tests
 async def test_sst_test(ops_test: OpsTest, continuous_writes):

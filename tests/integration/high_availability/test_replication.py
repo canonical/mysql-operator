@@ -39,7 +39,6 @@ ANOTHER_APP_NAME = f"second{APP_NAME}"
 TIMEOUT = 17 * 60
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
@@ -47,7 +46,6 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     await high_availability_test_setup(ops_test, series)
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
 async def test_consistent_data_replication_across_cluster(
@@ -66,7 +64,6 @@ async def test_consistent_data_replication_across_cluster(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
 async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
@@ -115,7 +112,6 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
 async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
@@ -194,7 +190,6 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
         assert random_chars in output
 
 
-@pytest.mark.order(5)
 @pytest.mark.ha_tests
 async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     """Test for cluster data isolation.
