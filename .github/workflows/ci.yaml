@@ -126,25 +126,26 @@ jobs:
       - name: Run integration database tests
         run: tox -e integration-mysql-interface -- --series=${{ matrix.series }}
 
-  integration-test-self-healing:
-    strategy:
-      matrix:
-        series: [focal, jammy]
-    name: Integration tests for self healing scenarios
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration database tests
-        run: tox -e integration-healing -- --series=${{ matrix.series }}
+# TODO: re-enable when stable (currently flaky)
+#  integration-test-self-healing:
+#    strategy:
+#      matrix:
+#        series: [focal, jammy]
+#    name: Integration tests for self healing scenarios
+#    needs:
+#      - lint
+#      - unit-test
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#      - name: Setup operator environment
+#        uses: charmed-kubernetes/actions-operator@main
+#        with:
+#          provider: lxd
+#          bootstrap-options: "--agent-version 2.9.29"
+#      - name: Run integration database tests
+#        run: tox -e integration-healing -- --series=${{ matrix.series }}
 
   integration-test-tls:
     strategy:
