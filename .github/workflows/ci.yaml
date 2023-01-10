@@ -31,7 +31,16 @@ jobs:
         run: tox -e unit
 
   build:
-    name: Build charm
+    strategy:
+      matrix:
+        charm:
+          - name: mysql
+            path: .
+          - name: ha-test-application
+            path: tests/integration/high_availability/application_charm
+          - name: relations-test-application
+            path: tests/integration/relations/application-charm
+    name: Build ${{ matrix.charm.name }} charm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,6 +50,7 @@ jobs:
         run: |
           # Copied from https://github.com/charmed-kubernetes/actions-operator/blob/96fb0b07eb675f74cf1796be812bc7e67a0d62fc/src/bootstrap/index.ts#L151
           sudo snap refresh lxd --channel=latest/stable
+          # TODO: remove refresh
           sudo adduser $USER lxd
           newgrp lxd
           sudo lxd waitready
@@ -52,14 +62,14 @@ jobs:
       - name: Get charmcraft version
         id: charmcraft-version
         # Major and minor versions (e.g. "2.1")
-        run: echo "VERSION=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
       - name: Cache `charmcraft pack` LXC instance(s)
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          key: charmcraft-pack-${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
+          key: charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
           restore-keys: |
-            charmcraft-pack-${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-
+            charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
       - name: Import cached container(s)
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
@@ -70,7 +80,7 @@ jobs:
           # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
           lxc project create charmcraft
           lxc --project default profile show default | lxc --project charmcraft profile edit default
-          charm_repository_directory_inode=$(stat --format "%i" .)
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
           for container_tarball in ~/ga-charmcraft-cache/*
           do
             lxc --project charmcraft import $container_tarball
@@ -80,26 +90,25 @@ jobs:
             lxc --project charmcraft move $container_name_without_inode $container_name_with_inode
           done
       - name: Pack charm
-        # TODO: add application charm?
+        working-directory: ${{ matrix.charm.path }}
         run: charmcraft pack
+      - run: touch .empty
       - name: Upload packed charm(s)
-        # TODO: multiple ubuntu versions?
         uses: actions/upload-artifact@v3
         with:
-          name: packed-charm
-          path: '*.charm'
+          name: packed-charms
+          # .empty file required to preserve directory structure
+          # See https://github.com/actions/upload-artifact/issues/344#issuecomment-1379232156
+          path: |
+            ${{ matrix.charm.path }}/*.charm
+            .empty
+          if-no-files-found: error
       - name: Export `charmcraft pack` container(s) to cache
         run: |
           mkdir -p ~/ga-charmcraft-cache
-          charm_repository_directory_inode=$(stat --format "%i" .)
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
           for container_name_with_inode in $(lxc --project charmcraft list --columns n --format csv)
           do
-            # TODO cleanup
-            # skip application charm LXC container
-            if [[ $container_name_with_inode =~ "application" ]]
-            then
-              continue
-            fi
             # Replace inode with placeholder text "INODE"
             container_name_without_inode=$(echo $container_name_with_inode | sed "s/$charm_repository_directory_inode/INODE/")
             lxc --project charmcraft move $container_name_with_inode $container_name_without_inode
@@ -145,7 +154,7 @@ jobs:
               "GET",
               "/repos/{owner}/{repo}/actions/caches",
               "--raw-field",
-              "key=charmcraft-pack-",
+              "key=charmcraft-pack-${{ matrix.charm.name }}-",
               "--raw-field",
               "sort=created_at",
               "--raw-field",
@@ -212,11 +221,11 @@ jobs:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
       - name: Download packed charm(s)
-        # TODO: multiple ubuntu versions?
+        # TODO: multiple application charms
+        # maybe use context from previous job? https://docs.github.com/en/actions/learn-github-actions/contexts
         uses: actions/download-artifact@v3
         with:
-          name: packed-charm
-          path: '*.charm'
+          name: packed-charms
       - name: Run integration tests
         # TODO: use .charm instead of packing
         run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
