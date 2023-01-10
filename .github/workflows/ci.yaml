@@ -59,9 +59,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          key: ${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
+          key: charmcraft-pack-${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-
+            charmcraft-pack-${{ runner.os }}-${{ steps.charmcraft-version.outputs.VERSION }}-${{ hashFiles('charmcraft.yaml') }}-
       - name: Import cached container(s)
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
@@ -146,6 +146,8 @@ jobs:
               "--method",
               "GET",
               "/repos/{owner}/{repo}/actions/caches",
+              "--raw-field",
+              "key=charmcraft-pack-",
               "--raw-field",
               "sort=created_at",
               "--raw-field",
