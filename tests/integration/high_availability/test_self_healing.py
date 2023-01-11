@@ -8,17 +8,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    ensure_n_online_mysql_members,
-    high_availability_test_setup,
-    insert_data_into_mysql_and_validate_replication,
-)
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from src.constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
+from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 from tests.integration.helpers import (
     cut_network_from_unit,
     execute_queries_on_unit,
@@ -37,6 +30,13 @@ from tests.integration.helpers import (
     unit_hostname,
     wait_network_restore,
     write_random_chars_to_test_table,
+)
+from tests.integration.high_availability.high_availability_helpers import (
+    clean_up_database_and_table,
+    ensure_all_units_continuous_writes_incrementing,
+    ensure_n_online_mysql_members,
+    high_availability_test_setup,
+    insert_data_into_mysql_and_validate_replication,
 )
 
 logger = logging.getLogger(__name__)

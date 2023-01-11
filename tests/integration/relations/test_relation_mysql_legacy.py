@@ -9,15 +9,15 @@ from pathlib import Path
 
 import pytest
 import yaml
-from helpers import (
+from pytest_operator.plugin import OpsTest
+
+from tests.integration.helpers import (
     get_legacy_mysql_credentials,
     instance_ip,
     is_connection_possible,
     is_relation_broken,
     is_relation_joined,
 )
-from pytest_operator.plugin import OpsTest
-
 from tests.integration.integration_constants import (
     SERIES_TO_BASE_INDEX,
     SERIES_TO_VERSION,
