@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -20,10 +19,7 @@ from tests.integration.helpers import (
     scale_application,
     unit_file_md5,
 )
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
-)
+from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +41,10 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 await scale_application(ops_test, app, 3)
             return
 
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
 
     await ops_test.model.deploy(
-        charm_url,
+        charm,
         application_name=APP_NAME,
         num_units=3,
         series=series,

@@ -203,7 +203,12 @@ jobs:
       matrix:
         tox-environments:
           - integration-ha
+          - integration-db-router
+          - integration-shared-db
+          - integration-database
+          - integration-mysql-interface
           - integration-healing
+          - integration-tls
         series: [focal, jammy]
     name: ${{ matrix.tox-environments }} / ${{ matrix.series }}
     needs:
@@ -221,11 +226,8 @@ jobs:
           provider: lxd
           bootstrap-options: "--agent-version 2.9.29"
       - name: Download packed charm(s)
-        # TODO: multiple application charms
-        # maybe use context from previous job? https://docs.github.com/en/actions/learn-github-actions/contexts
         uses: actions/download-artifact@v3
         with:
           name: packed-charms
       - name: Run integration tests
-        # TODO: use .charm instead of packing
         run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}

@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -21,10 +20,7 @@ from tests.integration.helpers import (
     is_relation_joined,
     scale_application,
 )
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
-)
+from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 # Copied these values from high_availability.application_charm.src.charm
 DATABASE_NAME = "continuous_writes_database"
@@ -118,31 +114,6 @@ async def ensure_n_online_mysql_members(
         return False
 
 
-def pack_charm(series: str) -> str:
-    """Packs a charm from local source folder, avoiding rebuilds.
-
-    Args:
-        series: charm series
-    """
-    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
-    charm_path = Path(charm_url.split(":")[1])
-    if charm_path.exists() and charm_path.is_file():
-        logger.info("Skipping build, charm file encountered")
-        return charm_url
-
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_call(charmcraft_pack_commands)
-    return charm_url
-
-
 async def deploy_and_scale_mysql(
     ops_test: OpsTest,
     series: str,
@@ -167,13 +138,13 @@ async def deploy_and_scale_mysql(
 
         return application_name
 
-    charm_url = pack_charm(series)
+    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
 
     config = {"cluster-name": CLUSTER_NAME}
 
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
-            charm_url,
+            charm,
             application_name=mysql_application_name,
             config=config,
             num_units=3,

@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -18,10 +17,7 @@ from tests.integration.helpers import (
     is_relation_broken,
     is_relation_joined,
 )
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
-)
+from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +43,7 @@ TIMEOUT = 15 * 60
 @pytest.mark.mysql_interface_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    # Build and deploy charms from local source folders
-
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    db_charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
 
     app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
@@ -66,7 +51,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm_url,
+            db_charm,
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,

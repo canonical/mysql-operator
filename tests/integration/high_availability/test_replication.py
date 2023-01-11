@@ -4,7 +4,6 @@
 
 
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -27,9 +26,8 @@ from tests.integration.high_availability.high_availability_helpers import (
     ensure_n_online_mysql_members,
     high_availability_test_setup,
     insert_data_into_mysql_and_validate_replication,
-    pack_charm,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -202,16 +200,10 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
-    charm_url = pack_charm(series)
-    if not charm_url:
-        # Manually call charmcraft pack because ops_test.build_charm() does not support
-        # multiple bases in the charmcraft file
-        charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
-        subprocess.check_output(charmcraft_pack_commands)
-        charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
 
     await ops_test.model.deploy(
-        charm_url,
+        charm,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
         series=series,
