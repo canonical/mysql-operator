@@ -200,6 +200,7 @@ jobs:
 
   integration-test:
     strategy:
+      fail-fast: false
       matrix:
         tox-environments:
           - integration-ha
