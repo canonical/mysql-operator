@@ -17,7 +17,6 @@ from tests.integration.helpers import (
     is_relation_broken,
     is_relation_joined,
 )
-from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ TIMEOUT = 15 * 60
 @pytest.mark.mysql_interface_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    db_charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
+    db_charm = await ops_test.build_charm(".")
 
     app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 

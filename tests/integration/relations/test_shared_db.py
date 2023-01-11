@@ -16,7 +16,6 @@ from tests.integration.helpers import (
     get_server_config_credentials,
     scale_application,
 )
-from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +153,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None
         ops_test: The ops test framework
         series: The series for the database machine
     """
-    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
+    charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME}
     await ops_test.model.deploy(

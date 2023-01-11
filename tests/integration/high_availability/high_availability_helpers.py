@@ -20,7 +20,6 @@ from tests.integration.helpers import (
     is_relation_joined,
     scale_application,
 )
-from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 # Copied these values from high_availability.application_charm.src.charm
 DATABASE_NAME = "continuous_writes_database"
@@ -138,7 +137,7 @@ async def deploy_and_scale_mysql(
 
         return application_name
 
-    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
+    charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME}
 

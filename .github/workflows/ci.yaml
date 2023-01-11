@@ -32,17 +32,28 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
+  get-build-matrix:
+    name: Create build matrix from charmcraft.yaml file(s)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install tox
+        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
+        run: python3 -m pip install tox
+      - name: Create build matrix
+        id: create-matrix
+        run: tox run -e create-build-matrix
+    outputs:
+      build-matrix: ${{ steps.create-matrix.outputs.build_matrix }}
+
   build:
     strategy:
       matrix:
-        charm:
-          - name: mysql
-            path: .
-          - name: ha-test-application
-            path: tests/integration/high_availability/application_charm
-          - name: relations-test-application
-            path: tests/integration/relations/application-charm
-    name: Build ${{ matrix.charm.name }} charm
+        charm: ${{ fromJSON(needs.get-build-matrix.outputs.build-matrix) }}
+    name: Build ${{ matrix.charm.name }} charm / ${{ matrix.charm.series }}
+    needs:
+      - get-build-matrix
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -51,8 +62,6 @@ jobs:
         # TODO: Replace with custom image on self-hosted runner
         run: |
           # Copied from https://github.com/charmed-kubernetes/actions-operator/blob/96fb0b07eb675f74cf1796be812bc7e67a0d62fc/src/bootstrap/index.ts#L151
-          sudo snap refresh lxd --channel=latest/stable
-          # TODO: remove refresh
           sudo adduser $USER lxd
           newgrp lxd
           sudo lxd waitready
@@ -69,8 +78,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          key: charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
-          restore-keys: charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
+          key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
+          restore-keys: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
       - name: Import cached container(s)
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
@@ -92,7 +101,7 @@ jobs:
           done
       - name: Pack charm
         working-directory: ${{ matrix.charm.path }}
-        run: charmcraft pack
+        run: charmcraft pack --bases-index=${{ matrix.charm.bases_index }}
       - run: touch .empty
       - name: Upload packed charm(s)
         uses: actions/upload-artifact@v3
@@ -155,7 +164,7 @@ jobs:
               "GET",
               "/repos/{owner}/{repo}/actions/caches",
               "--raw-field",
-              "key=charmcraft-pack-${{ matrix.charm.name }}-",
+              "key=charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-",
               "--raw-field",
               "sort=created_at",
               "--raw-field",

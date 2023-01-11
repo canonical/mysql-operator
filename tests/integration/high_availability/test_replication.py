@@ -27,7 +27,6 @@ from tests.integration.high_availability.high_availability_helpers import (
     high_availability_test_setup,
     insert_data_into_mysql_and_validate_replication,
 )
-from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +199,7 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
-    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
+    charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
         charm,

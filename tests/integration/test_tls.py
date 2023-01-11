@@ -19,7 +19,6 @@ from tests.integration.helpers import (
     scale_application,
     unit_file_md5,
 )
-from tests.integration.integration_constants import SERIES_TO_BASE_INDEX
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 await scale_application(ops_test, app, 3)
             return
 
-    charm = await ops_test.build_charm(".", bases_index=SERIES_TO_BASE_INDEX[series])
+    charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
         charm,

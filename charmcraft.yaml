@@ -3,6 +3,7 @@
 
 type: charm
 bases:
+  # Update tests/integration/integration_constants.py whenever "bases" is changed
   - build-on:
       - name: "ubuntu"
         channel: "20.04"
