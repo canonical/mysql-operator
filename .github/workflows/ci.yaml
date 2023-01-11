@@ -14,10 +14,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install dependencies
+      - name: Install tox
+        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run linters
-        run: tox -e lint
+        run: tox run -e lint
 
   unit-test:
     name: Unit tests
@@ -25,10 +26,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install dependencies
+      - name: Install tox
+        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run tests
-        run: tox -e unit
+        run: tox run -e unit
 
   build:
     strategy:
@@ -68,8 +70,7 @@ jobs:
         with:
           path: ~/ga-charmcraft-cache/**
           key: charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
-          restore-keys: |
-            charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
+          restore-keys: charmcraft-pack-${{ matrix.charm.name }}-${{ runner.os }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
       - name: Import cached container(s)
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
@@ -210,7 +211,9 @@ jobs:
           - integration-mysql-interface
           - integration-healing
           - integration-tls
-        series: [focal, jammy]
+        series:
+          - focal
+          - jammy
     name: ${{ matrix.tox-environments }} / ${{ matrix.series }}
     needs:
       - lint
@@ -231,4 +234,4 @@ jobs:
         with:
           name: packed-charms
       - name: Run integration tests
-        run: tox -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
+        run: tox run -e ${{ matrix.tox-environments }} -- --series=${{ matrix.series }}
