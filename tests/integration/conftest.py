@@ -13,6 +13,7 @@ from tests.integration.read_charm_yaml import get_base_versions, get_charm_name
 
 @pytest.fixture
 def ops_test(ops_test: OpsTest, series: str) -> OpsTest:
+    _build_charm_original = ops_test.build_charm
     if os.environ.get("CI") == "true":
         # Running in GitHub Actions; skip build step
         # (GitHub Actions uses a separate, cached build step. See .github/workflows/ci.yaml)
@@ -43,7 +44,7 @@ def ops_test(ops_test: OpsTest, series: str) -> OpsTest:
                 # Application charm version does not match mysql charm version
                 # Use latest available version for application charm
                 version = available_versions[-1]
-            return await ops_test.build_charm(
+            return await _build_charm_original(
                 charm_path,
                 bases_index=available_versions.index(version),
             )
