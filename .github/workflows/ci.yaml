@@ -236,6 +236,8 @@ jobs:
               logging.info(
                   f"{bytes_available / GIBIBYTE:.1f} GiB available, {bytes_required / GIBIBYTE:.1f} GiB required"
               )
+              if not cache_deletion_order:
+                  break
               # Delete current ref cache if it exists or delete the oldest cache
               ref, cache = cache_deletion_order.pop(-1)
               if ref == "refs/heads/main":
