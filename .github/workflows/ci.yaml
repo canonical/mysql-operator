@@ -80,6 +80,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
+          # Prune cache step depends on this key format
+          # (If key format is changed, update prune cache step)
           key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
           restore-keys: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
       - name: Import cached container(s)
@@ -166,7 +168,7 @@ jobs:
               "GET",
               "/repos/{owner}/{repo}/actions/caches",
               "--raw-field",
-              "key=charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-",
+              "key=charmcraft-pack-",
               "--raw-field",
               "sort=created_at",
               "--raw-field",
@@ -180,6 +182,27 @@ jobs:
           bytes_used = run_gh_cli("--method", "GET", "/repos/{owner}/{repo}/actions/cache/usage")[
               "active_caches_size_in_bytes"
           ]
+          CURRENT_REF = "${{ github.ref }}"
+          if CURRENT_REF == "refs/heads/main":
+              # Remove caches that are no longer in the build matrix
+              # Usually, each instance in the build matrix prunes its own caches
+              # However, in the following cases, the instance is no longer part of the build matrix:
+              # - charmcraft.yaml file is deleted
+              # - number of bases in charmcraft.yaml decreases
+              BUILD_MATRIX = json.loads("${{ needs.get-build-matrix.outputs.build-matrix }}")
+              prefixes_in_build_matrix = [
+                  f"charmcraft-pack-{item['path']}-{item['bases_index']}" for item in BUILD_MATRIX
+              ]
+              for cache in caches:
+                  key_prefix = "-".join(cache["key"].split("-")[:-3])
+                  if key_prefix not in prefixes_in_build_matrix:
+                      delete_cache(cache)
+          
+          CACHE_KEY_PREFIX = "charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-"
+          caches = [cache for cache in caches if cache["key"].startswith(CACHE_KEY_PREFIX)]
+          if not caches:
+              logging.info("No caches")
+              exit()
           fresh_caches = {}  # Last created cache for a ref (branch or PR)
           for cache in caches:
               if (ref := cache["ref"]) not in fresh_caches:
@@ -188,7 +211,6 @@ jobs:
                   # Cache is stale (no longer in use); delete it
                   delete_cache(cache)
 
-          CURRENT_REF = "${{ github.ref }}"
           expected_cache_size = (fresh_caches.get(CURRENT_REF) or list(fresh_caches.values())[0])[
               "size_in_bytes"
           ]
@@ -200,7 +222,7 @@ jobs:
           GIBIBYTE = 1073741824  # 1 GiB
           while (bytes_available := 10 * GIBIBYTE - bytes_used) < bytes_required:
               logging.info(
-                  f"{bytes_available/GIBIBYTE:.1f} GiB available, {bytes_required/GIBIBYTE:.1f} GiB required"
+                  f"{bytes_available / GIBIBYTE:.1f} GiB available, {bytes_required / GIBIBYTE:.1f} GiB required"
               )
               # Delete current ref cache if it exists or delete the oldest cache
               ref, cache = fresh_caches.pop(-1)
