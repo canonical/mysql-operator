@@ -1,3 +1,5 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
 name: Tests
 
 on:
@@ -33,7 +35,7 @@ jobs:
         run: tox run -e unit
 
   get-build-matrix:
-    name: Create build matrix from charmcraft.yaml file(s)
+    name: Create build matrix
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,7 +43,7 @@ jobs:
       - name: Install tox
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
-      - name: Create build matrix
+      - name: Create build matrix from charmcraft.yaml file(s)
         id: create-matrix
         run: tox run -e create-build-matrix
     outputs:
