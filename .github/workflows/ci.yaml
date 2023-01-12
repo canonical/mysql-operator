@@ -194,7 +194,10 @@ jobs:
               f"charmcraft-pack-{item['path']}-{item['bases_index']}" for item in BUILD_MATRIX
           ]
           for cache in caches:
+              # Path component of key might contain "-"; remove components from end of key
+              # (components at the end of key will not contain "-")
               key_prefix = "-".join(cache["key"].split("-")[:-3])
+
               if key_prefix not in prefixes_in_build_matrix:
                   if cache["ref"] == CURRENT_REF:
                       delete_cache(cache)
