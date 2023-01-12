@@ -47,13 +47,15 @@ def create_build_matrix():
     build_matrix = []
     version_to_series = {version: series for series, version in SERIES_TO_VERSION.items()}
     for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
+        charm_name = get_charm_name(charmcraft_yaml.parent / "metadata.yaml")
+        path = charmcraft_yaml.parent.as_posix()
         for index, version in enumerate(get_base_versions(charmcraft_yaml)):
             build_matrix.append(
                 {
-                    "name": get_charm_name(charmcraft_yaml.parent / "metadata.yaml"),
+                    "name": charm_name,
                     "series": version_to_series[version],
                     "bases_index": index,
-                    "path": charmcraft_yaml.parent.as_posix(),
+                    "path": path,
                 }
             )
     output_file = os.environ["GITHUB_OUTPUT"]
