@@ -1008,9 +1008,13 @@ class MySQLBase(ABC):
         Raises:
             MySQLUpgradeUserForMySQLRouterError if there is an issue upgrading user for mysqlrouter
         """
+        cluster_primary = self.get_cluster_primary_address()
+        if not cluster_primary:
+            raise MySQLUpgradeUserForMySQLRouterError("Failed to retrieve cluster primary")
+
         options = {"update": "true"}
         upgrade_user_commands = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{cluster_primary}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"cluster.setup_router_account('{username}@{hostname}', {json.dumps(options)})",
         )
@@ -1037,8 +1041,12 @@ class MySQLBase(ABC):
         Raises:
             MySQLGrantPrivilegesToUserError if there is an issue granting privileges to a user
         """
+        cluster_primary = self.get_cluster_primary_address()
+        if not cluster_primary:
+            raise MySQLGrantPrivilegesToUserError("Failed to get cluster primary address")
+
         grant_privileges_commands = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{cluster_primary}')",
             f"session.run_sql(\"GRANT {', '.join(privileges)} ON *.* TO '{username}'@'{hostname}'{' WITH GRANT OPTION' if with_grant_option else ''}\")",
         )
 
