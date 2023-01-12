@@ -183,6 +183,7 @@ jobs:
               "active_caches_size_in_bytes"
           ]
           CURRENT_REF = "${{ github.ref }}"
+
           # Remove caches that are no longer in the build matrix
           # Usually, each instance in the build matrix prunes its own caches
           # However, in the following cases, the instance is no longer part of the build matrix:
