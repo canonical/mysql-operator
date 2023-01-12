@@ -28,7 +28,7 @@ def ops_test(ops_test: OpsTest, series: str) -> OpsTest:
                 # Application charm version does not match mysql charm version
                 # Use latest available version for application charm
                 version = available_versions[-1]
-            return charm_path / f"{charm_name}_ubuntu-{version}-amd64.charm"
+            return f"local:./{charm_path/charm_name}_ubuntu-{version}-amd64.charm"
 
     else:
 
