@@ -134,7 +134,6 @@ jobs:
         # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
         shell: python
         run: |
-          import datetime
           import json
           import logging
           import subprocess
@@ -199,15 +198,15 @@ jobs:
               if key_prefix not in prefixes_in_build_matrix:
                   if cache["ref"] == CURRENT_REF:
                       delete_cache(cache)
-                  elif CURRENT_REF == "refs/heads/main":
-                      time_accessed = datetime.datetime.fromisoformat(
-                          cache["last_accessed_at"].replace("Z", "")
-                      )
-                      if datetime.datetime.now() - time_accessed > datetime.timedelta(weeks=1):
-                          delete_cache(cache)
-          
+                  else:
+                      cache["not-in-build-matrix"] = True
+
           CACHE_KEY_PREFIX = "charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-"
-          caches = [cache for cache in caches if cache["key"].startswith(CACHE_KEY_PREFIX)]
+          caches = [
+              cache
+              for cache in caches
+              if cache["key"].startswith(CACHE_KEY_PREFIX) or cache.get("not-in-build-matrix")
+          ]
           if not caches:
               logging.info("No caches")
               exit()
