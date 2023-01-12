@@ -191,8 +191,9 @@ jobs:
           # - number of bases in charmcraft.yaml decreases
           BUILD_MATRIX = json.loads('${{ needs.get-build-matrix.outputs.build-matrix }}')
           prefixes_in_build_matrix = [
-              f"charmcraft-pack-{item['path']}-{item['bases_index']}" for item in BUILD_MATRIX
+              f"charmcraft-pack-{element['path']}-{element['bases_index']}" for element in BUILD_MATRIX
           ]
+          caches_not_in_build_matrix = []
           for cache in caches:
               # Path component of key might contain "-"; remove components from end of key
               # (components at the end of key will not contain "-")
@@ -202,14 +203,10 @@ jobs:
                   if cache["ref"] == CURRENT_REF:
                       delete_cache(cache)
                   else:
-                      cache["not-in-build-matrix"] = True
+                      caches_not_in_build_matrix.append(cache)
 
           CACHE_KEY_PREFIX = "charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-"
-          caches = [
-              cache
-              for cache in caches
-              if cache["key"].startswith(CACHE_KEY_PREFIX) or cache.get("not-in-build-matrix")
-          ]
+          caches = [cache for cache in caches if cache["key"].startswith(CACHE_KEY_PREFIX)]
           if not caches:
               logging.info("No caches")
               exit()
@@ -224,10 +221,15 @@ jobs:
           expected_cache_size = (fresh_caches.get(CURRENT_REF) or list(fresh_caches.values())[0])[
               "size_in_bytes"
           ]
-          # Move current ref cache to end of fresh_caches insertion order
-          if current_ref_cache := fresh_caches.pop(CURRENT_REF, None):
-              fresh_caches[CURRENT_REF] = current_ref_cache
-          fresh_caches = list(fresh_caches.items())
+          current_ref_cache = fresh_caches.pop(CURRENT_REF, None)
+          cache_deletion_order = list(fresh_caches.items())
+          cache_deletion_order += [(cache["ref"], cache) for cache in caches_not_in_build_matrix]
+          # Delete caches from end of list to beginning of list
+          # Delete caches in order of oldest to newest
+          cache_deletion_order.sort(key=lambda cache_item: cache_item[1]["created_at"], reverse=True)
+          # Delete current ref cache first
+          if current_ref_cache:
+              cache_deletion_order.append((CURRENT_REF, current_ref_cache))
           bytes_required = int(expected_cache_size * 1.2)  # Add 20% margin
           GIBIBYTE = 1073741824  # 1 GiB
           while (bytes_available := 10 * GIBIBYTE - bytes_used) < bytes_required:
@@ -235,7 +237,7 @@ jobs:
                   f"{bytes_available / GIBIBYTE:.1f} GiB available, {bytes_required / GIBIBYTE:.1f} GiB required"
               )
               # Delete current ref cache if it exists or delete the oldest cache
-              ref, cache = fresh_caches.pop(-1)
+              ref, cache = cache_deletion_order.pop(-1)
               if ref == "refs/heads/main":
                   continue
               delete_cache(cache)
