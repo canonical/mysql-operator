@@ -188,7 +188,7 @@ jobs:
           # However, in the following cases, the instance is no longer part of the build matrix:
           # - charmcraft.yaml file is deleted
           # - number of bases in charmcraft.yaml decreases
-          BUILD_MATRIX = json.loads("${{ needs.get-build-matrix.outputs.build-matrix }}")
+          BUILD_MATRIX = json.loads('${{ needs.get-build-matrix.outputs.build-matrix }}')
           prefixes_in_build_matrix = [
               f"charmcraft-pack-{item['path']}-{item['bases_index']}" for item in BUILD_MATRIX
           ]
