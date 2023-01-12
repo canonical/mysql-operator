@@ -134,6 +134,7 @@ jobs:
         # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
         shell: python
         run: |
+          import datetime
           import json
           import logging
           import subprocess
