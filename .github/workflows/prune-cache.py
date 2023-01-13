@@ -35,7 +35,15 @@ parser.add_argument("--github.ref", required=True)
 parser.add_argument("--needs.get-build-matrix.outputs.build-matrix", required=True)
 parser.add_argument("--matrix.charm.path", required=True)
 parser.add_argument("--matrix.charm.bases_index", required=True)
-GITHUB_ACTIONS_CONTEXT = vars(parser.parse_args())
+
+
+# argparse converts "-" to "_" in argument names
+class ArgumentDict(dict):
+    def __getitem__(self, key):
+        return super().__getitem__(key.replace("-", "_"))
+
+
+GITHUB_ACTIONS_CONTEXT = ArgumentDict(vars(parser.parse_args()))
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 caches = run_gh_cli(
