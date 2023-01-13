@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import subprocess
@@ -26,6 +27,16 @@ def delete_cache(cache_: dict) -> None:
     bytes_used -= cache["size_in_bytes"]
 
 
+# Parse required GitHub Actions contexts
+# (https://docs.github.com/en/actions/learn-github-actions/contexts)
+# from command-line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("--github.ref", required=True)
+parser.add_argument("--needs.get-build-matrix.outputs.build-matrix", required=True)
+parser.add_argument("--matrix.charm.path", required=True)
+parser.add_argument("--matrix.charm.bases_index", required=True)
+GITHUB_ACTIONS_CONTEXT = vars(parser.parse_args())
+
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 caches = run_gh_cli(
     "--method",
@@ -46,14 +57,14 @@ if not caches:
 bytes_used = run_gh_cli("--method", "GET", "/repos/{owner}/{repo}/actions/cache/usage")[
     "active_caches_size_in_bytes"
 ]
-CURRENT_REF = "${{ github.ref }}"
+CURRENT_REF = GITHUB_ACTIONS_CONTEXT["github.ref"]
 
 # Remove caches that are no longer in the build matrix
 # Usually, each instance in the build matrix prunes its own caches
 # However, in the following cases, the instance is no longer part of the build matrix:
 # - charmcraft.yaml file is deleted
 # - number of bases in charmcraft.yaml decreases
-BUILD_MATRIX = json.loads("${{ needs.get-build-matrix.outputs.build-matrix }}")
+BUILD_MATRIX = json.loads(GITHUB_ACTIONS_CONTEXT["needs.get-build-matrix.outputs.build-matrix"])
 prefixes_in_build_matrix = [
     f"charmcraft-pack-{element['path']}-{element['bases_index']}" for element in BUILD_MATRIX
 ]
@@ -69,7 +80,7 @@ for cache in caches:
         else:
             caches_not_in_build_matrix.append(cache)
 
-CACHE_KEY_PREFIX = "charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-"
+CACHE_KEY_PREFIX = f"charmcraft-pack-{GITHUB_ACTIONS_CONTEXT['matrix.charm.path']}-{GITHUB_ACTIONS_CONTEXT['matrix.charm.bases_index']}-"
 caches = [cache for cache in caches if cache["key"].startswith(CACHE_KEY_PREFIX)]
 if not caches:
     logging.info("No caches")
