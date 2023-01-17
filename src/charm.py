@@ -116,7 +116,7 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # Initial setup operations like installing dependencies, and creating users and groups.
-        def set_retry_status():
+        def set_retry_status(_):
             self.unit.status = MaintenanceStatus(
                 "Failed to install and configure MySQL. Retrying..."
             )
