@@ -39,6 +39,7 @@ from tenacity import (
     RetryError,
     Retrying,
     stop_after_attempt,
+    stop_after_delay,
     wait_exponential,
     wait_fixed,
 )
@@ -123,7 +124,8 @@ class MySQLOperatorCharm(CharmBase):
 
         try:
             for attempt in Retrying(
-                wait=wait_exponential(multiplier=10, max=60 * 5),
+                wait=wait_exponential(multiplier=10),
+                stop=stop_after_delay(60 * 5),
                 after=set_retry_status,
             ):
                 with attempt:
