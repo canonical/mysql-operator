@@ -20,7 +20,8 @@ markers = [
     "mysql_interface_tests: mysql legacy interface relation tests",
     "healing_tests: stress tests of mysql-server",
     "tls_tests: tls certificates interface relation tests",
-    "dev: mark to test in development tests"
+    "dev: mark to test in development tests",
+    "flaky"
 ]
 
 # Formatting tools configuration
