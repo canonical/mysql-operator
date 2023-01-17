@@ -47,14 +47,12 @@ MYSQL_DAEMON = "mysqld"
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build and deploy."""
     await high_availability_test_setup(ops_test, series)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -93,7 +91,6 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
     """Freeze and unfreeze process and check for auto cluster recovery."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -137,7 +134,6 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_network_cut(ops_test: OpsTest, continuous_writes):
     """Completely cut and restore network."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -218,7 +214,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     """Stop server, write data, start and validate replication."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -301,7 +296,6 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     """Pause test.
 
@@ -366,7 +360,6 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.healing_tests
 async def test_sst_test(ops_test: OpsTest, continuous_writes):
     """The SST test.
 
