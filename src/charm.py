@@ -35,7 +35,13 @@ from ops.model import (
     StatusBase,
     WaitingStatus,
 )
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    stop_after_attempt,
+    wait_exponential,
+    wait_fixed,
+)
 
 from constants import (
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -110,9 +116,19 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         # Initial setup operations like installing dependencies, and creating users and groups.
+        def set_retry_status():
+            self.unit.status = MaintenanceStatus(
+                "Failed to install and configure MySQL. Retrying..."
+            )
+
         try:
-            MySQL.install_and_configure_mysql_dependencies()
-        except Exception:
+            for attempt in Retrying(
+                wait=wait_exponential(multiplier=10, max=60 * 5),
+                after=set_retry_status,
+            ):
+                with attempt:
+                    MySQL.install_and_configure_mysql_dependencies()
+        except RetryError:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
             return
 
