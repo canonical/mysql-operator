@@ -67,8 +67,7 @@ jobs:
           - integration-shared-db
           - integration-database
           - integration-mysql-interface
-          # TODO: re-enable when stable (currently flaky)
-          # - integration-healing
+          - integration-healing
           - integration-tls
         series:
           - focal
