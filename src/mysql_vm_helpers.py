@@ -139,7 +139,7 @@ class MySQL(MySQLBase):
 
             # install xtrabackup snap and connect system-files interface
             if not xtrabackup.present:
-                logger.debug("Installing mysql shell snap")
+                logger.debug("Installing xtrabackup snap")
                 xtrabackup.ensure(snap.SnapState.Latest, channel="edge")
                 subprocess.run("snap connect xtrabackup:mysql-data".split())
         except subprocess.CalledProcessError as e:
