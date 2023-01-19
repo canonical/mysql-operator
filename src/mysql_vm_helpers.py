@@ -141,7 +141,6 @@ class MySQL(MySQLBase):
             if not xtrabackup.present:
                 logger.debug("Installing xtrabackup snap")
                 xtrabackup.ensure(snap.SnapState.Latest, channel="edge")
-                subprocess.run("snap connect xtrabackup:mysql-data".split())
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
             raise
