@@ -1,3 +1,5 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
 import argparse
 import json
 import logging
