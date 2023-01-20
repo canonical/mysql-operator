@@ -44,7 +44,6 @@ TIMEOUT = 15 * 60
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-@pytest.mark.mysql_interface_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charms from local source folders
@@ -111,7 +110,6 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.mysql_interface_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     # Configure a user and database to be used for the relation
@@ -132,7 +130,6 @@ async def test_relation_creation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.mysql_interface_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
     # store database credentials for test access later

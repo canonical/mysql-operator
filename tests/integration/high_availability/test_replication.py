@@ -40,14 +40,12 @@ TIMEOUT = 17 * 60
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     await high_availability_test_setup(ops_test, series)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_consistent_data_replication_across_cluster(
     ops_test: OpsTest,
 ) -> None:
@@ -65,7 +63,6 @@ async def test_consistent_data_replication_across_cluster(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -113,7 +110,6 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
@@ -190,7 +186,6 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
         assert random_chars in output
 
 
-@pytest.mark.ha_tests
 async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     """Test for cluster data isolation.
 

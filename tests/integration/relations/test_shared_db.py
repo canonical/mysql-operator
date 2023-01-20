@@ -150,7 +150,6 @@ async def check_keystone_users_existence(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.shared_db_tests
 async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
 

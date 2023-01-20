@@ -55,7 +55,6 @@ TIMEOUT = 15 * 60
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-@pytest.mark.database_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     # Build and deploy charm from local source folder
@@ -120,7 +119,6 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -165,7 +163,6 @@ async def test_password_rotation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation_silent(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -205,7 +202,6 @@ async def test_password_rotation_silent(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -252,7 +248,6 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
@@ -266,7 +261,6 @@ async def test_relation_creation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_ready_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
     relation_data = await get_relation_data(
@@ -319,7 +313,6 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
