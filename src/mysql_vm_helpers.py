@@ -23,6 +23,7 @@ from constants import (
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_SOCK_FILE,
+    XTRABACKUP_SNAP_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,7 @@ class MySQL(MySQLBase):
             logger.debug("Retrieving snap cache")
             cache = snap.SnapCache()
             mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
+            xtrabackup = cache[XTRABACKUP_SNAP_NAME]
 
             if not mysql_shell.present:
                 logger.debug("Installing mysql shell snap")
@@ -134,6 +136,11 @@ class MySQL(MySQLBase):
                 logger.debug("Creating mysql shell common directory")
                 mysqlsh_help_command = [MySQL.get_mysqlsh_bin(), "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
+
+            # install xtrabackup snap and connect system-files interface
+            if not xtrabackup.present:
+                logger.debug("Installing xtrabackup snap")
+                xtrabackup.ensure(snap.SnapState.Latest, channel="edge")
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
             raise
