@@ -4,9 +4,7 @@ name: Tests
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
+  # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
 
 jobs:
