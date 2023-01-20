@@ -130,7 +130,7 @@ jobs:
       - name: Prune cache from previous runs
         # GitHub actions cache is limited to 10 GiB per repository
         # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
-        run: python3 .github/workflows/prune-cache.py --github.ref '${{ github.ref }}' --needs.get-build-matrix.outputs.build-matrix '${{ needs.get-build-matrix.outputs.build-matrix }}' --matrix.charm.path '${{ matrix.charm.path }}' --matrix.charm.bases_index '${{ matrix.charm.bases_index }}'
+        run: python3 .github/workflows/prune_cache.py --github.ref '${{ github.ref }}' --needs.get-build-matrix.outputs.build-matrix '${{ needs.get-build-matrix.outputs.build-matrix }}' --matrix.charm.path '${{ matrix.charm.path }}' --matrix.charm.bases_index '${{ matrix.charm.bases_index }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
