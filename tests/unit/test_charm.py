@@ -12,6 +12,7 @@ from charms.mysql.v0.mysql import (
 )
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
+from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
 from tests.unit.helpers import patch_network_get
@@ -38,13 +39,18 @@ class TestCharm(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
+    @patch("charm.Retrying", return_value=Retrying(stop=stop_after_attempt(1)))
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch(
         "mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies", side_effect=Exception()
     )
     def test_on_install_exception(
-        self, _install_and_configure_mysql_dependencies, _is_data_dir_attached, _check_call
+        self,
+        _install_and_configure_mysql_dependencies,
+        _is_data_dir_attached,
+        _check_call,
+        _retrying,
     ):
         self.charm.on.install.emit()
 
