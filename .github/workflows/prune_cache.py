@@ -1,5 +1,25 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+
+"""Prune GitHub Actions `charmcraft pack` cache.
+
+A new cache is created on each commit for each charm base.
+(a charm can have multiple bases [e.g. Ubuntu 20.04 and Ubuntu 22.04] and thus, multiple caches per commit)
+
+This script runs immediately before a cache is saved.
+
+Usually*, only caches with the same charm base are pruned.
+
+High-level overview:
+1. For each branch, delete all caches except the latest cache.
+2. If there is not enough space to save the cache, delete caches in this order:
+    a. The latest cache on the current branch (it's about to be replaced)
+    b. Caches in order from oldest to newest
+
+*If a charm base is removed from charmcraft.yaml,
+it will be pruned when saving a cache with a different charm base.
+"""
+
 import argparse
 import json
 import logging
@@ -67,16 +87,18 @@ if not caches:
 bytes_used = run_gh_cli("--method", "GET", "/repos/{owner}/{repo}/actions/cache/usage")[
     "active_caches_size_in_bytes"
 ]
+# A "ref" is practically equivalent to a branch
 CURRENT_REF = GITHUB_ACTIONS_CONTEXT["github.ref"]
 
 # Remove caches that are no longer in the build matrix
-# Usually, each instance in the build matrix prunes its own caches
+# Usually, each charm base in the build matrix prunes its own caches
 # However, in the following cases, the instance is no longer part of the build matrix:
 # - charmcraft.yaml file is deleted
 # - number of bases in charmcraft.yaml decreases
 BUILD_MATRIX = json.loads(GITHUB_ACTIONS_CONTEXT["needs.get-build-matrix.outputs.build-matrix"])
 prefixes_in_build_matrix = [
-    f"charmcraft-pack-{element['path']}-{element['bases_index']}" for element in BUILD_MATRIX
+    f"charmcraft-pack-{charm_base['path']}-{charm_base['bases_index']}"
+    for charm_base in BUILD_MATRIX
 ]
 caches_not_in_build_matrix = []
 for cache in caches:
@@ -88,13 +110,18 @@ for cache in caches:
         if cache["ref"] == CURRENT_REF:
             delete_cache(cache)
         else:
+            # The cache is not part of the build matrix on this ref, but it
+            # could be in the build matrix on the ref it was saved on, so it's
+            # not safe to immediately delete.
             caches_not_in_build_matrix.append(cache)
 
 CACHE_KEY_PREFIX = f"charmcraft-pack-{GITHUB_ACTIONS_CONTEXT['matrix.charm.path']}-{GITHUB_ACTIONS_CONTEXT['matrix.charm.bases_index']}-"
+# Select caches of the current charm base
 caches = [cache for cache in caches if cache["key"].startswith(CACHE_KEY_PREFIX)]
 if not caches:
     logging.info("No caches")
     exit()
+# For each ref, delete all caches except the latest cache
 fresh_caches = {}  # Last created cache for a ref (branch or PR)
 for cache in caches:
     if (ref := cache["ref"]) not in fresh_caches:
@@ -107,9 +134,10 @@ expected_cache_size = (fresh_caches.get(CURRENT_REF) or list(fresh_caches.values
     "size_in_bytes"
 ]
 current_ref_cache = fresh_caches.pop(CURRENT_REF, None)
+# Caches will be deleted from end of "cache_deletion_order" to
+# beginning of "cache_deletion_order"
 cache_deletion_order = list(fresh_caches.items())
 cache_deletion_order += [(cache["ref"], cache) for cache in caches_not_in_build_matrix]
-# Delete caches from end of list to beginning of list
 # Delete caches in order of oldest to newest
 cache_deletion_order.sort(key=lambda cache_item: cache_item[1]["created_at"], reverse=True)
 # Delete current ref cache first
