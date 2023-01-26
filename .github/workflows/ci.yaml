@@ -74,7 +74,7 @@ jobs:
         id: charmcraft-version
         # Major and minor versions (e.g. "2.1")
         run: echo "version=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
-      - name: Cache `charmcraft pack` LXC instance(s)
+      - name: Cache `charmcraft pack` LXC instance
         uses: actions/cache@v3
         with:
           path: ~/ga-charmcraft-cache/**
@@ -82,11 +82,11 @@ jobs:
           # (If key format is changed, update prune cache step)
           key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
           restore-keys: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
-      - name: Import cached container(s)
+      - name: Import cached container
         run: |
           if [ ! -d ~/ga-charmcraft-cache/ ]
           then
-            echo No cached containers to import
+            echo No cached container to import
             exit 0
           fi
           # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
@@ -105,7 +105,7 @@ jobs:
         working-directory: ${{ matrix.charm.path }}
         run: charmcraft pack --bases-index=${{ matrix.charm.bases_index }}
       - run: touch .empty
-      - name: Upload packed charm(s)
+      - name: Upload packed charm
         uses: actions/upload-artifact@v3
         with:
           name: packed-charms
@@ -115,7 +115,7 @@ jobs:
             ${{ matrix.charm.path }}/*.charm
             .empty
           if-no-files-found: error
-      - name: Export `charmcraft pack` container(s) to cache
+      - name: Export `charmcraft pack` container to cache
         run: |
           mkdir -p ~/ga-charmcraft-cache
           charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
