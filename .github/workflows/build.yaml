@@ -1,0 +1,121 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+on:
+  workflow_call:
+    inputs:
+      build-matrix:
+        description: JSON string of charms to build
+        required: true
+        type: string
+        # Example:
+        # [
+        #   {
+        #     "job_display_name": "Build mysql charm | focal",
+        #     "bases_index": 0, # corresponds to charmcraft.yaml file
+        #     "path": "."
+        #   },
+        #   {
+        #     "job_display_name": "Build mysql charm | jammy",
+        #     "bases_index": 1,
+        #     "path": "."
+        #   },
+        #   {
+        #     "job_display_name": "Build application charm | jammy",
+        #     "bases_index": 0,
+        #     "path": "tests/integration/relations/application-charm"
+        #   }
+        # ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        charm: ${{ fromJSON(inputs.build-matrix) }}
+    name: ${{ matrix.charm.job_display_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup environment
+        # TODO: Replace with custom image on self-hosted runner
+        run: |
+          # Copied from https://github.com/charmed-kubernetes/actions-operator/blob/96fb0b07eb675f74cf1796be812bc7e67a0d62fc/src/bootstrap/index.ts#L151
+          sudo adduser $USER lxd
+          newgrp lxd
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo chmod a+wr /var/snap/lxd/common/lxd/unix.socket
+          sudo snap install charmcraft --classic
+      - name: Get charmcraft version
+        id: charmcraft-version
+        # Major and minor versions (e.g. "2.1")
+        run: echo "version=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
+      - name: Restore cache of `charmcraft pack` LXC instance
+        id: restore-cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/ga-charmcraft-cache/**
+          key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path), format('{0}/actions.yaml', matrix.charm.path), format('{0}/requirements.txt', matrix.charm.path)) }}
+      - name: Import cached container
+        if: ${{ steps.restore-cache.outputs.cache-hit }}
+        run: |
+          # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
+          lxc project create charmcraft
+          lxc --project default profile show default | lxc --project charmcraft profile edit default
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
+          for container_tarball in ~/ga-charmcraft-cache/*
+          do
+            lxc --project charmcraft import $container_tarball
+            container_name_without_inode=$(basename --suffix .tar $container_tarball)
+            # Replace placeholder text "INODE" with inode
+            container_name_with_inode=$(echo $container_name_without_inode | sed "s/INODE/$charm_repository_directory_inode/")
+            lxc --project charmcraft move $container_name_without_inode $container_name_with_inode
+          done
+      - name: Pack charm
+        working-directory: ${{ matrix.charm.path }}
+        run: charmcraft pack --bases-index=${{ matrix.charm.bases_index }}
+      - run: touch .empty
+      - name: Upload packed charm
+        uses: actions/upload-artifact@v3
+        with:
+          name: packed-charms
+          # .empty file required to preserve directory structure
+          # See https://github.com/actions/upload-artifact/issues/344#issuecomment-1379232156
+          path: |
+            ${{ matrix.charm.path }}/*.charm
+            .empty
+          if-no-files-found: error
+      - name: Export `charmcraft pack` container to cache
+        run: |
+          mkdir -p ~/ga-charmcraft-cache
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
+          for container_name_with_inode in $(lxc --project charmcraft list --columns n --format csv)
+          do
+            # Replace inode with placeholder text "INODE"
+            container_name_without_inode=$(echo $container_name_with_inode | sed "s/$charm_repository_directory_inode/INODE/")
+            lxc --project charmcraft move $container_name_with_inode $container_name_without_inode
+            # Use GitHub actions/cache compression
+            lxc --project charmcraft export --optimized-storage --compression none $container_name_without_inode ~/ga-charmcraft-cache/$container_name_without_inode.tar
+          done
+      - if: ${{ github.event_name == 'schedule' && steps.restore-cache.outputs.cache-hit }}
+        name: Delete cache on main
+        # GitHub actions cache is limited to 10 GiB per repository
+        # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
+        # When the 10 GiB limit is exceeded, GitHub deletes the oldest caches.
+        # If the cache on the main branch is deleted by GitHub,
+        # any new pull requests will be unable to restore a cache.
+        # To avoid that situation, delete the cache on main and save
+        # a new cache with the same key once per day.
+        run: |
+          gh api -H "Accept: application/vnd.github+json" --method DELETE "/repos/{owner}/{repo}/actions/caches?key=${{ steps.restore-cache.outputs.cache-primary-key }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save cache of `charmcraft pack` LXC instance
+        if: ${{ !steps.restore-cache.outputs.cache-hit || github.event_name == 'schedule' }}
+        uses: actions/cache/save@v3
+        with:
+          path: ~/ga-charmcraft-cache/**
+          # Use value of "key" from restore-cache step
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}

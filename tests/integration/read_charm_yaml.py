@@ -52,8 +52,7 @@ def create_build_matrix():
         for index, version in enumerate(get_base_versions(charmcraft_yaml)):
             build_matrix.append(
                 {
-                    "name": charm_name,
-                    "series": version_to_series[version],
+                    "job_display_name": f"Build {charm_name} charm | {version_to_series[version]}",
                     "bases_index": index,
                     "path": path,
                 }
