@@ -4,6 +4,8 @@ name: Tests
 
 on:
   pull_request:
+  schedule:
+    - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
 
@@ -74,21 +76,15 @@ jobs:
         id: charmcraft-version
         # Major and minor versions (e.g. "2.1")
         run: echo "version=$(charmcraft version | cut --delimiter '.' --fields 1,2)" >> $GITHUB_OUTPUT
-      - name: Cache `charmcraft pack` LXC instance
-        uses: actions/cache@v3
+      - name: Restore cache of `charmcraft pack` LXC instance
+        id: restore-cache
+        uses: actions/cache/restore@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          # Prune cache step depends on this key format
-          # (If key format is changed, update prune cache step)
-          key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-${{ github.sha }}
-          restore-keys: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}-
+          key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path)) }}
       - name: Import cached container
+        if: ${{ steps.restore-cache.outputs.cache-hit }}
         run: |
-          if [ ! -d ~/ga-charmcraft-cache/ ]
-          then
-            echo No cached container to import
-            exit 0
-          fi
           # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
           lxc project create charmcraft
           lxc --project default profile show default | lxc --project charmcraft profile edit default
@@ -127,12 +123,27 @@ jobs:
             # Use GitHub actions/cache compression
             lxc --project charmcraft export --optimized-storage --compression none $container_name_without_inode ~/ga-charmcraft-cache/$container_name_without_inode.tar
           done
-      - name: Prune cache from previous runs
+      - if: ${{ github.event_name == 'schedule' }}
+        name: Delete cache on main
         # GitHub actions cache is limited to 10 GiB per repository
         # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
-        run: python3 .github/workflows/prune_cache.py --github.ref '${{ github.ref }}' --needs.get-build-matrix.outputs.build-matrix '${{ needs.get-build-matrix.outputs.build-matrix }}' --matrix.charm.path '${{ matrix.charm.path }}' --matrix.charm.bases_index '${{ matrix.charm.bases_index }}'
+        # When the 10 GiB limit is exceeded, GitHub deletes the oldest caches.
+        # If the cache on the main branch is deleted by GitHub,
+        # any new pull requests will be unable to restore a cache.
+        # To avoid that situation, delete the cache on main and save
+        # a new cache with the same key once per day.
+        run: |
+          gh api -H "Accept: application/vnd.github+json" --method DELETE "/repos/{owner}/{repo}/actions/caches?key=${{ steps.restore-cache.outputs.cache-primary-key }}"
+        # Returns 404 error if no cache on main
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save cache of `charmcraft pack` LXC instance
+        uses: actions/cache/save@v3
+        with:
+          path: ~/ga-charmcraft-cache/**
+          # Use value of "key" from restore-cache step
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
   integration-test:
     strategy:
