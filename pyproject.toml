@@ -13,13 +13,6 @@ minversion = "6.0"
 log_cli_level = "INFO"
 asyncio_mode = "auto"
 markers = [
-    "ha_tests: high-availability tests",
-    "database_tests: database interface relation tests",
-    "db_router_tests: db-router legacy interface relation tests",
-    "shared_db_tests: shared_db legacy interface relation tests",
-    "mysql_interface_tests: mysql legacy interface relation tests",
-    "healing_tests: stress tests of mysql-server",
-    "tls_tests: tls certificates interface relation tests",
     "dev: mark to test in development tests",
     "flaky"
 ]
