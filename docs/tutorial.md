@@ -342,7 +342,7 @@ The root `password` should match whatever you passed in when you entered the com
 Relations, or what Juju 3.0+ documentation [describes as Integration](https://juju.is/docs/sdk/integration), are the easiest way to create a user for MySQL in Charmed MySQL. Relations automatically create a username, password, and database for the desired user/application. As mentioned earlier in the [Access MySQL section](#access-mysql) it is a better practice to connect to MySQL via a specific user rather than the admin user.
 
 ### Data Integrator Charm
-Before relating to a charmed application, we must first deploy our charmed application. In this tutorial we will relate to the [Data Integrator Charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users, providing support for different kinds of data platforms (e.g. MySQL, PostgreSQL, MongoDB, Kafka, etc) with a consistent, opinionated and robust user experience. In order to deploy the Data Integrator Charm we can use the comman `juju deploy` we have learned above:
+Before relating to a charmed application, we must first deploy our charmed application. In this tutorial we will relate to the [Data Integrator Charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users, providing support for different kinds of data platforms (e.g. MySQL, PostgreSQL, MongoDB, Kafka, etc) with a consistent, opinionated and robust user experience. In order to deploy the Data Integrator Charm we can use the command `juju deploy` we have learned above:
 
 ```shell
 juju deploy data-integrator --channel edge --config database-name=test-database
@@ -569,7 +569,7 @@ Issuer: CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
 The Charmed MySQL application returned to the certificate `server-cert.pem` created locally in a moment of the MySQL server installation.
 
 ## Next Steps
-In this tutorial we've successfully deployed MySQL, added/removed cluster memebers, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MySQL deployment running and write to the database or remove it entirely using the steps in [Remove Charmed MySQL and Juju](#remove-charmed-mysql-and-juju). If you're looking for what to do next you can:
+In this tutorial we've successfully deployed MySQL, added/removed cluster members, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MySQL deployment running and write to the database or remove it entirely using the steps in [Remove Charmed MySQL and Juju](#remove-charmed-mysql-and-juju). If you're looking for what to do next you can:
 - Run [Charmed MySQL on Kubernetes](https://github.com/canonical/mysql-k8s-operator).
 - Check out our Charmed offerings of [PostgreSQL](https://charmhub.io/postgresql?channel=edge) and [Kafka](https://charmhub.io/kafka?channel=edge).
 - Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
@@ -587,7 +587,7 @@ juju destroy-model tutorial --destroy-storage --force
 
 Next step is to remove the Juju controller. You can see all of the available controllers by entering `juju controllers`. To remove the controller enter:
 ```shell
-juju destroy-controller overlord
+juju destroy-controller overlord --destroy-all-models
 ```
 
 Finally to remove Juju altogether, enter:
