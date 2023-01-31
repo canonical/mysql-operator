@@ -39,7 +39,7 @@ TIMEOUT = 15 * 60
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
 
@@ -53,7 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
-            series=series,
+            series=mysql_charm_series,
         ),
         ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
     )

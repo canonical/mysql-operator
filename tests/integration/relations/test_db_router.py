@@ -110,19 +110,19 @@ async def check_keystone_users_existence(
 
 
 @pytest.mark.abort_on_fail
-async def test_keystone_bundle_db_router(ops_test: OpsTest, series: str) -> None:
+async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation.
 
     Args:
         ops_test: The ops test framework
-        series: The series for the database machine
+        mysql_charm_series: The series for the database machine
     """
     charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME}
 
     mysql_app = await ops_test.model.deploy(
-        charm, application_name=APP_NAME, config=config, num_units=1, series=series
+        charm, application_name=APP_NAME, config=config, num_units=1, series=mysql_charm_series
     )
 
     # Deploy keystone

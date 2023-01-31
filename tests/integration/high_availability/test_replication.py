@@ -37,17 +37,17 @@ TIMEOUT = 17 * 60
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    await high_availability_test_setup(ops_test, series)
+    await high_availability_test_setup(ops_test, mysql_charm_series)
 
 
 @pytest.mark.abort_on_fail
 async def test_consistent_data_replication_across_cluster(
-    ops_test: OpsTest,
+    ops_test: OpsTest, mysql_charm_series: str
 ) -> None:
     """Confirm that data is replicated from the primary node to all the replicas."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
 
     # assert that there are 3 units in the mysql cluster
     assert len(ops_test.model.applications[mysql_application_name].units) == 3
@@ -60,9 +60,9 @@ async def test_consistent_data_replication_across_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
+async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     application = ops_test.model.applications[mysql_application_name]
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -183,7 +183,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
         assert random_chars in output
 
 
-async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
+async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test for cluster data isolation.
 
     This test creates a new cluster, create a new table on both cluster, write a single record with
@@ -200,7 +200,7 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
         charm,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
-        series=series,
+        series=mysql_charm_series,
     )
     async with ops_test.fast_forward():
         await ops_test.model.block_until(

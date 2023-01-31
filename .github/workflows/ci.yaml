@@ -103,4 +103,4 @@ jobs:
             echo "mark_expression=not flaky" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --series=${{ matrix.series }}
+        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.series }}
