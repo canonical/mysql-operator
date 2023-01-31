@@ -2,18 +2,36 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import os
+from argparse import ArgumentError
 from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .integration_constants import SERIES_TO_VERSION
-from .read_charm_yaml import get_base_versions, get_charm_name
-
 
 def pytest_addoption(parser):
-    parser.addoption("--mysql-charm-series", default="jammy")
+    parser.addoption("--mysql-charm-series", help="Ubuntu series for mysql charm (e.g. jammy)")
+    parser.addoption(
+        "--mysql-charm-bases-index",
+        type=int,
+        help="Index of charmcraft.yaml base that matches --mysql-charm-series",
+    )
+
+
+def pytest_configure(config):
+    if (config.option.mysql_charm_series is None) ^ (
+        config.option.mysql_charm_bases_index is None
+    ):
+        raise ArgumentError(
+            None, "--mysql-charm-series and --mysql-charm-bases-index must be given together"
+        )
+    # Update defaults whenever charmcraft.yaml is changed
+    if config.option.mysql_charm_series is None:
+        config.option.mysql_charm_series = "jammy"
+    if config.option.mysql_charm_bases_index is None:
+        config.option.mysql_charm_bases_index = 1
 
 
 @pytest.fixture
@@ -22,42 +40,31 @@ def mysql_charm_series(pytestconfig) -> str:
 
 
 @pytest.fixture
-def ops_test(ops_test: OpsTest, mysql_charm_series: str) -> OpsTest:
-    _build_charm_original = ops_test.build_charm
+def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
     if os.environ.get("CI") == "true":
         # Running in GitHub Actions; skip build step
         # (GitHub Actions uses a separate, cached build step. See .github/workflows/ci.yaml)
-        async def build_charm(charm_path) -> Path:
-            # Partially copied from
-            # https://github.com/charmed-kubernetes/pytest-operator/blob/d78d6a3158f1ccb7c69ad8c19a0ce573dddbc4c3/pytest_operator/plugin.py#L913
-            charm_path = Path(charm_path)
-            charm_name = get_charm_name(charm_path / "metadata.yaml")
-            available_versions = get_base_versions(charm_path / "charmcraft.yaml")
-            version = SERIES_TO_VERSION[mysql_charm_series]
-            # "series" is only for the mysql charm, not the application charms
-            if version not in available_versions:
-                # Application charm version does not match mysql charm version
-                # Use latest available version for application charm
-                version = available_versions[-1]
-            return f"local:./{charm_path/charm_name}_ubuntu-{version}-amd64.charm"
+        build_matrix = json.loads(os.environ["CI_BUILD_MATRIX"])
+
+        async def _build_charm(charm_path, bases_index: int = None) -> Path:
+            for charm in build_matrix.values():
+                if Path(charm_path) == Path(charm["directory_path"]):
+                    if bases_index is None or bases_index == charm["bases_index"]:
+                        return charm["file_name"]
+            raise ValueError(f"Unable to find .charm file for {bases_index=} at {charm_path=}")
 
     else:
+        _build_charm = ops_test.build_charm
 
-        async def build_charm(charm_path) -> Path:
-            # Partially copied from
-            # https://github.com/charmed-kubernetes/pytest-operator/blob/d78d6a3158f1ccb7c69ad8c19a0ce573dddbc4c3/pytest_operator/plugin.py#L913
-            charm_path = Path(charm_path)
-            available_versions = get_base_versions(charm_path / "charmcraft.yaml")
-            version = SERIES_TO_VERSION[mysql_charm_series]
-            # "series" is only for the mysql charm, not the application charms
-            if version not in available_versions:
-                # Application charm version does not match mysql charm version
-                # Use latest available version for application charm
-                version = available_versions[-1]
-            return await _build_charm_original(
+    async def build_charm(charm_path) -> Path:
+        if Path(charm_path) == Path("."):
+            # Building mysql charm
+            return await _build_charm(
                 charm_path,
-                bases_index=available_versions.index(version),
+                bases_index=pytestconfig.option.mysql_charm_bases_index,
             )
+        else:
+            return await _build_charm(charm_path)
 
     ops_test.build_charm = build_charm
     return ops_test

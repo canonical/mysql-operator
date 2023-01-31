@@ -3,7 +3,9 @@
 
 type: charm
 bases:
-  # Update tests/integration/integration_constants.py whenever "bases" is changed
+  # Whenever "bases" is changed:
+  # - Update tests/integration/conftest.py::pytest_configure()
+  # - Update .github/workflow/ci.yaml integration-test matrix
   - build-on:
       - name: "ubuntu"
         channel: "20.04"

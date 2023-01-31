@@ -1,14 +1,12 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""Read charmcraft.yaml and metadata.yaml file(s)."""
+"""Create build matrix from charmcraft.yaml file(s)"""
 
 import json
 import os
 from pathlib import Path
 
 import yaml
-
-from .integration_constants import SERIES_TO_VERSION
 
 
 def get_base_versions(path_to_charmcraft_yaml: Path) -> list[str]:
@@ -27,36 +25,19 @@ def get_base_versions(path_to_charmcraft_yaml: Path) -> list[str]:
     return versions
 
 
-def get_charm_name(path_to_metadata_yaml: Path) -> str:
-    """Reads charm name from metadata.yaml.
-
-    Args:
-        path_to_metadata_yaml: Path to metadata.yaml
-
-    Returns:
-        Charm name from metadata.yaml
-    """
-    return yaml.safe_load(path_to_metadata_yaml.read_text())["name"]
-
-
-def create_build_matrix():
-    """Create build matrix from charmcraft.yaml file(s).
-
-    Called by GitHub Actions (see .github/workflows/ci.yaml)
-    """
-    build_matrix = []
-    version_to_series = {version: series for series, version in SERIES_TO_VERSION.items()}
-    for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
-        charm_name = get_charm_name(charmcraft_yaml.parent / "metadata.yaml")
-        path = charmcraft_yaml.parent.as_posix()
-        for index, version in enumerate(get_base_versions(charmcraft_yaml)):
-            build_matrix.append(
-                {
-                    "job_display_name": f"Build {charm_name} charm | {version_to_series[version]}",
-                    "bases_index": index,
-                    "path": path,
-                }
-            )
-    output_file = os.environ["GITHUB_OUTPUT"]
-    with open(output_file, "a") as file:
-        file.write(f"build_matrix={json.dumps(build_matrix)}")
+build_matrix = []
+for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
+    path = charmcraft_yaml.parent
+    charm_name = yaml.safe_load((path / "metadata.yaml").read_text())["name"]
+    for index, version in enumerate(get_base_versions(charmcraft_yaml)):
+        build_matrix.append(
+            {
+                "job_display_name": f"Build {charm_name} charm | {version}",
+                "bases_index": index,
+                "directory_path": path.as_posix(),
+                "file_name": f"local:./{path/charm_name}_ubuntu-{version}-amd64.charm",
+            }
+        )
+output_file = os.environ["GITHUB_OUTPUT"]
+with open(output_file, "a") as file:
+    file.write(f"build_matrix={json.dumps(build_matrix)}")

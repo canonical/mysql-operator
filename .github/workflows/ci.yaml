@@ -34,28 +34,9 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
-  get-build-matrix:
-    name: Create build matrix
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
-      - name: Create build matrix from charmcraft.yaml file(s)
-        id: create-matrix
-        run: tox run -e create-build-matrix
-    outputs:
-      build-matrix: ${{ steps.create-matrix.outputs.build_matrix }}
-
   build:
     name: Build charms
-    needs:
-      - get-build-matrix
     uses: ./.github/workflows/build.yaml
-    with:
-     build-matrix: ${{ needs.get-build-matrix.outputs.build-matrix }}
 
   integration-test:
     strategy:
@@ -69,10 +50,12 @@ jobs:
           - integration-mysql-interface
           - integration-healing
           - integration-tls
-        series:
-          - focal
-          - jammy
-    name: ${{ matrix.tox-environments }} | ${{ matrix.series }}
+        ubuntu-versions:
+          - series: focal
+            bases-index: 0
+          - series: jammy
+            bases-index: 1
+    name: ${{ matrix.tox-environments }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - lint
       - unit-test
@@ -103,4 +86,6 @@ jobs:
             echo "mark_expression=not flaky" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.series }}
+        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
+        env:
+          CI_BUILD_MATRIX: ${{ needs.build.outputs.build-matrix }}

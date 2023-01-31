@@ -2,36 +2,62 @@
 # See LICENSE file for licensing details.
 on:
   workflow_call:
-    inputs:
+    outputs:
       build-matrix:
-        description: JSON string of charms to build
-        required: true
-        type: string
+        description: JSON string of charms built
+        value: ${{ jobs.get-build-matrix.outputs.build-matrix }}
         # Example:
         # [
         #   {
-        #     "job_display_name": "Build mysql charm | focal",
+        #     "job_display_name": "Build mysql charm | 20.04",
         #     "bases_index": 0, # corresponds to charmcraft.yaml file
-        #     "path": "."
+        #     "directory_path": ".",
+        #     "file_name": "local:./mysql_ubuntu-20.04-amd64.charm"
         #   },
         #   {
-        #     "job_display_name": "Build mysql charm | jammy",
+        #     "job_display_name": "Build mysql charm | 22.04",
         #     "bases_index": 1,
-        #     "path": "."
+        #     "directory_path": ".",
+        #     "file_name": "local:./mysql_ubuntu-22.04-amd64.charm"
         #   },
         #   {
-        #     "job_display_name": "Build application charm | jammy",
+        #     "job_display_name": "Build application charm | 22.04",
         #     "bases_index": 0,
-        #     "path": "tests/integration/relations/application-charm"
+        #     "directory_path": "tests/integration/relations/application-charm",
+        #     "file_name": "local:./tests/integration/relations/application_ubuntu-22.04-amd64.charm"
         #   }
         # ]
 
 jobs:
+  get-build-matrix:
+    name: Create build matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout charm repository
+        uses: actions/checkout@v3
+        with:
+          path: charm-repo
+      - name: Checkout reusable workflow repository
+        uses: actions/checkout@v3
+        with:
+          repository: carlcsaposs-canonical/test-reusable-workflow
+          path: workflow-repo
+      - name: Install pyyaml
+        run: python3 -m pip install pyyaml
+      - name: Create build matrix from charmcraft.yaml file(s)
+        id: create-matrix
+        working-directory: charm-repo
+        run: python3 ../workflow-repo/read_charm_yaml.py
+    outputs:
+      build-matrix: ${{ steps.create-matrix.outputs.build_matrix }}
+
   build:
     strategy:
       matrix:
-        charm: ${{ fromJSON(inputs.build-matrix) }}
+        charm: ${{ fromJSON(needs.get-build-matrix.outputs.build-matrix) }}
     name: ${{ matrix.charm.job_display_name }}
+    needs:
+      - get-build-matrix
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,14 +83,14 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: ~/ga-charmcraft-cache/**
-          key: charmcraft-pack-${{ matrix.charm.path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.path), format('{0}/actions.yaml', matrix.charm.path), format('{0}/requirements.txt', matrix.charm.path)) }}
+          key: charmcraft-pack-${{ matrix.charm.directory_path }}-${{ matrix.charm.bases_index }}-${{ steps.charmcraft-version.outputs.version }}-${{ hashFiles(format('{0}/charmcraft.yaml', matrix.charm.directory_path), format('{0}/actions.yaml', matrix.charm.directory_path), format('{0}/requirements.txt', matrix.charm.directory_path)) }}
       - name: Import cached container
         if: ${{ steps.restore-cache.outputs.cache-hit }}
         run: |
           # Project setup copied from https://github.com/canonical/craft-providers/blob/20d154bb8fa9868a678c5621f124a02e2b9e72ad/craft_providers/lxd/project.py#L26
           lxc project create charmcraft
           lxc --project default profile show default | lxc --project charmcraft profile edit default
-          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.directory_path }})
           for container_tarball in ~/ga-charmcraft-cache/*
           do
             lxc --project charmcraft import $container_tarball
@@ -74,7 +100,7 @@ jobs:
             lxc --project charmcraft move $container_name_without_inode $container_name_with_inode
           done
       - name: Pack charm
-        working-directory: ${{ matrix.charm.path }}
+        working-directory: ${{ matrix.charm.directory_path }}
         run: charmcraft pack --bases-index=${{ matrix.charm.bases_index }}
       - run: touch .empty
       - name: Upload packed charm
@@ -84,13 +110,13 @@ jobs:
           # .empty file required to preserve directory structure
           # See https://github.com/actions/upload-artifact/issues/344#issuecomment-1379232156
           path: |
-            ${{ matrix.charm.path }}/*.charm
+            ${{ matrix.charm.directory_path }}/*.charm
             .empty
           if-no-files-found: error
       - name: Export `charmcraft pack` container to cache
         run: |
           mkdir -p ~/ga-charmcraft-cache
-          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.path }})
+          charm_repository_directory_inode=$(stat --format "%i" ${{ matrix.charm.directory_path }})
           for container_name_with_inode in $(lxc --project charmcraft list --columns n --format csv)
           do
             # Replace inode with placeholder text "INODE"
