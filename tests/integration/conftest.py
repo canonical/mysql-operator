@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.integration_constants import SERIES_TO_VERSION
-from tests.integration.read_charm_yaml import get_base_versions, get_charm_name
+from .integration_constants import SERIES_TO_VERSION
+from .read_charm_yaml import get_base_versions, get_charm_name
 
 
 @pytest.fixture

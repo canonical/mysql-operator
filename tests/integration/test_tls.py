@@ -9,7 +9,8 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
-from tests.integration.helpers import (
+
+from .helpers import (
     app_name,
     get_process_pid,
     get_system_user_password,

@@ -15,7 +15,8 @@ from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
-from tests.unit.helpers import patch_network_get
+
+from .helpers import patch_network_get
 
 
 class TestCharm(unittest.TestCase):

@@ -10,7 +10,7 @@ from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import (
+from ..helpers import (
     execute_queries_on_unit,
     generate_random_string,
     get_cluster_status,

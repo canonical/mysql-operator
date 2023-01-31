@@ -10,7 +10,8 @@ from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
 from constants import LEGACY_DB_SHARED
-from tests.unit.helpers import patch_network_get
+
+from .helpers import patch_network_get
 
 
 class TestSharedDBRelation(unittest.TestCase):

@@ -10,7 +10,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from ..helpers import (
     get_legacy_mysql_credentials,
     instance_ip,
     is_connection_possible,
