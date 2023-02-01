@@ -602,7 +602,6 @@ class MySQLOperatorCharm(CharmBase):
         """
         logger.debug("Restarting mysqld daemon")
         if service_restart(SERVICE_NAME):
-
             # when restart done right after cluster creation (e.g bundles)
             # or for single unit deployments, it's necessary reboot the
             # cluster from outage to restore unit as primary
