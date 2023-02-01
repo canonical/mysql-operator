@@ -69,7 +69,7 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 from tenacity import (
     retry,
@@ -89,7 +89,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -203,6 +203,14 @@ class MySQLGetClusterEndpointsError(Error):
 
 class MySQLRebootFromCompleteOutageError(Error):
     """Exception raised when there is an issue rebooting from complete outage."""
+
+
+class MySQLSetInstanceOfflineModeError(Error):
+    """Exception raised when there is an issue setting instance as offline."""
+
+
+class MySQLSetInstanceOptionError(Error):
+    """Exception raised when there is an issue setting instance option."""
 
 
 class MySQLBase(ABC):
@@ -435,7 +443,11 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlcli_script("; ".join(get_unit_user_commands))
+            output = self._run_mysqlcli_script(
+                "; ".join(get_unit_user_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
             users = [line.strip() for line in output.split("\n") if line.strip()][1:]
             users = [f"'{user.split('@')[0]}'@'{user.split('@')[1]}'" for user in users]
 
@@ -444,6 +456,8 @@ class MySQLBase(ABC):
                 return
 
             primary_address = self.get_cluster_primary_address()
+            if not primary_address:
+                raise MySQLDeleteUsersForUnitError("Unable to query cluster primary address")
 
             # Using server_config_user as we are sure it has drop user grants
             drop_users_command = (
@@ -1127,6 +1141,50 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLRebootFromCompleteOutageError(e.message)
+
+    def set_instance_offline_mode(self, offline_mode: bool = False) -> None:
+        """Sets the instance offline_mode.
+
+        Args:
+            offline_mode: Value of offline_mode to set
+
+        Raises:
+            MySQLSetInstanceOfflineModeError - if issue setting instance offline_mode.
+        """
+        mode = "ON" if offline_mode else "OFF"
+        set_instance_offline_mode_commands = (f"SET @@GLOBAL.offline_mode = {mode}",)
+
+        try:
+            self._run_mysqlcli_script(
+                "; ".join(set_instance_offline_mode_commands),
+                user=self.cluster_admin_user,
+                password=self.cluster_admin_password,
+            )
+        except MySQLClientError as e:
+            logger.exception(f"Failed to set instance state to offline_mode {mode}", exc_info=e)
+            raise MySQLSetInstanceOfflineModeError(e.message)
+
+    def set_instance_option(self, option: str, value: Any) -> None:
+        """Sets an instance option.
+
+        Args:
+            option: The option to set for the instance
+            value: The option value to set
+
+        Raises:
+            MySQLSetInstanceOptionError - if there is an error setting instance option
+        """
+        set_instance_option_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.set_instance_option('{self.instance_address}', '{option}', '{value}')",
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(set_instance_option_commands))
+        except MySQLClientError as e:
+            logger.exception(f"Failed to set option {option} with value {value}", exc_info=e)
+            raise MySQLSetInstanceOptionError(e.message)
 
     @abstractmethod
     def wait_until_mysql_connection(self) -> None:
