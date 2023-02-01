@@ -256,7 +256,11 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.delete_users_for_unit("app/0")
 
-        _run_mysqlcli_script.assert_called_once_with(_expected_get_unit_user_commands)
+        _run_mysqlcli_script.assert_called_once_with(
+            _expected_get_unit_user_commands,
+            user="serverconfig",
+            password="serverconfigpassword",
+        )
         _get_cluster_primary_address.assert_called_once()
         _run_mysqlsh_script.assert_called_once_with(_expected_drop_users_command)
 
