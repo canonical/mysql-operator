@@ -11,7 +11,6 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
-    app_name,
     cluster_name,
     execute_queries_on_unit,
     generate_random_string,
@@ -107,10 +106,10 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
 
 
 @pytest.mark.abort_on_fail
-async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
+async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
-    app = await app_name(ops_test)
+    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     application = ops_test.model.applications[app]
 
     random_unit = application.units[0]
@@ -190,7 +189,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
     the application name for each cluster, retrieve and compare these records, asserting they are
     not the same.
     """
-    app = await app_name(ops_test)
+    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
