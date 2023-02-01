@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 from pathlib import Path
 from typing import Dict, List
 
@@ -16,10 +15,6 @@ from tests.integration.helpers import (
     get_primary_unit,
     get_server_config_credentials,
     scale_application,
-)
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,9 +144,7 @@ async def check_keystone_users_existence(
         assert user not in output
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.shared_db_tests
 async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
 
@@ -159,21 +152,11 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, series: str) -> None
         ops_test: The ops test framework
         series: The series for the database machine
     """
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME}
     await ops_test.model.deploy(
-        charm_url,
+        charm,
         application_name=APP_NAME,
         config=config,
         num_units=3,

@@ -4,19 +4,10 @@
 
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
-from helpers import (
-    check_read_only_endpoints,
-    get_relation_data,
-    is_relation_broken,
-    is_relation_joined,
-    remove_leader_unit,
-    scale_application,
-)
 from pytest_operator.plugin import OpsTest
 from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
 
@@ -27,14 +18,16 @@ from constants import (
     SERVER_CONFIG_USERNAME,
 )
 from tests.integration.helpers import (
+    check_read_only_endpoints,
     execute_queries_on_unit,
     fetch_credentials,
     get_primary_unit,
+    get_relation_data,
+    is_relation_broken,
+    is_relation_joined,
+    remove_leader_unit,
     rotate_credentials,
-)
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
+    scale_application,
 )
 from utils import generate_random_password
 
@@ -55,23 +48,11 @@ ENDPOINT = "database"
 TIMEOUT = 15 * 60
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-@pytest.mark.database_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    db_charm = await ops_test.build_charm(".")
 
     app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
@@ -79,7 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm_url,
+            db_charm,
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
@@ -122,9 +103,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -168,9 +147,7 @@ async def test_password_rotation(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation_silent(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -209,9 +186,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
-@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     """Rotate password and confirm changes."""
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
@@ -257,9 +232,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
-@pytest.mark.order(5)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
@@ -272,9 +245,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
-@pytest.mark.order(6)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_ready_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
     relation_data = await get_relation_data(
@@ -326,9 +297,7 @@ async def test_ready_only_endpoints(ops_test: OpsTest):
         assert False
 
 
-@pytest.mark.order(7)
 @pytest.mark.abort_on_fail
-@pytest.mark.database_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(

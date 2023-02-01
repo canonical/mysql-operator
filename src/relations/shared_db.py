@@ -3,7 +3,6 @@
 
 """Library containing the implementation of the legacy shared-db relation."""
 
-
 import logging
 
 from charms.mysql.v0.mysql import (

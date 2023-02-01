@@ -1,9 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -21,10 +19,6 @@ from tests.integration.helpers import (
     scale_application,
     unit_file_md5,
 )
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +28,7 @@ APP_NAME = METADATA["name"]
 TLS_APP_NAME = "tls-certificates-operator"
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.tls_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
@@ -47,20 +39,10 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
                 await scale_application(ops_test, app, 3)
             return
 
-    # Build and deploy charm from local source folder
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
-        charm_url,
+        charm,
         application_name=APP_NAME,
         num_units=3,
         series=series,
@@ -80,9 +62,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
         )
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.tls_tests
 async def test_connection_before_tls(ops_test: OpsTest) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
     app = await app_name(ops_test)
@@ -110,9 +90,7 @@ async def test_connection_before_tls(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection not possible to unit {unit.name} with disabled TLS"
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
-@pytest.mark.tls_tests
 async def test_enable_tls(ops_test: OpsTest) -> None:
     """Test for encryption enablement when relation to TLS charm."""
     app = await app_name(ops_test)
@@ -154,9 +132,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     assert await get_tls_ca(ops_test, all_units[0].name), "❌ No CA found after TLS relation"
 
 
-@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
-@pytest.mark.tls_tests
 async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """Verify rotating tls private keys restarts cluster with new certificates.
 
@@ -213,9 +189,7 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection possible to unit {unit.name} with enabled TLS"
 
 
-@pytest.mark.order(5)
 @pytest.mark.abort_on_fail
-@pytest.mark.tls_tests
 async def test_disable_tls(ops_test: OpsTest) -> None:
     # Remove the relation
     app = await app_name(ops_test)

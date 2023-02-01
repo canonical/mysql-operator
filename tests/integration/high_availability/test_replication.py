@@ -4,7 +4,6 @@
 
 
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -27,9 +26,7 @@ from tests.integration.high_availability.high_availability_helpers import (
     ensure_n_online_mysql_members,
     high_availability_test_setup,
     insert_data_into_mysql_and_validate_replication,
-    pack_charm,
 )
-from tests.integration.integration_constants import SERIES_TO_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +36,13 @@ ANOTHER_APP_NAME = f"second{APP_NAME}"
 TIMEOUT = 17 * 60
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     await high_availability_test_setup(ops_test, series)
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_consistent_data_replication_across_cluster(
     ops_test: OpsTest,
 ) -> None:
@@ -66,9 +59,7 @@ async def test_consistent_data_replication_across_cluster(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test)
@@ -115,9 +106,7 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest) -> None:
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.order(4)
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_tests
 async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
@@ -194,8 +183,6 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
         assert random_chars in output
 
 
-@pytest.mark.order(5)
-@pytest.mark.ha_tests
 async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     """Test for cluster data isolation.
 
@@ -207,16 +194,10 @@ async def test_cluster_isolation(ops_test: OpsTest, series: str) -> None:
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
-    charm_url = pack_charm(series)
-    if not charm_url:
-        # Manually call charmcraft pack because ops_test.build_charm() does not support
-        # multiple bases in the charmcraft file
-        charmcraft_pack_commands = ["sg", "lxd", "-c", "charmcraft pack"]
-        subprocess.check_output(charmcraft_pack_commands)
-        charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
-        charm_url,
+        charm,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
         series=series,

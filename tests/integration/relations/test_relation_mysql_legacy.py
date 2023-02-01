@@ -4,23 +4,18 @@
 
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
-from helpers import (
+from pytest_operator.plugin import OpsTest
+
+from tests.integration.helpers import (
     get_legacy_mysql_credentials,
     instance_ip,
     is_connection_possible,
     is_relation_broken,
     is_relation_joined,
-)
-from pytest_operator.plugin import OpsTest
-
-from tests.integration.integration_constants import (
-    SERIES_TO_BASE_INDEX,
-    SERIES_TO_VERSION,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,24 +37,11 @@ TEST_DATABASE = "testdb"
 TIMEOUT = 15 * 60
 
 
-@pytest.mark.order(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-@pytest.mark.mysql_interface_tests
 async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    # Build and deploy charms from local source folders
-
-    # Manually call charmcraft pack because ops_test.build_charm() does not support
-    # multiple bases in the charmcraft file
-    charmcraft_pack_commands = [
-        "sg",
-        "lxd",
-        "-c",
-        f"charmcraft pack --bases-index={SERIES_TO_BASE_INDEX[series]}",
-    ]
-    subprocess.check_output(charmcraft_pack_commands)
-    db_charm_url = f"local:mysql_ubuntu-{SERIES_TO_VERSION[series]}-amd64.charm"
+    db_charm = await ops_test.build_charm(".")
 
     app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
@@ -67,7 +49,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm_url,
+            db_charm,
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
@@ -111,9 +93,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
     assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
 
 
-@pytest.mark.order(2)
 @pytest.mark.abort_on_fail
-@pytest.mark.mysql_interface_tests
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     # Configure a user and database to be used for the relation
@@ -133,9 +113,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
-@pytest.mark.order(3)
 @pytest.mark.abort_on_fail
-@pytest.mark.mysql_interface_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
     # store database credentials for test access later
