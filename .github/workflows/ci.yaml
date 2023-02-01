@@ -79,7 +79,6 @@ jobs:
                   "--color=no",
                   "--collect-only",
                   "tests/integration/",
-                  "-m '${{ steps.select-tests.outputs.mark_expression }}'"
               ],
               encoding="utf-8",
           )
