@@ -38,29 +38,73 @@ jobs:
     name: Build charms
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@main
 
+  collect-tests:
+    name: Collect integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install tox
+        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
+        run: python3 -m pip install tox
+      - name: Collect tests
+        id: collect-tests
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          
+          output = subprocess.check_output(
+              [
+                  "tox",
+                  "-qq",
+                  "run",
+                  "-e",
+                  "integration",
+                  "--",
+                  "pytest",
+                  "--quiet",
+                  "--color=no",
+                  "--collect-only",
+                  "tests/integration/",
+              ],
+              encoding="utf-8",
+          )
+          """
+          Example output (every line before the first empty line is a test):
+          tests/integration/test_tls.py::test_connection_before_tls
+          tests/integration/high_availability/test_replication.py::test_consistent_data_replication_across_cluster
+          tests/integration/high_availability/test_replication.py::test_kill_primary_check_reelection
+          
+          3 tests collected in 0.02s
+          """
+          output = output.split("\n")
+          tests = output[: output.index("")]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as file:
+              file.write(f"tests={json.dumps(tests)}")
+    outputs:
+      tests: ${{ steps.collect-tests.outputs.tests }}
+
+
+
   integration-test:
     strategy:
       fail-fast: false
       matrix:
-        tox-environments:
-          - integration-ha
-          - integration-db-router
-          - integration-shared-db
-          - integration-database
-          - integration-mysql-interface
-          - integration-healing
-          - integration-tls
+        tests: ${{ fromJSON(needs.collect-tests.outputs.tests) }}
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
           - series: focal
             bases-index: 0
           - series: jammy
             bases-index: 1
-    name: ${{ matrix.tox-environments }} | ${{ matrix.ubuntu-versions.series }}
+    name: ${{ matrix.tests }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - lint
       - unit-test
       - build
+      - collect-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -86,7 +130,7 @@ jobs:
             echo Skipping flaky tests
             echo "mark_expression=not flaky" >> $GITHUB_OUTPUT
           fi
-      - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
+      - name: Run integration test
+        run: tox run -e integration -- pytest -v --tb native --log-cli-level=INFO -s ${{ matrix.tests }} --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
