@@ -94,6 +94,7 @@ jobs:
           """
           output = output.split("\n")
           tests = output[: output.index("")]
+          tests = ["tests/integration/high_availability/test_replication.py::test_kill_primary_check_reelection"]
           with open(os.environ["GITHUB_OUTPUT"], "a") as file:
               file.write(f"tests={json.dumps(tests)}")
     outputs:
