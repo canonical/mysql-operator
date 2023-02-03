@@ -17,7 +17,6 @@ from ..helpers import (
     get_primary_unit,
     get_primary_unit_wrapper,
     get_server_config_credentials,
-    is_relation_joined,
     scale_application,
 )
 from .high_availability_helpers import (
@@ -62,43 +61,12 @@ async def test_consistent_data_replication_across_cluster(
 @pytest.mark.abort_on_fail
 async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
-    mysql_charm = await ops_test.build_charm(".")
-    application_charm = await ops_test.build_charm(
-        "./tests/integration/high_availability/application_charm/"
-    )
-    config = {"cluster-name": "test_cluster"}
-    async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            mysql_charm,
-            application_name=APP_NAME,
-            config=config,
-            num_units=3,
-            series=mysql_charm_series,
-        )
-        await ops_test.model.deploy(
-            application_charm,
-            application_name="application",
-            num_units=1,
-        )
-        application_name = "application"
-        await ops_test.model.relate(f"{application_name}:database", f"{APP_NAME}:database")
-        await ops_test.model.block_until(
-            lambda: is_relation_joined(ops_test, "database", "database")
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME, application_name],
-            status="active",
-            raise_on_blocked=True,
-            timeout=20 * 60,
-        )
-
-    # mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
-    application = ops_test.model.applications[APP_NAME]
-    logger.error("SETUP COMPLETE")
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    application = ops_test.model.applications[mysql_application_name]
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
-    primary_unit = await get_primary_unit_wrapper(ops_test, APP_NAME)
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     primary_unit_name = primary_unit.name
 
     # Destroy the primary unit and block to ensure that the
@@ -109,21 +77,21 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
     async with ops_test.fast_forward():
         await ops_test.model.block_until(lambda: len(application.units) == 2)
         await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
+            apps=[mysql_application_name],
             status="active",
             raise_on_blocked=True,
             timeout=TIMEOUT,
         )
 
     # Wait for unit to be destroyed and confirm that the new primary unit is different
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, APP_NAME)
+    new_primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
     assert primary_unit_name != new_primary_unit.name, "Primary has not changed"
 
     # Add the unit back and wait until it is active
     async with ops_test.fast_forward():
         logger.info("Scaling back to 3 units")
-        await scale_application(ops_test, APP_NAME, 3)
+        await scale_application(ops_test, mysql_application_name, 3)
 
         # wait (and retry) until the killed pod is back online in the mysql cluster
         assert await ensure_n_online_mysql_members(
