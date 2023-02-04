@@ -245,7 +245,7 @@ async def test_relation_creation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_ready_only_endpoints(ops_test: OpsTest):
+async def test_read_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
     relation_data = await get_relation_data(
         ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME

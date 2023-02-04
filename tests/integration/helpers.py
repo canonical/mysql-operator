@@ -647,7 +647,7 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
     return read_only_endpoints
 
 
-def get_read_only_endpoint_hostnames(relation_data: list) -> List[str]:
+def get_read_only_endpoint_ips(relation_data: list) -> List[str]:
     """Returns the read-only-endpoint hostnames from the relation data.
 
     Args:
@@ -694,7 +694,7 @@ async def remove_leader_unit(ops_test: OpsTest, application_name: str):
         )
 
 
-async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
+async def get_units_ip_addresses(ops_test: OpsTest, app_name: str) -> List[str]:
     """Retrieves hostnames of given application units.
 
     Args:
@@ -703,7 +703,10 @@ async def get_unit_hostname(ops_test: OpsTest, app_name: str) -> List[str]:
     Returns:
         a list that contains the hostnames of a given application
     """
-    units = [app_unit.name for app_unit in ops_test.model.applications[app_name].units]
+    units = [
+        get_unit_ip(ops_test, app_unit.name)
+        for app_unit in ops_test.model.applications[app_name].units
+    ]
 
     return [await unit_hostname(ops_test, unit_name) for unit_name in units]
 
@@ -720,13 +723,13 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
     relation_data = await get_relation_data(
         ops_test=ops_test, application_name=app_name, relation_name=relation_name
     )
-    read_only_endpoints = get_read_only_endpoint_hostnames(relation_data)
+    read_only_endpoints = get_read_only_endpoint_ips(relation_data)
     # check that the number of read-only-endpoints is correct
     assert len(ops_test.model.applications[app_name].units) - 1 == len(read_only_endpoints)
-    app_hostnames = await get_unit_hostname(ops_test=ops_test, app_name=app_name)
+    app_ips = await get_units_ip_addresses(ops_test=ops_test, app_name=app_name)
     # check that endpoints are the one of the application
     for r_endpoint in read_only_endpoints:
-        assert r_endpoint in app_hostnames
+        assert r_endpoint in app_ips
 
 
 async def get_controller_machine(ops_test: OpsTest) -> str:
