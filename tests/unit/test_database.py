@@ -25,7 +25,10 @@ class TestDatase(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
-    @patch("mysql_vm_helpers.MySQL.get_cluster_endpoints", return_value=("2.2.2.2:3306", "2.2.2.1:3306,2.2.2.3:3306"))
+    @patch(
+        "mysql_vm_helpers.MySQL.get_cluster_endpoints",
+        return_value=("2.2.2.2:3306", "2.2.2.1:3306,2.2.2.3:3306"),
+    )
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     @patch(
         "relations.mysql_provider.generate_random_password", return_value="super_secure_password"
