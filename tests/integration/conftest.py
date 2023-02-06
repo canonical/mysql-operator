@@ -47,7 +47,7 @@ def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
         packed_charms = json.loads(os.environ["CI_PACKED_CHARMS"])
 
         async def _build_charm(charm_path, bases_index: int = None) -> Path:
-            for charm in packed_charms.values():
+            for charm in packed_charms:
                 if Path(charm_path) == Path(charm["directory_path"]):
                     if bases_index is None or bases_index == charm["bases_index"]:
                         return charm["file_name"]
