@@ -44,10 +44,10 @@ def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
     if os.environ.get("CI") == "true":
         # Running in GitHub Actions; skip build step
         # (GitHub Actions uses a separate, cached build step. See .github/workflows/ci.yaml)
-        build_matrix = json.loads(os.environ["CI_BUILD_MATRIX"])
+        packed_charms = json.loads(os.environ["CI_PACKED_CHARMS"])
 
         async def _build_charm(charm_path, bases_index: int = None) -> Path:
-            for charm in build_matrix.values():
+            for charm in packed_charms.values():
                 if Path(charm_path) == Path(charm["directory_path"]):
                     if bases_index is None or bases_index == charm["bases_index"]:
                         return charm["file_name"]

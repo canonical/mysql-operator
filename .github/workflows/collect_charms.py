@@ -1,6 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""Create build matrix from charmcraft.yaml file(s)"""
+"""Collect charms to build from charmcraft.yaml file(s)"""
 
 import json
 import os
@@ -25,14 +25,14 @@ def get_base_versions(path_to_charmcraft_yaml: Path) -> list[str]:
     return versions
 
 
-build_matrix = []
+charms = []
 for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
     path = charmcraft_yaml.parent
     charm_name = yaml.safe_load((path / "metadata.yaml").read_text())["name"]
     for index, version in enumerate(get_base_versions(charmcraft_yaml)):
-        build_matrix.append(
+        charms.append(
             {
-                "job_display_name": f"Build {charm_name} charm | {version}",
+                "_job_display_name": f"Build {charm_name} charm | {version}",
                 "bases_index": index,
                 "directory_path": path.as_posix(),
                 "file_name": f"local:./{path/charm_name}_ubuntu-{version}-amd64.charm",
@@ -40,4 +40,4 @@ for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
         )
 output_file = os.environ["GITHUB_OUTPUT"]
 with open(output_file, "a") as file:
-    file.write(f"build_matrix={json.dumps(build_matrix)}")
+    file.write(f"charms={json.dumps(charms)}")

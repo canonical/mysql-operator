@@ -3,25 +3,25 @@
 on:
   workflow_call:
     outputs:
-      build-matrix:
+      charms:
         description: JSON string of charms built
-        value: ${{ jobs.get-build-matrix.outputs.build-matrix }}
+        value: ${{ jobs.collect-charms.outputs.charms }}
         # Example:
         # [
         #   {
-        #     "job_display_name": "Build mysql charm | 20.04",
+        #     "_job_display_name": "Build mysql charm | 20.04",
         #     "bases_index": 0, # corresponds to charmcraft.yaml file
         #     "directory_path": ".",
         #     "file_name": "local:./mysql_ubuntu-20.04-amd64.charm"
         #   },
         #   {
-        #     "job_display_name": "Build mysql charm | 22.04",
+        #     "_job_display_name": "Build mysql charm | 22.04",
         #     "bases_index": 1,
         #     "directory_path": ".",
         #     "file_name": "local:./mysql_ubuntu-22.04-amd64.charm"
         #   },
         #   {
-        #     "job_display_name": "Build application charm | 22.04",
+        #     "_job_display_name": "Build application charm | 22.04",
         #     "bases_index": 0,
         #     "directory_path": "tests/integration/relations/application-charm",
         #     "file_name": "local:./tests/integration/relations/application_ubuntu-22.04-amd64.charm"
@@ -29,35 +29,35 @@ on:
         # ]
 
 jobs:
-  get-build-matrix:
-    name: Create build matrix
+  collect-charms:
+    name: Collect charms
     runs-on: ubuntu-latest
     steps:
       - name: Checkout charm repository
         uses: actions/checkout@v3
         with:
           path: charm-repo
-      - name: Checkout reusable workflow repository
+      - name: Checkout build workflow repository
         uses: actions/checkout@v3
         with:
           repository: carlcsaposs-canonical/test-reusable-workflow
           path: workflow-repo
       - name: Install pyyaml
         run: python3 -m pip install pyyaml
-      - name: Create build matrix from charmcraft.yaml file(s)
-        id: create-matrix
+      - name: Collect charms to build from charmcraft.yaml file(s)
+        id: collect
         working-directory: charm-repo
-        run: python3 ../workflow-repo/read_charm_yaml.py
+        run: python3 ../workflow-repo/collect_charms.py
     outputs:
-      build-matrix: ${{ steps.create-matrix.outputs.build_matrix }}
+      charms: ${{ steps.collect.outputs.charms }}
 
   build:
     strategy:
       matrix:
-        charm: ${{ fromJSON(needs.get-build-matrix.outputs.build-matrix) }}
-    name: ${{ matrix.charm.job_display_name }}
+        charm: ${{ fromJSON(needs.collect-charms.outputs.charms) }}
+    name: ${{ matrix.charm._job_display_name }}
     needs:
-      - get-build-matrix
+      - collect-charms
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

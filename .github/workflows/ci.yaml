@@ -88,4 +88,4 @@ jobs:
       - name: Run integration tests
         run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
         env:
-          CI_BUILD_MATRIX: ${{ needs.build.outputs.build-matrix }}
+          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
