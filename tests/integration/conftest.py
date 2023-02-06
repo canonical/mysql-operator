@@ -12,6 +12,15 @@ from tests.integration.integration_constants import SERIES_TO_VERSION
 from tests.integration.read_charm_yaml import get_base_versions, get_charm_name
 
 
+def pytest_addoption(parser):
+    parser.addoption("--series", default="jammy")
+
+
+@pytest.fixture
+def series(pytestconfig) -> str:
+    return pytestconfig.option.series
+
+
 @pytest.fixture
 def ops_test(ops_test: OpsTest, series: str) -> OpsTest:
     _build_charm_original = ops_test.build_charm
