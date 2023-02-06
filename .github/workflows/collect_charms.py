@@ -4,6 +4,8 @@
 
 import json
 import os
+import logging
+import sys
 from pathlib import Path
 
 import yaml
@@ -25,6 +27,7 @@ def get_base_versions(path_to_charmcraft_yaml: Path) -> list[str]:
     return versions
 
 
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 charms = []
 for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
     path = charmcraft_yaml.parent
@@ -38,6 +41,7 @@ for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
                 "file_name": f"local:./{path/charm_name}_ubuntu-{version}-amd64.charm",
             }
         )
+logging.info(f"Collected {charms=}")
 output_file = os.environ["GITHUB_OUTPUT"]
 with open(output_file, "a") as file:
     file.write(f"charms={json.dumps(charms)}")
