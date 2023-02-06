@@ -36,7 +36,8 @@ jobs:
 
   build:
     name: Build charms
-    uses: ./.github/workflows/build.yaml
+    # TODO: switch to main branch
+    uses: canonical/data-platform/.github/workflows/build-charms.yaml@feature/build-workflow
 
   integration-test:
     strategy:
