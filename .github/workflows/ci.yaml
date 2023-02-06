@@ -51,6 +51,7 @@ jobs:
           - integration-healing
           - integration-tls
         ubuntu-versions:
+          # Update whenever charmcraft.yaml is changed
           - series: focal
             bases-index: 0
           - series: jammy
