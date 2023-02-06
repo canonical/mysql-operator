@@ -38,7 +38,7 @@ for charmcraft_yaml in Path(".").glob("**/charmcraft.yaml"):
                 "_job_display_name": f"Build {charm_name} charm | {version}",
                 "bases_index": index,
                 "directory_path": path.as_posix(),
-                "file_name": f"local:./{path/charm_name}_ubuntu-{version}-amd64.charm",
+                "file_path": f"local:./{path/charm_name}_ubuntu-{version}-amd64.charm",
             }
         )
 logging.info(f"Collected {charms=}")

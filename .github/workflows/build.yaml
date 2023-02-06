@@ -11,17 +11,17 @@ on:
         #   {
         #     "bases_index": 0, # corresponds to charmcraft.yaml file
         #     "directory_path": ".",
-        #     "file_name": "local:./mysql_ubuntu-20.04-amd64.charm"
+        #     "file_path": "local:./mysql_ubuntu-20.04-amd64.charm"
         #   },
         #   {
         #     "bases_index": 1,
         #     "directory_path": ".",
-        #     "file_name": "local:./mysql_ubuntu-22.04-amd64.charm"
+        #     "file_path": "local:./mysql_ubuntu-22.04-amd64.charm"
         #   },
         #   {
         #     "bases_index": 0,
         #     "directory_path": "tests/integration/relations/application-charm",
-        #     "file_name": "local:./tests/integration/relations/application-charm/application_ubuntu-22.04-amd64.charm"
+        #     "file_path": "local:./tests/integration/relations/application-charm/application_ubuntu-22.04-amd64.charm"
         #   }
         # ]
 

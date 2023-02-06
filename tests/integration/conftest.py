@@ -50,7 +50,7 @@ def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
             for charm in packed_charms:
                 if Path(charm_path) == Path(charm["directory_path"]):
                     if bases_index is None or bases_index == charm["bases_index"]:
-                        return charm["file_name"]
+                        return charm["file_path"]
             raise ValueError(f"Unable to find .charm file for {bases_index=} at {charm_path=}")
 
     else:
