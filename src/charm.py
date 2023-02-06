@@ -213,7 +213,12 @@ class MySQLOperatorCharm(CharmBase):
 
         # Defer if the instance is not configured for use in an InnoDB cluster
         # Every instance gets configured for use in an InnoDB cluster on start
-        event_unit_address = event.relation.data[event.unit]["private-address"]
+        try:
+            event_unit_address = event.relation.data[event.unit]["private-address"]
+        except KeyError:
+            # bypass when unit is no longer available
+            logger.warning(f"Unit {event.unit.name} is no longer available")
+            return
         event_unit_label = event.unit.name.replace("/", "-")
 
         if not self._mysql.is_instance_configured_for_innodb(event_unit_address, event_unit_label):
