@@ -141,7 +141,6 @@ class MySQLTLS(Object):
         self.remove_tls_config_file()
         # set member-state to avoid unwanted health-check actions
         self.charm.unit_peer_data.update({"member-state": "waiting", "tls": ""})
-        self.charm.unit_peer_data["member-state"] = "waiting"
         # trigger rolling restart
         self.charm.on[self.charm.restart_manager.name].acquire_lock.emit()
 
@@ -165,7 +164,8 @@ class MySQLTLS(Object):
         # store secrets
         self.charm.set_secret(SCOPE, "key", key.decode("utf-8"))
         self.charm.set_secret(SCOPE, "csr", csr.decode("utf-8"))
-
+        # set control flag
+        self.charm.unit_peer_data.update({"tls": "requested"})
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
