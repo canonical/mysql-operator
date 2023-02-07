@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from tests.integration.integration_constants import SERIES_TO_VERSION
+from .integration_constants import SERIES_TO_VERSION
 
 
 def get_base_versions(path_to_charmcraft_yaml: Path) -> list[str]:

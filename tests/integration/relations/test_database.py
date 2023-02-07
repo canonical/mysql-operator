@@ -17,7 +17,9 @@ from constants import (
     ROOT_USERNAME,
     SERVER_CONFIG_USERNAME,
 )
-from tests.integration.helpers import (
+from utils import generate_random_password
+
+from ..helpers import (
     check_read_only_endpoints,
     execute_queries_on_unit,
     fetch_credentials,
@@ -29,7 +31,6 @@ from tests.integration.helpers import (
     rotate_credentials,
     scale_application,
 )
-from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
 

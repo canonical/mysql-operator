@@ -10,7 +10,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit,
     get_server_config_credentials,

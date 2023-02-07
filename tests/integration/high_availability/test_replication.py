@@ -10,7 +10,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from ..helpers import (
     app_name,
     cluster_name,
     execute_queries_on_unit,
@@ -20,7 +20,7 @@ from tests.integration.helpers import (
     get_server_config_credentials,
     scale_application,
 )
-from tests.integration.high_availability.high_availability_helpers import (
+from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,

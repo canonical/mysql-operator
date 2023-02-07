@@ -9,7 +9,8 @@ from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
 from constants import DB_RELATION_NAME
-from tests.unit.helpers import patch_network_get
+
+from .helpers import patch_network_get
 
 
 class TestDatase(unittest.TestCase):

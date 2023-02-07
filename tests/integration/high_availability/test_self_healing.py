@@ -12,7 +12,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
-from tests.integration.helpers import (
+
+from ..helpers import (
     cut_network_from_unit,
     execute_queries_on_unit,
     get_controller_machine,
@@ -31,7 +32,7 @@ from tests.integration.helpers import (
     wait_network_restore,
     write_random_chars_to_test_table,
 )
-from tests.integration.high_availability.high_availability_helpers import (
+from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,

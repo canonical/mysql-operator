@@ -8,7 +8,8 @@ from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
 from constants import LEGACY_MYSQL, PEER
-from tests.unit.helpers import patch_network_get
+
+from .helpers import patch_network_get
 
 
 class TestMariaDBRelation(unittest.TestCase):

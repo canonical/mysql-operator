@@ -13,7 +13,8 @@ from ops.model import BlockedStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from tests.unit.helpers import patch_network_get
+
+from .helpers import patch_network_get
 
 
 class TestDBRouter(unittest.TestCase):
