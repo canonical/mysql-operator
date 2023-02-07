@@ -27,7 +27,7 @@ def pytest_configure(config):
         raise ArgumentError(
             None, "--mysql-charm-series and --mysql-charm-bases-index must be given together"
         )
-    # Update defaults whenever charmcraft.yaml is changed
+    # Note: Update defaults whenever charmcraft.yaml is changed
     if config.option.mysql_charm_series is None:
         config.option.mysql_charm_series = "jammy"
     if config.option.mysql_charm_bases_index is None:
