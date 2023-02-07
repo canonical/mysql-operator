@@ -211,11 +211,17 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
-        # Defer if the instance is not configured for use in an InnoDB cluster
-        # Every instance gets configured for use in an InnoDB cluster on start
-        event_unit_address = event.relation.data[event.unit]["private-address"]
+        event_unit_data = event.relation.data.get(event.unit)
+        if not event_unit_data:
+            # bypass when unit is no longer available
+            logger.warning(f"Unit {event.unit.name} is no longer available")
+            return
+
+        event_unit_address = event_unit_data["private-address"]
         event_unit_label = event.unit.name.replace("/", "-")
 
+        # Defer if the instance is not configured for use in an InnoDB cluster
+        # Every instance gets configured for use in an InnoDB cluster on start
         if not self._mysql.is_instance_configured_for_innodb(event_unit_address, event_unit_label):
             event.defer()
             return
@@ -619,7 +625,7 @@ class MySQLOperatorCharm(CharmBase):
                 for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
                     with attempt:
                         if self._mysql.is_instance_in_cluster(unit_label):
-                            self.unit.status = ActiveStatus(self.active_status_message)
+                            self._on_update_status(None)
                             return
                         raise Exception
             except RetryError:
