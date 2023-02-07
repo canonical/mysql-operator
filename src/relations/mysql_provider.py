@@ -207,19 +207,11 @@ class MySQLProvider(Object):
 
         try:
             db_version = self.charm._mysql.get_mysql_version()
-            primary_endpoint = self.charm._mysql.get_cluster_primary_address()
+            rw_endpoints, ro_endpoints = self.charm._mysql.get_cluster_endpoints()
             self.database.set_credentials(relation_id, db_user, db_pass)
-            self.database.set_endpoints(relation_id, primary_endpoint)
+            self.database.set_endpoints(relation_id, rw_endpoints)
             self.database.set_version(relation_id, db_version)
-            # get read only endpoints by removing primary from all members
-            read_only_endpoints = sorted(
-                self.charm._mysql.get_cluster_members_addresses()
-                - {
-                    primary_endpoint,
-                }
-            )
-
-            self.database.set_read_only_endpoints(relation_id, ",".join(read_only_endpoints))
+            self.database.set_read_only_endpoints(relation_id, ro_endpoints)
             # TODO:
             # add setup of tls, tls_ca and status
             self.charm._mysql.create_application_database_and_scoped_user(

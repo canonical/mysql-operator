@@ -27,10 +27,9 @@ class TestDatase(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
     @patch(
-        "mysql_vm_helpers.MySQL.get_cluster_members_addresses",
-        return_value={"2.2.2.1:3306", "2.2.2.3:3306", "2.2.2.2:3306"},
+        "mysql_vm_helpers.MySQL.get_cluster_endpoints",
+        return_value=("2.2.2.2:3306", "2.2.2.1:3306,2.2.2.3:3306"),
     )
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2:3306")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     @patch(
         "relations.mysql_provider.generate_random_password", return_value="super_secure_password"
@@ -39,8 +38,7 @@ class TestDatase(unittest.TestCase):
         self,
         _generate_random_password,
         _create_application_database_and_scoped_user,
-        _get_cluster_primary_address,
-        _get_cluster_members_addresses,
+        _get_cluster_endpoints,
         _get_mysql_version,
     ):
         # run start-up events to enable usage of the helper class
@@ -82,8 +80,7 @@ class TestDatase(unittest.TestCase):
 
         _generate_random_password.assert_called_once()
         _create_application_database_and_scoped_user.assert_called_once()
-        _get_cluster_primary_address.assert_called_once()
-        _get_cluster_members_addresses.assert_called_once()
+        _get_cluster_endpoints.assert_called_once()
         _get_mysql_version.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
