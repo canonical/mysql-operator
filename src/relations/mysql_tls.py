@@ -69,7 +69,7 @@ class MySQLTLS(Object):
 
     def _on_tls_relation_joined(self, event) -> None:
         """Request certificate when TLS relation joined."""
-        if self.charm.unit_peer_data.get("unit-initialized", "False") != "True":
+        if self.charm.unit_peer_data.get("unit-initialized") != "True":
             event.defer()
             return
         self._request_certificate(None)
@@ -83,7 +83,7 @@ class MySQLTLS(Object):
             logger.error("An unknown certificate expiring.")
             return
 
-        if self.charm.unit_peer_data.get("tls", "") == "enabled":
+        if self.charm.unit_peer_data.get("tls") == "enabled":
             logger.debug("TLS is already enabled.")
             return
 
