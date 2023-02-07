@@ -747,10 +747,10 @@ class MySQLBase(ABC):
         def _get_host_ip(host: str) -> str:
             try:
                 if ":" in host:
-                    [host, port] = host.split(":")
+                    host, port = host.split(":")
 
                 host_ip = socket.gethostbyname(host)
-                return host_ip if not port else f"{host_ip}:{port}"
+                return f"{host_ip}:{port}" if port else host_ip
             except socket.gaierror:
                 raise MySQLGetClusterEndpointsError(f"Failed to query IP for host {host}")
 
