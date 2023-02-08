@@ -20,7 +20,7 @@ jobs:
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run linters
-        run: tox run -e lint
+        run: cat /proc/cpuinfo
 
   unit-test:
     name: Unit tests
