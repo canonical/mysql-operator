@@ -1,0 +1,15 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+on:
+  issues:
+    types: [opened, reopened, closed]
+
+jobs:
+  sync:
+    name: Sync GitHub issue to Jira
+    # TODO: switch to main branch
+    uses: canonical/data-platform-workflows/.github/workflows/sync_issue_to_jira.yaml@feature/jira-sync
+    with:
+      jira-component-name: mysql-vm
+    secrets:
+      jira-webhook-url: ${{ secrets.JIRA_WEBHOOK_URL }}
