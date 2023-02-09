@@ -37,7 +37,7 @@ jobs:
   build:
     name: Build charms
     # TODO: switch to main branch
-    uses: canonical/data-platform-workflows/.github/workflows/build-charms-with-cache.yaml@feature/build-charms
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@feature/build-charms
 
   integration-test:
     strategy:
