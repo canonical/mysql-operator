@@ -12,4 +12,4 @@ jobs:
     with:
       jira-component-name: mysql-vm
     secrets:
-      jira-webhook-url: ${{ secrets.JIRA_WEBHOOK_URL }}
+      jira-webhook-url: ${{ secrets.JIRA_URL }}
