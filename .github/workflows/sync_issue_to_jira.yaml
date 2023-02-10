@@ -7,8 +7,7 @@ on:
 jobs:
   sync:
     name: Sync GitHub issue to Jira
-    # TODO: switch to main branch
-    uses: canonical/data-platform-workflows/.github/workflows/sync_issue_to_jira.yaml@feature/jira-sync
+    uses: canonical/data-platform-workflows/.github/workflows/sync_issue_to_jira.yaml@main
     with:
       jira-component-name: mysql-vm
     secrets:
