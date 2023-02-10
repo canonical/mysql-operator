@@ -6,9 +6,9 @@ MySQL is the world’s most popular open source database. A relational database 
 This MySQL operator charm comes in two flavours to deploy and operate MySQL on [physical/virtual machines](https://github.com/canonical/mysql-operator) and [Kubernetes](https://github.com/canonical/mysql-k8s-operator). Both offer features such as replication, TLS, password rotation, and easy to use integration with applications. The Charmed MySQL Operator meets the need of deploying MySQL in a structured and consistent manner while allowing the user flexibility in configuration. It simplifies deployment, scaling, configuration and management of MySQL in production at scale in a reliable way.
 
 [note type="positive"]
-**"Charmed MySQL" or "Mysql Innodb Cluster"?**
+**"Charmed MySQL", "MariaDB", "OSM MariaDB", "Percona Cluster" or "Mysql Innodb Cluster"?**
 
-Charmed MySQL operators is the new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" providing backward compatibility.
+"Charmed MySQL" operator is a new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators providing backward compatibility.
 [/note]
 
 ## Project and community

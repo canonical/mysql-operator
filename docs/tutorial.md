@@ -1,5 +1,5 @@
 # Charmed MySQL tutorial
-The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/). As a first step this tutorial shows you how to get Charmed MySQL up and running, but the tutorial does not stop there. Through this tutorial you will learn a variety of operations, everything from adding replicas to advanced operations such as enabling Transcript Layer Security (TLS). In this tutorial we will walk through how to:
+The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/). As a first step this tutorial shows you how to get Charmed MySQL up and running, but the tutorial does not stop there. Through this tutorial you will learn a variety of operations, everything from adding replicas to advanced operations such as enabling Transport Layer Security (TLS). In this tutorial we will walk through how to:
 - Set up your environment using LXD and Juju.
 - Deploy MySQL using a single command.
 - Access the admin database directly.
@@ -102,6 +102,8 @@ Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
 ```
 To exit the screen with `juju status --watch 1s`, enter `Ctrl+c`.
+If you want to further inspect juju logs, can watch for logs with `juju debug-log`.
+More info on logging at [juju logs](https://juju.is/docs/olm/juju-logs).
 
 ## Access MySQL
 > **!** *Disclaimer: this part of the tutorial accesses MySQL via the `root` user. **Do not** directly interface with the root user in a production environment. In a production environment always create a separate user using [Data Integrator](https://charmhub.io/data-integrator) and connect to MySQL with that user instead. Later in the section covering Relations we will cover how to access MySQL without the root user.*
@@ -126,6 +128,11 @@ unit-mysql-0:
 
 ```
 
+*Note: to request a password for a different user, use an option `username`:*
+```shell
+juju run-action mysql/leader get-password username=myuser --wait
+```
+
 The host’s IP address can be found with `juju status` (the unit hosting the MySQL application):
 ```
 ...
@@ -138,7 +145,7 @@ To access the units hosting Charmed MySQL use:
 ```shell
 mysql -h 10.234.188.135 -uroot -p<password>
 ```
-*Note if at any point you'd like to leave the unit hosting Charmed MySQL, enter* `Ctrl+d` or type `exit`*.
+*Note: if at any point you'd like to leave the unit hosting Charmed MySQL, enter* `Ctrl+d` or type `exit`*.
 
 The another way to access MySQL server is to ssh into Juju machine:
 ```shell
@@ -178,7 +185,7 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 mysql>
 ```
-*Note if at any point you'd like to leave the mysql client, enter `Ctrl+d` or type `exit`*.
+*Note: if at any point you'd like to leave the mysql client, enter `Ctrl+d` or type `exit`*.
 
 You can now interact with MySQL directly using any [MySQL Queries](https://dev.mysql.com/doc/refman/8.0/en/entering-queries.html). For example entering `SELECT VERSION(), CURRENT_DATE;` should output something like:
 ```
@@ -422,7 +429,7 @@ unit-data-integrator-1:
     enqueued: 2023-01-29 23:11:15 +0000 UTC
     started: 2023-01-29 23:11:16 +0000 UTC
 ```
-*(Note: your hostnames, usernames, and passwords will likely be different.)*
+*Note: your hostnames, usernames, and passwords will likely be different.*
 
 ### Access the related database
 Use `endpoints`, `username`, `password` from above to connect newly created database `test-database` on MySQL server:
@@ -477,7 +484,7 @@ juju run-action data-integrator/leader get-credentials --wait
 You can connect to the database with this new credentials.
 From here you will see all of your data is still present in the database.
 
-## Transcript Layer Security (TLS)
+## Transport Layer Security (TLS)
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed MySQL. This means (re-)configuring TLS on Charmed MySQL is readily available and requires minimal effort on your end.
 
 Again, relations come in handy here as TLS is enabled via relations; i.e. by relating Charmed MySQL to the [TLS Certificates Charm](https://charmhub.io/tls-certificates-operator). The TLS Certificates Charm centralises TLS certificate management in a consistent manner and handles providing, requesting, and renewing TLS certificates.
