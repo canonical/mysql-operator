@@ -30,7 +30,7 @@ TLS_APP_NAME = "tls-certificates-operator"
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
         if len(ops_test.model.applications[app].units) == 3:
@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
         charm,
         application_name=APP_NAME,
         num_units=3,
-        series=series,
+        series=mysql_charm_series,
     )
 
     # Reduce the update_status frequency until the cluster is deployed

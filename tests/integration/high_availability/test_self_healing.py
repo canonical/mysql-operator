@@ -48,16 +48,18 @@ MYSQL_DAEMON = "mysqld"
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build and deploy."""
-    await high_availability_test_setup(ops_test, series)
+    await high_availability_test_setup(ops_test, mysql_charm_series)
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
+async def test_kill_db_process(
+    ops_test: OpsTest, continuous_writes, mysql_charm_series: str
+) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -94,9 +96,9 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
+async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Freeze and unfreeze process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -138,9 +140,9 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_network_cut(ops_test: OpsTest, continuous_writes):
+async def test_network_cut(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Completely cut and restore network."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     all_units = ops_test.model.applications[mysql_application_name].units
 
@@ -219,9 +221,11 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
+async def test_replicate_data_on_restart(
+    ops_test: OpsTest, continuous_writes, mysql_charm_series: str
+):
     """Stop server, write data, start and validate replication."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
 
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -302,13 +306,13 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
+async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Pause test.
 
     A graceful simultaneous restart of all instances,
     check primary election after the start, write and read data
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     all_units = ops_test.model.applications[mysql_application_name].units
 
     config = {
@@ -367,12 +371,12 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
 
 @pytest.mark.abort_on_fail
 @pytest.mark.flaky
-async def test_sst_test(ops_test: OpsTest, continuous_writes):
+async def test_sst_test(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """The SST test.
 
     A forceful restart instance with deleted data and without transaction logs (forced clone).
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     all_units = ops_test.model.applications[mysql_application_name].units
