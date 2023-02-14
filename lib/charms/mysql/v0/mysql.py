@@ -232,6 +232,8 @@ class MySQLBase(ABC):
         server_config_password: str,
         cluster_admin_user: str,
         cluster_admin_password: str,
+        exporter_user: str,
+        exporter_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -243,6 +245,8 @@ class MySQLBase(ABC):
             server_config_password: password for the server config user
             cluster_admin_user: user name for the cluster admin user
             cluster_admin_password: password for the cluster admin user
+            exporter_user: user name for the mysql exporter
+            exporter_password: password for the exporter user
         """
         self.instance_address = instance_address
         self.cluster_name = cluster_name
@@ -251,6 +255,8 @@ class MySQLBase(ABC):
         self.server_config_password = server_config_password
         self.cluster_admin_user = cluster_admin_user
         self.cluster_admin_password = cluster_admin_password
+        self.exporter_user = exporter_user
+        self.exporter_password = exporter_password
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -285,6 +291,8 @@ class MySQLBase(ABC):
         configure_users_commands = (
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
+            f"CREATE USER '{self.exporter_user}'@'%' IDENTIFIED BY '{self.exporter_password}' WITH MAX_USER_CONNECTIONS 3",
+            f"GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{self.exporter_user}'@'%'",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
             f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%'",

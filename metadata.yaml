@@ -30,6 +30,10 @@ provides:
     interface: mysql_client
   mysql:
     interface: mysql
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
 requires:
   certificates:
     interface: tls-certificates

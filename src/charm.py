@@ -7,6 +7,7 @@
 import logging
 from typing import Dict, Optional
 
+from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -18,6 +19,7 @@ from charms.mysql.v0.mysql import (
     MySQLRebootFromCompleteOutageError,
 )
 from charms.operator_libs_linux.v0.systemd import service_restart, service_stop
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
@@ -47,6 +49,10 @@ from tenacity import (
 from constants import (
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
+    EXPORTER_PASSWORD_KEY,
+    EXPORTER_USERNAME,
+    MYSQL_EXPORTER_PORT,
+    NODE_EXPORTER_PORT,
     PASSWORD_LENGTH,
     PEER,
     REQUIRED_USERNAMES,
@@ -103,6 +109,17 @@ class MySQLOperatorCharm(CharmBase):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+        self.grafana_dashboards = GrafanaDashboardProvider(self)
+        self.metrics_endpoint = MetricsEndpointProvider(
+            self,
+            jobs=[
+                {
+                    "static_configs": [
+                        {"targets": [f"*:{NODE_EXPORTER_PORT}", f"*:{MYSQL_EXPORTER_PORT}"]}
+                    ]
+                }
+            ],
+        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -143,6 +160,7 @@ class MySQLOperatorCharm(CharmBase):
             ROOT_PASSWORD_KEY,
             SERVER_CONFIG_PASSWORD_KEY,
             CLUSTER_ADMIN_PASSWORD_KEY,
+            EXPORTER_PASSWORD_KEY,
         ]
 
         for required_password in required_passwords:
@@ -388,6 +406,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == EXPORTER_USERNAME:
+            secret_key = EXPORTER_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -409,6 +429,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == EXPORTER_USERNAME:
+            secret_key == EXPORTER_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -433,6 +455,8 @@ class MySQLOperatorCharm(CharmBase):
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
             CLUSTER_ADMIN_USERNAME,
             self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
+            EXPORTER_USERNAME,
+            self.get_secret("app", EXPORTER_PASSWORD_KEY),
         )
 
     @property
@@ -515,6 +539,7 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
+        self._mysql.connect_mysql_exporter()
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         workload_version = self._mysql.get_mysql_version()
         self.unit.set_workload_version(workload_version)

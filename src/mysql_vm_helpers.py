@@ -18,11 +18,13 @@ from tenacity import retry, stop_after_delay, wait_fixed
 from constants import (
     MYSQL_APT_PACKAGE_NAME,
     MYSQL_DATA_DIR,
+    MYSQL_EXPORTER_SNAP_NAME,
     MYSQL_SHELL_COMMON_DIRECTORY,
     MYSQL_SHELL_SNAP_NAME,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_SOCK_FILE,
+    NODE_EXPORTER_SNAP_NAME,
     XTRABACKUP_SNAP_NAME,
 )
 
@@ -57,6 +59,8 @@ class MySQL(MySQLBase):
         server_config_password: str,
         cluster_admin_user: str,
         cluster_admin_password: str,
+        exporter_user: str,
+        exporter_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -68,6 +72,8 @@ class MySQL(MySQLBase):
             server_config_password: password for the server config user
             cluster_admin_user: user name for the cluster admin user
             cluster_admin_password: password for the cluster admin user
+            exporter_user: user name for the mysql exporter
+            exporter_password: password for the exporter user
         """
         super().__init__(
             instance_address=instance_address,
@@ -77,6 +83,8 @@ class MySQL(MySQLBase):
             server_config_password=server_config_password,
             cluster_admin_user=cluster_admin_user,
             cluster_admin_password=cluster_admin_password,
+            exporter_user=exporter_user,
+            exporter_password=exporter_password,
         )
 
     @staticmethod
@@ -126,6 +134,8 @@ class MySQL(MySQLBase):
             cache = snap.SnapCache()
             mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
             xtrabackup = cache[XTRABACKUP_SNAP_NAME]
+            mysql_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
+            node_exporter = cache[NODE_EXPORTER_SNAP_NAME]
 
             if not mysql_shell.present:
                 logger.debug("Installing mysql shell snap")
@@ -141,6 +151,21 @@ class MySQL(MySQLBase):
             if not xtrabackup.present:
                 logger.debug("Installing xtrabackup snap")
                 xtrabackup.ensure(snap.SnapState.Latest, channel="edge")
+
+            # install mysqld-exporter snap
+            mysql_exporter.ensure(snap.SnapState.Latest, channel="edge")
+
+            # install node-exporter snap
+            node_exporter.ensure(snap.SnapState.Latest, channel="edge")
+            node_exporter_plugs = [
+                "hardware-observe",
+                "network-observe",
+                "mount-observe",
+                "system-observe",
+            ]
+            for plug in node_exporter_plugs:
+                node_exporter.connect(plug=plug)
+
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
             raise
@@ -162,6 +187,20 @@ class MySQL(MySQLBase):
         """
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError()
+
+    def connect_mysql_exporter(self) -> None:
+        """Set up mysqld-exporter config options."""
+        cache = snap.SnapCache()
+        mysqld_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
+
+        try:
+            mysqld_exporter.set({
+                "mysql.host": self.instance_address,
+                "mysql.user": self.exporter_user,
+                "mysql.password": self.exporter_password,
+            })
+        except snap.SnapError as e:
+            logger.error("An exception occurred when setting configs for mysqld-exporter snap. Reason: %s" % e.message)
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
