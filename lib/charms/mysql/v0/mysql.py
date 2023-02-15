@@ -292,7 +292,7 @@ class MySQLBase(ABC):
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
             f"CREATE USER '{self.exporter_user}'@'%' IDENTIFIED BY '{self.exporter_password}' WITH MAX_USER_CONNECTIONS 3",
-            f"GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{self.exporter_user}'@'%'",
+            f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.exporter_user}'@'%'",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
             f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%'",

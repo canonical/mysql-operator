@@ -194,13 +194,19 @@ class MySQL(MySQLBase):
         mysqld_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
 
         try:
-            mysqld_exporter.set({
-                "mysql.host": self.instance_address,
-                "mysql.user": self.exporter_user,
-                "mysql.password": self.exporter_password,
-            })
+            mysqld_exporter.set(
+                {
+                    "mysql.host": self.instance_address,
+                    "mysql.user": self.exporter_user,
+                    "mysql.password": self.exporter_password,
+                }
+            )
+            mysqld_exporter.restart()
         except snap.SnapError as e:
-            logger.error("An exception occurred when setting configs for mysqld-exporter snap. Reason: %s" % e.message)
+            logger.error(
+                "An exception occurred when setting configs for mysqld-exporter snap. Reason: %s"
+                % e.message
+            )
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
