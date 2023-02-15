@@ -149,7 +149,7 @@ class MySQLProvider(Object):
             remote_app (str): The name of the remote application
         """
         try:
-            rw_endpoints, ro_endpoints = self.charm._mysql.get_cluster_endpoints()
+            rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
 
             # check if endpoints need update
             relation = self.model.get_relation(DB_RELATION_NAME, relation_id)
@@ -207,7 +207,7 @@ class MySQLProvider(Object):
 
         try:
             db_version = self.charm._mysql.get_mysql_version()
-            rw_endpoints, ro_endpoints = self.charm._mysql.get_cluster_endpoints()
+            rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
             self.database.set_credentials(relation_id, db_user, db_pass)
             self.database.set_endpoints(relation_id, rw_endpoints)
             self.database.set_version(relation_id, db_version)
