@@ -54,7 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_kill_db_process(
     ops_test: OpsTest, continuous_writes, mysql_charm_series: str
 ) -> None:
@@ -95,7 +95,7 @@ async def test_kill_db_process(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Freeze and unfreeze process and check for auto cluster recovery."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
@@ -139,7 +139,7 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_cha
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_network_cut(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Completely cut and restore network."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
@@ -220,7 +220,7 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes, mysql_charm_ser
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_replicate_data_on_restart(
     ops_test: OpsTest, continuous_writes, mysql_charm_series: str
 ):
@@ -305,7 +305,7 @@ async def test_replicate_data_on_restart(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Pause test.
 
@@ -370,7 +370,7 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_s
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.flaky
+@pytest.mark.unstable
 async def test_sst_test(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """The SST test.
 
