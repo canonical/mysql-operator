@@ -22,6 +22,8 @@ class TestMySQL(unittest.TestCase):
             "serverconfigpassword",
             "clusteradmin",
             "clusteradminpassword",
+            "exporter",
+            "exporterpassword",
         )
 
     @patch("os.path.exists")
