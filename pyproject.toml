@@ -14,7 +14,7 @@ log_cli_level = "INFO"
 asyncio_mode = "auto"
 markers = [
     "dev: mark to test in development tests",
-    "flaky"
+    "unstable"
 ]
 
 # Formatting tools configuration
