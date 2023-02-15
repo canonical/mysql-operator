@@ -868,6 +868,43 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
+    @patch(
+        "charms.mysql.v0.mysql.MySQLBase.get_cluster_status",
+        return_value={
+            "defaultreplicaset": {
+                "topology": {
+                    "mysql-k8s-0": {
+                        "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
+                        "memberrole": "secondary",
+                        "status": "online",
+                    },
+                    "mysql-k8s-1": {
+                        "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
+                        "memberrole": "primary",
+                        "status": "online",
+                    },
+                    "mysql-k8s-2": {
+                        "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
+                        "memberrole": "",
+                        "status": "offline",
+                    },
+                }
+            }
+        },
+    )
+    def test_get_cluster_endpoints(self, _):
+        """Test get_cluster_endpoints() method."""
+        endpoints = self.mysql.get_cluster_endpoints(get_ips=False)
+
+        self.assertEqual(
+            endpoints,
+            (
+                "mysql-k8s-1.mysql-k8s-endpoints:3306",
+                "mysql-k8s-0.mysql-k8s-endpoints:3306",
+                "mysql-k8s-2.mysql-k8s-endpoints:3306",
+            ),
+        )
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):
