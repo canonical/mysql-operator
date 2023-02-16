@@ -277,7 +277,7 @@ class TestMySQLBase(unittest.TestCase):
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
         configure_instance_commands = (
-            'dba.configure_instance(\'serverconfig:serverconfigpassword@127.0.0.1\', {"clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword", "restart": "true"})',
+            'dba.configure_instance(\'serverconfig:serverconfigpassword@127.0.0.1\', {"restart": "true", "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
         )
 
         self.mysql.configure_instance()
