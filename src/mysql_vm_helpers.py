@@ -189,7 +189,11 @@ class MySQL(MySQLBase):
             raise MySQLServiceNotRunningError()
 
     def connect_mysql_exporter(self) -> None:
-        """Set up mysqld-exporter config options."""
+        """Set up mysqld-exporter config options.
+
+        Raises
+            snap.SnapError: if an issue occurs during config setting or restart
+        """
         cache = snap.SnapCache()
         mysqld_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
 
