@@ -207,6 +207,7 @@ class MySQL(MySQLBase):
                 "An exception occurred when setting configs for mysqld-exporter snap. Reason: %s"
                 % e.message
             )
+            raise
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
