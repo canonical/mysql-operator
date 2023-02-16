@@ -21,6 +21,7 @@ from charms.mysql.v0.mysql import (
     MySQLDeleteUserForRelationError,
     MySQLDeleteUsersForUnitError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
     MySQLUpgradeUserForMySQLRouterError,
@@ -904,6 +905,41 @@ class TestMySQLBase(unittest.TestCase):
                 "mysql-k8s-2.mysql-k8s-endpoints:3306",
             ),
         )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
+        """Test the offline_mode_and_hidden_instance_exists() method."""
+        commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            "cluster_topology = dba.get_cluster('test_cluster').status()['defaultReplicaSet']['topology']",
+            "selected_instances = [label for label, member in cluster_topology.items() if 'Instance has offline_mode enabled' in member.get('instanceErrors', '') and member.get('hiddenFromRouter')]",
+            "print(f'<OFFLINE_MODE_INSTANCES>{len(selected_instances)}</OFFLINE_MODE_INSTANCES>')",
+        )
+
+        _run_mysqlsh_script.return_value = "<OFFLINE_MODE_INSTANCES>1</OFFLINE_MODE_INSTANCES>"
+
+        exists = self.mysql.offline_mode_and_hidden_instance_exists()
+        self.assertTrue(exists)
+        _run_mysqlsh_script.assert_called_once_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.return_value = "<OFFLINE_MODE_INSTANCES>0</OFFLINE_MODE_INSTANCES>"
+
+        exists = self.mysql.offline_mode_and_hidden_instance_exists()
+        self.assertFalse(exists)
+        _run_mysqlsh_script.assert_called_once_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError()
+
+        with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
+            self.mysql.offline_mode_and_hidden_instance_exists()
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.return_value = "garbage"
+
+        with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
+            self.mysql.offline_mode_and_hidden_instance_exists()
 
     def test_abstract_methods(self):
         """Test abstract methods."""
