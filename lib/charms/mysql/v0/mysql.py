@@ -232,8 +232,8 @@ class MySQLBase(ABC):
         server_config_password: str,
         cluster_admin_user: str,
         cluster_admin_password: str,
-        exporter_user: str,
-        exporter_password: str,
+        monitoring_user: str,
+        monitoring_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -245,8 +245,8 @@ class MySQLBase(ABC):
             server_config_password: password for the server config user
             cluster_admin_user: user name for the cluster admin user
             cluster_admin_password: password for the cluster admin user
-            exporter_user: user name for the mysql exporter
-            exporter_password: password for the exporter user
+            monitoring_user: user name for the mysql exporter
+            monitoring_password: password for the monitoring user
         """
         self.instance_address = instance_address
         self.cluster_name = cluster_name
@@ -255,8 +255,8 @@ class MySQLBase(ABC):
         self.server_config_password = server_config_password
         self.cluster_admin_user = cluster_admin_user
         self.cluster_admin_password = cluster_admin_password
-        self.exporter_user = exporter_user
-        self.exporter_password = exporter_password
+        self.monitoring_user = monitoring_user
+        self.monitoring_password = monitoring_password
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -291,8 +291,8 @@ class MySQLBase(ABC):
         configure_users_commands = (
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
-            f"CREATE USER '{self.exporter_user}'@'%' IDENTIFIED BY '{self.exporter_password}' WITH MAX_USER_CONNECTIONS 3",
-            f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.exporter_user}'@'%'",
+            f"CREATE USER '{self.monitoring_user}'@'%' IDENTIFIED BY '{self.monitoring_password}' WITH MAX_USER_CONNECTIONS 3",
+            f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.monitoring_user}'@'%'",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
             f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%'",

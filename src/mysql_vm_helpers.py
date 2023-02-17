@@ -59,8 +59,8 @@ class MySQL(MySQLBase):
         server_config_password: str,
         cluster_admin_user: str,
         cluster_admin_password: str,
-        exporter_user: str,
-        exporter_password: str,
+        monitoring_user: str,
+        monitoring_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -72,8 +72,8 @@ class MySQL(MySQLBase):
             server_config_password: password for the server config user
             cluster_admin_user: user name for the cluster admin user
             cluster_admin_password: password for the cluster admin user
-            exporter_user: user name for the mysql exporter
-            exporter_password: password for the exporter user
+            monitoring_user: user name for the mysql exporter
+            monitoring_password: password for the monitoring user
         """
         super().__init__(
             instance_address=instance_address,
@@ -83,8 +83,8 @@ class MySQL(MySQLBase):
             server_config_password=server_config_password,
             cluster_admin_user=cluster_admin_user,
             cluster_admin_password=cluster_admin_password,
-            exporter_user=exporter_user,
-            exporter_password=exporter_password,
+            monitoring_user=monitoring_user,
+            monitoring_password=monitoring_password,
         )
 
     @staticmethod
@@ -201,8 +201,8 @@ class MySQL(MySQLBase):
             mysqld_exporter.set(
                 {
                     "mysql.host": self.instance_address,
-                    "mysql.user": self.exporter_user,
-                    "mysql.password": self.exporter_password,
+                    "mysql.user": self.monitoring_user,
+                    "mysql.password": self.monitoring_password,
                 }
             )
             mysqld_exporter.restart()

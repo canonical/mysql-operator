@@ -49,8 +49,8 @@ from tenacity import (
 from constants import (
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
-    EXPORTER_PASSWORD_KEY,
-    EXPORTER_USERNAME,
+    MONITORING_PASSWORD_KEY,
+    MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
     NODE_EXPORTER_PORT,
     PASSWORD_LENGTH,
@@ -160,7 +160,7 @@ class MySQLOperatorCharm(CharmBase):
             ROOT_PASSWORD_KEY,
             SERVER_CONFIG_PASSWORD_KEY,
             CLUSTER_ADMIN_PASSWORD_KEY,
-            EXPORTER_PASSWORD_KEY,
+            MONITORING_PASSWORD_KEY,
         ]
 
         for required_password in required_passwords:
@@ -406,8 +406,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == EXPORTER_USERNAME:
-            secret_key = EXPORTER_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key = MONITORING_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -429,8 +429,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == EXPORTER_USERNAME:
-            secret_key == EXPORTER_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key == MONITORING_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -455,8 +455,8 @@ class MySQLOperatorCharm(CharmBase):
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
             CLUSTER_ADMIN_USERNAME,
             self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
-            EXPORTER_USERNAME,
-            self.get_secret("app", EXPORTER_PASSWORD_KEY),
+            MONITORING_USERNAME,
+            self.get_secret("app", MONITORING_PASSWORD_KEY),
         )
 
     @property

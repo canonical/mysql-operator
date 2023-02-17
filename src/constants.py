@@ -6,7 +6,7 @@
 ROOT_USERNAME = "root"
 CLUSTER_ADMIN_USERNAME = "clusteradmin"
 SERVER_CONFIG_USERNAME = "serverconfig"
-EXPORTER_USERNAME = "exporter"
+MONITORING_USERNAME = "monitoring"
 PASSWORD_LENGTH = 24
 PEER = "database-peers"
 LEGACY_DB_ROUTER = "db-router"
@@ -16,7 +16,7 @@ DB_RELATION_NAME = "database"
 ROOT_PASSWORD_KEY = "root-password"
 SERVER_CONFIG_PASSWORD_KEY = "server-config-password"
 CLUSTER_ADMIN_PASSWORD_KEY = "cluster-admin-password"
-EXPORTER_PASSWORD_KEY = "exporter-password"
+MONITORING_PASSWORD_KEY = "monitoring-password"
 REQUIRED_USERNAMES = [ROOT_USERNAME, SERVER_CONFIG_USERNAME, CLUSTER_ADMIN_USERNAME]
 TLS_RELATION = "certificates"
 TLS_SSL_CA_FILE = "custom-ca.pem"
