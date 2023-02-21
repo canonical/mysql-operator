@@ -270,6 +270,7 @@ class MySQLOperatorCharm(CharmBase):
             self.unit_peer_data["unit-initialized"] = "True"
             try:
                 subprocess.check_call(["open-port", "3306/tcp"])
+                subprocess.check_call(["open-port", "33060/tcp"])
             except subprocess.CalledProcessError:
                 logger.exception("failed to open port")
             self.unit.status = ActiveStatus(self.active_status_message)
@@ -537,6 +538,7 @@ class MySQLOperatorCharm(CharmBase):
         self.unit_peer_data["member-role"] = "primary"
         try:
             subprocess.check_call(["open-port", "3306/tcp"])
+            subprocess.check_call(["open-port", "33060/tcp"])
         except subprocess.CalledProcessError:
             logger.exception("failed to open port")
 
