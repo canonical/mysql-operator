@@ -17,7 +17,6 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
 )
-from charms.operator_libs_linux.v0.systemd import service_restart, service_stop
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
@@ -45,6 +44,8 @@ from tenacity import (
 )
 
 from constants import (
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     PASSWORD_LENGTH,
@@ -54,7 +55,6 @@ from constants import (
     ROOT_USERNAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
-    SERVICE_NAME,
 )
 from mysql_vm_helpers import (
     MySQL,
@@ -63,6 +63,8 @@ from mysql_vm_helpers import (
     instance_hostname,
     is_data_dir_attached,
     reboot_system,
+    restart_snap_service,
+    stop_snap_service,
 )
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
@@ -348,7 +350,9 @@ class MySQLOperatorCharm(CharmBase):
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
 
-        if state == "unreachable" and not service_restart(SERVICE_NAME):
+        if state == "unreachable" and not restart_snap_service(
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE
+        ):
             # mysqld access not possible and daemon restart fails
             # force reset necessary
             self.unit.status = MaintenanceStatus("Workload reset")
@@ -512,6 +516,8 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        self._mysql.reset_root_password_and_start_mysqld()
+
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
@@ -572,7 +578,7 @@ class MySQLOperatorCharm(CharmBase):
             if not primary_address:
                 logger.debug("Primary not yet defined on peers. Waiting new primary.")
                 return MaintenanceStatus("Workload reset: waiting new primary")
-            service_stop(SERVICE_NAME)
+            stop_snap_service(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE)
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
@@ -607,7 +613,7 @@ class MySQLOperatorCharm(CharmBase):
         Used exclusively for rolling restarts.
         """
         logger.debug("Restarting mysqld daemon")
-        if service_restart(SERVICE_NAME):
+        if restart_snap_service(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE):
             # when restart done right after cluster creation (e.g bundles)
             # or for single unit deployments, it's necessary reboot the
             # cluster from outage to restore unit as primary
