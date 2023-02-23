@@ -198,11 +198,21 @@ class MySQL(MySQLBase):
         mysqld_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
 
         try:
+            # Set up exporter with connection info and disable metrics
             mysqld_exporter.set(
                 {
-                    "mysql.host": self.instance_address,
+                    "mysql.host": "unix(/var/run/mysqld/mysqld.sock)",
                     "mysql.user": self.monitoring_user,
                     "mysql.password": self.monitoring_password,
+                    "collect.auto_increment.columns": False,
+                    "collect.info_schema.tables": False,
+                    "collect.info_schema.tablestats": False,
+                    "collect.perf_schema.indexiowaits": False,
+                    "collect.perf_schema.tableiowaits": False,
+                    "collect.perf_schema.tablelocks": False,
+                    "collect.info_schema.userstats": False,
+                    "collect.binlog_size": False,
+                    "collect.info_schema.processlist": False,
                 }
             )
             mysqld_exporter.restart()
