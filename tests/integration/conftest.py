@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import dataclasses
@@ -29,7 +28,7 @@ def pytest_configure(config):
 
 
 def _get_group_number(function) -> Optional[int]:
-    """Gets group number from test function marker
+    """Gets group number from test function marker.
 
     This example has a group number of 1:
     @pytest.mark.group(1)
@@ -48,7 +47,7 @@ def _get_group_number(function) -> Optional[int]:
 
 
 def _collect_groups(items):
-    """Collects unique group numbers for each test module"""
+    """Collects unique group numbers for each test module."""
 
     @dataclasses.dataclass(eq=True, frozen=True)
     class Group:
