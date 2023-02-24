@@ -24,8 +24,8 @@ from ops.model import MaintenanceStatus
 
 from constants import (
     MYSQL_DATA_DIR,
-    MYSQLD_CONFIG_DIRECTORY,
     MYSQL_SYSTEM_USER,
+    MYSQLD_CONFIG_DIRECTORY,
     TLS_RELATION,
     TLS_SSL_CA_FILE,
     TLS_SSL_CERT_FILE,
