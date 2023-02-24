@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import subprocess
 from typing import Dict, Optional
 
 from charms.mysql.v0.mysql import (
@@ -267,6 +268,11 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit_peer_data["unit-initialized"] = "True"
+            try:
+                subprocess.check_call(["open-port", "3306/tcp"])
+                subprocess.check_call(["open-port", "33060/tcp"])
+            except subprocess.CalledProcessError:
+                logger.exception("failed to open port")
             self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_database_storage_detaching(self, _) -> None:
@@ -530,6 +536,11 @@ class MySQLOperatorCharm(CharmBase):
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
+        try:
+            subprocess.check_call(["open-port", "3306/tcp"])
+            subprocess.check_call(["open-port", "33060/tcp"])
+        except subprocess.CalledProcessError:
+            logger.exception("failed to open port")
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
