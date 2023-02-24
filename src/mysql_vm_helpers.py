@@ -201,7 +201,7 @@ class MySQL(MySQLBase):
             # Set up exporter with connection info and disable metrics
             mysqld_exporter.set(
                 {
-                    "mysql.host": MYSQLD_SOCK_FILE,
+                    "mysql.socket": MYSQLD_SOCK_FILE,
                     "mysql.user": self.monitoring_user,
                     "mysql.password": self.monitoring_password,
                     "collect.auto-increment.columns": "false",
