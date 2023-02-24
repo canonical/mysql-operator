@@ -136,7 +136,7 @@ async def get_primary_unit(
         A juju unit that is a MySQL primary
     """
     commands = [
-        "mysqlsh",
+        "charmed-mysql.mysqlsh",
         "--python",
         f"{server_config_username}:{server_config_password}@127.0.0.1",
         "-e",
@@ -527,7 +527,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         ops_test: The ops test object passed into every test case
         unit_name: The name of the unit to be tested
     """
-    await ops_test.juju("ssh", unit_name, "sudo", "systemctl", "restart", "mysql")
+    await ops_test.juju("ssh", unit_name, "sudo", "snap", "restart", "charmed-mysql.mysqld")
 
     # hold execution until process is started
     try:

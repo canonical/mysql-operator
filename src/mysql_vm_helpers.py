@@ -319,7 +319,7 @@ def write_content_to_file(
     path: str,
     content: str,
     owner: str = MYSQL_SYSTEM_USER,
-    group: str = MYSQL_SYSTEM_USER,
+    group: str = "root",
     permission: int = 0o640,
 ) -> None:
     """Write content to file.
