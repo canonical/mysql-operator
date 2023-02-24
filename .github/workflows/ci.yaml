@@ -35,6 +35,8 @@ jobs:
         run: tox run -e unit
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
+        with:
+          if_ci_failed: false
 
   lib-check:
     name: Check libraries
