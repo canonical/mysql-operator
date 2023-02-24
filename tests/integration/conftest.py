@@ -94,12 +94,12 @@ def pytest_collection_modifyitems(config, items):
         items[:] = filtered_items
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mysql_charm_series(pytestconfig) -> str:
     return pytestconfig.option.mysql_charm_series
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
     if os.environ.get("CI") == "true":
         # Running in GitHub Actions; skip build step
