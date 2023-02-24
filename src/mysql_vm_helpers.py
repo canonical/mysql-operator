@@ -201,18 +201,18 @@ class MySQL(MySQLBase):
             # Set up exporter with connection info and disable metrics
             mysqld_exporter.set(
                 {
-                    "mysql.host": "unix(/var/run/mysqld/mysqld.sock)",
+                    "mysql.host": MYSQLD_SOCK_FILE,
                     "mysql.user": self.monitoring_user,
                     "mysql.password": self.monitoring_password,
-                    "collect.auto_increment.columns": False,
-                    "collect.info_schema.tables": False,
-                    "collect.info_schema.tablestats": False,
-                    "collect.perf_schema.indexiowaits": False,
-                    "collect.perf_schema.tableiowaits": False,
-                    "collect.perf_schema.tablelocks": False,
-                    "collect.info_schema.userstats": False,
-                    "collect.binlog_size": False,
-                    "collect.info_schema.processlist": False,
+                    "collect.auto-increment.columns": "false",
+                    "collect.info-schema.tables": "false",
+                    "collect.info-schema.tablestats": "false",
+                    "collect.perf-schema.indexiowaits": "false",
+                    "collect.perf-schema.tableiowaits": "false",
+                    "collect.perf-schema.tablelocks": "false",
+                    "collect.info-schema.userstats": "false",
+                    "collect.binlog-size": "false",
+                    "collect.info-schema.processlist": "false",
                 }
             )
             mysqld_exporter.restart()
