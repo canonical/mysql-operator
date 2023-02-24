@@ -24,15 +24,6 @@ class TestMySQL(unittest.TestCase):
             "clusteradminpassword",
         )
 
-    @patch("os.path.exists")
-    def test_mysqlsh_bin(self, _exists):
-        """Test the mysqlsh_bin property."""
-        _exists.return_value = True
-        self.assertEqual(MySQL.get_mysqlsh_bin(), "/usr/bin/mysqlsh")
-
-        _exists.return_value = False
-        self.assertEqual(MySQL.get_mysqlsh_bin(), "/snap/bin/mysql-shell")
-
     @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
     def test_run_mysqlsh_script(self, _check_output, _):
@@ -59,11 +50,11 @@ class TestMySQL(unittest.TestCase):
 
         _check_output.assert_called_once_with(
             [
-                "mysql",
+                "charmed-mysql.mysql",
                 "-u",
                 "root",
                 "--protocol=SOCKET",
-                "--socket=/var/run/mysqld/mysqld.sock",
+                "--socket=/var/snap/charmed-mysql/common/mysql/mysqld.sock",
                 "-e",
                 "script",
             ],

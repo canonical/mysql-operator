@@ -351,7 +351,7 @@ def restart_snap_service(snapname: str, service: str) -> bool:
             raise Exception(f"Snap {snapname} not installed")
 
         selected_snap.restart(services=[service])
-        return selected_snap.services[snapname].active
+        return selected_snap.services[service]["active"]
     except snap.SnapError:
         return False
 

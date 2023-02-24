@@ -75,7 +75,7 @@ class TestMySQLBase(unittest.TestCase):
             sorted(_run_mysqlcli_script.mock_calls),
             sorted(
                 [
-                    call(_expected_create_root_user_commands),
+                    call(_expected_create_root_user_commands, password="password"),
                     call(_expected_configure_user_commands, password="password"),
                 ]
             ),

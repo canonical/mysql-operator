@@ -127,8 +127,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     def test_on_start(
         self,
+        _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
         _configure_instance,
@@ -153,8 +155,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     def test_on_start_exceptions(
         self,
+        _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
         _configure_instance,
