@@ -49,7 +49,7 @@ def _get_group_number(function) -> Optional[int]:
 def _collect_groups(items):
     """Collects unique group numbers for each test module."""
 
-    @dataclasses.dataclass(eq=True, frozen=True)
+    @dataclasses.dataclass(eq=True, order=True, frozen=True)
     class Group:
         path_to_test_file: str
         group_number: int
@@ -67,8 +67,7 @@ def _collect_groups(items):
         # Example: "relations/test_database.py | group 1"
         job_name = f"{'/'.join(path_to_test_file.split('/')[2:])} | group {group_number}"
         groups.add(Group(path_to_test_file, group_number, job_name))
-    sorted_groups: list[dict] = [dataclasses.asdict(group) for group in groups]
-    sorted_groups.sort()
+    sorted_groups: list[dict] = [dataclasses.asdict(group) for group in sorted(list(groups))]
     output = f"groups={json.dumps(sorted_groups)}"
     print(f"\n\n{output}\n")
     output_file = os.environ["GITHUB_OUTPUT"]
