@@ -49,8 +49,11 @@ ENDPOINT = "database"
 TIMEOUT = 15 * 60
 
 
-@pytest.fixture(scope="module", autouse=True)
-async def deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_deployed
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+    """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
 
     app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
@@ -93,12 +96,6 @@ async def deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
             ),
         )
 
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
-    """Build the charm and deploy 3 units to ensure a cluster is formed."""
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -239,7 +236,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
@@ -253,7 +250,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_read_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
@@ -306,7 +303,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
         assert False
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
