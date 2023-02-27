@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Relation 'requires' side abstraction for database relation.
+"""[DEPRECATED] Relation 'requires' side abstraction for database relation.
 
 This library is a uniform interface to a selection of common database
 metadata, with added custom events that add convenience to database management,
@@ -23,7 +23,10 @@ application charm code:
 
 ```python
 
-from charms.data_platform_libs.v0.database_requires import DatabaseRequires
+from charms.data_platform_libs.v0.database_requires import (
+    DatabaseCreatedEvent,
+    DatabaseRequires,
+)
 
 class ApplicationCharm(CharmBase):
     # Application charm that connects to database charms.
@@ -84,7 +87,10 @@ The implementation would be something like the following code:
 
 ```python
 
-from charms.data_platform_libs.v0.database_requires import DatabaseRequires
+from charms.data_platform_libs.v0.database_requires import (
+    DatabaseCreatedEvent,
+    DatabaseRequires,
+)
 
 class ApplicationCharm(CharmBase):
     # Application charm that connects to database charms.
@@ -154,7 +160,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version.
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 
