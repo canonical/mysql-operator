@@ -11,11 +11,13 @@ from pytest_operator.plugin import OpsTest
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 
 from .helpers import (
+    app_name,
     get_process_pid,
     get_system_user_password,
     get_tls_ca,
     get_unit_ip,
     is_connection_possible,
+    scale_application,
     unit_file_md5,
 )
 
@@ -27,8 +29,18 @@ APP_NAME = METADATA["name"]
 TLS_APP_NAME = "tls-certificates-operator"
 
 
-@pytest.fixture(scope="module")
-async def deploy(ops_test: OpsTest, mysql_charm_series: str) -> str:
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+    """Build the charm and deploy 3 units to ensure a cluster is formed."""
+    if app := await app_name(ops_test):
+        if len(ops_test.model.applications[app].units) == 3:
+            return
+        else:
+            async with ops_test.fast_forward():
+                await scale_application(ops_test, app, 3)
+            return
+
     charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
@@ -50,21 +62,12 @@ async def deploy(ops_test: OpsTest, mysql_charm_series: str) -> str:
             timeout=15 * 60,
         )
 
-    return APP_NAME
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(deploy: str) -> None:
-    """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    pass
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_connection_before_tls(ops_test: OpsTest, deploy: str) -> None:
+async def test_connection_before_tls(ops_test: OpsTest) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
-    app = deploy
+    app = await app_name(ops_test)
     all_units = ops_test.model.applications[app].units
 
     # set global config dict once
@@ -91,9 +94,9 @@ async def test_connection_before_tls(ops_test: OpsTest, deploy: str) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_enable_tls(ops_test: OpsTest, deploy: str) -> None:
+async def test_enable_tls(ops_test: OpsTest) -> None:
     """Test for encryption enablement when relation to TLS charm."""
-    app = deploy
+    app = await app_name(ops_test)
     all_units = ops_test.model.applications[app].units
 
     # Deploy TLS Certificates operator.
@@ -132,14 +135,14 @@ async def test_enable_tls(ops_test: OpsTest, deploy: str) -> None:
     assert await get_tls_ca(ops_test, all_units[0].name), "❌ No CA found after TLS relation"
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_rotate_tls_key(ops_test: OpsTest, deploy: str) -> None:
+async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """Verify rotating tls private keys restarts cluster with new certificates.
 
     This test rotates tls private keys to randomly generated keys.
     """
-    app = deploy
+    app = await app_name(ops_test)
     all_units = ops_test.model.applications[app].units
     # dict of values for cert file md5sum and mysql service PID. After resetting the
     # private keys these certificates should be updated and the mysql service should be
@@ -194,9 +197,9 @@ async def test_rotate_tls_key(ops_test: OpsTest, deploy: str) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_disable_tls(ops_test: OpsTest, deploy: str) -> None:
+async def test_disable_tls(ops_test: OpsTest) -> None:
     # Remove the relation
-    app = deploy
+    app = await app_name(ops_test)
     all_units = ops_test.model.applications[app].units
 
     logger.info("Removing relation")
