@@ -3,28 +3,11 @@
 import dataclasses
 import json
 import os
-from argparse import ArgumentError
 from pathlib import Path
 from typing import Optional
 
 import pytest
 from pytest_operator.plugin import OpsTest
-
-
-def pytest_configure(config):
-    if config.option.collect_groups:
-        config.option.collectonly = True
-    if (config.option.mysql_charm_series is None) ^ (
-        config.option.mysql_charm_bases_index is None
-    ):
-        raise ArgumentError(
-            None, "--mysql-charm-series and --mysql-charm-bases-index must be given together"
-        )
-    # Note: Update defaults whenever charmcraft.yaml is changed
-    if config.option.mysql_charm_series is None:
-        config.option.mysql_charm_series = "jammy"
-    if config.option.mysql_charm_bases_index is None:
-        config.option.mysql_charm_bases_index = 0
 
 
 def _get_group_number(function) -> Optional[int]:
