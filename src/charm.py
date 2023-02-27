@@ -60,11 +60,12 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLDataPurgeError,
     MySQLReconfigureError,
+    MySQLResetRootPasswordAndStartMySQLDError,
+    SnapServiceOperationError,
     instance_hostname,
     is_data_dir_attached,
     reboot_system,
-    restart_snap_service,
-    stop_snap_service,
+    snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
@@ -290,6 +291,46 @@ class MySQLOperatorCharm(CharmBase):
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
 
+    def _handle_non_online_instance_status(self, state) -> None:
+        """Helper method to handle non-online instance statuses.
+
+        Invoked from the update status event handler.
+        """
+        if state == "recovering":
+            # server is in the process of becoming an active member
+            logger.info("Instance is being recovered")
+            return
+
+        if state == "offline":
+            # Group Replication is active but the member does not belong to any group
+            all_states = {
+                self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
+            }
+            all_states.add("offline")
+
+            if all_states == {"offline"} and self.unit.is_leader():
+                # All instance are off or its a single unit cluster
+                # reboot cluster from outage from the leader unit
+                logger.debug("Attempting reboot from complete outage.")
+                try:
+                    # reboot from outage forcing it when it a single unit
+                    self._mysql.reboot_from_complete_outage()
+                except MySQLRebootFromCompleteOutageError:
+                    logger.error("Failed to reboot cluster from complete outage.")
+                    self.unit.status = BlockedStatus("failed to recover cluster.")
+
+        if state == "unreachable":
+            try:
+                if not snap_service_operation(
+                    CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
+                ):
+                    # mysqld access not possible and daemon restart fails
+                    # force reset necessary
+                    self.unit.status = MaintenanceStatus("Workload reset")
+                    self.unit.status = self._workload_reset()
+            except SnapServiceOperationError as e:
+                self.unit.status = BlockedStatus(e.message)
+
     def _on_update_status(self, _) -> None:
         """Handle update status.
 
@@ -327,36 +368,7 @@ class MySQLOperatorCharm(CharmBase):
             else MaintenanceStatus(state)
         )
 
-        if state == "recovering":
-            # server is in the process of becoming an active member
-            logger.info("Instance is being recovered")
-            return
-
-        if state == "offline":
-            # Group Replication is active but the member does not belong to any group
-            all_states = {
-                self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
-            }
-            all_states.add("offline")
-
-            if all_states == {"offline"} and self.unit.is_leader():
-                # All instance are off or its a single unit cluster
-                # reboot cluster from outage from the leader unit
-                logger.debug("Attempting reboot from complete outage.")
-                try:
-                    # reboot from outage forcing it when it a single unit
-                    self._mysql.reboot_from_complete_outage()
-                except MySQLRebootFromCompleteOutageError:
-                    logger.error("Failed to reboot cluster from complete outage.")
-                    self.unit.status = BlockedStatus("failed to recover cluster.")
-
-        if state == "unreachable" and not restart_snap_service(
-            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE
-        ):
-            # mysqld access not possible and daemon restart fails
-            # force reset necessary
-            self.unit.status = MaintenanceStatus("Workload reset")
-            self.unit.status = self._workload_reset()
+        self._handle_non_online_instance_status(state)
 
     # =======================
     #  Custom Action Handlers
@@ -578,7 +590,7 @@ class MySQLOperatorCharm(CharmBase):
             if not primary_address:
                 logger.debug("Primary not yet defined on peers. Waiting new primary.")
                 return MaintenanceStatus("Workload reset: waiting new primary")
-            stop_snap_service(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE)
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
@@ -597,6 +609,10 @@ class MySQLOperatorCharm(CharmBase):
             return BlockedStatus("Failed to re-configure instance for InnoDB")
         except MySQLDataPurgeError:
             return BlockedStatus("Failed to purge data dir")
+        except MySQLResetRootPasswordAndStartMySQLDError:
+            return BlockedStatus("Failed to reset root password")
+        except SnapServiceOperationError as e:
+            return BlockedStatus(e.message)
 
         return ActiveStatus(self.active_status_message)
 
@@ -613,33 +629,43 @@ class MySQLOperatorCharm(CharmBase):
         Used exclusively for rolling restarts.
         """
         logger.debug("Restarting mysqld daemon")
-        if restart_snap_service(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE):
-            # when restart done right after cluster creation (e.g bundles)
-            # or for single unit deployments, it's necessary reboot the
-            # cluster from outage to restore unit as primary
-            if self.app_peer_data["units-added-to-cluster"] == "1":
-                try:
-                    self._mysql.reboot_from_complete_outage()
-                except MySQLRebootFromCompleteOutageError:
-                    logger.error("Failed to restart single node cluster")
-                    self.unit.status = BlockedStatus("Failed to restart primary")
-                    return
 
-            unit_label = self.unit.name.replace("/", "-")
+        try:
+            mysqld_running = snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
+            )
+        except SnapServiceOperationError as e:
+            self.unit.status = BlockedStatus(e.message)
+            return
 
-            try:
-                for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
-                    with attempt:
-                        if self._mysql.is_instance_in_cluster(unit_label):
-                            self._on_update_status(None)
-                            return
-                        raise Exception
-            except RetryError:
-                logger.error("Unable to rejoin mysqld instance to the cluster.")
-                self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
-        else:
+        if not mysqld_running:
             logger.error("Failed to restart mysqld on rolling restart")
             self.unit.status = BlockedStatus("Failed to restart mysqld")
+            return
+
+        # when restart done right after cluster creation (e.g bundles)
+        # or for single unit deployments, it's necessary reboot the
+        # cluster from outage to restore unit as primary
+        if self.app_peer_data["units-added-to-cluster"] == "1":
+            try:
+                self._mysql.reboot_from_complete_outage()
+            except MySQLRebootFromCompleteOutageError:
+                logger.error("Failed to restart single node cluster")
+                self.unit.status = BlockedStatus("Failed to restart primary")
+                return
+
+        unit_label = self.unit.name.replace("/", "-")
+
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
+                with attempt:
+                    if self._mysql.is_instance_in_cluster(unit_label):
+                        self._on_update_status(None)
+                        return
+                    raise Exception
+        except RetryError:
+            logger.error("Unable to rejoin mysqld instance to the cluster.")
+            self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
 
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.

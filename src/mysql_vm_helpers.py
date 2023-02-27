@@ -40,6 +40,14 @@ class MySQLDataPurgeError(Error):
     """Exception raised when there's an error purging data dir."""
 
 
+class MySQLResetRootPasswordAndStartMySQLDError(Error):
+    """Exception raised when there's an error resetting root password and starting mysqld."""
+
+
+class SnapServiceOperationError(Error):
+    """Exception raised when there's an error running an operation on a snap service."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -129,29 +137,58 @@ class MySQL(MySQLBase):
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
         with tempfile.NamedTemporaryFile(
-            dir=MYSQLD_CONFIG_DIRECTORY, suffix=".cnf", mode="w+", encoding="utf-8"
+            dir=MYSQLD_CONFIG_DIRECTORY,
+            prefix="z-custom-init-file.",
+            suffix=".cnf",
+            mode="w+",
+            encoding="utf-8",
         ) as _custom_config_file:
             with tempfile.NamedTemporaryFile(
-                dir=CHARMED_MYSQL_COMMON_DIRECTORY, suffix=".sql", mode="w+", encoding="utf-8"
+                dir=CHARMED_MYSQL_COMMON_DIRECTORY,
+                prefix="alter-root-user",
+                suffix=".sql",
+                mode="w+",
+                encoding="utf-8",
             ) as _sql_file:
                 _sql_file.write(
                     f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';"
                 )
                 _sql_file.flush()
 
-                subprocess.check_output(["sudo", "chmod", "644", _sql_file.name])
-                subprocess.check_output(["sudo", "chown", "snap_daemon:root", _sql_file.name])
+                try:
+                    subprocess.check_output(["sudo", "chmod", "644", _sql_file.name])
+                    subprocess.check_output(
+                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _sql_file.name]
+                    )
+                except subprocess.CalledProcessError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError(
+                        "Failed to change permissions for temp SQL file"
+                    )
 
                 _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
                 _custom_config_file.flush()
 
-                subprocess.check_output(
-                    ["sudo", "chown", "snap_daemon:root", _custom_config_file.name]
-                )
-                subprocess.check_output(["sudo", "chmod", "644", _custom_config_file.name])
+                try:
+                    subprocess.check_output(
+                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _custom_config_file.name]
+                    )
+                    subprocess.check_output(["sudo", "chmod", "644", _custom_config_file.name])
+                except subprocess.CalledProcessError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError(
+                        "Failed to change permissions for custom mysql config"
+                    )
 
-                start_snap_service(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE)
-                self.wait_until_mysql_connection()
+                try:
+                    snap_service_operation(
+                        CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+                    )
+                except SnapServiceOperationError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
+
+                try:
+                    self.wait_until_mysql_connection()
+                except MySQLServiceNotRunningError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def wait_until_mysql_connection(self) -> None:
@@ -338,53 +375,37 @@ def write_content_to_file(
     os.chmod(path, mode=permission)
 
 
-def restart_snap_service(snapname: str, service: str) -> bool:
-    """Restart a snap service.
+def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
+    """Helper function to run an operation on a snap service.
 
-    Returns: a boolean indicating whether the service is running after the restart.
+    Args:
+        snapname: The name of the snap
+        service: The name of the service
+        operation: The name of the operation (restart, start, stop)
+
+    Returns:
+        a bool indicating if the operation was successful.
     """
+    if operation not in ["restart", "start", "stop"]:
+        raise SnapServiceOperationError(f"Invalid snap service operation {operation}")
+
     try:
         cache = snap.SnapCache()
         selected_snap = cache[snapname]
 
         if not selected_snap.present:
-            raise Exception(f"Snap {snapname} not installed")
+            raise SnapServiceOperationError(f"Snap {snapname} not installed")
 
-        selected_snap.restart(services=[service])
-        return selected_snap.services[service]["active"]
-    except snap.SnapError:
-        return False
-
-
-def stop_snap_service(snapname: str, service: str) -> None:
-    """Stop a snap service.
-
-    Returns: a boolean indicating whether the service is stopped after the restart.
-    """
-    try:
-        cache = snap.SnapCache()
-        selected_snap = cache[snapname]
-
-        if not selected_snap.present:
-            raise Exception(f"Snap {snapname} not installed")
-
-        selected_snap.stop(services=[service])
-    except snap.SnapError:
-        return False
-
-
-def start_snap_service(snapname: str, service: str) -> None:
-    """Start a snap service.
-
-    Returns: a boolean indicating whether the service is stopped after the restart.
-    """
-    try:
-        cache = snap.SnapCache()
-        selected_snap = cache[snapname]
-
-        if not selected_snap.present:
-            raise Exception(f"Snap {snapname} not installed")
-
-        selected_snap.start(services=[service])
-    except snap.SnapError:
-        return False
+        if operation == "restart":
+            selected_snap.restart(services=[service])
+            return selected_snap.services[service]["active"]
+        elif operation == "start":
+            selected_snap.start(services=[service])
+            return selected_snap.services[service]["active"]
+        else:
+            selected_snap.stop(services=[service])
+            return not selected_snap.services[service]["active"]
+    except snap.SnapError as e:
+        error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"
+        logger.exception(error_message, exc_info=e)
+        raise SnapServiceOperationError(error_message)
