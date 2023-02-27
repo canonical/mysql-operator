@@ -122,7 +122,18 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.artifact-name }}
+      - name: Select test stability level
+        id: select-test-stability
+        run: |
+          if [ "${{ github.event_name }}" == "schedule" ]
+          then
+            echo Running unstable and stable tests
+            echo "mark_expression=" >> $GITHUB_OUTPUT
+          else
+            echo Skipping unstable tests
+            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+          fi
       - name: Run integration tests
-        run: tox run -e integration -- ${{ matrix.groups.path_to_test_file }} --group ${{ matrix.groups.group_number }} --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
+        run: tox run -e integration -- ${{ matrix.groups.path_to_test_file }} --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
