@@ -9,7 +9,8 @@ bases:
     run-on:
       - name: "ubuntu"
         channel: "20.04"
+
 parts:
   charm:
     charm-binary-python-packages:
-      - mysql-connector-python==8.0.32
+      - mysql-connector-python ~= 8.0.32
