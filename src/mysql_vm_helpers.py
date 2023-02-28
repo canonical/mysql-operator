@@ -104,7 +104,7 @@ class MySQL(MySQLBase):
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
                 charmed_mysql.ensure(
-                    snap.SnapState.Latest, channel="8.0/edge/whatever-shayan-wants"
+                    snap.SnapState.Latest, channel="8.0/edge"
                 )
 
             # create the mysqld config directory if it does not exist
