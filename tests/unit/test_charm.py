@@ -10,7 +10,7 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
@@ -245,3 +245,76 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)["password"]
             == "test-password"
         )
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("charm.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
+    @patch("charm.snap_service_operation")
+    @patch("charm.MySQLOperatorCharm._workload_reset")
+    def test_on_update(
+        self,
+        _workload_reset,
+        _snap_service_operation,
+        __reboot_from_complete_outage,
+        _is_data_dir_attached,
+        _get_member_state,
+    ):
+        self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
+        self.harness.set_leader()
+        self.charm.on.config_changed.emit()
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
+        )
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.unit.name,
+            {
+                "member-role": "primary",
+                "member-state": "online",
+                "unit-initialized": "true",
+            },
+        )
+        _get_member_state.return_value = ("online", "primary")
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_not_called()
+        _snap_service_operation.assert_not_called()
+        _workload_reset.assert_not_called()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+        # test instance state = offline
+        _get_member_state.reset_mock()
+        _get_member_state.return_value = ("offline", "primary")
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.unit.name,
+            {
+                "member-state": "offline",
+            },
+        )
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_called_once()
+        _snap_service_operation.assert_not_called()
+        _workload_reset.assert_not_called()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
+
+        # test instance state = unreachable
+        _get_member_state.reset_mock()
+        __reboot_from_complete_outage.reset_mock()
+        _snap_service_operation.return_value = False
+        _workload_reset.return_value = ActiveStatus()
+        _get_member_state.return_value = ("unreachable", "primary")
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_not_called()
+        _snap_service_operation.assert_called_once()
+        _workload_reset.assert_called_once()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))

@@ -5,15 +5,17 @@
 
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from charms.mysql.v0.mysql import MySQLClientError
 
+from constants import CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE
 from mysql_vm_helpers import (
     MySQL,
     MySQLResetRootPasswordAndStartMySQLDError,
     MySQLServiceNotRunningError,
     SnapServiceOperationError,
+    snap_service_operation,
 )
 
 
@@ -154,3 +156,66 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(4, _check_output.call_count)
         self.assertEqual(1, _snap_service_operation.call_count)
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
+
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_reconfigure_mysqld(self, _snap_cache):
+        """Test a successful execution of method reconfigure_mysqld."""
+        _charmed_mysql_mock = MagicMock()
+        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
+        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
+
+        self.mysql.reconfigure_mysqld()
+
+        _snap_cache.assert_called_once()
+
+        _charmed_mysql_mock._remove.assert_called_once()
+        _charmed_mysql_mock.ensure.assert_called_once()
+
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_snap_service_operation(self, _snap_cache):
+        """Test a successful execution of function snap_service_operation."""
+        _charmed_mysql_mock = MagicMock()
+        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
+        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
+
+        # Test start operation
+        snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+
+        _snap_cache.assert_called_once()
+        _charmed_mysql_mock.start.assert_called_once()
+        _charmed_mysql_mock.restart.assert_not_called()
+        _charmed_mysql_mock.stop.assert_not_called()
+
+        # Test restart operation
+        _snap_cache.reset_mock()
+        _charmed_mysql_mock.reset_mock()
+
+        snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart")
+
+        _snap_cache.assert_called_once()
+        _charmed_mysql_mock.start.assert_not_called()
+        _charmed_mysql_mock.restart.assert_called_once()
+        _charmed_mysql_mock.stop.assert_not_called()
+
+        # Test stop operation
+        _snap_cache.reset_mock()
+        _charmed_mysql_mock.reset_mock()
+
+        snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
+
+        _snap_cache.assert_called_once()
+        _charmed_mysql_mock.start.assert_not_called()
+        _charmed_mysql_mock.restart.assert_not_called()
+        _charmed_mysql_mock.stop.assert_called_once()
+
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_snap_service_operation_exception(self, _snap_cache):
+        """Test failure in execution of function snap_service_operation."""
+        _charmed_mysql_mock = MagicMock()
+        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
+        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
+
+        with self.assertRaises(SnapServiceOperationError):
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense")
+
+        _snap_cache.assert_not_called()
