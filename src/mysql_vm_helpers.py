@@ -16,14 +16,15 @@ from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
 from constants import (
-    MYSQL_APT_PACKAGE_NAME,
+    CHARMED_MYSQL,
+    CHARMED_MYSQL_COMMON_DIRECTORY,
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_SERVICE,
+    CHARMED_MYSQLSH,
     MYSQL_DATA_DIR,
-    MYSQL_SHELL_COMMON_DIRECTORY,
-    MYSQL_SHELL_SNAP_NAME,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_SOCK_FILE,
-    XTRABACKUP_SNAP_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,14 @@ class MySQLReconfigureError(Error):
 
 class MySQLDataPurgeError(Error):
     """Exception raised when there's an error purging data dir."""
+
+
+class MySQLResetRootPasswordAndStartMySQLDError(Error):
+    """Exception raised when there's an error resetting root password and starting mysqld."""
+
+
+class SnapServiceOperationError(Error):
+    """Exception raised when there's an error running an operation on a snap service."""
 
 
 class MySQL(MySQLBase):
@@ -80,24 +89,6 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def get_mysqlsh_bin() -> str:
-        """Determine binary path for MySQL Shell.
-
-        Returns:
-            Path to binary mysqlsh
-        """
-        # Allow for various versions of the mysql-shell snap
-        # When we get the alias use /snap/bin/mysqlsh
-        paths = ("/usr/bin/mysqlsh", "/snap/bin/mysqlsh", "/snap/bin/mysql-shell.mysqlsh")
-
-        for path in paths:
-            if os.path.exists(path):
-                return path
-
-        # Default to the full path version
-        return "/snap/bin/mysql-shell"
-
-    @staticmethod
     def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
 
@@ -107,6 +98,15 @@ class MySQL(MySQLBase):
             snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
         """
         try:
+            # install the charmed-mysql snap
+            logger.debug("Retrieving snap cache")
+            cache = snap.SnapCache()
+            charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+
+            if not charmed_mysql.present:
+                logger.debug("Installing charmed-mysql snap")
+                charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
+
             # create the mysqld config directory if it does not exist
             logger.debug("Copying custom mysqld config")
             pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
@@ -115,32 +115,12 @@ class MySQL(MySQLBase):
                 "templates/mysqld.cnf", f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
             )
 
-            # install mysql server
-            logger.debug("Updating apt")
-            apt.update()
-            logger.debug("Installing mysql server")
-            apt.add_package(MYSQL_APT_PACKAGE_NAME)
-
-            # install mysql shell if not already installed
-            logger.debug("Retrieving snap cache")
-            cache = snap.SnapCache()
-            mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
-            xtrabackup = cache[XTRABACKUP_SNAP_NAME]
-
-            if not mysql_shell.present:
-                logger.debug("Installing mysql shell snap")
-                mysql_shell.ensure(snap.SnapState.Latest, channel="edge")
-
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
-            if not os.path.exists(MYSQL_SHELL_COMMON_DIRECTORY):
+            if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
                 logger.debug("Creating mysql shell common directory")
-                mysqlsh_help_command = [MySQL.get_mysqlsh_bin(), "--help"]
+                mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
-            # install xtrabackup snap and connect system-files interface
-            if not xtrabackup.present:
-                logger.debug("Installing xtrabackup snap")
-                xtrabackup.ensure(snap.SnapState.Latest, channel="edge")
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
             raise
@@ -153,6 +133,60 @@ class MySQL(MySQLBase):
         except Exception as e:
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
+
+    def reset_root_password_and_start_mysqld(self) -> None:
+        """Reset the root user password and start mysqld."""
+        with tempfile.NamedTemporaryFile(
+            dir=MYSQLD_CONFIG_DIRECTORY,
+            prefix="z-custom-init-file.",
+            suffix=".cnf",
+            mode="w+",
+            encoding="utf-8",
+        ) as _custom_config_file:
+            with tempfile.NamedTemporaryFile(
+                dir=CHARMED_MYSQL_COMMON_DIRECTORY,
+                prefix="alter-root-user.",
+                suffix=".sql",
+                mode="w+",
+                encoding="utf-8",
+            ) as _sql_file:
+                _sql_file.write(
+                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';"
+                )
+                _sql_file.flush()
+
+                try:
+                    subprocess.check_output(
+                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _sql_file.name]
+                    )
+                except subprocess.CalledProcessError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError(
+                        "Failed to change permissions for temp SQL file"
+                    )
+
+                _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
+                _custom_config_file.flush()
+
+                try:
+                    subprocess.check_output(
+                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _custom_config_file.name]
+                    )
+                except subprocess.CalledProcessError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError(
+                        "Failed to change permissions for custom mysql config"
+                    )
+
+                try:
+                    snap_service_operation(
+                        CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+                    )
+                except SnapServiceOperationError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
+
+                try:
+                    self.wait_until_mysql_connection()
+                except MySQLServiceNotRunningError:
+                    raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
     @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
     def wait_until_mysql_connection(self) -> None:
@@ -175,13 +209,13 @@ class MySQL(MySQLBase):
             String representing the output of the mysqlsh command
         """
         # Use the self.mysqlsh_common_dir for the confined mysql-shell snap.
-        with tempfile.NamedTemporaryFile(mode="w", dir=MYSQL_SHELL_COMMON_DIRECTORY) as _file:
+        with tempfile.NamedTemporaryFile(mode="w", dir=CHARMED_MYSQL_COMMON_DIRECTORY) as _file:
             _file.write(script)
             _file.flush()
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            command = [MySQL.get_mysqlsh_bin(), "--no-wizard", "--python", "-f", _file.name]
+            command = [CHARMED_MYSQLSH, "--no-wizard", "--python", "-f", _file.name]
 
             try:
                 return subprocess.check_output(
@@ -202,11 +236,11 @@ class MySQL(MySQLBase):
             password: (optional) password to invoke the mysql cli script with
         """
         command = [
-            "mysql",
+            CHARMED_MYSQL,
             "-u",
             user,
             "--protocol=SOCKET",
-            "--socket=/var/run/mysqld/mysqld.sock",
+            f"--socket={CHARMED_MYSQL_COMMON_DIRECTORY}/mysql/mysqld.sock",
             "-e",
             script,
         ]
@@ -276,14 +310,16 @@ class MySQL(MySQLBase):
         Raises:
             MySQLReconfigureError: Error occurred when reconfiguring server package.
         """
-        bootstrap_command = ["dpkg-reconfigure", MYSQL_APT_PACKAGE_NAME]
+        logger.debug("Retrieving snap cache")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
 
-        logger.info("Reconfiguring mysql-server package")
-        try:
-            subprocess.check_call(bootstrap_command)
-        except subprocess.CalledProcessError:
-            logger.debug("Failed to reconfigure package")
-            raise MySQLReconfigureError("Failed to reconfigure mysql-server")
+        if charmed_mysql.present:
+            logger.debug("Uninstalling charmed-mysql snap")
+            charmed_mysql._remove()
+
+        logger.debug("Installing charmed-mysql snap")
+        charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
 
 
 def is_data_dir_attached() -> bool:
@@ -318,7 +354,7 @@ def write_content_to_file(
     path: str,
     content: str,
     owner: str = MYSQL_SYSTEM_USER,
-    group: str = MYSQL_SYSTEM_USER,
+    group: str = "root",
     permission: int = 0o640,
 ) -> None:
     """Write content to file.
@@ -335,3 +371,39 @@ def write_content_to_file(
 
     shutil.chown(path, owner, group)
     os.chmod(path, mode=permission)
+
+
+def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
+    """Helper function to run an operation on a snap service.
+
+    Args:
+        snapname: The name of the snap
+        service: The name of the service
+        operation: The name of the operation (restart, start, stop)
+
+    Returns:
+        a bool indicating if the operation was successful.
+    """
+    if operation not in ["restart", "start", "stop"]:
+        raise SnapServiceOperationError(f"Invalid snap service operation {operation}")
+
+    try:
+        cache = snap.SnapCache()
+        selected_snap = cache[snapname]
+
+        if not selected_snap.present:
+            raise SnapServiceOperationError(f"Snap {snapname} not installed")
+
+        if operation == "restart":
+            selected_snap.restart(services=[service])
+            return selected_snap.services[service]["active"]
+        elif operation == "start":
+            selected_snap.start(services=[service])
+            return selected_snap.services[service]["active"]
+        else:
+            selected_snap.stop(services=[service])
+            return not selected_snap.services[service]["active"]
+    except snap.SnapError:
+        error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"
+        logger.exception(error_message)
+        raise SnapServiceOperationError(error_message)

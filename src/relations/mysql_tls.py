@@ -24,6 +24,7 @@ from ops.model import MaintenanceStatus
 
 from constants import (
     MYSQL_DATA_DIR,
+    MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
     TLS_RELATION,
     TLS_SSL_CA_FILE,
@@ -243,7 +244,7 @@ class MySQLTLS(Object):
         write_content_to_file(
             f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-tls.cnf",
             config_string,
-            owner="root",
+            owner=MYSQL_SYSTEM_USER,
             group="root",
             permission=0o644,
         )

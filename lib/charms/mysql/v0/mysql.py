@@ -90,7 +90,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 14
+LIBPATCH = 15
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -302,7 +302,9 @@ class MySQLBase(ABC):
 
         try:
             logger.debug(f"Configuring MySQL users for {self.instance_address}")
-            self._run_mysqlcli_script("; ".join(create_root_user_commands))
+            self._run_mysqlcli_script(
+                "; ".join(create_root_user_commands), password=self.root_password
+            )
             # run configure users commands with newly created root user
             self._run_mysqlcli_script(
                 "; ".join(configure_users_commands), password=self.root_password

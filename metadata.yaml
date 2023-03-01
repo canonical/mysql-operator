@@ -38,6 +38,6 @@ storage:
   database:
     type: filesystem
     description: Persistent storage for MySQL data
-    location: /var/lib/mysql
+    location: /var/snap/charmed-mysql/common/mysql/data
 assumes:
   - juju

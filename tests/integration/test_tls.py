@@ -147,9 +147,11 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     for unit in all_units:
         original_tls[unit.name] = {}
         original_tls[unit.name]["cert"] = await unit_file_md5(
-            ops_test, unit.name, f"/var/lib/mysql/{TLS_SSL_CERT_FILE}"
+            ops_test, unit.name, f"/var/snap/charmed-mysql/common/mysql/data/{TLS_SSL_CERT_FILE}"
         )
-        original_tls[unit.name]["mysql_pid"] = await get_process_pid(ops_test, unit.name, "mysqld")
+        original_tls[unit.name]["mysql_pid"] = await get_process_pid(
+            ops_test, unit.name, "mysqld_safe"
+        )
 
     # set key using auto-generated key for each unit
     # not asserting actions run due false positives on CI
@@ -166,9 +168,9 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     # made; then the certificates should be available and updated.
     for unit in all_units:
         new_cert_md5 = await unit_file_md5(
-            ops_test, unit.name, f"/var/lib/mysql/{TLS_SSL_CERT_FILE}"
+            ops_test, unit.name, f"/var/snap/charmed-mysql/common/mysql/data/{TLS_SSL_CERT_FILE}"
         )
-        new_mysql_pid = await get_process_pid(ops_test, unit.name, "mysqld")
+        new_mysql_pid = await get_process_pid(ops_test, unit.name, "mysqld_safe")
 
         assert (
             new_cert_md5 != original_tls[unit.name]["cert"]
