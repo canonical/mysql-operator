@@ -98,7 +98,7 @@ class TestMySQL(unittest.TestCase):
         self.mysql.reset_root_password_and_start_mysqld()
 
         self.assertEqual(2, _named_temporary_file.call_count)
-        self.assertEqual(4, _check_output.call_count)
+        self.assertEqual(2, _check_output.call_count)
         self.assertEqual(1, _snap_service_operation.call_count)
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
 
@@ -136,7 +136,7 @@ class TestMySQL(unittest.TestCase):
             self.mysql.reset_root_password_and_start_mysqld()
 
         self.assertEqual(2, _named_temporary_file.call_count)
-        self.assertEqual(4, _check_output.call_count)
+        self.assertEqual(2, _check_output.call_count)
         self.assertEqual(1, _snap_service_operation.call_count)
         self.assertEqual(0, _wait_until_mysql_connection.call_count)
 
@@ -153,7 +153,7 @@ class TestMySQL(unittest.TestCase):
             self.mysql.reset_root_password_and_start_mysqld()
 
         self.assertEqual(2, _named_temporary_file.call_count)
-        self.assertEqual(4, _check_output.call_count)
+        self.assertEqual(2, _check_output.call_count)
         self.assertEqual(1, _snap_service_operation.call_count)
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
 

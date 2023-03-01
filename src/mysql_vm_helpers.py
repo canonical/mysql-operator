@@ -16,9 +16,11 @@ from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
 from constants import (
+    CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
+    CHARMED_MYSQLSH,
     MYSQL_DATA_DIR,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
@@ -143,7 +145,7 @@ class MySQL(MySQLBase):
         ) as _custom_config_file:
             with tempfile.NamedTemporaryFile(
                 dir=CHARMED_MYSQL_COMMON_DIRECTORY,
-                prefix="alter-root-user",
+                prefix="alter-root-user.",
                 suffix=".sql",
                 mode="w+",
                 encoding="utf-8",
@@ -154,7 +156,6 @@ class MySQL(MySQLBase):
                 _sql_file.flush()
 
                 try:
-                    subprocess.check_output(["sudo", "chmod", "644", _sql_file.name])
                     subprocess.check_output(
                         ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _sql_file.name]
                     )
@@ -170,7 +171,6 @@ class MySQL(MySQLBase):
                     subprocess.check_output(
                         ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _custom_config_file.name]
                     )
-                    subprocess.check_output(["sudo", "chmod", "644", _custom_config_file.name])
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for custom mysql config"
@@ -215,7 +215,7 @@ class MySQL(MySQLBase):
 
             # Specify python as this is not the default in the deb version
             # of the mysql-shell snap
-            command = ["charmed-mysql.mysqlsh", "--no-wizard", "--python", "-f", _file.name]
+            command = [CHARMED_MYSQLSH, "--no-wizard", "--python", "-f", _file.name]
 
             try:
                 return subprocess.check_output(
@@ -236,11 +236,11 @@ class MySQL(MySQLBase):
             password: (optional) password to invoke the mysql cli script with
         """
         command = [
-            "charmed-mysql.mysql",
+            CHARMED_MYSQL,
             "-u",
             user,
             "--protocol=SOCKET",
-            "--socket=/var/snap/charmed-mysql/common/mysql/mysqld.sock",
+            f"--socket={CHARMED_MYSQL_COMMON_DIRECTORY}/mysql/mysqld.sock",
             "-e",
             script,
         ]
@@ -403,7 +403,7 @@ def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
         else:
             selected_snap.stop(services=[service])
             return not selected_snap.services[service]["active"]
-    except snap.SnapError as e:
+    except snap.SnapError:
         error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"
-        logger.exception(error_message, exc_info=e)
+        logger.exception(error_message)
         raise SnapServiceOperationError(error_message)
