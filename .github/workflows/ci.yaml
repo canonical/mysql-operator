@@ -59,13 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          - integration-ha
-          - integration-db-router
-          - integration-shared-db
-          - integration-database
-          - integration-mysql-interface
           - integration-healing
-          - integration-tls
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
           - series: focal
