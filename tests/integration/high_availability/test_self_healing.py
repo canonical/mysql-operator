@@ -48,6 +48,7 @@ MYSQL_DAEMON = "mysqld"
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.unstable
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build and deploy."""
     await high_availability_test_setup(ops_test, mysql_charm_series)
