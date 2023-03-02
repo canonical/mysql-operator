@@ -180,7 +180,7 @@ class DBRouterRelation(Object):
             return
 
         try:
-            primary_address = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
         except MySQLGetClusterPrimaryAddressError:
             logger.error("Can't get primary address. Deferring")
             event.defer()
