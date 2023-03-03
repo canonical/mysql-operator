@@ -39,6 +39,7 @@ class TestMariaDBRelation(unittest.TestCase):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
+        self.charm.unit_peer_data["unit-initialized"] = "True"
         self.harness.update_config(
             {"mysql-interface-user": "mysql", "mysql-interface-database": "default_database"}
         )
