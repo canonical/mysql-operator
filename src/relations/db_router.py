@@ -208,6 +208,11 @@ class DBRouterRelation(Object):
         if not self.charm.unit.is_leader():
             return
 
+        # wait until the unit is initialized
+        if not self.charm.unit_peer_data.get("unit-initialized"):
+            event.defer()
+            return
+
         logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
 
         changed_unit_databag = event.relation.data.get(event.unit)
