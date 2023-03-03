@@ -9,8 +9,15 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+from typing import Dict, List, Tuple
 
-from charms.mysql.v0.mysql import Error, MySQLBase, MySQLClientError
+from charms.mysql.v0.mysql import (
+    Error,
+    MySQLBase,
+    MySQLClientError,
+    MySQLExecError,
+    MySQLGetInnoDBBufferPoolParametersError,
+)
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
@@ -42,6 +49,14 @@ class MySQLDataPurgeError(Error):
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
     """Exception raised when there's an error resetting root password and starting mysqld."""
+
+
+class MySQLChangeSnapDaemonHomeDirectoryError(Error):
+    """Exception raised when there's an issue changing the home dir for snap_daemon."""
+
+
+class MySQLCreateCustomMySQLDConfigError(Error):
+    """Exception raised when there's an error creating custom mysqld config."""
 
 
 class SnapServiceOperationError(Error):
@@ -105,14 +120,6 @@ class MySQL(MySQLBase):
                 logger.debug("Installing charmed-mysql snap")
                 charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
 
-            # create the mysqld config directory if it does not exist
-            logger.debug("Copying custom mysqld config")
-            pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
-            # target file has prefix 'z-' to ensure priority over the default mysqld config file
-            shutil.copyfile(
-                "templates/mysqld.cnf", f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
-            )
-
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
                 logger.debug("Creating mysql shell common directory")
@@ -131,6 +138,52 @@ class MySQL(MySQLBase):
         except Exception as e:
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
+
+    def change_snap_daemon_home_directory(self) -> None:
+        """Change the snap_daemon home directory to a directory that exists.
+
+        This is done as a fix to ensure that subprocess.call with the snap_daemon
+        user does not throw an exception (due to its home dir not existing).
+        """
+        try:
+            command = f"sudo usermod -d / {MYSQL_SYSTEM_USER}".split()
+            self._execute_commands(command)
+        except MySQLExecError:
+            error_message = f"Failed to change the home directory for {MYSQL_SYSTEM_USER}"
+            logger.exception(error_message)
+            raise MySQLChangeSnapDaemonHomeDirectoryError(error_message)
+
+    def create_custom_mysqld_config(self) -> None:
+        """Create custom mysql config file.
+
+        Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
+            custom mysqld config
+        """
+        try:
+            (
+                innodb_buffer_pool_size,
+                innodb_buffer_pool_chunk_size,
+            ) = self.get_innodb_buffer_pool_parameters()
+        except MySQLGetInnoDBBufferPoolParametersError:
+            raise MySQLCreateCustomMySQLDConfigError("Failed to computer innodb buffer pool size")
+
+        content = [
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+        ]
+
+        if innodb_buffer_pool_chunk_size:
+            content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+        content.append("")
+
+        # create the mysqld config directory if it does not exist
+        logger.debug("Copying custom mysqld config")
+        pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
+
+        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+") as config_file:
+            config_file.write("\n".join(content))
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
@@ -196,6 +249,83 @@ class MySQL(MySQLBase):
         """
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError()
+
+    def _get_total_memory(self) -> None:
+        """Retrieves the total memory of the server where mysql is running."""
+        return super(MySQL, self)._get_total_memory(
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def execute_backup_commands(
+        self,
+        s3_bucket: str,
+        s3_directory: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+    ) -> Tuple[str, str]:
+        """Executes commands to create a backup."""
+        return super(MySQL, self).execute_backup_commands(
+            s3_bucket,
+            s3_directory,
+            s3_access_key,
+            s3_secret_key,
+            s3_endpoint,
+            "/snap/bin/charmed-mysql.xtrabackup",
+            "/snap/bin/charmed-mysql.xbcloud",
+            "/snap/charmed-mysql/current/usr/lib/xtrabackup/plugin/",
+            "/var/snap/charmed-mysql/common/mysql/mysqld.sock",
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql/mysql.cnf",
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def delete_temp_backup_directory(self) -> None:
+        """Delete the temp backup directory."""
+        super(MySQL, self).delete_temp_backup_directory(
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def _execute_commands(
+        self,
+        commands: List[str],
+        bash: bool = False,
+        user: str = None,
+        group: str = None,
+        env: Dict = {},
+    ) -> Tuple[str, str]:
+        """Execute commands on the server where mysql is running.
+
+        Args:
+            commands: a list containing the commands to execute
+            bash: whether to run the commands with bash
+            user: the user with which to execute the commands
+            group: the group with which to execute the commands
+            env: the environment variables to execute the commands with
+
+        Returns: the (stdout, stderr) of the commands
+
+        Raises: MySQLExecError if there was an error executing the commands
+        """
+        try:
+            if bash:
+                commands = ["bash", "-c", " ".join(commands)]
+
+            stdout = subprocess.check_output(
+                commands,
+                user=user,
+                group=group,
+                env=env,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+            ).strip()
+            return (stdout, "")
+        except subprocess.CalledProcessError as e:
+            raise MySQLExecError(e.stderr)
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.

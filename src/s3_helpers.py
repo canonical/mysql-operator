@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Helpers to manage interactions with S3."""
+
+import logging
+import tempfile
+from typing import Dict, List
+
+import boto3
+
+logger = logging.getLogger(__name__)
+
+
+def upload_content_to_s3(content: str, content_path: str, s3_parameters: Dict) -> bool:
+    """Uploads the provided contents to the provided S3 bucket.
+
+    Args:
+        content: The content to upload to S3
+        content_path: The path to which to upload the content
+        s3_parameters: A dictionary containing the S3 parameters
+            The following are expected keys in the dictionary: bucket, region,
+            endpoint, access-key and secret-key
+
+    Returns: a boolean indicating success.
+    """
+    try:
+        logger.info(f"Uploading content to bucket={s3_parameters['bucket']}, path={content_path}")
+        session = boto3.session.Session(
+            aws_access_key_id=s3_parameters["access-key"],
+            aws_secret_access_key=s3_parameters["secret-key"],
+            region_name=s3_parameters["region"],
+        )
+
+        s3 = session.resource("s3", endpoint_url=s3_parameters["endpoint"])
+        bucket = s3.Bucket(s3_parameters["bucket"])
+
+        with tempfile.NamedTemporaryFile() as temp_file:
+            temp_file.write(content.encode("utf-8"))
+            temp_file.flush()
+
+            bucket.upload_file(temp_file.name, content_path)
+    except Exception as e:
+        logger.exception(
+            f"Failed to upload content to S3 bucket={s3_parameters['bucket']}, path={content_path}",
+            exc_info=e,
+        )
+        return False
+
+    return True
+
+
+def list_backups_in_s3_path(s3_parameters: Dict) -> List[str]:
+    """Retrieve subdirectories in an S3 path.
+
+    Args:
+        s3_parameters: A dictionary containing the S3 parameters
+            The following are expected keys in the dictionary: bucket, path,
+            region, endpoint, access-key and secret-key
+
+    Returns: a list of subdirectories directly after the S3 path.
+
+    Raises: any exception raised by boto3
+    """
+    try:
+        logger.info(
+            f"Listing subdirectories from S3 bucket={s3_parameters['bucket']}, path={s3_parameters['path']}"
+        )
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=s3_parameters["access-key"],
+            aws_secret_access_key=s3_parameters["secret-key"],
+            endpoint_url=s3_parameters["endpoint"],
+            region_name=s3_parameters["region"],
+        )
+        list_objects_v2_paginator = s3_client.get_paginator("list_objects_v2")
+        s3_path_directory = (
+            s3_parameters["path"]
+            if s3_parameters["path"][-1] == "/"
+            else f"{s3_parameters['path']}/"
+        )
+
+        directories = []
+        for page in list_objects_v2_paginator.paginate(
+            Bucket=s3_parameters["bucket"],
+            Prefix=s3_path_directory,
+            Delimiter="/",
+        ):
+            for content in page.get("Contents", []):
+                key = content["Key"]
+                if ".md5" in key:
+                    directories.append(
+                        key.lstrip(s3_path_directory).split("/")[0].split(".md5")[0]
+                    )
+
+        return directories
+    except Exception as e:
+        logger.exception(
+            f"Failed to list subdirectories in S3 bucket={s3_parameters['bucket']}, path={s3_parameters['path']}",
+            exc_info=e,
+        )
+        raise
+
+
+def fetch_and_check_existence_of_s3_path(s3_parameters: Dict, path: str) -> bool:
+    """Checks the existence of a provided S3 path by fetching the object.
+
+    Args:
+        s3_parameters: A dictionary containing the S3 parameters
+            The following are expected keys in the dictionary: bucket, region,
+            endpoint, access-key and secret-key
+        path: The path to check the existence of
+
+    Returns: a boolean indicating the existence of the s3 path
+
+    Raises: any exceptions raised by boto3
+    """
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=s3_parameters["access-key"],
+        aws_secret_access_key=s3_parameters["secret-key"],
+        endpoint_url=s3_parameters["endpoint"],
+        region_name=s3_parameters["region"],
+    )
+
+    try:
+        response = s3_client.get_object(Bucket=s3_parameters["bucket"], Key=path)
+        return "ContentLength" in response  # return True even if object is empty
+    except s3_client.exceptions.NoSuchKey:
+        return False
+    except Exception as e:
+        logger.exception(
+            f"Failed to fetch and check existence of path {path} in S3 bucket {s3_parameters['bucket']}",
+            exc_info=e,
+        )
+        raise

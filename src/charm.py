@@ -7,6 +7,7 @@
 import logging
 from typing import Dict, Optional
 
+from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -43,6 +44,7 @@ from tenacity import (
     wait_fixed,
 )
 
+from backups import MySQLBackups
 from constants import (
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
@@ -53,11 +55,14 @@ from constants import (
     REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
+    S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
 from mysql_vm_helpers import (
     MySQL,
+    MySQLChangeSnapDaemonHomeDirectoryError,
+    MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
@@ -106,6 +111,8 @@ class MySQLOperatorCharm(CharmBase):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+        self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
+        self.backups = MySQLBackups(self, self.s3_integrator)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -183,6 +190,12 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
+            return
+        except MySQLChangeSnapDaemonHomeDirectoryError:
+            self.unit.status = BlockedStatus("Failed to change home dir for snap_daemon")
+            return
+        except MySQLCreateCustomMySQLDConfigError:
+            self.unit.status = BlockedStatus("Failed to create custom mysqld config")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -528,8 +541,9 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        self._mysql.change_snap_daemon_home_directory()
+        self._mysql.create_custom_mysqld_config()
         self._mysql.reset_root_password_and_start_mysqld()
-
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
@@ -611,6 +625,10 @@ class MySQLOperatorCharm(CharmBase):
             return BlockedStatus("Failed to purge data dir")
         except MySQLResetRootPasswordAndStartMySQLDError:
             return BlockedStatus("Failed to reset root password")
+        except MySQLChangeSnapDaemonHomeDirectoryError:
+            return BlockedStatus("Failed to change home dir for snap_daemon")
+        except MySQLCreateCustomMySQLDConfigError:
+            return BlockedStatus("Failed to create custom mysqld config")
         except SnapServiceOperationError as e:
             return BlockedStatus(e.message)
 

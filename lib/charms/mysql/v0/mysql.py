@@ -70,7 +70,7 @@ import logging
 import re
 import socket
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tenacity import (
     retry,
@@ -220,6 +220,25 @@ class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
     We check if an instance is in offline_mode and hidden from mysql-router to determine
     this.
     """
+
+
+class MySQLGetInnoDBBufferPoolParametersError(Error):
+    """Exception raised when there is an error computing the innodb buffer pool parameters."""
+
+
+class MySQLExecuteBackupCommandsError(Error):
+    """Exception raised when there is an error executing the backup commands.
+
+    The backup commands are executed in the workload container using the pebble API.
+    """
+
+
+class MySQLDeleteTempBackupDirectoryError(Error):
+    """Exception raised when there is an error deleting the temp backup directory."""
+
+
+class MySQLExecError(Error):
+    """Exception raised when there is an error executing commands on the mysql server."""
 
 
 class MySQLBase(ABC):
@@ -1252,6 +1271,186 @@ class MySQLBase(ABC):
             raise MySQLOfflineModeAndHiddenInstanceExistsError("Failed to parse command output")
 
         return matches.group(1) != "0"
+
+    def get_innodb_buffer_pool_parameters(self) -> Tuple[int, Optional[int]]:
+        """Get innodb buffer pool parameters for the instance.
+
+        Returns: a tuple of (innodb_buffer_pool_size, optional(innodb_buffer_pool_chunk_size))
+        """
+        # Reference: based off xtradb-cluster-operator
+        # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L31-L54
+
+        chunk_size_min = 1048576  # 1 mebibyte
+        chunk_size_default = 134217728  # 128 mebibytes
+
+        try:
+            innodb_buffer_pool_chunk_size = None
+            total_memory = self._get_total_memory()
+
+            pool_size = int(total_memory * 0.75)
+            # 1000000000 = 1 gigabyte
+            if total_memory - pool_size < 1000000000:
+                pool_size = int(total_memory * 0.5)
+
+            if pool_size % chunk_size_default != 0:
+                # round pool_size to be a multiple of chunk_size_default
+                pool_size += chunk_size_default - (pool_size % chunk_size_default)
+
+            # 1073741824 = 1 gibibyte
+            if pool_size > 1073741824:
+                chunk_size = int(pool_size / 8)
+
+                if chunk_size % chunk_size_min != 0:
+                    # round chunk_size to a multiple of chunk_size_min
+                    chunk_size += chunk_size_min - (chunk_size % chunk_size_min)
+
+                pool_size = chunk_size * 8
+
+                innodb_buffer_pool_chunk_size = chunk_size
+
+            return (pool_size, innodb_buffer_pool_chunk_size)
+        except Exception as e:
+            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
+            raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
+
+    def _get_total_memory(self, user: str = None, group: str = None) -> int:
+        """Retrieves the total memory of the server where mysql is running."""
+        try:
+            logger.info("Retrieving the total memory of the server")
+
+            """Below is an example output of `free --bytes`:
+               total        used        free      shared  buff/cache   available
+Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
+Swap:     1027600384  1027600384           0
+            """
+            # need to use sh -c to be able to use pipes
+            get_total_memory_command = "free --bytes | sed -n '2p' | awk '{print $2}'".split()
+
+            total_memory, _ = self._execute_commands(
+                get_total_memory_command,
+                bash=True,
+                user=user,
+                group=group,
+            )
+            return int(total_memory)
+        except MySQLExecError:
+            logger.exception("Failed to execute commands to query total memory")
+            raise
+
+    def execute_backup_commands(
+        self,
+        s3_bucket: str,
+        s3_directory: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+        xtrabackup_location: str,
+        xbcloud_location: str,
+        xtrabackup_plugin_dir: str,
+        mysqld_socket_file: str,
+        tmp_base_directory: str,
+        defaults_file: str,
+        user: str = None,
+        group: str = None,
+    ) -> Tuple[str, str]:
+        """Executes commands to create a backup with the given args."""
+        nproc_command = "nproc".split()
+        make_temp_dir_command = f"mktemp --directory {tmp_base_directory}/xtra_backup_XXXX".split()
+
+        try:
+            nproc, _ = self._execute_commands(nproc_command, user=user, group=group)
+            tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
+        except MySQLExecError as e:
+            logger.exception("Failed to execute commands prior to running backup")
+            raise MySQLExecuteBackupCommandsError(e.message)
+        except Exception as e:
+            # Catch all other exceptions to prevent the database being stuck in
+            # a bad state due to pre-backup operations
+            logger.exception("Failed to execute commands prior to running backup")
+            raise MySQLExecuteBackupCommandsError(e)
+
+        # TODO: remove flags --no-server-version-check
+        # when MySQL and XtraBackup versions are in sync
+        xtrabackup_commands = f"""
+{xtrabackup_location} --defaults-file={defaults_file}
+            --defaults-group=mysqld
+            --no-version-check
+            --parallel={nproc}
+            --user={self.server_config_user}
+            --password={self.server_config_password}
+            --socket={mysqld_socket_file}
+            --lock-ddl
+            --backup
+            --stream=xbstream
+            --xtrabackup-plugin-dir={xtrabackup_plugin_dir}
+            --target-dir={tmp_dir}
+            --no-server-version-check
+    | {xbcloud_location} put
+            --curl-retriable-errors=7
+            --insecure
+            --storage=s3
+            --parallel=10
+            --md5
+            --s3-bucket={s3_bucket}
+            --s3-endpoint={s3_endpoint}
+            {s3_directory}
+""".split()
+
+        try:
+            # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
+            stdout, stderr = self._execute_commands(
+                xtrabackup_commands,
+                bash=True,
+                user=user,
+                group=group,
+                env={
+                    "ACCESS_KEY_ID": s3_access_key,
+                    "SECRET_ACCESS_KEY": s3_secret_key,
+                },
+            )
+            return (stdout, stderr)
+        except MySQLExecError as e:
+            logger.exception("Failed to execute backup commands")
+            raise MySQLExecuteBackupCommandsError(e.message)
+        except Exception as e:
+            # Catch all other exceptions to prevent the database being stuck in
+            # a bad state due to pre-backup operations
+            logger.exception("Failed to execute backup commands")
+            raise MySQLExecuteBackupCommandsError(e)
+
+    def delete_temp_backup_directory(
+        self,
+        tmp_base_directory: str,
+        user: str = None,
+        group: str = None,
+    ) -> None:
+        """Delete the temp backup directory."""
+        delete_temp_dir_command = f"find {tmp_base_directory} -wholename {tmp_base_directory}/xtra_backup_* -delete".split()
+
+        try:
+            self._execute_commands(
+                delete_temp_dir_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to delete temp backup directory")
+            raise MySQLDeleteTempBackupDirectoryError(e.message)
+        except Exception as e:
+            logger.exception("Failed to delete temp backup directory")
+            raise MySQLDeleteTempBackupDirectoryError(e)
+
+    @abstractmethod
+    def _execute_commands(
+        self,
+        commands: List[str],
+        bash: bool = False,
+        user: str = None,
+        group: str = None,
+        env: Dict = {},
+    ) -> Tuple[str, str]:
+        """Execute commands on the server where MySQL is running."""
+        raise NotImplementedError
 
     @abstractmethod
     def wait_until_mysql_connection(self) -> None:
