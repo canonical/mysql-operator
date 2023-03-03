@@ -75,10 +75,8 @@ jobs:
           - integration-tls
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
-          - series: focal
-            bases-index: 0
           - series: jammy
-            bases-index: 1
+            bases-index: 0
     name: ${{ matrix.tox-environments }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - lib-check
