@@ -523,10 +523,10 @@ class MySQLOperatorCharm(CharmBase):
             raise RuntimeError("Unknown secret scope.")
 
     @property
-    def active_status_message(self):
+    def active_status_message(self) -> Optional[str]:
         """Active status message."""
-        role = self.unit_peer_data.get("member-role")
-        return f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}"
+        if self.unit_peer_data.get("member-role") == "primary":
+            return "Primary"
 
     def _workload_initialise(self) -> None:
         """Workload initialisation commands.
