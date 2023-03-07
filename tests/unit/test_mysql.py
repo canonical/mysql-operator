@@ -18,8 +18,12 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
+    MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteUserForRelationError,
     MySQLDeleteUsersForUnitError,
+    MySQLExecError,
+    MySQLExecuteBackupCommandsError,
+    MySQLGetInnoDBBufferPoolParametersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLRemoveInstanceError,
@@ -941,6 +945,211 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
+    def test_get_innodb_buffer_pool_parameters(self, _get_total_memory):
+        """Test the successful execution of get_innodb_buffer_pool_parameters()."""
+        _get_total_memory.return_value = 16484458496
+
+        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
+        self.assertEqual(12482248704, pool_size)
+        self.assertEqual(1560281088, chunk_size)
+
+        _get_total_memory.return_value = 3221000000
+        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
+        self.assertEqual(1610612736, pool_size)
+        self.assertEqual(201326592, chunk_size)
+
+        _get_total_memory.return_value = 1073741825
+        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
+        self.assertEqual(536870912, pool_size)
+        self.assertIsNone(chunk_size)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
+    def test_get_innodb_buffer_pool_parameters_exception(self, _get_total_memory):
+        """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
+        _get_total_memory.side_effect = MySQLExecError
+
+        with self.assertRaises(MySQLGetInnoDBBufferPoolParametersError):
+            self.mysql.get_innodb_buffer_pool_parameters()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_get_total_memory(self, _execute_commands):
+        """Test successful execution of _get_total_memory()."""
+        _execute_commands.return_value = "16484458496\n", None
+
+        total_memory = self.mysql._get_total_memory(user="test_user", group="test_group")
+
+        self.assertEqual(16484458496, total_memory)
+
+        _execute_commands.assert_called_once_with(
+            "free --bytes | sed -n '2p' | awk '{print $2}'".split(),
+            bash=True,
+            user="test_user",
+            group="test_group",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_get_total_memory_exception(self, _execute_commands):
+        """Test a failure in execution of _get_total_memory()."""
+        _execute_commands.side_effect = MySQLExecError
+
+        with self.assertRaises(MySQLExecError):
+            self.mysql._get_total_memory()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_execute_backup_commands(self, _execute_commands):
+        """Test successful execution of execute_backup_commands()."""
+        _execute_commands.side_effect = [
+            ("16", None),
+            ("/tmp/base/directory/xtra_backup_ABCD", None),
+            ("stdout", "stderr"),
+        ]
+
+        stdout, stderr = self.mysql.execute_backup_commands(
+            "s3_bucket",
+            "s3_directory",
+            "s3_access_key",
+            "s3_secret_key",
+            "s3_endpoint",
+            "/xtrabackup/location",
+            "/xbcloud/location",
+            "/xtrabackup/plugin/dir",
+            "/mysqld/socket/file.sock",
+            "/tmp/base/directory",
+            "/defaults/file.cnf",
+            user="test_user",
+            group="test_group",
+        )
+
+        self.assertEqual(stdout, "stdout")
+        self.assertEqual(stderr, "stderr")
+
+        self.assertEqual(_execute_commands.call_count, 3)
+
+        _expected_nproc_commands = ["nproc"]
+        _expected_tmp_dir_commands = (
+            "mktemp --directory /tmp/base/directory/xtra_backup_XXXX".split()
+        )
+        _expected_xtrabackup_commands = """
+/xtrabackup/location --defaults-file=/defaults/file.cnf
+            --defaults-group=mysqld
+            --no-version-check
+            --parallel=16
+            --user=serverconfig
+            --password=serverconfigpassword
+            --socket=/mysqld/socket/file.sock
+            --lock-ddl
+            --backup
+            --stream=xbstream
+            --xtrabackup-plugin-dir=/xtrabackup/plugin/dir
+            --target-dir=/tmp/base/directory/xtra_backup_ABCD
+            --no-server-version-check
+    | /xbcloud/location put
+            --curl-retriable-errors=7
+            --insecure
+            --storage=s3
+            --parallel=10
+            --md5
+            --s3-bucket=s3_bucket
+            --s3-endpoint=s3_endpoint
+            s3_directory
+""".split()
+
+        self.assertEqual(
+            sorted(_execute_commands.mock_calls),
+            sorted(
+                [
+                    call(_expected_nproc_commands, user="test_user", group="test_group"),
+                    call(_expected_tmp_dir_commands, user="test_user", group="test_group"),
+                    call(
+                        _expected_xtrabackup_commands,
+                        bash=True,
+                        user="test_user",
+                        group="test_group",
+                        env={
+                            "ACCESS_KEY_ID": "s3_access_key",
+                            "SECRET_ACCESS_KEY": "s3_secret_key",
+                        },
+                    ),
+                ]
+            ),
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_execute_backup_commands_exceptions(self, _execute_commands):
+        """Test a failure in the execution of execute_backup_commands()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        args = [
+            "s3_bucket",
+            "s3_directory",
+            "s3_access_key",
+            "s3_secret_key",
+            "s3_endpoint",
+            "/xtrabackup/location",
+            "/xbcloud/location",
+            "/xtrabackup/plugin/dir",
+            "/mysqld/socket/file.sock",
+            "/tmp/base/directory",
+            "/defaults/file.cnf",
+        ]
+        kwargs = {
+            "user": "test_user",
+            "group": "test_group",
+        }
+
+        with self.assertRaises(MySQLExecuteBackupCommandsError):
+            self.mysql.execute_backup_commands(*args, **kwargs)
+
+        _execute_commands.side_effect = Exception("failure")
+
+        with self.assertRaises(MySQLExecuteBackupCommandsError):
+            self.mysql.execute_backup_commands(*args, **kwargs)
+
+        _execute_commands.side_effect = [
+            ("16", None),
+            ("/tmp/base/directory/xtra_backup_ABCD", None),
+            MySQLExecError("failure"),
+        ]
+
+        with self.assertRaises(MySQLExecuteBackupCommandsError):
+            self.mysql.execute_backup_commands(*args, **kwargs)
+
+        _execute_commands.side_effect = [
+            ("16", None),
+            ("/tmp/base/directory/xtra_backup_ABCD", None),
+            Exception("failure"),
+        ]
+
+        with self.assertRaises(MySQLExecuteBackupCommandsError):
+            self.mysql.execute_backup_commands(*args, **kwargs)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_delete_temp_backup_directory(self, _execute_commands):
+        """Test successful execution of delete_temp_backup_directory()."""
+        self.mysql.delete_temp_backup_directory(
+            "/temp/base/directory", user="test_user", group="test_group"
+        )
+
+        _execute_commands.assert_called_once_with(
+            "find /temp/base/directory -wholename /temp/base/directory/xtra_backup_* -delete".split(),
+            user="test_user",
+            group="test_group",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_delete_temp_backup_directory_exception(self, _execute_commands):
+        """Test a failure in execution of delete_temp_backup_directory()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        with self.assertRaises(MySQLDeleteTempBackupDirectoryError):
+            self.mysql.delete_temp_backup_directory("/temp/backup/directory")
+
+        _execute_commands.side_effect = Exception("failure")
+
+        with self.assertRaises(MySQLDeleteTempBackupDirectoryError):
+            self.mysql.delete_temp_backup_directory("/temp/backup/directory")
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):
@@ -951,3 +1160,6 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(NotImplementedError):
             self.mysql._run_mysqlcli_script("")
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql._execute_commands([])

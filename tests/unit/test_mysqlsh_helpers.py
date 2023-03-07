@@ -5,13 +5,24 @@
 
 import subprocess
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
-from charms.mysql.v0.mysql import MySQLClientError
+from charms.mysql.v0.mysql import (
+    MySQLClientError,
+    MySQLExecError,
+    MySQLGetInnoDBBufferPoolParametersError,
+)
 
-from constants import CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE
+from constants import (
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_SERVICE,
+    MYSQL_SYSTEM_USER,
+    MYSQLD_CONFIG_DIRECTORY,
+)
 from mysql_vm_helpers import (
     MySQL,
+    MySQLChangeSnapDaemonHomeDirectoryError,
+    MySQLCreateCustomMySQLDConfigError,
     MySQLResetRootPasswordAndStartMySQLDError,
     MySQLServiceNotRunningError,
     SnapServiceOperationError,
@@ -219,3 +230,106 @@ class TestMySQL(unittest.TestCase):
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense")
 
         _snap_cache.assert_not_called()
+
+    @patch("mysql_vm_helpers.MySQL._execute_commands")
+    def test_change_snap_daemon_home_directory(self, _execute_commands):
+        """Test successful execution of change_snap_daemon_home_directory()."""
+        self.mysql.change_snap_daemon_home_directory()
+
+        _execute_commands.assert_called_once_with(
+            ["sudo", "usermod", "-d", "/", MYSQL_SYSTEM_USER]
+        )
+
+    @patch("mysql_vm_helpers.MySQL._execute_commands")
+    def test_change_snap_daemon_home_directory_exception(self, _execute_commands):
+        """Test failure in execution of change_snap_daemon_home_directory()."""
+        _execute_commands.side_effect = MySQLExecError
+
+        with self.assertRaises(MySQLChangeSnapDaemonHomeDirectoryError):
+            self.mysql.change_snap_daemon_home_directory()
+
+    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch("pathlib.Path")
+    @patch("builtins.open")
+    def test_create_custom_mysqld_config(self, _open, _path, _get_innodb_buffer_pool_parameters):
+        """Test successful execution of create_custom_mysqld_config."""
+        _path_mock = MagicMock()
+        _path.return_value = _path_mock
+
+        _open_mock = unittest.mock.mock_open()
+        _open.side_effect = _open_mock
+
+        self.mysql.create_custom_mysqld_config()
+
+        config = """[mysqld]
+bind-address = 0.0.0.0
+mysqlx-bind-address = 0.0.0.0
+innodb_buffer_pool_size = 1234
+innodb_buffer_pool_chunk_size = 5678
+"""
+
+        _get_innodb_buffer_pool_parameters.assert_called_once()
+        _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
+        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+")
+
+        self.assertEqual(
+            sorted(_open_mock.mock_calls),
+            sorted(
+                [
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+"),
+                    call().__enter__(),
+                    call().write(config),
+                    call().__exit__(None, None, None),
+                ]
+            ),
+        )
+
+    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch("pathlib.Path")
+    @patch("builtins.open")
+    def test_create_custom_mysqld_config_exception(
+        self, _open, _path, _get_innodb_buffer_pool_parameters
+    ):
+        """Test failure in execution of create_custom_mysqld_config."""
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError
+
+        _path_mock = MagicMock()
+        _path.return_value = _path_mock
+
+        _open_mock = unittest.mock.mock_open()
+        _open.side_effect = _open_mock
+
+        with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
+            self.mysql.create_custom_mysqld_config()
+
+    @patch("subprocess.check_output")
+    def test_execute_commands(self, _check_output):
+        """Test a successful execution of _execute_commands."""
+        self.mysql._execute_commands(
+            ["ls", "-la"], bash=True, user="test_user", group="test_group", env={"envA": "valueA"}
+        )
+
+        _check_output.assert_called_once_with(
+            ["bash", "-c", "ls -la"],
+            user="test_user",
+            group="test_group",
+            env={
+                "envA": "valueA",
+            },
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+    @patch("subprocess.check_output")
+    def test_execute_commands_exception(self, _check_output):
+        """Test a failure in execution of _execute_commands."""
+        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+
+        with self.assertRaises(MySQLExecError):
+            self.mysql._execute_commands(
+                ["ls", "-la"],
+                bash=True,
+                user="test_user",
+                group="test_group",
+                env={"envA": "valueA"},
+            )
