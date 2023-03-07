@@ -994,10 +994,9 @@ class MySQLBase(ABC):
         Returns:
             The address of the cluster's primary
         """
-        logger.debug(f"Getting cluster primary member's address from {connect_instance_address}")
-
         if not connect_instance_address:
             connect_instance_address = self.instance_address
+        logger.debug(f"Getting cluster primary member's address from {connect_instance_address}")
 
         get_cluster_primary_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{connect_instance_address}')",

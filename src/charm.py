@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import subprocess
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
@@ -283,6 +284,11 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit_peer_data["unit-initialized"] = "True"
+            try:
+                subprocess.check_call(["open-port", "3306/tcp"])
+                subprocess.check_call(["open-port", "33060/tcp"])
+            except subprocess.CalledProcessError:
+                logger.exception("failed to open port")
             self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_database_storage_detaching(self, _) -> None:
@@ -530,10 +536,11 @@ class MySQLOperatorCharm(CharmBase):
             raise RuntimeError("Unknown secret scope.")
 
     @property
-    def active_status_message(self):
+    def active_status_message(self) -> str:
         """Active status message."""
-        role = self.unit_peer_data.get("member-role")
-        return f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}"
+        if self.unit_peer_data.get("member-role") == "primary":
+            return "Primary"
+        return ""
 
     def _workload_initialise(self) -> None:
         """Workload initialisation commands.
@@ -562,6 +569,11 @@ class MySQLOperatorCharm(CharmBase):
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
+        try:
+            subprocess.check_call(["open-port", "3306/tcp"])
+            subprocess.check_call(["open-port", "33060/tcp"])
+        except subprocess.CalledProcessError:
+            logger.exception("failed to open port")
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.

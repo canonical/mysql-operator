@@ -31,7 +31,7 @@ def pytest_configure(config):
     if config.option.mysql_charm_series is None:
         config.option.mysql_charm_series = "jammy"
     if config.option.mysql_charm_bases_index is None:
-        config.option.mysql_charm_bases_index = 1
+        config.option.mysql_charm_bases_index = 0
 
 
 @pytest.fixture
