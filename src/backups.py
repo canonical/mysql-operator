@@ -11,20 +11,41 @@ from typing import Dict, List, Tuple
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.mysql.v0.mysql import (
+    MySQLConfigureInstanceError,
+    MySQLCreateClusterError,
     MySQLDeleteTempBackupDirectoryError,
+    MySQLDeleteTempRestoreDirectoryError,
+    MySQLEmptyDataDirectoryError,
     MySQLExecuteBackupCommandsError,
     MySQLGetMemberStateError,
+    MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
+    MySQLPrepareBackupForRestoreError,
+    MySQLRestoreBackupError,
+    MySQLRetrieveBackupWithXBCloudError,
     MySQLSetInstanceOfflineModeError,
     MySQLSetInstanceOptionError,
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
-from ops.model import BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus
 
-from constants import S3_INTEGRATOR_RELATION_NAME
-from s3_helpers import list_backups_in_s3_path, upload_content_to_s3
+from constants import (
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_SERVICE,
+    S3_INTEGRATOR_RELATION_NAME,
+)
+from mysql_vm_helpers import (
+    MySQLServiceNotRunningError,
+    SnapServiceOperationError,
+    snap_service_operation,
+)
+from s3_helpers import (
+    fetch_and_check_existence_of_s3_path,
+    list_backups_in_s3_path,
+    upload_content_to_s3,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +63,7 @@ class MySQLBackups(Object):
 
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups)
+        self.framework.observe(self.charm.on.restore_action, self._on_restore)
 
     # ------------------ Helpers ------------------
 
@@ -319,5 +341,233 @@ Juju Version: {str(juju_version)}
             self.charm._mysql.set_instance_option("tag:_hidden", "false")
         except MySQLSetInstanceOptionError:
             return False, "Error setting instance option tag:_hidden"
+
+        return True, None
+
+    # ------------------ Perform Restore ------------------
+
+    def _pre_restore_checks(self, event: ActionEvent) -> bool:
+        """Run some checks before starting the restore.
+
+        Returns: a boolean indicating whether restore should be run
+        """
+        if not self.charm.model.get_relation(S3_INTEGRATOR_RELATION_NAME):
+            event.fail("Missing relation with S3 integrator charm")
+            return False
+
+        if not event.params.get("backup-id"):
+            event.fail("Missing backup-id to restore")
+            return False
+
+        logger.info("Checking if the unit is waiting to start or restart")
+        if self.charm.unit_peer_data.get("member-state") == "waiting":
+            error_message = "Cluster or unit is waiting to start or restart"
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        logger.info("Checking that the cluster does not have more than one unit")
+        if self.charm.app.planned_units() > 1:
+            error_message = (
+                "Unit cannot restore backup as there are more than one units in the cluster"
+            )
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        return True
+
+    def _on_restore(self, event: ActionEvent) -> None:
+        """Handle the restore backup action event.
+
+        Restore a backup from S3 (parameters for which can retrieved from the
+        relation with S3 integrator).
+        """
+        if not self._pre_restore_checks(event):
+            return
+
+        backup_id = event.params.get("backup-id")
+        logger.info(f"A restore with backup-id {backup_id} has been requested on unit")
+
+        # Retrieve and validate missing S3 parameters
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            event.fail(f"Missing S3 parameters: {missing_parameters}")
+            return
+
+        # Validate the provided backup id
+        logger.info("Validating provided backup-id in the specified s3 path")
+        s3_backup_md5 = str(pathlib.Path(s3_parameters["path"]) / f"{backup_id}.md5")
+        if not fetch_and_check_existence_of_s3_path(s3_parameters, s3_backup_md5):
+            event.fail(f"Invalid backup-id: {backup_id}")
+            return
+
+        # Run operations to prepare for the restore
+        success, error_message = self._pre_restore()
+        if not success:
+            logger.warning(error_message)
+            event.fail(error_message)
+            return
+
+        # Perform the restore
+        success, recoverable, error_message = self._restore(backup_id, s3_parameters)
+        if not success:
+            logger.warning(error_message)
+            event.fail(error_message)
+
+            if recoverable:
+                self._clean_data_dir_and_start_mysqld()
+            else:
+                self.charm.unit.status = BlockedStatus(error_message)
+
+            return
+
+        # Run post-restore operations
+        success, error_message = self._post_restore()
+        if not success:
+            logger.warning(error_message)
+            self.charm.unit.status = BlockedStatus(error_message)
+            event.fail(error_message)
+            return
+
+        event.set_results(
+            {
+                "completed": "ok",
+            }
+        )
+
+    def _pre_restore(self) -> Tuple[bool, str]:
+        """Perform operations that need to be done before performing a restore.
+
+        Returns: tuple of (success, error_message)
+        """
+        logger.info(
+            f"Stopping service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
+        except SnapServiceOperationError:
+            error_message = (
+                f"Failed to stop snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+            )
+            logger.exception(error_message)
+            return False, error_message
+
+        return True, None
+
+    def _restore(self, backup_id: str, s3_parameters: Dict) -> Tuple[bool, bool, str]:
+        """Run the restore operations.
+
+        Args:
+            backup_id: ID of backup to restore
+            s3_parameters: Dictionary of S3 parameters to use to restore the backup
+
+        Returns: tuple of (success, recoverable_error, error_message)
+        """
+        try:
+            logger.info("Running xbcloud get commands to retrieve the backup")
+            stdout, stderr, backup_location = self.charm._mysql.retrieve_backup_with_xbcloud(
+                s3_parameters["bucket"],
+                s3_parameters["path"],
+                s3_parameters["access-key"],
+                s3_parameters["secret-key"],
+                backup_id,
+            )
+            logger.debug(f"Stdout of xbcloud get commands: {stdout}")
+            logger.debug(f"Stderr of xbcloud get commands: {stderr}")
+        except MySQLRetrieveBackupWithXBCloudError:
+            return False, True, f"Failed to retrieve backup {backup_id}"
+
+        try:
+            logger.info("Preparing retrieved backup using xtrabackup prepare")
+            stdout, stderr = self.charm._mysql.prepare_backup_for_restore(backup_location)
+            logger.debug(f"Stdout of xtrabackup prepare command: {stdout}")
+            logger.debug(f"Stderr of xtrabackup prepare command: {stderr}")
+        except MySQLPrepareBackupForRestoreError:
+            return False, True, f"Failed to prepare backup {backup_id}"
+
+        try:
+            logger.info("Removing the contents of the data directory")
+            self.charm._mysql.empty_data_files()
+        except MySQLEmptyDataDirectoryError:
+            return False, False, "Failed to empty the data directory"
+
+        try:
+            logger.info("Restoring the backup")
+            stdout, stderr = self.charm._mysql.restore_backup(backup_location)
+            logger.debug(f"Stdout of xtrabackup move-back command: {stdout}")
+            logger.debug(f"Stderr of xtrabackup move-back command: {stderr}")
+        except MySQLRestoreBackupError:
+            return False, False, f"Failed to restore backup {backup_id}"
+
+        return True, True, None
+
+    def _clean_data_dir_and_start_mysqld(self) -> Tuple[bool, str]:
+        """Run idempotent operations run after restoring a backup.
+
+        Returns tuple of (success, error_message)
+        """
+        try:
+            self.charm._mysql.delete_temp_restore_directory()
+        except MySQLDeleteTempRestoreDirectoryError:
+            return False, "Failed to delete the temp restore directory"
+
+        logger.info(
+            f"Starting service snap={CHARMED_MYSQL_SNAP_NAME}, service{CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+            self.charm._mysql.wait_until_mysql_connection()
+        except (
+            SnapServiceOperationError,
+            MySQLServiceNotRunningError,
+        ):
+            error_message = (
+                f"Failed to start snap={CHARMED_MYSQL_SNAP_NAME}, service{CHARMED_MYSQLD_SERVICE}"
+            )
+            logger.exception(error_message)
+            return False, error_message
+
+        return True, None
+
+    def _post_restore(self) -> Tuple[bool, str]:
+        """Run operations required after restoring a backup.
+
+        Returns: tuple of (success, error_message)
+        """
+        success, error_message = self._clean_data_dir_and_start_mysqld()
+        if not success:
+            return success, error_message
+
+        try:
+            logger.info("Configuring instance to be part of an InnoDB cluster")
+            self.charm._mysql.configure_instance(create_cluster_admin=False)
+            self.charm._mysql.wait_until_mysql_connection()
+        except MySQLConfigureInstanceError:
+            return False, "Failed to configure restored instance for InnoDB cluster"
+
+        self.charm.unit_peer_data["unit-configured"] = "True"
+
+        try:
+            logger.info("Creating cluster on restored node")
+            unit_label = self.charm.unit.name.replace("/", "-")
+            self.charm._mysql.create_cluster(unit_label)
+            self.charm._mysql.initialize_juju_units_operations_table()
+
+            logger.info("Retrieving instance cluster state and role")
+            state, role = self.charm._mysql.get_member_state()
+        except MySQLCreateClusterError:
+            return False, "Failed to create InnoDB cluster on restored instance"
+        except MySQLInitializeJujuOperationsTableError:
+            return False, "Failed to initialize the juju operations table"
+        except MySQLGetMemberStateError:
+            return False, "Failed to retrieve member state in restored instance"
+
+        self.charm.unit_peer_data["member-role"] = role
+        self.charm.unit_peer_data["member-state"] = state
+
+        self.charm.unit.status = ActiveStatus()
 
         return True, None

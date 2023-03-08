@@ -27,6 +27,7 @@ from constants import (
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
+    CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
@@ -290,6 +291,69 @@ class MySQL(MySQLBase):
         """Delete the temp backup directory."""
         super(MySQL, self).delete_temp_backup_directory(
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def retrieve_backup_with_xbcloud(
+        self,
+        s3_bucket: str,
+        s3_path: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        backup_id: str,
+    ) -> Tuple[str, str, str]:
+        """Retrieve the provided backup with xbcloud."""
+        return super(MySQL, self).retrieve_backup_with_xbcloud(
+            s3_bucket,
+            s3_path,
+            s3_access_key,
+            s3_secret_key,
+            backup_id,
+            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_XBCLOUD_LOCATION,
+            CHARMED_MYSQL_XBSTREAM_LOCATION,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
+        """Prepare the download backup for restore with xtrabackup --prepare."""
+        return super(MySQL, self).prepare_backup_for_restore(
+            backup_location,
+            CHARMED_MYSQL_XTRABACKUP_LOCATION,
+            XTRABACKUP_PLUGIN_DIR,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def empty_data_files(self) -> None:
+        """Empty the mysql data directory in preparation of the restore."""
+        super(MySQL, self).empty_data_files(
+            MYSQL_DATA_DIR,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def restore_backup(
+        self,
+        backup_location: str,
+    ) -> Tuple[str, str]:
+        """Restore the provided prepared backup."""
+        return super(MySQL, self).restore_backup(
+            backup_location,
+            CHARMED_MYSQL_XTRABACKUP_LOCATION,
+            MYSQLD_DEFAULTS_CONFIG_FILE,
+            MYSQL_DATA_DIR,
+            XTRABACKUP_PLUGIN_DIR,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
+        )
+
+    def delete_temp_restore_directory(self) -> None:
+        """Delete the temp restore directory from the mysql data directory."""
+        super(MySQL, self).delete_temp_restore_directory(
+            MYSQL_DATA_DIR,
             user=MYSQL_SYSTEM_USER,
             group=MYSQL_SYSTEM_USER,
         )

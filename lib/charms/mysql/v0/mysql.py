@@ -67,6 +67,7 @@ error handling on the subclass and in the charm code.
 
 import json
 import logging
+import pathlib
 import re
 import socket
 from abc import ABC, abstractmethod
@@ -90,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 16
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -235,6 +236,26 @@ class MySQLExecuteBackupCommandsError(Error):
 
 class MySQLDeleteTempBackupDirectoryError(Error):
     """Exception raised when there is an error deleting the temp backup directory."""
+
+
+class MySQLRetrieveBackupWithXBCloudError(Error):
+    """Exception raised when there is an error retrieving a backup from S3 with xbcloud."""
+
+
+class MySQLPrepareBackupForRestoreError(Error):
+    """Exception raised when there is an error preparing a backup for restore."""
+
+
+class MySQLEmptyDataDirectoryError(Error):
+    """Exception raised when there is an error emptying the mysql data directory."""
+
+
+class MySQLRestoreBackupError(Error):
+    """Exception raised when there is an error restoring a backup."""
+
+
+class MySQLDeleteTempRestoreDirectoryError(Error):
+    """Exception raised when there is an error deleting the temp restore directory."""
 
 
 class MySQLExecError(Error):
@@ -588,8 +609,8 @@ class MySQLBase(ABC):
                 initializing the juju_units_operations table
         """
         initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started')",
+            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor='', status = 'not-started'",
         )
 
         try:
@@ -1348,7 +1369,7 @@ Swap:     1027600384  1027600384           0
         xtrabackup_plugin_dir: str,
         mysqld_socket_file: str,
         tmp_base_directory: str,
-        defaults_file: str,
+        defaults_config_file: str,
         user: str = None,
         group: str = None,
     ) -> Tuple[str, str]:
@@ -1361,6 +1382,7 @@ Swap:     1027600384  1027600384           0
             tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
         except MySQLExecError as e:
             logger.exception("Failed to execute commands prior to running backup")
+            logger.error(e.message)
             raise MySQLExecuteBackupCommandsError(e.message)
         except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
@@ -1371,7 +1393,7 @@ Swap:     1027600384  1027600384           0
         # TODO: remove flags --no-server-version-check
         # when MySQL and XtraBackup versions are in sync
         xtrabackup_commands = f"""
-{xtrabackup_location} --defaults-file={defaults_file}
+{xtrabackup_location} --defaults-file={defaults_config_file}
             --defaults-group=mysqld
             --no-version-check
             --parallel={nproc}
@@ -1397,7 +1419,7 @@ Swap:     1027600384  1027600384           0
 
         try:
             # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
-            stdout, stderr = self._execute_commands(
+            return self._execute_commands(
                 xtrabackup_commands,
                 bash=True,
                 user=user,
@@ -1407,9 +1429,9 @@ Swap:     1027600384  1027600384           0
                     "SECRET_ACCESS_KEY": s3_secret_key,
                 },
             )
-            return (stdout, stderr)
         except MySQLExecError as e:
             logger.exception("Failed to execute backup commands")
+            logger.error(e.message)
             raise MySQLExecuteBackupCommandsError(e.message)
         except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
@@ -1434,10 +1456,201 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to delete temp backup directory")
+            logger.error(e.message)
             raise MySQLDeleteTempBackupDirectoryError(e.message)
         except Exception as e:
             logger.exception("Failed to delete temp backup directory")
             raise MySQLDeleteTempBackupDirectoryError(e)
+
+    def retrieve_backup_with_xbcloud(
+        self,
+        s3_bucket: str,
+        s3_path: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        backup_id: str,
+        mysql_data_directory: str,
+        xbcloud_location: str,
+        xbstream_location: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str, str]:
+        """Retrieve the specified backup from S3.
+
+        The backup is retrieved using xbcloud and stored in a temp dir in the
+        mysql container.
+        """
+        nproc_command = "nproc".split()
+        make_temp_dir_command = f"mktemp --directory {mysql_data_directory}/mysql_sst_XXXX".split()
+
+        try:
+            nproc, _ = self._execute_commands(
+                nproc_command,
+                user=user,
+                group=group,
+            )
+
+            tmp_dir, _ = self._execute_commands(
+                make_temp_dir_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to execute commands prior to running xbcloud get")
+            logger.error(e.message)
+            raise MySQLRetrieveBackupWithXBCloudError(e.message)
+
+        backup_path = str(pathlib.Path(s3_bucket) / s3_path / backup_id)
+
+        retrieve_backup_command = f"""
+{xbcloud_location} get
+        --curl-retriable-errors=7
+        --parallel=10
+        s3://{backup_path}
+    | {xbstream_location}
+        --decompress
+        -x
+        -C {tmp_dir}
+        --parallel={nproc}
+""".split()
+
+        try:
+            # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
+            stdout, stderr = self._execute_commands(
+                retrieve_backup_command,
+                bash=True,
+                env={
+                    "ACCESS_KEY_ID": s3_access_key,
+                    "SECRET_ACCESS_KEY": s3_secret_key,
+                },
+                user=user,
+                group=user,
+            )
+            return (stdout, stderr, tmp_dir)
+        except MySQLExecError as e:
+            logger.exception("Failed to retrieve backup")
+            logger.error(e.message)
+            raise MySQLRetrieveBackupWithXBCloudError(e.message)
+        except Exception as e:
+            logger.exception("Failed to retrieve backup")
+            raise MySQLRetrieveBackupWithXBCloudError(e)
+
+    def prepare_backup_for_restore(
+        self,
+        backup_location: str,
+        xtrabackup_location: str,
+        xtrabackup_plugin_dir: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str]:
+        """Prepare the backup in the provided dir for restore."""
+        try:
+            innodb_buffer_pool_size, _ = self.get_innodb_buffer_pool_parameters()
+        except MySQLGetInnoDBBufferPoolParametersError as e:
+            raise MySQLPrepareBackupForRestoreError(e)
+
+        prepare_backup_command = f"""
+{xtrabackup_location} --prepare
+        --use-memory={innodb_buffer_pool_size}
+        --no-version-check
+        --rollback-prepared-trx
+        --xtrabackup-plugin-dir={xtrabackup_plugin_dir}
+        --target-dir={backup_location}
+""".split()
+
+        try:
+            return self._execute_commands(
+                prepare_backup_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to prepare backup for restore")
+            logger.error(e.message)
+            raise MySQLPrepareBackupForRestoreError(e.message)
+        except Exception as e:
+            logger.exception("Failed to prepare backup for restore")
+            raise MySQLPrepareBackupForRestoreError(e)
+
+    def empty_data_files(
+        self,
+        mysql_data_directory: str,
+        user=None,
+        group=None,
+    ) -> None:
+        """Empty the mysql data directory in preparation of backup restore."""
+        empty_data_files_command = f"find {mysql_data_directory} -not -path {mysql_data_directory}/mysql_sst_* -not -path {mysql_data_directory} -delete".split()
+
+        try:
+            self._execute_commands(
+                empty_data_files_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to empty data directory in prep for backup restore")
+            logger.error(e.message)
+            raise MySQLEmptyDataDirectoryError(e.message)
+        except Exception as e:
+            logger.exception("Failed to empty data directory in prep for backup restore")
+            raise MySQLEmptyDataDirectoryError(e)
+
+    def restore_backup(
+        self,
+        backup_location: str,
+        xtrabackup_location: str,
+        defaults_config_file: str,
+        mysql_data_directory: str,
+        xtrabackup_plugin_directory: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str]:
+        """Restore the provided prepared backup."""
+        restore_backup_command = f"""
+{xtrabackup_location} --defaults-file={defaults_config_file}
+        --defaults-group=mysqld
+        --datadir={mysql_data_directory}
+        --no-version-check
+        --move-back
+        --force-non-empty-directories
+        --xtrabackup-plugin-dir={xtrabackup_plugin_directory}
+        --target-dir={backup_location}
+""".split()
+
+        try:
+            return self._execute_commands(
+                restore_backup_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to restore backup")
+            logger.error(e.message)
+            raise MySQLRestoreBackupError(e.message)
+        except Exception as e:
+            logger.exception("Failed to restore backup")
+            raise MySQLRestoreBackupError(e)
+
+    def delete_temp_restore_directory(
+        self,
+        mysql_data_directory: str,
+        user=None,
+        group=None,
+    ) -> None:
+        """Delete the temp restore directory from the mysql data directory."""
+        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
+        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/mysql_sst_* -delete".split()
+
+        try:
+            self._execute_commands(
+                delete_temp_restore_directory_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to remove temp backup directory")
+            logger.error(e.message)
+            raise MySQLDeleteTempRestoreDirectoryError(e.message)
 
     @abstractmethod
     def _execute_commands(
