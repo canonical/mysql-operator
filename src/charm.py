@@ -9,6 +9,7 @@ import subprocess
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -45,7 +46,6 @@ from tenacity import (
     wait_fixed,
 )
 
-from backups import MySQLBackups
 from constants import (
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
