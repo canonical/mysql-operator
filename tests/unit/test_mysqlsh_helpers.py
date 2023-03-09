@@ -270,13 +270,13 @@ innodb_buffer_pool_chunk_size = 5678
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
-        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+")
+        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted(
                 [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+"),
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
                     call().__enter__(),
                     call().write(config),
                     call().__exit__(None, None, None),
