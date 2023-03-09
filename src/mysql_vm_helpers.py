@@ -171,7 +171,7 @@ class MySQL(MySQLBase):
                 innodb_buffer_pool_chunk_size,
             ) = self.get_innodb_buffer_pool_parameters()
         except MySQLGetInnoDBBufferPoolParametersError:
-            raise MySQLCreateCustomMySQLDConfigError("Failed to computer innodb buffer pool size")
+            raise MySQLCreateCustomMySQLDConfigError("Failed to compute innodb buffer pool size")
 
         content = [
             "[mysqld]",
@@ -188,7 +188,7 @@ class MySQL(MySQLBase):
         logger.debug("Copying custom mysqld config")
         pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
 
-        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+") as config_file:
+        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
             config_file.write("\n".join(content))
 
     def reset_root_password_and_start_mysqld(self) -> None:
@@ -256,7 +256,7 @@ class MySQL(MySQLBase):
 
     def _get_total_memory(self) -> None:
         """Retrieves the total memory of the server where mysql is running."""
-        return super(MySQL, self)._get_total_memory(
+        return super()._get_total_memory(
             user=MYSQL_SYSTEM_USER,
             group=MYSQL_SYSTEM_USER,
         )
@@ -270,7 +270,7 @@ class MySQL(MySQLBase):
         s3_endpoint: str,
     ) -> Tuple[str, str]:
         """Executes commands to create a backup."""
-        return super(MySQL, self).execute_backup_commands(
+        return super().execute_backup_commands(
             s3_bucket,
             s3_directory,
             s3_access_key,
@@ -288,7 +288,7 @@ class MySQL(MySQLBase):
 
     def delete_temp_backup_directory(self) -> None:
         """Delete the temp backup directory."""
-        super(MySQL, self).delete_temp_backup_directory(
+        super().delete_temp_backup_directory(
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
             user=MYSQL_SYSTEM_USER,
             group=MYSQL_SYSTEM_USER,
@@ -311,7 +311,7 @@ class MySQL(MySQLBase):
             group: the group with which to execute the commands
             env: the environment variables to execute the commands with
 
-        Returns: the (stdout, stderr) of the commands
+        Returns: tuple of (stdout + stderr, "")
 
         Raises: MySQLExecError if there was an error executing the commands
         """
