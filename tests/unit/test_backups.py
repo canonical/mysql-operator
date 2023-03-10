@@ -59,7 +59,7 @@ class TestMySQLBackups(unittest.TestCase):
             sorted(missing_required_parameters), sorted(["bucket", "access-key", "secret-key"])
         )
 
-    @patch("backups.upload_content_to_s3", return_value=True)
+    @patch("charms.mysql.v0.backups.upload_content_to_s3", return_value=True)
     def test_upload_logs_to_s3(self, _upload_content_to_s3):
         """Test _upload_logs_to_s3()."""
         expected_logs = """Stdout:
@@ -73,10 +73,10 @@ test stderr"""
         _upload_content_to_s3.assert_called_once_with(expected_logs, "/filename", s3_params)
 
     @patch(
-        "backups.MySQLBackups._retrieve_s3_parameters",
+        "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
         return_value=({"bucket": "test-bucket"}, []),
     )
-    @patch("backups.list_backups_in_s3_path", return_value=["backup1", "backup2"])
+    @patch("charms.mysql.v0.backups.list_backups_in_s3_path", return_value=["backup1", "backup2"])
     def test_on_list_backups(self, _list_backups_in_s3_path, _retrieve_s3_parameters):
         """Test _on_list_backups()."""
         event = MagicMock()
@@ -89,8 +89,8 @@ test stderr"""
         event.set_results.assert_called_once_with({"backup-ids": '["backup1", "backup2"]'})
         event.fail.assert_not_called()
 
-    @patch("backups.MySQLBackups._retrieve_s3_parameters")
-    @patch("backups.list_backups_in_s3_path")
+    @patch("charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters")
+    @patch("charms.mysql.v0.backups.list_backups_in_s3_path")
     def test_on_list_backups_failure(self, _list_backups_in_s3_path, _retrieve_s3_parameters):
         """Test failures in _on_list_backups()."""
         # test an exception being thrown
@@ -121,13 +121,18 @@ test stderr"""
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
 
     @patch("datetime.datetime")
-    @patch("backups.MySQLBackups._retrieve_s3_parameters", return_value=({"path": "/path"}, []))
-    @patch("backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None))
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
+        return_value=({"path": "/path"}, []),
+    )
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
+    )
     @patch("ops.jujuversion.JujuVersion.from_environ", return_value="test-juju-version")
-    @patch("backups.upload_content_to_s3")
-    @patch("backups.MySQLBackups._pre_backup", return_value=(True, None))
-    @patch("backups.MySQLBackups._backup", return_value=(True, None))
-    @patch("backups.MySQLBackups._post_backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.upload_content_to_s3")
+    @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.MySQLBackups._post_backup", return_value=(True, None))
     def test_on_create_backup(
         self,
         _post_backup,
@@ -169,13 +174,18 @@ Juju Version: test-juju-version
         event.fail.assert_not_called()
 
     @patch("datetime.datetime")
-    @patch("backups.MySQLBackups._retrieve_s3_parameters", return_value=({"path": "/path"}, []))
-    @patch("backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None))
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
+        return_value=({"path": "/path"}, []),
+    )
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
+    )
     @patch("ops.jujuversion.JujuVersion.from_environ", return_value="test-juju-version")
-    @patch("backups.upload_content_to_s3")
-    @patch("backups.MySQLBackups._pre_backup", return_value=(True, None))
-    @patch("backups.MySQLBackups._backup", return_value=(True, None))
-    @patch("backups.MySQLBackups._post_backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.upload_content_to_s3")
+    @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
+    @patch("charms.mysql.v0.backups.MySQLBackups._post_backup", return_value=(True, None))
     def test_on_create_backup_failure(
         self,
         _post_backup,
@@ -379,7 +389,7 @@ Juju Version: test-juju-version
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
-    @patch("backups.MySQLBackups._upload_logs_to_s3")
+    @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup(
         self,
         _upload_logs_to_s3,
@@ -400,7 +410,7 @@ Juju Version: test-juju-version
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
-    @patch("backups.MySQLBackups._upload_logs_to_s3")
+    @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup_failure(
         self,
         _upload_logs_to_s3,

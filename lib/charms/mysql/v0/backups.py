@@ -1,7 +1,40 @@
 # Copyright 2022 Canonical Ltd.
-# See LICENSE file for licensing details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-"""Library containing the implementation of backups."""
+"""MySQL helper class for backups and restores.
+
+The `MySQLBackups` class can be instantiated by a MySQL charm , and contains
+event handlers for `list-backups`, `create-backup` and `restore` backup actions.
+These actions must be added to the actions.yaml file.
+
+An example of instantiating the `MySQLBackups`:
+
+```python
+from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.mysql.v0.backups import MySQLBackups
+from charms.mysql.v0.backups import MySQLBase
+
+
+class MySQL(MySQLBase):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.s3_integrator = S3Requirer(self, "s3-integrator")
+        self.backups = MySQLBackups(self, self.s3_integrator)
+```
+
+"""
 
 import datetime
 import json
@@ -26,6 +59,7 @@ from charms.mysql.v0.mysql import (
     MySQLSetInstanceOfflineModeError,
     MySQLSetInstanceOptionError,
 )
+from charms.mysql.v0.s3_helpers import list_backups_in_s3_path, upload_content_to_s3
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
@@ -50,6 +84,16 @@ from s3_helpers import (
 logger = logging.getLogger(__name__)
 
 MYSQL_BACKUPS = "mysql-backups"
+
+# The unique Charmhub library identifier, never change it
+LIBID = "183844304be247129572309a5fb1e47c"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
 
 
 class MySQLBackups(Object):

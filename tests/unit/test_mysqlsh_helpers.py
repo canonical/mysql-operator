@@ -270,13 +270,13 @@ innodb_buffer_pool_chunk_size = 5678
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
-        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+")
+        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted(
                 [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w+"),
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
                     call().__enter__(),
                     call().write(config),
                     call().__exit__(None, None, None),
@@ -302,28 +302,29 @@ innodb_buffer_pool_chunk_size = 5678
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
             self.mysql.create_custom_mysqld_config()
 
-    @patch("subprocess.check_output")
-    def test_execute_commands(self, _check_output):
+    @patch("subprocess.run")
+    def test_execute_commands(self, _run):
         """Test a successful execution of _execute_commands."""
         self.mysql._execute_commands(
             ["ls", "-la"], bash=True, user="test_user", group="test_group", env={"envA": "valueA"}
         )
 
-        _check_output.assert_called_once_with(
+        _run.assert_called_once_with(
             ["bash", "-c", "ls -la"],
             user="test_user",
             group="test_group",
             env={
                 "envA": "valueA",
             },
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            check=True,
             encoding="utf-8",
         )
 
-    @patch("subprocess.check_output")
-    def test_execute_commands_exception(self, _check_output):
+    @patch("subprocess.run")
+    def test_execute_commands_exception(self, _run):
         """Test a failure in execution of _execute_commands."""
-        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        _run.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
 
         with self.assertRaises(MySQLExecError):
             self.mysql._execute_commands(
