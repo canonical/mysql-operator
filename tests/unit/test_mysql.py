@@ -982,7 +982,7 @@ class TestMySQLBase(unittest.TestCase):
         self.assertEqual(16484458496, total_memory)
 
         _execute_commands.assert_called_once_with(
-            "free --bytes | sed -n '2p' | awk '{print $2}'".split(),
+            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
             bash=True,
             user="test_user",
             group="test_group",
