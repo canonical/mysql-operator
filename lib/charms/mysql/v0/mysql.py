@@ -1323,7 +1323,7 @@ Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
 Swap:     1027600384  1027600384           0
             """
             # need to use sh -c to be able to use pipes
-            get_total_memory_command = "free --bytes | sed -n '2p' | awk '{print $2}'".split()
+            get_total_memory_command = "free --bytes | awk '/^Mem:/{print $2; exit}'".split()
 
             total_memory, _ = self._execute_commands(
                 get_total_memory_command,

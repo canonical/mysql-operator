@@ -319,15 +319,16 @@ class MySQL(MySQLBase):
             if bash:
                 commands = ["bash", "-c", " ".join(commands)]
 
-            stdout = subprocess.check_output(
+            process = subprocess.run(
                 commands,
                 user=user,
                 group=group,
                 env=env,
-                stderr=subprocess.PIPE,
+                capture_output=True,
+                check=True,
                 encoding="utf-8",
-            ).strip()
-            return (stdout, "")
+            )
+            return (process.stdout.strip(), process.stderr.strip())
         except subprocess.CalledProcessError as e:
             raise MySQLExecError(e.stderr)
 
