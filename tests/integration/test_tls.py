@@ -29,6 +29,7 @@ APP_NAME = METADATA["name"]
 TLS_APP_NAME = "tls-certificates-operator"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
@@ -62,6 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_connection_before_tls(ops_test: OpsTest) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
@@ -90,6 +92,7 @@ async def test_connection_before_tls(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection not possible to unit {unit.name} with disabled TLS"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_enable_tls(ops_test: OpsTest) -> None:
     """Test for encryption enablement when relation to TLS charm."""
@@ -132,6 +135,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     assert await get_tls_ca(ops_test, all_units[0].name), "❌ No CA found after TLS relation"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """Verify rotating tls private keys restarts cluster with new certificates.
@@ -191,6 +195,7 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection possible to unit {unit.name} with enabled TLS"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_disable_tls(ops_test: OpsTest) -> None:
     # Remove the relation
