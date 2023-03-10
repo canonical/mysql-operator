@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 16
+LIBPATCH = 17
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -260,6 +260,18 @@ class MySQLDeleteTempRestoreDirectoryError(Error):
 
 class MySQLExecError(Error):
     """Exception raised when there is an error executing commands on the mysql server."""
+
+
+class MySQLStopMySQLDError(Error):
+    """Exception raised when there is an error stopping the MySQLD process."""
+
+
+class MySQLStartMySQLDError(Error):
+    """Exception raised when there is an error starting the MySQLD process."""
+
+
+class MySQLServiceNotRunningError(Error):
+    """Exception raised when the MySQL service is not running."""
 
 
 class MySQLBase(ABC):
@@ -1662,6 +1674,21 @@ Swap:     1027600384  1027600384           0
         env: Dict = {},
     ) -> Tuple[str, str]:
         """Execute commands on the server where MySQL is running."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_mysqld_running(self) -> bool:
+        """Returns whether mysqld is running."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def stop_mysqld(self) -> None:
+        """Stops the mysqld process."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def start_mysqld(self) -> None:
+        """Starts the mysqld process."""
         raise NotImplementedError
 
     @abstractmethod

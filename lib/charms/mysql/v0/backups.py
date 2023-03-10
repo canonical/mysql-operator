@@ -32,6 +32,15 @@ class MySQL(MySQLBase):
 
         self.s3_integrator = S3Requirer(self, "s3-integrator")
         self.backups = MySQLBackups(self, self.s3_integrator)
+
+    @property
+    def s3_integrator_relation_exists(self) -> bool:
+        # Returns whether a relation with the s3-integrator exists
+        return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    def is_unit_blocked(self) -> bool:
+        # Returns whether the unit is in blocked state and should run any operations
+        return False
 ```
 
 """
@@ -56,30 +65,21 @@ from charms.mysql.v0.mysql import (
     MySQLPrepareBackupForRestoreError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
+    MySQLServiceNotRunningError,
     MySQLSetInstanceOfflineModeError,
     MySQLSetInstanceOptionError,
+    MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
 )
-from charms.mysql.v0.s3_helpers import list_backups_in_s3_path, upload_content_to_s3
-from ops.charm import ActionEvent, CharmBase
-from ops.framework import Object
-from ops.jujuversion import JujuVersion
-from ops.model import ActiveStatus, BlockedStatus
-
-from constants import (
-    CHARMED_MYSQL_SNAP_NAME,
-    CHARMED_MYSQLD_SERVICE,
-    S3_INTEGRATOR_RELATION_NAME,
-)
-from mysql_vm_helpers import (
-    MySQLServiceNotRunningError,
-    SnapServiceOperationError,
-    snap_service_operation,
-)
-from s3_helpers import (
+from charms.mysql.v0.s3_helpers import (
     fetch_and_check_existence_of_s3_path,
     list_backups_in_s3_path,
     upload_content_to_s3,
 )
+from ops.charm import ActionEvent, CharmBase
+from ops.framework import Object
+from ops.jujuversion import JujuVersion
+from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ Stderr:
 
         List backups available to restore by this application.
         """
-        if not self.charm.model.get_relation(S3_INTEGRATOR_RELATION_NAME):
+        if not self.charm.s3_integrator_relation_exists:
             event.fail("Missing relation with S3 integrator charm")
             return
 
@@ -198,8 +198,12 @@ Stderr:
         """Handle the create backup action."""
         logger.info("A backup has been requested on unit")
 
-        if not self.charm.model.get_relation(S3_INTEGRATOR_RELATION_NAME):
+        if not self.charm.s3_integrator_relation_exists:
             event.fail("Missing relation with S3 integrator charm")
+            return
+
+        if not self.charm._mysql.is_mysqld_running:
+            event.fail("Process mysqld not running")
             return
 
         datetime_backup_requested = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -276,8 +280,8 @@ Juju Version: {str(juju_version)}
         Returns: tuple of (success, error_message)
         """
         logger.info("Checking if the unit is waiting to start or restart")
-        if self.charm.unit_peer_data.get("member-state") == "waiting":
-            return False, "Cluster or unit is waiting to start or restart"
+        if self.charm.is_unit_blocked():
+            return False, "Unit is waiting to start or restart"
 
         logger.info("Checking if backup already in progress")
         try:
@@ -395,17 +399,27 @@ Juju Version: {str(juju_version)}
 
         Returns: a boolean indicating whether restore should be run
         """
-        if not self.charm.model.get_relation(S3_INTEGRATOR_RELATION_NAME):
-            event.fail("Missing relation with S3 integrator charm")
+        if not self.charm.s3_integrator_relation_exists:
+            error_message = "Missing relation with S3 integrator charm"
+            logger.warning(error_message)
+            event.fail(error_message)
             return False
 
         if not event.params.get("backup-id"):
-            event.fail("Missing backup-id to restore")
+            error_message = "Missing backup-id to restore"
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        if not self.charm._mysql.is_mysqld_running():
+            error_message = "Process mysqld is not running"
+            logger.warning(error_message)
+            event.fail(error_message)
             return False
 
         logger.info("Checking if the unit is waiting to start or restart")
-        if self.charm.unit_peer_data.get("member-state") == "waiting":
-            error_message = "Cluster or unit is waiting to start or restart"
+        if self.charm.is_unit_blocked():
+            error_message = "Unit is waiting to start or restart"
             logger.warning(error_message)
             event.fail(error_message)
             return False
@@ -485,18 +499,10 @@ Juju Version: {str(juju_version)}
 
         Returns: tuple of (success, error_message)
         """
-        logger.info(
-            f"Stopping service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
-        )
-
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-        except SnapServiceOperationError:
-            error_message = (
-                f"Failed to stop snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
-            )
-            logger.exception(error_message)
-            return False, error_message
+            self.charm._mysql.stop_mysqld()
+        except MySQLStopMySQLDError:
+            return False, "Failed to stop mysqld"
 
         return True, None
 
@@ -557,22 +563,10 @@ Juju Version: {str(juju_version)}
         except MySQLDeleteTempRestoreDirectoryError:
             return False, "Failed to delete the temp restore directory"
 
-        logger.info(
-            f"Starting service snap={CHARMED_MYSQL_SNAP_NAME}, service{CHARMED_MYSQLD_SERVICE}"
-        )
-
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
-            self.charm._mysql.wait_until_mysql_connection()
-        except (
-            SnapServiceOperationError,
-            MySQLServiceNotRunningError,
-        ):
-            error_message = (
-                f"Failed to start snap={CHARMED_MYSQL_SNAP_NAME}, service{CHARMED_MYSQLD_SERVICE}"
-            )
-            logger.exception(error_message)
-            return False, error_message
+            self.charm._mysql.start_mysqld()
+        except MySQLStartMySQLDError:
+            return False, "Failed to start mysqld"
 
         return True, None
 
@@ -589,7 +583,10 @@ Juju Version: {str(juju_version)}
             logger.info("Configuring instance to be part of an InnoDB cluster")
             self.charm._mysql.configure_instance(create_cluster_admin=False)
             self.charm._mysql.wait_until_mysql_connection()
-        except MySQLConfigureInstanceError:
+        except (
+            MySQLConfigureInstanceError,
+            MySQLServiceNotRunningError,
+        ):
             return False, "Failed to configure restored instance for InnoDB cluster"
 
         self.charm.unit_peer_data["unit-configured"] = "True"

@@ -17,6 +17,9 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
     MySQLGetInnoDBBufferPoolParametersError,
+    MySQLServiceNotRunningError,
+    MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
@@ -40,10 +43,6 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class MySQLServiceNotRunningError(Error):
-    """Exception raised when the MySQL service is not running."""
 
 
 class MySQLReconfigureError(Error):
@@ -395,6 +394,39 @@ class MySQL(MySQLBase):
             return (process.stdout.strip(), process.stderr.strip())
         except subprocess.CalledProcessError as e:
             raise MySQLExecError(e.stderr)
+
+    def is_mysqld_running(self) -> bool:
+        """Returns whether mysqld is running."""
+        return os.path.exists(MYSQLD_SOCK_FILE)
+
+    def stop_mysqld(self) -> None:
+        """Stops the mysqld process."""
+        logger.info(
+            f"Stopping service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
+        except SnapServiceOperationError as e:
+            raise MySQLStopMySQLDError(e.message)
+
+    def start_mysqld(self) -> None:
+        """Starts the mysqld process."""
+        logger.info(
+            f"Starting service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+            self.wait_until_mysql_connection()
+        except (
+            MySQLServiceNotRunningError,
+            SnapServiceOperationError,
+        ) as e:
+            if isinstance(e, MySQLServiceNotRunningError):
+                logger.exception("Failed to start mysqld")
+
+            raise MySQLStartMySQLDError(e.message)
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.

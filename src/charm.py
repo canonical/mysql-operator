@@ -284,6 +284,7 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit_peer_data["unit-initialized"] = "True"
+            self.unit_peer_data["member-state"] = "online"
             try:
                 subprocess.check_call(["open-port", "3306/tcp"])
                 subprocess.check_call(["open-port", "33060/tcp"])
@@ -511,6 +512,15 @@ class MySQLOperatorCharm(CharmBase):
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
 
+    @property
+    def s3_integrator_relation_exists(self) -> bool:
+        """Returns whether a relation with the s3 integrator exists."""
+        return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    def is_unit_blocked(self) -> bool:
+        """Returns whether the unit is in blocked state and should not run any operations."""
+        return self.unit_peer_data.get("member-state") == "waiting"
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
@@ -569,6 +579,7 @@ class MySQLOperatorCharm(CharmBase):
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
+        self.unit_peer_data["member-state"] = "online"
         try:
             subprocess.check_call(["open-port", "3306/tcp"])
             subprocess.check_call(["open-port", "33060/tcp"])
