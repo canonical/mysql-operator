@@ -9,7 +9,11 @@ import re
 import socket
 from typing import List, Optional, Tuple
 
-from charms.mysql.v0.mysql import MySQLKillSessionError
+from charms.mysql.v0.mysql import (
+    MySQLKillSessionError,
+    MySQLTLSRestoreDefaultConfigError,
+    MySQLTLSSetCustomConfigError,
+)
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -19,7 +23,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
-from ops.model import MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 from constants import (
     MYSQL_DATA_DIR,
@@ -100,19 +104,24 @@ class MySQLTLS(Object):
         self.charm.set_secret(SCOPE, "ca", event.ca)
 
         self.push_tls_files_to_workload()
-        self.charm._mysql.tls_set_custom(
-            ca_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CA_FILE}",
-            key_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_KEY_FILE}",
-            cert_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CERT_FILE}",
-        )
-
         try:
+            self.charm._mysql.tls_set_custom(
+                ca_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CA_FILE}",
+                key_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_KEY_FILE}",
+                cert_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CERT_FILE}",
+            )
+
             # kill any unencrypted sessions to force clients to reconnect
             self.charm._mysql.kill_unencrypted_sessions()
+        except MySQLTLSSetCustomConfigError:
+            logger.error("Failed to set custom TLS configuration.")
+            self.charm.unit.status = BlockedStatus("Failed to set TLS configuration.")
+            return
         except MySQLKillSessionError:
-            pass
+            logger.warning("Failed to kill unencrypted sessions.")
         # set tls flag for unit
         self.charm.unit_peer_data.update({"tls": "enabled"})
+        self.charm.unit.status = ActiveStatus()
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Request the new certificate when old certificate is expiring."""
@@ -143,8 +152,12 @@ class MySQLTLS(Object):
         except KeyError:
             # ignore key error for unit teardown
             pass
-        self.charm._mysql.tls_restore_default()
-        self.charm.unit_peer_data.update({"tls": ""})
+        try:
+            self.charm._mysql.tls_restore_default()
+            self.charm.unit_peer_data.pop("tls")
+        except MySQLTLSRestoreDefaultConfigError:
+            logger.error("Failed to restore default TLS configuration.")
+            self.charm.unit.status = BlockedStatus("Failed to restore default TLS configuration.")
 
     # =======================
     #  Helpers

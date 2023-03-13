@@ -946,9 +946,9 @@ class TestMySQLBase(unittest.TestCase):
     def test_tls_set_custom(self, _run_mysqlcli_script):
         """Test the successful execution of tls_set_custom."""
         commands = (
-            f"SET PERSIST ssl_ca='ca_path';"
-            f"SET PERSIST ssl_key='key_path';"
-            f"SET PERSIST ssl_cert='cert_path';"
+            "SET PERSIST ssl_ca='ca_path';"
+            "SET PERSIST ssl_key='key_path';"
+            "SET PERSIST ssl_cert='cert_path';"
             "SET PERSIST require_secure_transport=on;"
             "ALTER INSTANCE RELOAD TLS;"
         )
