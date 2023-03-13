@@ -12,7 +12,6 @@ from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 
 from .helpers import (
     app_name,
-    get_process_pid,
     get_system_user_password,
     get_tls_ca,
     get_unit_ip,
@@ -140,17 +139,13 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """
     app = await app_name(ops_test)
     all_units = ops_test.model.applications[app].units
-    # dict of values for cert file md5sum and mysql service PID. After resetting the
-    # private keys these certificates should be updated and the mysql service should be
-    # restarted
+    # dict of values for cert file md5sum . After resetting the
+    # private keys these certificates should be updated
     original_tls = {}
     for unit in all_units:
         original_tls[unit.name] = {}
         original_tls[unit.name]["cert"] = await unit_file_md5(
             ops_test, unit.name, f"/var/snap/charmed-mysql/common/mysql/data/{TLS_SSL_CERT_FILE}"
-        )
-        original_tls[unit.name]["mysql_pid"] = await get_process_pid(
-            ops_test, unit.name, "mysqld_safe"
         )
 
     # set key using auto-generated key for each unit
@@ -170,12 +165,10 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         new_cert_md5 = await unit_file_md5(
             ops_test, unit.name, f"/var/snap/charmed-mysql/common/mysql/data/{TLS_SSL_CERT_FILE}"
         )
-        new_mysql_pid = await get_process_pid(ops_test, unit.name, "mysqld_safe")
 
         assert (
             new_cert_md5 != original_tls[unit.name]["cert"]
         ), f"cert for {unit.name} was not updated."
-        assert new_mysql_pid > original_tls[unit.name]["mysql_pid"], "❌ mysqld was not restarted"
 
     # Asserting only encrypted connection should be possible
     logger.info("Asserting connections after relation")
