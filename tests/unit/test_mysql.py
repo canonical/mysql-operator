@@ -19,15 +19,20 @@ from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLDeleteTempBackupDirectoryError,
+    MySQLDeleteTempRestoreDirectoryError,
     MySQLDeleteUserForRelationError,
     MySQLDeleteUsersForUnitError,
+    MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
     MySQLGetInnoDBBufferPoolParametersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
+    MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRestoreBackupError,
+    MySQLRetrieveBackupWithXBCloudError,
     MySQLUpgradeUserForMySQLRouterError,
 )
 
@@ -319,9 +324,9 @@ class TestMySQLBase(unittest.TestCase):
     def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
         """Test a successful initialization of the mysql.juju_units_operations table."""
         expected_initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), "
+            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), "
             "status varchar(20), primary key(task))",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started')",
+            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         self.mysql.initialize_juju_units_operations_table()
@@ -1150,6 +1155,321 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLDeleteTempBackupDirectoryError):
             self.mysql.delete_temp_backup_directory("/temp/backup/directory")
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_retrieve_backup_with_xbcloud(
+        self,
+        _execute_commands,
+    ):
+        """Test a successful execution of retrieve_backup_with_xbcloud()."""
+        _execute_commands.side_effect = [
+            ("16", None),
+            ("mysql/data/directory/mysql_sst_ABCD", None),
+            ("", None),
+        ]
+
+        self.mysql.retrieve_backup_with_xbcloud(
+            "s3-bucket",
+            "s3-path",
+            "s3-access-key",
+            "s3-secret-key",
+            "backup-id",
+            "mysql/data/directory",
+            "xbcloud/location",
+            "xbstream/location",
+            user="test-user",
+            group="test-group",
+        )
+
+        _expected_nproc_commands = ["nproc"]
+        _expected_temp_dir_commands = (
+            "mktemp --directory mysql/data/directory/mysql_sst_XXXX".split()
+        )
+        _expected_retrieve_backup_commands = """
+xbcloud/location get
+        --curl-retriable-errors=7
+        --parallel=10
+        s3://s3-bucket/s3-path/backup-id
+    | xbstream/location
+        --decompress
+        -x
+        -C mysql/data/directory/mysql_sst_ABCD
+        --parallel=16
+""".split()
+
+        self.assertEqual(
+            sorted(_execute_commands.mock_calls),
+            sorted(
+                [
+                    call(_expected_nproc_commands, user="test-user", group="test-group"),
+                    call(_expected_temp_dir_commands, user="test-user", group="test-group"),
+                    call(
+                        _expected_retrieve_backup_commands,
+                        bash=True,
+                        env={
+                            "ACCESS_KEY_ID": "s3-access-key",
+                            "SECRET_ACCESS_KEY": "s3-secret-key",
+                        },
+                        user="test-user",
+                        group="test-group",
+                    ),
+                ]
+            ),
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_retrieve_backup_with_xbcloud_failure(
+        self,
+        _execute_commands,
+    ):
+        """Test a failure of retrieve_backup_with_xbcloud()."""
+        _execute_commands.side_effect = [
+            ("16", None),
+            ("mysql/data/directory/mysql_sst_ABCD", None),
+            MySQLExecError("failure"),
+        ]
+
+        with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
+            self.mysql.retrieve_backup_with_xbcloud(
+                "s3-bucket",
+                "s3-path",
+                "s3-access-key",
+                "s3-secret-key",
+                "backup-id",
+                "mysql/data/directory",
+                "xbcloud/location",
+                "xbstream/location",
+                user="test-user",
+                group="test-group",
+            )
+
+        _execute_commands.side_effect = [
+            ("16", None),
+            MySQLExecError("failure"),
+        ]
+
+        with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
+            self.mysql.retrieve_backup_with_xbcloud(
+                "s3-bucket",
+                "s3-path",
+                "s3-access-key",
+                "s3-secret-key",
+                "backup-id",
+                "mysql/data/directory",
+                "xbcloud/location",
+                "xbstream/location",
+                user="test-user",
+                group="test-group",
+            )
+
+        _execute_commands.side_effect = [
+            MySQLExecError("failure"),
+        ]
+
+        with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
+            self.mysql.retrieve_backup_with_xbcloud(
+                "s3-bucket",
+                "s3-path",
+                "s3-access-key",
+                "s3-secret-key",
+                "backup-id",
+                "mysql/data/directory",
+                "xbcloud/location",
+                "xbstream/location",
+                user="test-user",
+                group="test-group",
+            )
+
+    @patch(
+        "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678),
+    )
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_prepare_backup_for_restore(
+        self,
+        _execute_commands,
+        _get_innodb_buffer_pool_parameters,
+    ):
+        """Test successful execution of prepare_backup_for_restore()."""
+        self.mysql.prepare_backup_for_restore(
+            "backup/location",
+            "xtrabackup/location",
+            "xtrabackup/plugin/dir",
+            user="test-user",
+            group="test-group",
+        )
+
+        _expected_prepare_backup_command = """
+xtrabackup/location --prepare
+        --use-memory=1234
+        --no-version-check
+        --rollback-prepared-trx
+        --xtrabackup-plugin-dir=xtrabackup/plugin/dir
+        --target-dir=backup/location
+""".split()
+
+        _get_innodb_buffer_pool_parameters.assert_called_once()
+        _execute_commands.assert_called_once_with(
+            _expected_prepare_backup_command,
+            user="test-user",
+            group="test-group",
+        )
+
+    @patch(
+        "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678),
+    )
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_prepare_backup_for_restore_failure(
+        self,
+        _execute_commands,
+        _get_innodb_buffer_pool_parameters,
+    ):
+        """Test failure of prepare_backup_for_restore()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        with self.assertRaises(MySQLPrepareBackupForRestoreError):
+            self.mysql.prepare_backup_for_restore(
+                "backup/location",
+                "xtrabackup/location",
+                "xtrabackup/plugin/dir",
+                user="test-user",
+                group="test-group",
+            )
+
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError()
+        with self.assertRaises(MySQLPrepareBackupForRestoreError):
+            self.mysql.prepare_backup_for_restore(
+                "backup/location",
+                "xtrabackup/location",
+                "xtrabackup/plugin/dir",
+                user="test-user",
+                group="test-group",
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_empty_data_files(
+        self,
+        _execute_commands,
+    ):
+        """Test successful execution of empty_data_files()."""
+        self.mysql.empty_data_files(
+            "mysql/data/directory",
+            user="test-user",
+            group="test-group",
+        )
+
+        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/mysql_sst_* -not -path mysql/data/directory -delete".split()
+
+        _execute_commands.assert_called_once_with(
+            _expected_commands,
+            user="test-user",
+            group="test-group",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_empty_data_files_failure(
+        self,
+        _execute_commands,
+    ):
+        """Test failure of empty_data_files()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        with self.assertRaises(MySQLEmptyDataDirectoryError):
+            self.mysql.empty_data_files(
+                "mysql/data/directory",
+                user="test-user",
+                group="test-group",
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_restore_backup(
+        self,
+        _execute_commands,
+    ):
+        """Test successful execution of restore_backup()."""
+        self.mysql.restore_backup(
+            "backup/location",
+            "xtrabackup/location",
+            "defaults/config/file",
+            "mysql/data/directory",
+            "xtrabackup/plugin/directory",
+            user="test-user",
+            group="test-group",
+        )
+
+        _expected_commands = """
+xtrabackup/location --defaults-file=defaults/config/file
+        --defaults-group=mysqld
+        --datadir=mysql/data/directory
+        --no-version-check
+        --move-back
+        --force-non-empty-directories
+        --xtrabackup-plugin-dir=xtrabackup/plugin/directory
+        --target-dir=backup/location
+""".split()
+
+        _execute_commands.assert_called_once_with(
+            _expected_commands,
+            user="test-user",
+            group="test-group",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_restore_backup_failure(
+        self,
+        _execute_commands,
+    ):
+        """Test failure of restore_backup()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        with self.assertRaises(MySQLRestoreBackupError):
+            self.mysql.restore_backup(
+                "backup/location",
+                "xtrabackup/location",
+                "defaults/config/file",
+                "mysql/data/directory",
+                "xtrabackup/plugin/directory",
+                user="test-user",
+                group="test-group",
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_delete_temp_restore_directory(
+        self,
+        _execute_commands,
+    ):
+        """Test successful execution of delete_temp_restore_directory()."""
+        self.mysql.delete_temp_restore_directory(
+            "mysql/data/directory",
+            user="test-user",
+            group="test-group",
+        )
+
+        _expected_commands = (
+            "find mysql/data/directory -wholename mysql/data/directory/mysql_sst_* -delete".split()
+        )
+
+        _execute_commands.assert_called_once_with(
+            _expected_commands,
+            user="test-user",
+            group="test-group",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
+    def test_delete_temp_restore_directory_failure(
+        self,
+        _execute_commands,
+    ):
+        """Test failure of delete_temp_restore_directory()."""
+        _execute_commands.side_effect = MySQLExecError("failure")
+
+        with self.assertRaises(MySQLDeleteTempRestoreDirectoryError):
+            self.mysql.delete_temp_restore_directory(
+                "mysql/data/directory",
+                user="test-user",
+                group="test-group",
+            )
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):
@@ -1163,3 +1483,12 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(NotImplementedError):
             self.mysql._execute_commands([])
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.is_mysqld_running()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.stop_mysqld()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.start_mysqld()

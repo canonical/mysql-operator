@@ -622,7 +622,7 @@ class MySQLBase(ABC):
         """
         initialize_table_commands = (
             "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor='', status = 'not-started'",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         try:
@@ -1536,7 +1536,7 @@ Swap:     1027600384  1027600384           0
                     "SECRET_ACCESS_KEY": s3_secret_key,
                 },
                 user=user,
-                group=user,
+                group=group,
             )
             return (stdout, stderr, tmp_dir)
         except MySQLExecError as e:

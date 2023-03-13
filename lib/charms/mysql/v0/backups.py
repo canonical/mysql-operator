@@ -202,7 +202,7 @@ Stderr:
             event.fail("Missing relation with S3 integrator charm")
             return
 
-        if not self.charm._mysql.is_mysqld_running:
+        if not self.charm._mysql.is_mysqld_running():
             event.fail("Process mysqld not running")
             return
 

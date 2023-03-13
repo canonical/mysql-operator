@@ -11,6 +11,8 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
     MySQLGetInnoDBBufferPoolParametersError,
+    MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
 )
 
 from constants import (
@@ -334,3 +336,62 @@ innodb_buffer_pool_chunk_size = 5678
                 group="test_group",
                 env={"envA": "valueA"},
             )
+
+    @patch("os.path.exists", return_value=True)
+    def test_is_mysqld_running(self, _path_exists):
+        """Test execution of is_mysqld_running()."""
+        self.assertTrue(self.mysql.is_mysqld_running())
+
+        _path_exists.return_value = False
+        self.assertFalse(self.mysql.is_mysqld_running())
+
+    @patch("mysql_vm_helpers.snap_service_operation")
+    def test_stop_mysqld(self, _snap_service_operation):
+        """Test execution of stop_mysqld()."""
+        self.mysql.stop_mysqld()
+
+        _snap_service_operation.assert_called_once_with(
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop"
+        )
+
+    @patch("mysql_vm_helpers.snap_service_operation")
+    def test_stop_mysqld_failure(self, _snap_service_operation):
+        """Test failure of stop_mysqld()."""
+        _snap_service_operation.side_effect = SnapServiceOperationError("failure")
+
+        with self.assertRaises(MySQLStopMySQLDError):
+            self.mysql.stop_mysqld()
+
+    @patch("mysql_vm_helpers.snap_service_operation")
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    def test_start_mysqld(
+        self,
+        _wait_until_mysql_connection,
+        _snap_service_operation,
+    ):
+        """Test execution of start_mysqld()."""
+        self.mysql.start_mysqld()
+
+        _snap_service_operation.assert_called_once_with(
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+        )
+        _wait_until_mysql_connection.assert_called_once()
+
+    @patch("mysql_vm_helpers.snap_service_operation")
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    def test_start_mysqld_failure(
+        self,
+        _wait_until_mysql_connection,
+        _snap_service_operation,
+    ):
+        """Test failure of start_mysqld()."""
+        _snap_service_operation.side_effect = SnapServiceOperationError("failure")
+
+        with self.assertRaises(MySQLStartMySQLDError):
+            self.mysql.start_mysqld()
+
+        _snap_service_operation.reset_mock()
+        _wait_until_mysql_connection.side_effect = MySQLServiceNotRunningError
+
+        with self.assertRaises(MySQLStartMySQLDError):
+            self.mysql.start_mysqld()
