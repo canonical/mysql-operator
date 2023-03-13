@@ -488,7 +488,7 @@ class TestMySQLBase(unittest.TestCase):
         _acquire_lock.return_value = False
 
         # disable tenacity retry
-        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda x: True)
+        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
         with self.assertRaises(MySQLRemoveInstanceRetryError):
             self.mysql.remove_instance("mysql-0")
@@ -867,6 +867,7 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.grant_privileges_to_user("test_user", "%", ["SELECT", "UPDATE"])
 
+        _get_cluster_primary_address.assert_called()
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
     @patch(
@@ -940,6 +941,63 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_tls_set_custom(self, _run_mysqlcli_script):
+        """Test the successful execution of tls_set_custom."""
+        commands = (
+            f"SET PERSIST ssl_ca='ca_path';"
+            f"SET PERSIST ssl_key='key_path';"
+            f"SET PERSIST ssl_cert='cert_path';"
+            "SET PERSIST require_secure_transport=on;"
+            "ALTER INSTANCE RELOAD TLS;"
+        )
+
+        self.mysql.tls_set_custom("ca_path", "key_path", "cert_path")
+
+        _run_mysqlcli_script.assert_called_with(
+            commands,
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_tls_restore_deafult(self, _run_mysqlcli_script):
+        """Test the successful execution of tls_set_custom."""
+        commands = (
+            "SET PERSIST ssl_ca='ca.pem';"
+            "SET PERSIST ssl_key='server-key.pem';"
+            "SET PERSIST ssl_cert='server-cert.pem';"
+            "SET PERSIST require_secure_transport=off;"
+            "ALTER INSTANCE RELOAD TLS;"
+        )
+
+        self.mysql.tls_restore_default()
+
+        _run_mysqlcli_script.assert_called_with(
+            commands,
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_kill_unencrypted_sessions(self, _run_mysqlsh_script):
+        """Test kill non TLS connections."""
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            (
+                'processes = session.run_sql("'
+                "SELECT processlist_id FROM performance_schema.threads WHERE "
+                "connection_type = 'TCP/IP' AND type = 'FOREGROUND';"
+                '")'
+            ),
+            "process_id_list = [id[0] for id in processes.fetch_all()]",
+            'for process_id in process_id_list:\n  session.run_sql(f"KILL CONNECTION {process_id}")',
+        )
+
+        self.mysql.kill_unencrypted_sessions()
+
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
     def test_abstract_methods(self):
         """Test abstract methods."""
