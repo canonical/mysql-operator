@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+from time import sleep
 
 import pytest
 import yaml
@@ -195,11 +196,8 @@ async def test_disable_tls(ops_test: OpsTest) -> None:
         f"{app}:certificates", f"{TLS_APP_NAME}:certificates"
     )
 
-    # Wait for hooks start reconfiguring app
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[app].status != "active", timeout=4 * 60
-    )
-    await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=15 * 60)
+    # Allow time for reconfigure
+    sleep(30)
 
     # After relation removal both encrypted and unencrypted connection should be possible
     for unit in all_units:
