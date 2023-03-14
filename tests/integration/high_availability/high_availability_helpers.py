@@ -118,6 +118,7 @@ async def deploy_and_scale_mysql(
     mysql_charm_series: str,
     check_for_existing_application: bool = True,
     mysql_application_name: str = MYSQL_DEFAULT_APP_NAME,
+    num_units: int = 3,
 ) -> str:
     """Deploys and scales the mysql application charm.
 
@@ -127,13 +128,14 @@ async def deploy_and_scale_mysql(
         check_for_existing_application: Whether to check for existing mysql applications
             in the model
         mysql_application_name: The name of the mysql application if it is to be deployed
+        num_units: The number of units to deploy
     """
     application_name = await get_application_name(ops_test, "mysql")
 
     if check_for_existing_application and application_name:
-        if len(ops_test.model.applications[application_name].units) != 3:
+        if len(ops_test.model.applications[application_name].units) != num_units:
             async with ops_test.fast_forward():
-                await scale_application(ops_test, application_name, 3)
+                await scale_application(ops_test, application_name, num_units)
 
         return application_name
 
@@ -146,7 +148,7 @@ async def deploy_and_scale_mysql(
             charm,
             application_name=mysql_application_name,
             config=config,
-            num_units=3,
+            num_units=num_units,
             series=mysql_charm_series,
         )
 
@@ -156,7 +158,7 @@ async def deploy_and_scale_mysql(
             timeout=TIMEOUT,
         )
 
-        assert len(ops_test.model.applications[mysql_application_name].units) == 3
+        assert len(ops_test.model.applications[mysql_application_name].units) == num_units
 
     return mysql_application_name
 
