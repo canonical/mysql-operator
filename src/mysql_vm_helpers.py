@@ -400,7 +400,7 @@ class MySQL(MySQLBase):
             group: the group with which to execute the commands
             env: the environment variables to execute the commands with
 
-        Returns: tuple of (stdout + stderr, "")
+        Returns: tuple of (stdout, stderr)
 
         Raises: MySQLExecError if there was an error executing the commands
         """
