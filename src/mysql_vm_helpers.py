@@ -17,6 +17,7 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
     MySQLGetInnoDBBufferPoolParametersError,
+    MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
@@ -236,7 +237,7 @@ class MySQL(MySQLBase):
         Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
         """
         if not os.path.exists(MYSQLD_SOCK_FILE):
-            raise MySQLServiceNotRunningError()
+            raise MySQLServiceNotRunningError("MySQL socket file not found")
 
     def _get_total_memory(self) -> None:
         """Retrieves the total memory of the server where mysql is running."""
@@ -296,8 +297,8 @@ class MySQL(MySQLBase):
             MYSQL_DATA_DIR,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
@@ -306,16 +307,16 @@ class MySQL(MySQLBase):
             backup_location,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def empty_data_files(self) -> None:
         """Empty the mysql data directory in preparation of the restore."""
         super(MySQL, self).empty_data_files(
             MYSQL_DATA_DIR,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def restore_backup(
@@ -323,22 +324,63 @@ class MySQL(MySQLBase):
         backup_location: str,
     ) -> Tuple[str, str]:
         """Restore the provided prepared backup."""
-        return super(MySQL, self).restore_backup(
+        # TODO: remove workaround for changing permissions and ownership of data
+        # files once restore backup commands can be run with snap_daemon user
+        try:
+            command = f"chmod 775 {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.exception("Failed to change data directory permissions before restoring")
+            raise MySQLRestoreBackupError(e)
+
+        stdout, stderr = super(MySQL, self).restore_backup(
             backup_location,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             MYSQLD_DEFAULTS_CONFIG_FILE,
             MYSQL_DATA_DIR,
             XTRABACKUP_PLUGIN_DIR,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
+
+        try:
+            command = f"chmod 755 {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+
+            command = f"chown -R {MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER} {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                "Failed to change data directory permissions or ownershp after restoring"
+            )
+            raise MySQLRestoreBackupError(e)
+
+        return (stdout, stderr)
 
     def delete_temp_restore_directory(self) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         super(MySQL, self).delete_temp_restore_directory(
             MYSQL_DATA_DIR,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def _execute_commands(
@@ -382,6 +424,11 @@ class MySQL(MySQLBase):
     def is_mysqld_running(self) -> bool:
         """Returns whether mysqld is running."""
         return os.path.exists(MYSQLD_SOCK_FILE)
+
+    def is_server_connectable(self) -> bool:
+        """Returns whether the server is connectable."""
+        # Always true since the charm runs on the same server as mysqld
+        return True
 
     def stop_mysqld(self) -> None:
         """Stops the mysqld process."""

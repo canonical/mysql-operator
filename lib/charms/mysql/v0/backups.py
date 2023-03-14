@@ -411,8 +411,8 @@ Juju Version: {str(juju_version)}
             event.fail(error_message)
             return False
 
-        if not self.charm._mysql.is_mysqld_running():
-            error_message = "Process mysqld is not running"
+        if not self.charm._mysql.is_server_connectable():
+            error_message = "Server running mysqld is not connectable"
             logger.warning(error_message)
             event.fail(error_message)
             return False

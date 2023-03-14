@@ -1682,6 +1682,11 @@ Swap:     1027600384  1027600384           0
         raise NotImplementedError
 
     @abstractmethod
+    def is_server_connectable(self) -> bool:
+        """Returns whether the server is connectable."""
+        raise NotImplementedError
+
+    @abstractmethod
     def stop_mysqld(self) -> None:
         """Stops the mysqld process."""
         raise NotImplementedError

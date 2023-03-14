@@ -519,12 +519,12 @@ Juju Version: test-juju-version
         self.assertEqual(error_message, "Error deleting temp backup directory")
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_blocked", return_value=False)
     def test_pre_restore_checks(
         self,
         _is_unit_blocked,
-        _is_mysqld_running,
+        _is_server_connectable,
     ):
         """Test _pre_restore_checks()."""
         event = MagicMock()
@@ -532,12 +532,12 @@ Juju Version: test-juju-version
         self.assertTrue(self.mysql_backups._pre_restore_checks(event))
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_blocked", return_value=False)
     def test_pre_restore_checks_failure(
         self,
         _is_unit_blocked,
-        _is_mysqld_running,
+        _is_server_connectable,
     ):
         """Test failure of _pre_restore_checks()."""
         # test more than one planned units
@@ -555,7 +555,7 @@ Juju Version: test-juju-version
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
         # test mysqld not running
-        _is_mysqld_running.return_value = False
+        _is_server_connectable.return_value = False
         event = MagicMock()
 
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
