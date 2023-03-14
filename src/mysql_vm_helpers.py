@@ -25,6 +25,7 @@ from tenacity import retry, stop_after_delay, wait_fixed
 from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
+    CHARMED_MYSQL_SNAP_CHANNEL,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
@@ -35,6 +36,7 @@ from constants import (
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
+    ROOT_SYSTEM_USER,
     XTRABACKUP_PLUGIN_DIR,
 )
 
@@ -55,10 +57,6 @@ class MySQLDataPurgeError(Error):
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
     """Exception raised when there's an error resetting root password and starting mysqld."""
-
-
-class MySQLChangeSnapDaemonHomeDirectoryError(Error):
-    """Exception raised when there's an issue changing the home dir for snap_daemon."""
 
 
 class MySQLCreateCustomMySQLDConfigError(Error):
@@ -124,7 +122,7 @@ class MySQL(MySQLBase):
 
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
+                charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -144,20 +142,6 @@ class MySQL(MySQLBase):
         except Exception as e:
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
-
-    def change_snap_daemon_home_directory(self) -> None:
-        """Change the snap_daemon home directory to a directory that exists.
-
-        This is done as a fix to ensure that subprocess.call with the snap_daemon
-        user does not throw an exception (due to its home dir not existing).
-        """
-        try:
-            command = f"sudo usermod -d / {MYSQL_SYSTEM_USER}".split()
-            self._execute_commands(command)
-        except MySQLExecError:
-            error_message = f"Failed to change the home directory for {MYSQL_SYSTEM_USER}"
-            logger.exception(error_message)
-            raise MySQLChangeSnapDaemonHomeDirectoryError(error_message)
 
     def create_custom_mysqld_config(self) -> None:
         """Create custom mysql config file.
@@ -257,8 +241,8 @@ class MySQL(MySQLBase):
     def _get_total_memory(self) -> None:
         """Retrieves the total memory of the server where mysql is running."""
         return super()._get_total_memory(
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def execute_backup_commands(
@@ -282,16 +266,16 @@ class MySQL(MySQLBase):
             MYSQLD_SOCK_FILE,
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
             MYSQLD_DEFAULTS_CONFIG_FILE,
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def delete_temp_backup_directory(self) -> None:
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
-            user=MYSQL_SYSTEM_USER,
-            group=MYSQL_SYSTEM_USER,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
         )
 
     def _execute_commands(
