@@ -18,12 +18,10 @@ from charms.mysql.v0.mysql import (
 from constants import (
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
-    MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
 )
 from mysql_vm_helpers import (
     MySQL,
-    MySQLChangeSnapDaemonHomeDirectoryError,
     MySQLCreateCustomMySQLDConfigError,
     MySQLResetRootPasswordAndStartMySQLDError,
     MySQLServiceNotRunningError,
@@ -232,23 +230,6 @@ class TestMySQL(unittest.TestCase):
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense")
 
         _snap_cache.assert_not_called()
-
-    @patch("mysql_vm_helpers.MySQL._execute_commands")
-    def test_change_snap_daemon_home_directory(self, _execute_commands):
-        """Test successful execution of change_snap_daemon_home_directory()."""
-        self.mysql.change_snap_daemon_home_directory()
-
-        _execute_commands.assert_called_once_with(
-            ["sudo", "usermod", "-d", "/", MYSQL_SYSTEM_USER]
-        )
-
-    @patch("mysql_vm_helpers.MySQL._execute_commands")
-    def test_change_snap_daemon_home_directory_exception(self, _execute_commands):
-        """Test failure in execution of change_snap_daemon_home_directory()."""
-        _execute_commands.side_effect = MySQLExecError
-
-        with self.assertRaises(MySQLChangeSnapDaemonHomeDirectoryError):
-            self.mysql.change_snap_daemon_home_directory()
 
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
     @patch("pathlib.Path")

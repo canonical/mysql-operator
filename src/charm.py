@@ -62,7 +62,6 @@ from constants import (
 )
 from mysql_vm_helpers import (
     MySQL,
-    MySQLChangeSnapDaemonHomeDirectoryError,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
     MySQLReconfigureError,
@@ -191,9 +190,6 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
-            return
-        except MySQLChangeSnapDaemonHomeDirectoryError:
-            self.unit.status = BlockedStatus("Failed to change home dir for snap_daemon")
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
@@ -558,7 +554,6 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.change_snap_daemon_home_directory()
         self._mysql.create_custom_mysqld_config()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
@@ -648,8 +643,6 @@ class MySQLOperatorCharm(CharmBase):
             return BlockedStatus("Failed to purge data dir")
         except MySQLResetRootPasswordAndStartMySQLDError:
             return BlockedStatus("Failed to reset root password")
-        except MySQLChangeSnapDaemonHomeDirectoryError:
-            return BlockedStatus("Failed to change home dir for snap_daemon")
         except MySQLCreateCustomMySQLDConfigError:
             return BlockedStatus("Failed to create custom mysqld config")
         except SnapServiceOperationError as e:
