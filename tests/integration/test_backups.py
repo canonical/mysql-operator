@@ -92,9 +92,9 @@ def clean_backups_from_buckets() -> None:
             bucket_object.delete()
 
 
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
     primary_mysql = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
@@ -122,9 +122,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest) -> None:
+async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to create a backup and list backups."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
     global backups_by_cloud, value_before_backup, value_after_backup
 
@@ -196,9 +196,9 @@ async def test_backup(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_on_same_cluster(ops_test: OpsTest) -> None:
+async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to restore a backup to the same mysql cluster."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
     logger.info("Scaling mysql application to 1 unit")
     async with ops_test.fast_forward():
@@ -252,12 +252,13 @@ async def test_restore_on_same_cluster(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
+async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
 
     new_mysql_application_name = await deploy_and_scale_mysql(
         ops_test,
+        mysql_charm_series,
         check_for_existing_application=False,
         mysql_application_name="another-mysql-k8s",
         num_units=1,
