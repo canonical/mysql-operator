@@ -977,15 +977,13 @@ class TestMySQLBase(unittest.TestCase):
         """Test successful execution of _get_total_memory()."""
         _execute_commands.return_value = "16484458496\n", None
 
-        total_memory = self.mysql._get_total_memory(user="test_user", group="test_group")
+        total_memory = self.mysql._get_total_memory()
 
         self.assertEqual(16484458496, total_memory)
 
         _execute_commands.assert_called_once_with(
             "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
             bash=True,
-            user="test_user",
-            group="test_group",
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
@@ -1059,7 +1057,7 @@ class TestMySQLBase(unittest.TestCase):
             sorted(_execute_commands.mock_calls),
             sorted(
                 [
-                    call(_expected_nproc_commands, user="test_user", group="test_group"),
+                    call(_expected_nproc_commands),
                     call(_expected_tmp_dir_commands, user="test_user", group="test_group"),
                     call(
                         _expected_xtrabackup_commands,
