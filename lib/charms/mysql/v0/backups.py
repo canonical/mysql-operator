@@ -280,7 +280,7 @@ Juju Version: {str(juju_version)}
         Returns: tuple of (success, error_message)
         """
         logger.info("Checking if the unit is waiting to start or restart")
-        if self.charm.is_unit_blocked():
+        if self.charm.is_unit_busy():
             return False, "Unit is waiting to start or restart"
 
         logger.info("Checking if backup already in progress")
@@ -418,7 +418,7 @@ Juju Version: {str(juju_version)}
             return False
 
         logger.info("Checking if the unit is waiting to start or restart")
-        if self.charm.is_unit_blocked():
+        if self.charm.is_unit_busy():
             error_message = "Unit is waiting to start or restart"
             logger.warning(error_message)
             event.fail(error_message)

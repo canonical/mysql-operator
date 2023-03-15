@@ -320,6 +320,8 @@ class MySQL(MySQLBase):
         # TODO: remove workaround for changing permissions and ownership of data
         # files once restore backup commands can be run with snap_daemon user
         try:
+            # provide write permissions to root (group owner of the data directory)
+            # so the root user can move back files into the data directory
             command = f"chmod 775 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
@@ -343,6 +345,7 @@ class MySQL(MySQLBase):
         )
 
         try:
+            # Revert permissions for the data directory
             command = f"chmod 755 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
@@ -352,6 +355,8 @@ class MySQL(MySQLBase):
                 text=True,
             )
 
+            # Change ownership to the snap_daemon user since the restore files
+            # are owned by root
             command = f"chown -R {MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER} {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,

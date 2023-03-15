@@ -513,7 +513,7 @@ class MySQLOperatorCharm(CharmBase):
         """Returns whether a relation with the s3 integrator exists."""
         return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
 
-    def is_unit_blocked(self) -> bool:
+    def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
         return self.unit_peer_data.get("member-state") == "waiting"
 

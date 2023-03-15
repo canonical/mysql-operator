@@ -1494,11 +1494,7 @@ Swap:     1027600384  1027600384           0
         make_temp_dir_command = f"mktemp --directory {mysql_data_directory}/mysql_sst_XXXX".split()
 
         try:
-            nproc, _ = self._execute_commands(
-                nproc_command,
-                user=user,
-                group=group,
-            )
+            nproc, _ = self._execute_commands(nproc_command)
 
             tmp_dir, _ = self._execute_commands(
                 make_temp_dir_command,
