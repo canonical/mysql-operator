@@ -953,7 +953,7 @@ class TestMySQLBase(unittest.TestCase):
             "ALTER INSTANCE RELOAD TLS;"
         )
 
-        self.mysql.tls_set_custom("ca_path", "key_path", "cert_path")
+        self.mysql.tls_setup("ca_path", "key_path", "cert_path", True)
 
         _run_mysqlcli_script.assert_called_with(
             commands,
@@ -972,7 +972,7 @@ class TestMySQLBase(unittest.TestCase):
             "ALTER INSTANCE RELOAD TLS;"
         )
 
-        self.mysql.tls_restore_default()
+        self.mysql.tls_setup()
 
         _run_mysqlcli_script.assert_called_with(
             commands,

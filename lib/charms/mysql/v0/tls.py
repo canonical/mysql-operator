@@ -16,14 +16,8 @@
 
 This library is used by the mysql charm to provide the TLS certificates relation.
 It requires the TLS certificates library and the MySQL library.
+
 """
-
-# The unique Charmhub library identifier, never change it
-LIBID = "eb73947deedd4380a3a90d527e0878eb"
-
-LIBAPI = 0
-
-LIBPATCH = 1
 
 
 import base64
@@ -32,10 +26,7 @@ import re
 import socket
 from typing import List, Optional, Tuple
 
-from charms.mysql.v0.mysql import (
-    MySQLKillSessionError,
-    MySQLTLSSetupError,
-)
+from charms.mysql.v0.mysql import MySQLKillSessionError, MySQLTLSSetupError
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -56,6 +47,12 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+LIBID = "eb73947deedd4380a3a90d527e0878eb"
+
+LIBAPI = 0
+
+LIBPATCH = 1
 
 SCOPE = "unit"
 
