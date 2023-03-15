@@ -520,10 +520,10 @@ Juju Version: test-juju-version
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
-    @patch("charm.MySQLOperatorCharm.is_unit_blocked", return_value=False)
+    @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
     def test_pre_restore_checks(
         self,
-        _is_unit_blocked,
+        _is_unit_busy,
         _is_server_connectable,
     ):
         """Test _pre_restore_checks()."""
@@ -533,10 +533,10 @@ Juju Version: test-juju-version
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
-    @patch("charm.MySQLOperatorCharm.is_unit_blocked", return_value=False)
+    @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
     def test_pre_restore_checks_failure(
         self,
-        _is_unit_blocked,
+        _is_unit_busy,
         _is_server_connectable,
     ):
         """Test failure of _pre_restore_checks()."""
@@ -549,7 +549,7 @@ Juju Version: test-juju-version
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
 
         # test unit in blocked state
-        _is_unit_blocked.return_value = True
+        _is_unit_busy.return_value = True
         event = MagicMock()
 
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
