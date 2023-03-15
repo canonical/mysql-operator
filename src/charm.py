@@ -18,6 +18,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
 )
+from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -63,7 +64,6 @@ from mysql_vm_helpers import (
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
-from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
@@ -510,6 +510,13 @@ class MySQLOperatorCharm(CharmBase):
             self.app_peer_data.update({key: value})
         else:
             raise RuntimeError("Unknown secret scope.")
+
+    def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
+        """Get the hostname of the unit."""
+        if unit_name:
+            unit = self.model.get_unit(unit_name)
+            return self.peers.data[unit]["instance-hostname"].split(":")[0]
+        return self.unit_peer_data["instance-hostname"].split(":")[0]
 
     @property
     def active_status_message(self) -> str:

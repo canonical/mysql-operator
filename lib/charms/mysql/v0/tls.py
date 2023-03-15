@@ -1,7 +1,30 @@
-# Copyright 2022 Canonical Ltd.
-# See LICENSE file for licensing details.
+# Copyright 2023 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-"""Library containing the implementation of the tls certificates relation."""
+"""Library containing the implementation of the tls certificates relation for mysql charm.
+
+This library is used by the mysql charm to provide the TLS certificates relation.
+It requires the TLS certificates library and the MySQL library.
+"""
+
+# The unique Charmhub library identifier, never change it
+LIBID = "eb73947deedd4380a3a90d527e0878eb"
+
+LIBAPI = 0
+
+LIBPATCH = 1
+
 
 import base64
 import logging
@@ -11,8 +34,7 @@ from typing import List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
     MySQLKillSessionError,
-    MySQLTLSRestoreDefaultConfigError,
-    MySQLTLSSetCustomConfigError,
+    MySQLTLSSetupError,
 )
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -32,7 +54,6 @@ from constants import (
     TLS_SSL_CERT_FILE,
     TLS_SSL_KEY_FILE,
 )
-from mysql_vm_helpers import write_content_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -105,15 +126,16 @@ class MySQLTLS(Object):
 
         self.push_tls_files_to_workload()
         try:
-            self.charm._mysql.tls_set_custom(
+            self.charm._mysql.tls_setup(
                 ca_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CA_FILE}",
                 key_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_KEY_FILE}",
                 cert_path=f"{MYSQL_DATA_DIR}/{TLS_SSL_CERT_FILE}",
+                require_tls=True,
             )
 
             # kill any unencrypted sessions to force clients to reconnect
             self.charm._mysql.kill_unencrypted_sessions()
-        except MySQLTLSSetCustomConfigError:
+        except MySQLTLSSetupError:
             logger.error("Failed to set custom TLS configuration.")
             self.charm.unit.status = BlockedStatus("Failed to set TLS configuration.")
             return
@@ -133,7 +155,7 @@ class MySQLTLS(Object):
         old_csr = self.charm.get_secret(SCOPE, "csr").encode("utf-8")
         new_csr = generate_csr(
             private_key=key,
-            subject=self.charm.get_hostname_by_unit(self.charm.unit.name),
+            subject=self.charm.get_unit_hostname(),
             organization=self.charm.app.name,
             sans=self._get_sans(),
         )
@@ -153,9 +175,9 @@ class MySQLTLS(Object):
             # ignore key error for unit teardown
             pass
         try:
-            self.charm._mysql.tls_restore_default()
+            self.charm._mysql.tls_setup()
             self.charm.unit_peer_data.pop("tls")
-        except MySQLTLSRestoreDefaultConfigError:
+        except MySQLTLSSetupError:
             logger.error("Failed to restore default TLS configuration.")
             self.charm.unit.status = BlockedStatus("Failed to restore default TLS configuration.")
 
@@ -171,7 +193,7 @@ class MySQLTLS(Object):
 
         csr = generate_csr(
             private_key=key,
-            subject=self.charm.unit_peer_data["instance-hostname"].split(":")[0],
+            subject=self.charm.get_unit_hostname(),
             organization=self.charm.app.name,
             sans=self._get_sans(),
         )
@@ -229,14 +251,16 @@ class MySQLTLS(Object):
         ssl_key, ssl_ca, ssl_cert = self.get_tls_content()
 
         if ssl_key:
-            write_content_to_file(
+            self.charm._mysql.write_content_to_file(
                 f"{MYSQL_DATA_DIR}/{TLS_SSL_KEY_FILE}", ssl_key, permission=0o400
             )
 
         if ssl_ca:
-            write_content_to_file(f"{MYSQL_DATA_DIR}/{TLS_SSL_CA_FILE}", ssl_ca, permission=0o400)
+            self.charm._mysql.write_content_to_file(
+                f"{MYSQL_DATA_DIR}/{TLS_SSL_CA_FILE}", ssl_ca, permission=0o400
+            )
 
         if ssl_cert:
-            write_content_to_file(
+            self.charm._mysql.write_content_to_file(
                 f"{MYSQL_DATA_DIR}/{TLS_SSL_CERT_FILE}", ssl_cert, permission=0o400
             )
