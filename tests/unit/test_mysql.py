@@ -1198,7 +1198,7 @@ xbcloud/location get
             sorted(_execute_commands.mock_calls),
             sorted(
                 [
-                    call(_expected_nproc_commands, user="test-user", group="test-group"),
+                    call(_expected_nproc_commands),
                     call(_expected_temp_dir_commands, user="test-user", group="test-group"),
                     call(
                         _expected_retrieve_backup_commands,
