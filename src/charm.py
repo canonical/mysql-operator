@@ -122,7 +122,9 @@ class MySQLOperatorCharm(CharmBase):
                 after=set_retry_status,
             ):
                 with attempt:
-                    MySQL.install_and_configure_mysql_dependencies()
+                    MySQL.install_and_configure_mysql_dependencies(
+                        self.model.get_binding(PEER).network.bind_address
+                    )
         except RetryError:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
             return

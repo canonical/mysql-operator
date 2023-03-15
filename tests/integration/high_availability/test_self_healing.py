@@ -47,12 +47,14 @@ APP_NAME = METADATA["name"]
 MYSQL_DAEMON = "mysqld"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build and deploy."""
     await high_availability_test_setup(ops_test, mysql_charm_series)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_kill_db_process(
@@ -94,6 +96,7 @@ async def test_kill_db_process(
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
@@ -138,6 +141,7 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_cha
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_network_cut(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
@@ -219,6 +223,7 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes, mysql_charm_ser
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_replicate_data_on_restart(
@@ -304,6 +309,7 @@ async def test_replicate_data_on_restart(
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
@@ -369,6 +375,7 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_s
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_sst_test(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
