@@ -239,13 +239,6 @@ class MySQL(MySQLBase):
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
 
-    def _get_total_memory(self) -> None:
-        """Retrieves the total memory of the server where mysql is running."""
-        return super()._get_total_memory(
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
-        )
-
     def execute_backup_commands(
         self,
         s3_bucket: str,

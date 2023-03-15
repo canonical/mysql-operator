@@ -1345,7 +1345,7 @@ class MySQLBase(ABC):
             logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
             raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
 
-    def _get_total_memory(self, user: str = None, group: str = None) -> int:
+    def _get_total_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
         try:
             logger.info("Retrieving the total memory of the server")
@@ -1361,8 +1361,6 @@ Swap:     1027600384  1027600384           0
             total_memory, _ = self._execute_commands(
                 get_total_memory_command,
                 bash=True,
-                user=user,
-                group=group,
             )
             return int(total_memory)
         except MySQLExecError:
@@ -1390,7 +1388,7 @@ Swap:     1027600384  1027600384           0
         make_temp_dir_command = f"mktemp --directory {tmp_base_directory}/xtra_backup_XXXX".split()
 
         try:
-            nproc, _ = self._execute_commands(nproc_command, user=user, group=group)
+            nproc, _ = self._execute_commands(nproc_command)
             tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
         except MySQLExecError as e:
             logger.exception("Failed to execute commands prior to running backup")
