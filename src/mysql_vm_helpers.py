@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 
@@ -89,8 +90,11 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies() -> None:
+    def install_and_configure_mysql_dependencies(host_ip_address: str) -> None:
         """Install and configure MySQL dependencies.
+
+        Args:
+            host_ip_address: ip address of the host. Used only for MAAS ephemeral deployments.
 
         Raises
             subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
@@ -114,6 +118,12 @@ class MySQL(MySQLBase):
             shutil.copyfile(
                 "templates/mysqld.cnf", f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
             )
+
+            if socket.gethostbyname(socket.getfqdn()) == "127.0.1.1":
+                # append report host ip host_address to the custom config
+                # ref. https://github.com/canonical/mysql-operator/issues/121
+                with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "a") as f:
+                    f.write(f"\nreport_host = {host_ip_address}")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
