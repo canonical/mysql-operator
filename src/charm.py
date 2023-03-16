@@ -18,7 +18,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
 )
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
+from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -35,14 +35,7 @@ from ops.model import (
     StatusBase,
     WaitingStatus,
 )
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_exponential,
-    wait_fixed,
-)
+from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
 
 from constants import (
     CHARMED_MYSQL_SNAP_NAME,
@@ -71,7 +64,6 @@ from mysql_vm_helpers import (
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
-from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
@@ -104,9 +96,6 @@ class MySQLOperatorCharm(CharmBase):
         self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
-        self.restart_manager = RollingOpsManager(
-            charm=self, relation="restart", callback=self._restart
-        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -524,6 +513,13 @@ class MySQLOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Unknown secret scope.")
 
+    def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
+        """Get the hostname of the unit."""
+        if unit_name:
+            unit = self.model.get_unit(unit_name)
+            return self.peers.data[unit]["instance-hostname"].split(":")[0]
+        return self.unit_peer_data["instance-hostname"].split(":")[0]
+
     @property
     def active_status_message(self) -> str:
         """Active status message."""
@@ -543,8 +539,8 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
-        workload_version = self._mysql.get_mysql_version()
-        self.unit.set_workload_version(workload_version)
+        if workload_version := self._mysql.get_mysql_version():
+            self.unit.set_workload_version(workload_version)
 
     def _create_cluster(self) -> None:
         """Create cluster commands.
@@ -630,56 +626,14 @@ class MySQLOperatorCharm(CharmBase):
 
         return ActiveStatus(self.active_status_message)
 
-    def _get_primary_address_from_peers(self) -> str:
+    def _get_primary_address_from_peers(self) -> Optional[str]:
         """Retrieve primary address based on peer data."""
         for unit in self.peers.units:
-            if self.peers.data[unit]["member-role"] == "primary":
+            if (
+                self.peers.data[unit]["member-role"] == "primary"
+                and self.peers.data[unit]["member-state"] == "online"
+            ):
                 return self.peers.data[unit]["instance-hostname"]
-
-    def _restart(self, _) -> None:
-        """Restart server rolling ops callback function.
-
-        Hold execution until server is back in the cluster.
-        Used exclusively for rolling restarts.
-        """
-        logger.debug("Restarting mysqld daemon")
-
-        try:
-            mysqld_running = snap_service_operation(
-                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
-            )
-        except SnapServiceOperationError as e:
-            self.unit.status = BlockedStatus(e.message)
-            return
-
-        if not mysqld_running:
-            logger.error("Failed to restart mysqld on rolling restart")
-            self.unit.status = BlockedStatus("Failed to restart mysqld")
-            return
-
-        # when restart done right after cluster creation (e.g bundles)
-        # or for single unit deployments, it's necessary reboot the
-        # cluster from outage to restore unit as primary
-        if self.app_peer_data["units-added-to-cluster"] == "1":
-            try:
-                self._mysql.reboot_from_complete_outage()
-            except MySQLRebootFromCompleteOutageError:
-                logger.error("Failed to restart single node cluster")
-                self.unit.status = BlockedStatus("Failed to restart primary")
-                return
-
-        unit_label = self.unit.name.replace("/", "-")
-
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
-                with attempt:
-                    if self._mysql.is_instance_in_cluster(unit_label):
-                        self._on_update_status(None)
-                        return
-                    raise Exception
-        except RetryError:
-            logger.error("Unable to rejoin mysqld instance to the cluster.")
-            self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
 
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.

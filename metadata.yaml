@@ -19,8 +19,6 @@ maintainers:
 peers:
   database-peers:
     interface: mysql_peers
-  restart:
-    interface: rolling_op
 provides:
   db-router:
     interface: mysql-router

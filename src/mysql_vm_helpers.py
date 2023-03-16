@@ -331,6 +331,29 @@ class MySQL(MySQLBase):
         logger.debug("Installing charmed-mysql snap")
         charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
 
+    @staticmethod
+    def write_content_to_file(
+        path: str,
+        content: str,
+        owner: str = MYSQL_SYSTEM_USER,
+        group: str = "root",
+        permission: int = 0o640,
+    ) -> None:
+        """Write content to file.
+
+        Args:
+            path: filesystem full path (with filename)
+            content: string content to write
+            owner: file owner
+            group: file group
+            permission: file permission
+        """
+        with open(path, "w", encoding="utf-8") as fd:
+            fd.write(content)
+
+        shutil.chown(path, owner, group)
+        os.chmod(path, mode=permission)
+
 
 def is_data_dir_attached() -> bool:
     """Returns if data directory is attached."""
@@ -358,29 +381,6 @@ def instance_hostname():
     except subprocess.CalledProcessError as e:
         logger.exception("Failed to retrieve hostname", e)
         return None
-
-
-def write_content_to_file(
-    path: str,
-    content: str,
-    owner: str = MYSQL_SYSTEM_USER,
-    group: str = "root",
-    permission: int = 0o640,
-) -> None:
-    """Write content to file.
-
-    Args:
-        path: filesystem full path (with filename)
-        content: string content to write
-        owner: file owner
-        group: file group
-        permission: file permission
-    """
-    with open(path, "w", encoding="utf-8") as fd:
-        fd.write(content)
-
-    shutil.chown(path, owner, group)
-    os.chmod(path, mode=permission)
 
 
 def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
