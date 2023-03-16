@@ -145,7 +145,7 @@ def fetch_and_check_existence_of_s3_path(s3_parameters: Dict, path: str) -> bool
     )
 
     try:
-        response = s3_client.get_object(Bucket=s3_parameters["bucket"], Key=path)
+        response = s3_client.get_object(Bucket=s3_parameters["bucket"], Key=path, Range="0-1")
         return "ContentLength" in response  # return True even if object is empty
     except s3_client.exceptions.NoSuchKey:
         return False
