@@ -13,18 +13,18 @@
       "groupName": "Python dependencies"
     }, {
       "matchManagers": ["github-actions"],
-      "groupName": "Github actions"
+      "groupName": "GitHub actions"
     }, {
       "matchPackageNames": ["juju/juju"],
       "allowedVersions": "<3.0.0",
       "extractVersion": "^juju-(?<version>.*)$",
-      "groupName": "Juju release"
+      "groupName": "Juju agent"
     }
   ],
   "regexManagers": [
     {
       "fileMatch": ["^(workflow-templates|\\.github/workflows)/[^/]+\\.ya?ml$"],
-      "matchStrings": ["bootstrap-options: \"--agent-version (?<currentValue>.*?)\" # Latest"],
+      "matchStrings": ["bootstrap-options: \"--agent-version[= ](?<currentValue>.*?)\" +# renovate: latest"],
       "depNameTemplate": "juju/juju",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "loose",
