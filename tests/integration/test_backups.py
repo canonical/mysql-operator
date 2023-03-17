@@ -208,6 +208,8 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
     mysql_unit_address = await get_unit_ip(ops_test, mysql_unit.name)
     server_config_credentials = await get_server_config_credentials(mysql_unit)
 
+    select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
+
     for cloud_name, config in CLOUD_CONFIGS.items():
         assert backups_by_cloud[cloud_name]
 
@@ -240,7 +242,6 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
         logger.info(
             "Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not"
         )
-        select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
         values = await execute_queries_on_unit(
             mysql_unit_address,
@@ -249,6 +250,43 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
             select_values_sql,
         )
         assert values == [value_before_backup]
+
+        # insert data into cluster after restore
+        logger.info(f"Inserting value after restore from {cloud_name}")
+        value_after_restore = await insert_data_into_mysql_and_validate_replication(
+            ops_test,
+            DATABASE_NAME,
+            TABLE_NAME,
+        )
+
+        logger.info("Ensuring that pre-backup and post-restore values exist in the database")
+
+        values = await execute_queries_on_unit(
+            mysql_unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            select_values_sql,
+        )
+        assert values == [value_before_backup, value_after_restore]
+
+    logger.info("Scaling mysql application to 3 units")
+    await scale_application(ops_test, mysql_application_name, 3)
+
+    logger.info("Ensuring inserted values before backup and after restore exist on all units")
+    for unit in ops_test.model.applications[mysql_application_name].units:
+        unit_address = await get_unit_ip(ops_test, unit.name)
+
+        values = await execute_queries_on_unit(
+            unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            select_values_sql,
+        )
+
+        assert values == [value_before_backup, value_after_restore]
+
+    # scale down the cluster to preserve resources for the following tests
+    await scale_application(ops_test, mysql_application_name, 0)
 
 
 @pytest.mark.abort_on_fail
@@ -288,6 +326,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
     await rotate_credentials(primary_mysql, username="root", password=ROOT_PASSWORD)
 
     server_config_credentials = await get_server_config_credentials(primary_mysql)
+    select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
     for cloud_name, config in CLOUD_CONFIGS.items():
         assert backups_by_cloud[cloud_name]
@@ -321,7 +360,6 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
         logger.info(
             "Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not"
         )
-        select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
         values = await execute_queries_on_unit(
             primary_unit_address,
@@ -330,3 +368,37 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
             select_values_sql,
         )
         assert values == [value_before_backup]
+
+        # insert data into cluster after restore
+        logger.info(f"Inserting value after restore from {cloud_name}")
+        value_after_restore = await insert_data_into_mysql_and_validate_replication(
+            ops_test,
+            DATABASE_NAME,
+            TABLE_NAME,
+        )
+
+        logger.info("Ensuring that pre-backup and post-restore values exist in the database")
+
+        values = await execute_queries_on_unit(
+            primary_unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            select_values_sql,
+        )
+        assert values == [value_before_backup, value_after_restore]
+
+    logger.info("Scaling mysql application to 3 units")
+    await scale_application(ops_test, new_mysql_application_name, 3)
+
+    logger.info("Ensuring inserted values before backup and after restore exist on all units")
+    for unit in ops_test.model.applications[new_mysql_application_name].units:
+        unit_address = await get_unit_ip(ops_test, unit.name)
+
+        values = await execute_queries_on_unit(
+            unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            select_values_sql,
+        )
+
+        assert values == [value_before_backup, value_after_restore]
