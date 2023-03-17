@@ -7,6 +7,7 @@
   "enabledManagers": ["poetry", "pip_requirements", "github-actions", "regex"],
   "schedule": ["after 1am and before 2am every weekday"],
   "timezone": "Etc/UTC",
+  "prhourlylimit": 0,
   "packageRules": [
     {
       "matchManagers": ["poetry", "pip_requirements"],
@@ -24,7 +25,7 @@
   "regexManagers": [
     {
       "fileMatch": ["^(workflow-templates|\\.github/workflows)/[^/]+\\.ya?ml$"],
-      "matchStrings": ["bootstrap-options: \"--agent-version[= ](?<currentValue>.*?)\" +# renovate: latest"],
+      "matchStrings": ["\"--agent-version[= ](?<currentValue>.*?)\" +# renovate: latest"],
       "depNameTemplate": "juju/juju",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "loose",
