@@ -375,7 +375,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
             ops_test,
             DATABASE_NAME,
             TABLE_NAME,
-            mysql_application_substring=new_mysql_application_name,
+            mysql_application_substring="another-mysql",
         )
 
         logger.info("Ensuring that pre-backup and post-restore values exist in the database")
