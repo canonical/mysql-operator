@@ -1392,7 +1392,6 @@ Swap:     1027600384  1027600384           0
             tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
         except MySQLExecError as e:
             logger.exception("Failed to execute commands prior to running backup")
-            logger.error(e.message)
             raise MySQLExecuteBackupCommandsError(e.message)
         except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
@@ -1441,7 +1440,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to execute backup commands")
-            logger.error(e.message)
             raise MySQLExecuteBackupCommandsError(e.message)
         except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
@@ -1466,7 +1464,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to delete temp backup directory")
-            logger.error(e.message)
             raise MySQLDeleteTempBackupDirectoryError(e.message)
         except Exception as e:
             logger.exception("Failed to delete temp backup directory")
@@ -1503,7 +1500,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to execute commands prior to running xbcloud get")
-            logger.error(e.message)
             raise MySQLRetrieveBackupWithXBCloudError(e.message)
 
         backup_path = str(pathlib.Path(s3_bucket) / s3_path / backup_id)
@@ -1535,7 +1531,6 @@ Swap:     1027600384  1027600384           0
             return (stdout, stderr, tmp_dir)
         except MySQLExecError as e:
             logger.exception("Failed to retrieve backup")
-            logger.error(e.message)
             raise MySQLRetrieveBackupWithXBCloudError(e.message)
         except Exception as e:
             logger.exception("Failed to retrieve backup")
@@ -1572,7 +1567,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to prepare backup for restore")
-            logger.error(e.message)
             raise MySQLPrepareBackupForRestoreError(e.message)
         except Exception as e:
             logger.exception("Failed to prepare backup for restore")
@@ -1595,7 +1589,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to empty data directory in prep for backup restore")
-            logger.error(e.message)
             raise MySQLEmptyDataDirectoryError(e.message)
         except Exception as e:
             logger.exception("Failed to empty data directory in prep for backup restore")
@@ -1631,7 +1624,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to restore backup")
-            logger.error(e.message)
             raise MySQLRestoreBackupError(e.message)
         except Exception as e:
             logger.exception("Failed to restore backup")
@@ -1655,7 +1647,6 @@ Swap:     1027600384  1027600384           0
             )
         except MySQLExecError as e:
             logger.exception("Failed to remove temp backup directory")
-            logger.error(e.message)
             raise MySQLDeleteTempRestoreDirectoryError(e.message)
 
     @abstractmethod
