@@ -208,6 +208,7 @@ class MySQLProvider(Object):
         try:
             db_version = self.charm._mysql.get_mysql_version()
             rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+            self.database.set_database(relation_id, db_name)
             self.database.set_credentials(relation_id, db_user, db_pass)
             self.database.set_endpoints(relation_id, rw_endpoints)
             self.database.set_version(relation_id, db_version)
