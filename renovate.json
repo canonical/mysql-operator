@@ -2,5 +2,34 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base"
-  ]
+  ],
+  "reviewers": ["team:data-platform-mysql"],
+  "enabledManagers": ["poetry", "pip_requirements", "github-actions", "regex"],
+  "schedule": ["after 1am and before 2am every weekday"],
+  "timezone": "Etc/UTC",
+  "packageRules": [
+    {
+      "matchManagers": ["poetry", "pip_requirements"],
+      "groupName": "Python dependencies"
+    }, {
+      "matchManagers": ["github-actions"],
+      "groupName": "Github actions"
+    }, {
+      "matchPackageNames": ["juju/juju"],
+      "allowedVersions": "<3.0.0",
+      "extractVersion": "^juju-(?<version>.*)$",
+      "groupName": "Juju release"
+    }
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": ["^(workflow-templates|\\.github/workflows)/[^/]+\\.ya?ml$"],
+      "matchStrings": ["bootstrap-options: \"--agent-version (?<currentValue>.*?)\" # Latest"],
+      "depNameTemplate": "juju/juju",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "loose",
+      "extractVersionTemplate": "Juju release"
+    }
+  ],
+  "ignoreDeps": []
 }
