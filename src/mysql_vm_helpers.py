@@ -278,6 +278,7 @@ class MySQL(MySQLBase):
         s3_path: str,
         s3_access_key: str,
         s3_secret_key: str,
+        s3_endpoint: str,
         backup_id: str,
     ) -> Tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
@@ -287,6 +288,7 @@ class MySQL(MySQLBase):
             s3_access_key,
             s3_secret_key,
             backup_id,
+            s3_endpoint,
             MYSQL_DATA_DIR,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,

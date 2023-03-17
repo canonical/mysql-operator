@@ -522,6 +522,7 @@ Juju Version: {str(juju_version)}
                 s3_parameters["path"],
                 s3_parameters["access-key"],
                 s3_parameters["secret-key"],
+                s3_parameters["endpoint"],
                 backup_id,
             )
             logger.debug(f"Stdout of xbcloud get commands: {stdout}")

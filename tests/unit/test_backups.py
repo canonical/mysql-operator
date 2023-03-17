@@ -773,6 +773,7 @@ Juju Version: test-juju-version
             "path": "test/path",
             "access-key": "test-access-key",
             "secret-key": "test-secret-key",
+            "endpoint": "test-endpoint",
         }
         success, recoverable, error = self.mysql_backups._restore("test-backup-id", s3_parameters)
 
@@ -801,6 +802,7 @@ Juju Version: test-juju-version
             "path": "test/path",
             "access-key": "test-access-key",
             "secret-key": "test-secret-key",
+            "endpoint": "test-endpoint",
         }
 
         # test failure of restore_backup()

@@ -1475,6 +1475,7 @@ Swap:     1027600384  1027600384           0
         s3_path: str,
         s3_access_key: str,
         s3_secret_key: str,
+        s3_endpoint: str,
         backup_id: str,
         mysql_data_directory: str,
         xbcloud_location: str,
@@ -1508,6 +1509,7 @@ Swap:     1027600384  1027600384           0
 {xbcloud_location} get
         --curl-retriable-errors=7
         --parallel=10
+        --s3-endpoint={s3_endpoint}
         s3://{backup_path}
     | {xbstream_location}
         --decompress

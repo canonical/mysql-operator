@@ -1170,6 +1170,7 @@ class TestMySQLBase(unittest.TestCase):
             "s3-path",
             "s3-access-key",
             "s3-secret-key",
+            "s3-endpoint",
             "backup-id",
             "mysql/data/directory",
             "xbcloud/location",
@@ -1186,6 +1187,7 @@ class TestMySQLBase(unittest.TestCase):
 xbcloud/location get
         --curl-retriable-errors=7
         --parallel=10
+        --s3-endpoint=s3-endpoint
         s3://s3-bucket/s3-path/backup-id
     | xbstream/location
         --decompress
@@ -1232,6 +1234,7 @@ xbcloud/location get
                 "s3-path",
                 "s3-access-key",
                 "s3-secret-key",
+                "s3-endpoint",
                 "backup-id",
                 "mysql/data/directory",
                 "xbcloud/location",
@@ -1251,6 +1254,7 @@ xbcloud/location get
                 "s3-path",
                 "s3-access-key",
                 "s3-secret-key",
+                "s3-endpoint",
                 "backup-id",
                 "mysql/data/directory",
                 "xbcloud/location",
@@ -1269,6 +1273,7 @@ xbcloud/location get
                 "s3-path",
                 "s3-access-key",
                 "s3-secret-key",
+                "s3-endpoint",
                 "backup-id",
                 "mysql/data/directory",
                 "xbcloud/location",
