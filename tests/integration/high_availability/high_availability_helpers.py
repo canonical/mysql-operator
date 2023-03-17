@@ -272,6 +272,7 @@ async def insert_data_into_mysql_and_validate_replication(
     ops_test: OpsTest,
     database_name: str,
     table_name: str,
+    mysql_application_substring: Optional[str] = "mysql",
     mysql_units: Optional[List[Unit]] = None,
 ) -> str:
     """Inserts data into the mysql cluster and validates its replication.
@@ -279,7 +280,7 @@ async def insert_data_into_mysql_and_validate_replication(
     database_name: The name of the database to create
     table_name: The name of the table to create and insert data into
     """
-    mysql_application_name = await get_application_name(ops_test, "mysql")
+    mysql_application_name = await get_application_name(ops_test, mysql_application_substring)
 
     if not mysql_units:
         mysql_units = ops_test.model.applications[mysql_application_name].units
