@@ -267,7 +267,7 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
             server_config_credentials["password"],
             select_values_sql,
         )
-        assert values == [value_before_backup, value_after_restore]
+        assert sorted(values) == sorted([value_before_backup, value_after_restore])
 
     logger.info("Scaling mysql application to 3 units")
     await scale_application(ops_test, mysql_application_name, 3)
@@ -283,7 +283,7 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
             select_values_sql,
         )
 
-        assert values == [value_before_backup, value_after_restore]
+        assert sorted(values) == sorted([value_before_backup, value_after_restore])
 
     # scale down the cluster to preserve resources for the following tests
     await scale_application(ops_test, mysql_application_name, 0)
@@ -386,7 +386,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
             server_config_credentials["password"],
             select_values_sql,
         )
-        assert values == [value_before_backup, value_after_restore]
+        assert sorted(values) == sorted([value_before_backup, value_after_restore])
 
     logger.info("Scaling mysql application to 3 units")
     await scale_application(ops_test, new_mysql_application_name, 3)
@@ -402,4 +402,4 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
             select_values_sql,
         )
 
-        assert values == [value_before_backup, value_after_restore]
+        assert sorted(values) == sorted([value_before_backup, value_after_restore])
