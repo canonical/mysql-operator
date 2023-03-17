@@ -281,7 +281,7 @@ class MySQL(MySQLBase):
         backup_id: str,
     ) -> Tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
-        return super(MySQL, self).retrieve_backup_with_xbcloud(
+        return super().retrieve_backup_with_xbcloud(
             s3_bucket,
             s3_path,
             s3_access_key,
@@ -296,7 +296,7 @@ class MySQL(MySQLBase):
 
     def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
         """Prepare the download backup for restore with xtrabackup --prepare."""
-        return super(MySQL, self).prepare_backup_for_restore(
+        return super().prepare_backup_for_restore(
             backup_location,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
@@ -306,7 +306,7 @@ class MySQL(MySQLBase):
 
     def empty_data_files(self) -> None:
         """Empty the mysql data directory in preparation of the restore."""
-        super(MySQL, self).empty_data_files(
+        super().empty_data_files(
             MYSQL_DATA_DIR,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
@@ -322,7 +322,7 @@ class MySQL(MySQLBase):
         try:
             # provide write permissions to root (group owner of the data directory)
             # so the root user can move back files into the data directory
-            command = f"chmod 775 {MYSQL_DATA_DIR}".split()
+            command = f"chmod 770 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
                 user=ROOT_SYSTEM_USER,
@@ -334,7 +334,7 @@ class MySQL(MySQLBase):
             logger.exception("Failed to change data directory permissions before restoring")
             raise MySQLRestoreBackupError(e)
 
-        stdout, stderr = super(MySQL, self).restore_backup(
+        stdout, stderr = super().restore_backup(
             backup_location,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             MYSQLD_DEFAULTS_CONFIG_FILE,
@@ -346,7 +346,7 @@ class MySQL(MySQLBase):
 
         try:
             # Revert permissions for the data directory
-            command = f"chmod 755 {MYSQL_DATA_DIR}".split()
+            command = f"chmod 750 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
                 user=ROOT_SYSTEM_USER,
@@ -375,7 +375,7 @@ class MySQL(MySQLBase):
 
     def delete_temp_restore_directory(self) -> None:
         """Delete the temp restore directory from the mysql data directory."""
-        super(MySQL, self).delete_temp_restore_directory(
+        super().delete_temp_restore_directory(
             MYSQL_DATA_DIR,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
