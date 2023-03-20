@@ -18,9 +18,7 @@ maintainers:
   - Shayan Patel <shayan.patel@canonical.com>
 peers:
   database-peers:
-    interface: mysql-peers
-  restart:
-    interface: rolling_op
+    interface: mysql_peers
 provides:
   db-router:
     interface: mysql-router

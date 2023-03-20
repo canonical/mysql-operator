@@ -144,6 +144,7 @@ async def check_keystone_users_existence(
         assert user not in output
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_shared_db(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
