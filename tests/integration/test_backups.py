@@ -40,16 +40,6 @@ CLOUD_CONFIGS = {
         "region": "",
     },
 }
-CLOUD_CREDENTIALS = {
-    "aws": {
-        "access-key": os.environ["AWS_ACCESS_KEY"],
-        "secret-key": os.environ["AWS_SECRET_KEY"],
-    },
-    "gcp": {
-        "access-key": os.environ["GCP_ACCESS_KEY"],
-        "secret-key": os.environ["GCP_SECRET_KEY"],
-    },
-}
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
@@ -66,8 +56,23 @@ backups_by_cloud = {}
 value_before_backup, value_after_backup = None, None
 
 
+@pytest.fixture(scope="module")
+def cloud_credentials() -> dict[str, dict[str, str]]:
+    """Read cloud credentials from environment variables."""
+    return {
+        "aws": {
+            "access-key": os.environ["AWS_ACCESS_KEY"],
+            "secret-key": os.environ["AWS_SECRET_KEY"],
+        },
+        "gcp": {
+            "access-key": os.environ["GCP_ACCESS_KEY"],
+            "secret-key": os.environ["GCP_SECRET_KEY"],
+        },
+    }
+
+
 @pytest.fixture(scope="session", autouse=True)
-def clean_backups_from_buckets() -> None:
+def clean_backups_from_buckets(cloud_credentials) -> None:
     """Teardown to clean up created backups from clouds."""
     yield
 
@@ -79,8 +84,8 @@ def clean_backups_from_buckets() -> None:
             continue
 
         session = boto3.session.Session(
-            aws_access_key_id=CLOUD_CREDENTIALS[cloud_name]["access-key"],
-            aws_secret_access_key=CLOUD_CREDENTIALS[cloud_name]["secret-key"],
+            aws_access_key_id=cloud_credentials[cloud_name]["access-key"],
+            aws_secret_access_key=cloud_credentials[cloud_name]["secret-key"],
             region_name=config["region"],
         )
         s3 = session.resource("s3", endpoint_url=config["endpoint"])
@@ -124,7 +129,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credentials) -> None:
     """Test to create a backup and list backups."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
@@ -153,7 +158,7 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
         action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
-            "sync-s3-credentials", **CLOUD_CREDENTIALS[cloud_name]
+            "sync-s3-credentials", **cloud_credentials[cloud_name]
         )
         await action.wait()
 
@@ -199,7 +204,9 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_restore_on_same_cluster(
+    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+) -> None:
     """Test to restore a backup to the same mysql cluster."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
@@ -222,7 +229,7 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
         action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
             "sync-s3-credentials",
-            **CLOUD_CREDENTIALS[cloud_name],
+            **cloud_credentials[cloud_name],
         )
         await action.wait()
 
@@ -294,7 +301,9 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_restore_on_new_cluster(
+    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
 
@@ -341,7 +350,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
         action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
             "sync-s3-credentials",
-            **CLOUD_CREDENTIALS[cloud_name],
+            **cloud_credentials[cloud_name],
         )
         await action.wait()
 
