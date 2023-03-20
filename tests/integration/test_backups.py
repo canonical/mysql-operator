@@ -298,7 +298,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str
         ops_test,
         mysql_charm_series,
         check_for_existing_application=False,
-        mysql_application_name="another-mysql-k8s",
+        mysql_application_name="another-mysql",
         num_units=1,
     )
 
