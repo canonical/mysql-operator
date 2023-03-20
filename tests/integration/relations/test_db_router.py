@@ -109,6 +109,7 @@ async def check_keystone_users_existence(
         assert user not in output, "User(s) that should not exist are in the database"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation.
