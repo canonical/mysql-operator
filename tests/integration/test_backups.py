@@ -92,6 +92,7 @@ def clean_backups_from_buckets() -> None:
             bucket_object.delete()
 
 
+@pytest.mark.group(1)
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
@@ -121,6 +122,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to create a backup and list backups."""
@@ -195,6 +197,7 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str) -> None:
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to restore a backup to the same mysql cluster."""
@@ -289,6 +292,7 @@ async def test_restore_on_same_cluster(ops_test: OpsTest, mysql_charm_series: st
     await scale_application(ops_test, mysql_application_name, 0)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_new_cluster(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test to restore a backup on a new mysql cluster."""
