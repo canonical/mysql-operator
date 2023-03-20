@@ -156,11 +156,12 @@ async def get_primary_unit(
 
     cluster_status = json.loads(string_output)
 
-    primary_name = [
+    primary_label = [
         label
         for label, member in cluster_status["defaultReplicaSet"]["topology"].items()
         if member["mode"] == "R/W"
-    ][0].replace("-", "/")
+    ][0]
+    primary_name = "/".join(primary_label.rsplit("-", 1))
 
     for unit in ops_test.model.applications[app_name].units:
         if unit.name == primary_name:
