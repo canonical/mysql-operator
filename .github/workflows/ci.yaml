@@ -136,8 +136,8 @@ jobs:
       - name: Run integration tests
         run: tox run -e integration -- ${{ matrix.groups.path_to_test_file }} --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
         env:
-          AWS_ACCESS_KEY: "${{ matrix.tox-environments != 'integration-backups' || secrets.AWS_ACCESS_KEY }}"
-          AWS_SECRET_KEY: "${{ matrix.tox-environments != 'integration-backups' || secrets.AWS_SECRET_KEY }}"
-          GCP_ACCESS_KEY: "${{ matrix.tox-environments != 'integration-backups' || secrets.GCP_ACCESS_KEY }}"
-          GCP_SECRET_KEY: "${{ matrix.tox-environments != 'integration-backups' || secrets.GCP_SECRET_KEY }}"
+          AWS_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}"
+          AWS_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}"
+          GCP_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}"
+          GCP_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}"
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
