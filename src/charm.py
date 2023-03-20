@@ -8,6 +8,8 @@ import logging
 import subprocess
 from typing import Dict, Optional
 
+from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -47,11 +49,13 @@ from constants import (
     REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
+    S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
 from mysql_vm_helpers import (
     MySQL,
+    MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
@@ -96,6 +100,8 @@ class MySQLOperatorCharm(CharmBase):
         self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
+        self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
+        self.backups = MySQLBackups(self, self.s3_integrator)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -175,6 +181,9 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
+            return
+        except MySQLCreateCustomMySQLDConfigError:
+            self.unit.status = BlockedStatus("Failed to create custom mysqld config")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -262,6 +271,7 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit_peer_data["unit-initialized"] = "True"
+            self.unit_peer_data["member-state"] = "online"
             try:
                 subprocess.check_call(["open-port", "3306/tcp"])
                 subprocess.check_call(["open-port", "33060/tcp"])
@@ -489,6 +499,15 @@ class MySQLOperatorCharm(CharmBase):
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
 
+    @property
+    def s3_integrator_relation_exists(self) -> bool:
+        """Returns whether a relation with the s3 integrator exists."""
+        return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    def is_unit_busy(self) -> bool:
+        """Returns whether the unit is in blocked state and should not run any operations."""
+        return self.unit_peer_data.get("member-state") == "waiting"
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
@@ -533,8 +552,8 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        self._mysql.create_custom_mysqld_config()
         self._mysql.reset_root_password_and_start_mysqld()
-
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
@@ -553,6 +572,7 @@ class MySQLOperatorCharm(CharmBase):
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
+        self.unit_peer_data["member-state"] = "online"
         try:
             subprocess.check_call(["open-port", "3306/tcp"])
             subprocess.check_call(["open-port", "33060/tcp"])
@@ -621,6 +641,8 @@ class MySQLOperatorCharm(CharmBase):
             return BlockedStatus("Failed to purge data dir")
         except MySQLResetRootPasswordAndStartMySQLDError:
             return BlockedStatus("Failed to reset root password")
+        except MySQLCreateCustomMySQLDConfigError:
+            return BlockedStatus("Failed to create custom mysqld config")
         except SnapServiceOperationError as e:
             return BlockedStatus(e.message)
 

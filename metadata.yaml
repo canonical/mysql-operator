@@ -32,6 +32,9 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+  s3-parameters:
+    interface: s3
+    limit: 1
 storage:
   database:
     type: filesystem

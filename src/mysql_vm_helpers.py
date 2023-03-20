@@ -10,8 +10,19 @@ import shutil
 import socket
 import subprocess
 import tempfile
+from typing import Dict, List, Tuple
 
-from charms.mysql.v0.mysql import Error, MySQLBase, MySQLClientError
+from charms.mysql.v0.mysql import (
+    Error,
+    MySQLBase,
+    MySQLClientError,
+    MySQLExecError,
+    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLRestoreBackupError,
+    MySQLServiceNotRunningError,
+    MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
+)
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
@@ -19,20 +30,23 @@ from tenacity import retry, stop_after_delay, wait_fixed
 from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
+    CHARMED_MYSQL_SNAP_CHANNEL,
     CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQL_XBCLOUD_LOCATION,
+    CHARMED_MYSQL_XBSTREAM_LOCATION,
+    CHARMED_MYSQL_XTRABACKUP_LOCATION,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
     MYSQL_DATA_DIR,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
+    MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
+    ROOT_SYSTEM_USER,
+    XTRABACKUP_PLUGIN_DIR,
 )
 
 logger = logging.getLogger(__name__)
-
-
-class MySQLServiceNotRunningError(Error):
-    """Exception raised when the MySQL service is not running."""
 
 
 class MySQLReconfigureError(Error):
@@ -45,6 +59,10 @@ class MySQLDataPurgeError(Error):
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
     """Exception raised when there's an error resetting root password and starting mysqld."""
+
+
+class MySQLCreateCustomMySQLDConfigError(Error):
+    """Exception raised when there's an error creating custom mysqld config."""
 
 
 class SnapServiceOperationError(Error):
@@ -109,15 +127,7 @@ class MySQL(MySQLBase):
 
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
-
-            # create the mysqld config directory if it does not exist
-            logger.debug("Copying custom mysqld config")
-            pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
-            # target file has prefix 'z-' to ensure priority over the default mysqld config file
-            shutil.copyfile(
-                "templates/mysqld.cnf", f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
-            )
+                charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
 
             if socket.gethostbyname(socket.getfqdn()) == "127.0.1.1":
                 # append report host ip host_address to the custom config
@@ -143,6 +153,38 @@ class MySQL(MySQLBase):
         except Exception as e:
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
+
+    def create_custom_mysqld_config(self) -> None:
+        """Create custom mysql config file.
+
+        Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
+            custom mysqld config
+        """
+        try:
+            (
+                innodb_buffer_pool_size,
+                innodb_buffer_pool_chunk_size,
+            ) = self.get_innodb_buffer_pool_parameters()
+        except MySQLGetInnoDBBufferPoolParametersError:
+            raise MySQLCreateCustomMySQLDConfigError("Failed to compute innodb buffer pool size")
+
+        content = [
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+        ]
+
+        if innodb_buffer_pool_chunk_size:
+            content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+        content.append("")
+
+        # create the mysqld config directory if it does not exist
+        logger.debug("Copying custom mysqld config")
+        pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
+
+        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
+            config_file.write("\n".join(content))
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
@@ -205,7 +247,227 @@ class MySQL(MySQLBase):
         Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
         """
         if not os.path.exists(MYSQLD_SOCK_FILE):
-            raise MySQLServiceNotRunningError()
+            raise MySQLServiceNotRunningError("MySQL socket file not found")
+
+    def execute_backup_commands(
+        self,
+        s3_bucket: str,
+        s3_directory: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+    ) -> Tuple[str, str]:
+        """Executes commands to create a backup."""
+        return super().execute_backup_commands(
+            s3_bucket,
+            s3_directory,
+            s3_access_key,
+            s3_secret_key,
+            s3_endpoint,
+            CHARMED_MYSQL_XTRABACKUP_LOCATION,
+            CHARMED_MYSQL_XBCLOUD_LOCATION,
+            XTRABACKUP_PLUGIN_DIR,
+            MYSQLD_SOCK_FILE,
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
+            MYSQLD_DEFAULTS_CONFIG_FILE,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def delete_temp_backup_directory(self) -> None:
+        """Delete the temp backup directory."""
+        super().delete_temp_backup_directory(
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/mysql",
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def retrieve_backup_with_xbcloud(
+        self,
+        s3_bucket: str,
+        s3_path: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+        backup_id: str,
+    ) -> Tuple[str, str, str]:
+        """Retrieve the provided backup with xbcloud."""
+        return super().retrieve_backup_with_xbcloud(
+            s3_bucket,
+            s3_path,
+            s3_access_key,
+            s3_secret_key,
+            s3_endpoint,
+            backup_id,
+            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_XBCLOUD_LOCATION,
+            CHARMED_MYSQL_XBSTREAM_LOCATION,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
+        """Prepare the download backup for restore with xtrabackup --prepare."""
+        return super().prepare_backup_for_restore(
+            backup_location,
+            CHARMED_MYSQL_XTRABACKUP_LOCATION,
+            XTRABACKUP_PLUGIN_DIR,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def empty_data_files(self) -> None:
+        """Empty the mysql data directory in preparation of the restore."""
+        super().empty_data_files(
+            MYSQL_DATA_DIR,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def restore_backup(
+        self,
+        backup_location: str,
+    ) -> Tuple[str, str]:
+        """Restore the provided prepared backup."""
+        # TODO: remove workaround for changing permissions and ownership of data
+        # files once restore backup commands can be run with snap_daemon user
+        try:
+            # provide write permissions to root (group owner of the data directory)
+            # so the root user can move back files into the data directory
+            command = f"chmod 770 {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.exception("Failed to change data directory permissions before restoring")
+            raise MySQLRestoreBackupError(e)
+
+        stdout, stderr = super().restore_backup(
+            backup_location,
+            CHARMED_MYSQL_XTRABACKUP_LOCATION,
+            MYSQLD_DEFAULTS_CONFIG_FILE,
+            MYSQL_DATA_DIR,
+            XTRABACKUP_PLUGIN_DIR,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+        try:
+            # Revert permissions for the data directory
+            command = f"chmod 750 {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+
+            # Change ownership to the snap_daemon user since the restore files
+            # are owned by root
+            command = f"chown -R {MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER} {MYSQL_DATA_DIR}".split()
+            subprocess.run(
+                command,
+                user=ROOT_SYSTEM_USER,
+                group=ROOT_SYSTEM_USER,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.exception(
+                "Failed to change data directory permissions or ownershp after restoring"
+            )
+            raise MySQLRestoreBackupError(e)
+
+        return (stdout, stderr)
+
+    def delete_temp_restore_directory(self) -> None:
+        """Delete the temp restore directory from the mysql data directory."""
+        super().delete_temp_restore_directory(
+            MYSQL_DATA_DIR,
+            user=ROOT_SYSTEM_USER,
+            group=ROOT_SYSTEM_USER,
+        )
+
+    def _execute_commands(
+        self,
+        commands: List[str],
+        bash: bool = False,
+        user: str = None,
+        group: str = None,
+        env: Dict = {},
+    ) -> Tuple[str, str]:
+        """Execute commands on the server where mysql is running.
+
+        Args:
+            commands: a list containing the commands to execute
+            bash: whether to run the commands with bash
+            user: the user with which to execute the commands
+            group: the group with which to execute the commands
+            env: the environment variables to execute the commands with
+
+        Returns: tuple of (stdout, stderr)
+
+        Raises: MySQLExecError if there was an error executing the commands
+        """
+        try:
+            if bash:
+                commands = ["bash", "-c", " ".join(commands)]
+
+            process = subprocess.run(
+                commands,
+                user=user,
+                group=group,
+                env=env,
+                capture_output=True,
+                check=True,
+                encoding="utf-8",
+            )
+            return (process.stdout.strip(), process.stderr.strip())
+        except subprocess.CalledProcessError as e:
+            raise MySQLExecError(e.stderr)
+
+    def is_mysqld_running(self) -> bool:
+        """Returns whether mysqld is running."""
+        return os.path.exists(MYSQLD_SOCK_FILE)
+
+    def is_server_connectable(self) -> bool:
+        """Returns whether the server is connectable."""
+        # Always true since the charm runs on the same server as mysqld
+        return True
+
+    def stop_mysqld(self) -> None:
+        """Stops the mysqld process."""
+        logger.info(
+            f"Stopping service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
+        except SnapServiceOperationError as e:
+            raise MySQLStopMySQLDError(e.message)
+
+    def start_mysqld(self) -> None:
+        """Starts the mysqld process."""
+        logger.info(
+            f"Starting service snap={CHARMED_MYSQL_SNAP_NAME}, service={CHARMED_MYSQLD_SERVICE}"
+        )
+
+        try:
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+            self.wait_until_mysql_connection()
+        except (
+            MySQLServiceNotRunningError,
+            SnapServiceOperationError,
+        ) as e:
+            if isinstance(e, MySQLServiceNotRunningError):
+                logger.exception("Failed to start mysqld")
+
+            raise MySQLStartMySQLDError(e.message)
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
