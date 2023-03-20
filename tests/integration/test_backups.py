@@ -71,7 +71,7 @@ def cloud_credentials() -> dict[str, dict[str, str]]:
     }
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def clean_backups_from_buckets(cloud_credentials) -> None:
     """Teardown to clean up created backups from clouds."""
     yield
