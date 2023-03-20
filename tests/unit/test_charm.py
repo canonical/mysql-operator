@@ -34,13 +34,15 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("socket.getfqdn", return_value="test-hostname")
+    @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(
-        self, _install_and_configure_mysql_dependencies, _is_data_dir_attached, _check_call
-    ):
+    def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _):
         self.charm.on.install.emit()
+        _install_and_configure_mysql_dependencies.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 

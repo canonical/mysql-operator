@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Tuple
@@ -107,8 +108,11 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies() -> None:
+    def install_and_configure_mysql_dependencies(host_ip_address: str) -> None:
         """Install and configure MySQL dependencies.
+
+        Args:
+            host_ip_address: ip address of the host. Used only for MAAS ephemeral deployments.
 
         Raises
             subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
@@ -124,6 +128,12 @@ class MySQL(MySQLBase):
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
                 charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
+
+            if socket.gethostbyname(socket.getfqdn()) == "127.0.1.1":
+                # append report host ip host_address to the custom config
+                # ref. https://github.com/canonical/mysql-operator/issues/121
+                with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "a") as f:
+                    f.write(f"\nreport_host = {host_ip_address}")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -583,6 +593,29 @@ class MySQL(MySQLBase):
         logger.debug("Installing charmed-mysql snap")
         charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
 
+    @staticmethod
+    def write_content_to_file(
+        path: str,
+        content: str,
+        owner: str = MYSQL_SYSTEM_USER,
+        group: str = "root",
+        permission: int = 0o640,
+    ) -> None:
+        """Write content to file.
+
+        Args:
+            path: filesystem full path (with filename)
+            content: string content to write
+            owner: file owner
+            group: file group
+            permission: file permission
+        """
+        with open(path, "w", encoding="utf-8") as fd:
+            fd.write(content)
+
+        shutil.chown(path, owner, group)
+        os.chmod(path, mode=permission)
+
 
 def is_data_dir_attached() -> bool:
     """Returns if data directory is attached."""
@@ -610,29 +643,6 @@ def instance_hostname():
     except subprocess.CalledProcessError as e:
         logger.exception("Failed to retrieve hostname", e)
         return None
-
-
-def write_content_to_file(
-    path: str,
-    content: str,
-    owner: str = MYSQL_SYSTEM_USER,
-    group: str = "root",
-    permission: int = 0o640,
-) -> None:
-    """Write content to file.
-
-    Args:
-        path: filesystem full path (with filename)
-        content: string content to write
-        owner: file owner
-        group: file group
-        permission: file permission
-    """
-    with open(path, "w", encoding="utf-8") as fd:
-        fd.write(content)
-
-    shutil.chown(path, owner, group)
-    os.chmod(path, mode=permission)
 
 
 def snap_service_operation(snapname: str, service: str, operation: str) -> bool:

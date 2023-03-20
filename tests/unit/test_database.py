@@ -74,6 +74,7 @@ class TestDatase(unittest.TestCase):
                 "username": f"relation-{self.database_relation_id}",
                 "endpoints": "2.2.2.2:3306",
                 "version": "8.0.29-0ubuntu0.20.04.3",
+                "database": "test_db",
                 "read-only-endpoints": "2.2.2.1:3306,2.2.2.3:3306",
             },
         )

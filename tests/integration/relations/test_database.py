@@ -49,6 +49,7 @@ ENDPOINT = "database"
 TIMEOUT = 15 * 60
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
@@ -103,6 +104,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_password_rotation(ops_test: OpsTest):
     """Rotate password and confirm changes."""
@@ -147,6 +149,7 @@ async def test_password_rotation(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_password_rotation_silent(ops_test: OpsTest):
     """Rotate password and confirm changes."""
@@ -186,6 +189,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     """Rotate password and confirm changes."""
@@ -232,6 +236,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     assert len(output) > 0, "query with new password failed, no databases found"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
@@ -245,6 +250,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_read_only_endpoints(ops_test: OpsTest):
     """Check read-only-endpoints are correctly updated."""
@@ -297,6 +303,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
         assert False
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""

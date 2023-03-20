@@ -11,7 +11,6 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
-    app_name,
     cluster_name,
     execute_queries_on_unit,
     generate_random_string,
@@ -36,12 +35,14 @@ ANOTHER_APP_NAME = f"second{APP_NAME}"
 TIMEOUT = 17 * 60
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     await high_availability_test_setup(ops_test, mysql_charm_series)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_consistent_data_replication_across_cluster(
     ops_test: OpsTest, mysql_charm_series: str
@@ -59,6 +60,7 @@ async def test_consistent_data_replication_across_cluster(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
@@ -106,11 +108,12 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
+async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
-    app = await app_name(ops_test)
+    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     application = ops_test.model.applications[app]
 
     random_unit = application.units[0]
@@ -183,6 +186,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest) -> None:
         assert random_chars in output
 
 
+@pytest.mark.group(3)
 async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test for cluster data isolation.
 
@@ -190,7 +194,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
     the application name for each cluster, retrieve and compare these records, asserting they are
     not the same.
     """
-    app = await app_name(ops_test)
+    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
