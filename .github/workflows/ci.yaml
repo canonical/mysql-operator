@@ -88,6 +88,11 @@ jobs:
       - name: Collect test groups
         id: collect-groups
         run: tox run -e integration -- tests/integration -m '${{ steps.select-test-stability.outputs.mark_expression }}' --collect-groups
+        env:
+          AWS_ACCESS_KEY: "placeholder"
+          AWS_SECRET_KEY: "placeholder"
+          GCP_ACCESS_KEY: "placeholder"
+          GCP_SECRET_KEY: "placeholder"
     outputs:
       groups: ${{ steps.collect-groups.outputs.groups }}
 
