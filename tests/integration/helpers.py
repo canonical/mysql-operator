@@ -418,7 +418,7 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
         A integer for the process id
     """
     try:
-        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", process)
+        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", "-x", process)
         pid = int(raw_pid.strip())
 
         return pid
