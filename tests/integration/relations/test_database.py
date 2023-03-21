@@ -275,7 +275,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
 
     # wait for the update of the endpoints
     try:
-        for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
+        async for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
             with attempt:
                 # check update for read-only-endpoints
                 await check_read_only_endpoints(
@@ -293,7 +293,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
 
     # wait for the update of the endpoints
     try:
-        for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
+        async for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
             with attempt:
                 # check update for read-only-endpoints
                 await check_read_only_endpoints(
