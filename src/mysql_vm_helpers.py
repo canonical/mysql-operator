@@ -209,7 +209,12 @@ class MySQL(MySQLBase):
 
                 try:
                     subprocess.check_output(
-                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _sql_file.name]
+                        [
+                            "sudo",
+                            "chown",
+                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                            _sql_file.name,
+                        ]
                     )
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
@@ -221,7 +226,12 @@ class MySQL(MySQLBase):
 
                 try:
                     subprocess.check_output(
-                        ["sudo", "chown", f"{MYSQL_SYSTEM_USER}:root", _custom_config_file.name]
+                        [
+                            "sudo",
+                            "chown",
+                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                            _custom_config_file.name,
+                        ]
                     )
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
@@ -512,7 +522,7 @@ class MySQL(MySQLBase):
             "-u",
             user,
             "--protocol=SOCKET",
-            f"--socket={CHARMED_MYSQL_COMMON_DIRECTORY}/mysql/mysqld.sock",
+            f"--socket={MYSQLD_SOCK_FILE}",
             "-e",
             script,
         ]
