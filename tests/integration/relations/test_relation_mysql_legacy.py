@@ -55,7 +55,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             num_units=2,
-            channel="latest/edge/legacy-mysql",  # TODO: Remove branch before merge
+            channel="latest/edge",  # TODO: Remove branch before merge
         ),
     )
 
