@@ -35,6 +35,7 @@ jobs:
   release:
     name: Release charm
     needs:
+      - ci-tests
       - build
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
     with:
