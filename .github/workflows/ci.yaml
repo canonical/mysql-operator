@@ -52,6 +52,8 @@ jobs:
           test_framework: PYTEST
           test_format: JUNIT
           test_path: pytest_report.xml
+          coverage_format: LCOV/TXT
+          coverage_path: coverage.lcov
 
   lib-check:
     name: Check libraries
