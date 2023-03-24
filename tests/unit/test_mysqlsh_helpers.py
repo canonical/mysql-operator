@@ -72,7 +72,7 @@ class TestMySQL(unittest.TestCase):
                 "-u",
                 "root",
                 "--protocol=SOCKET",
-                "--socket=/var/snap/charmed-mysql/common/mysql/mysqld.sock",
+                "--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock",
                 "-e",
                 "script",
             ],
