@@ -16,18 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: 'Foresight: Collect workflow telemetry'
-        uses: runforesight/foresight-workflow-kit-action@v1
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
-      - name: Run linters
-        run: tox run -e lint
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@lint # TODO use v2
 
   unit-test:
     name: Unit tests
