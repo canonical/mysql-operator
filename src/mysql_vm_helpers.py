@@ -10,6 +10,7 @@ import shutil
 import socket
 import subprocess
 import tempfile
+from ipaddress import ip_address, ip_network
 from typing import Dict, List, Tuple
 
 from charms.mysql.v0.mysql import (
@@ -129,7 +130,7 @@ class MySQL(MySQLBase):
                 logger.debug("Installing charmed-mysql snap")
                 charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
 
-            if socket.gethostbyname(socket.getfqdn()) == "127.0.1.1":
+            if ip_address(socket.gethostbyname(socket.getfqdn())) in ip_network("127.0.0.0/8"):
                 # append report host ip host_address to the custom config
                 # ref. https://github.com/canonical/mysql-operator/issues/121
                 with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "a") as f:
