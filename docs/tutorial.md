@@ -533,7 +533,7 @@ The output should be similar to:
 Issuer: CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
 ...
 ```
-The Charmed MySQL application returned to the certificate created locally in a moment of the MySQL server installation.
+The Charmed MySQL application reverted to the certificate that was created locally during the MySQL server installation.
 
 ## Next Steps
 In this tutorial we've successfully deployed MySQL, added/removed cluster members, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MySQL deployment running and write to the database or remove it entirely using the steps in [Remove Charmed MySQL and Juju](#remove-charmed-mysql-and-juju). If you're looking for what to do next you can:
