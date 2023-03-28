@@ -29,8 +29,8 @@ jobs:
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.2.3
         with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          credentials: ${{ secrets.CHARMHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build charm
