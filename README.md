@@ -91,7 +91,6 @@ juju relate keystone:shared-db mysql:shared-db
 
 The Charmed MySQL Operator comes with several exporters by default. The metrics can be queried by accessing the following endpoints:
 
-- Node exporter: `http://<unit-ip>:9100/metrics`
 - MySQL exporter: `http://<unit-ip>:9104/metrics`
 
 Additionally, the charm provides integration with the [Canonical Observability Stack](https://charmhub.io/topics/canonical-observability-stack).

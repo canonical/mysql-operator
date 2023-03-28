@@ -51,13 +51,10 @@ async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) ->
 
     for unit in application.units:
         unit_address = await unit.get_public_address()
-        node_exporter_url = f"http://{unit_address}:9100/metrics"
         mysql_exporter_url = f"http://{unit_address}:9104/metrics"
 
-        node_resp = http.request("GET", node_exporter_url)
         jmx_resp = http.request("GET", mysql_exporter_url)
 
-        assert node_resp.status == 200
         assert jmx_resp.status == 200
 
 

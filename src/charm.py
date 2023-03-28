@@ -7,7 +7,7 @@
 import logging
 from typing import Dict, Optional
 
-from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -19,7 +19,6 @@ from charms.mysql.v0.mysql import (
     MySQLRebootFromCompleteOutageError,
 )
 from charms.operator_libs_linux.v0.systemd import service_restart, service_stop
-from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from ops.charm import (
     ActionEvent,
@@ -52,7 +51,6 @@ from constants import (
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
-    NODE_EXPORTER_PORT,
     PASSWORD_LENGTH,
     PEER,
     REQUIRED_USERNAMES,
@@ -109,16 +107,14 @@ class MySQLOperatorCharm(CharmBase):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
-        self.grafana_dashboards = GrafanaDashboardProvider(self)
-        self.metrics_endpoint = MetricsEndpointProvider(
+        self._grafana_agent = COSAgentProvider(
             self,
-            jobs=[
-                {
-                    "static_configs": [
-                        {"targets": [f"*:{NODE_EXPORTER_PORT}", f"*:{MYSQL_EXPORTER_PORT}"]}
-                    ]
-                }
+            metrics_endpoints=[
+                {"path": "/metrics", "port": f"*:{MYSQL_EXPORTER_PORT}"},
             ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            logs_rules_dir="./src/alert_rules/loki",
+            log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
         )
 
     # =======================

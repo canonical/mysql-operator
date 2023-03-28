@@ -24,7 +24,6 @@ from constants import (
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_SOCK_FILE,
-    NODE_EXPORTER_SNAP_NAME,
     XTRABACKUP_SNAP_NAME,
 )
 
@@ -135,7 +134,6 @@ class MySQL(MySQLBase):
             mysql_shell = cache[MYSQL_SHELL_SNAP_NAME]
             xtrabackup = cache[XTRABACKUP_SNAP_NAME]
             mysql_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
-            node_exporter = cache[NODE_EXPORTER_SNAP_NAME]
 
             if not mysql_shell.present:
                 logger.debug("Installing mysql shell snap")
@@ -154,17 +152,6 @@ class MySQL(MySQLBase):
 
             # install mysqld-exporter snap
             mysql_exporter.ensure(snap.SnapState.Latest, channel="edge")
-
-            # install node-exporter snap
-            node_exporter.ensure(snap.SnapState.Latest, channel="edge")
-            node_exporter_plugs = [
-                "hardware-observe",
-                "network-observe",
-                "mount-observe",
-                "system-observe",
-            ]
-            for plug in node_exporter_plugs:
-                node_exporter.connect(plug=plug)
 
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
