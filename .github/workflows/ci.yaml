@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@lint # TODO use v2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v2
 
   unit-test:
     name: Unit tests
