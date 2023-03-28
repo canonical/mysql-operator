@@ -24,26 +24,22 @@ DB_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = DB_METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 
-APP_METADATA = yaml.safe_load(
-    Path("./tests/integration/relations/application-charm/metadata.yaml").read_text()
-)
-APPLICATION_APP_NAME = APP_METADATA["name"]
+APPLICATION_APP_NAME = "mysql-test-app"
 
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "mysql"
 
 TEST_USER = "testuser"
-TEST_DATABASE = "testdb"
+TEST_DATABASE = "continuous_writes_database"
 TIMEOUT = 15 * 60
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
-
-    app_charm = await ops_test.build_charm("./tests/integration/relations/application-charm/")
 
     config = {"cluster-name": CLUSTER_NAME}
 
@@ -55,7 +51,12 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             num_units=3,
             series=mysql_charm_series,
         ),
-        ops_test.model.deploy(app_charm, application_name=APPLICATION_APP_NAME, num_units=2),
+        ops_test.model.deploy(
+            APPLICATION_APP_NAME,
+            application_name=APPLICATION_APP_NAME,
+            num_units=2,
+            channel="latest/edge",
+        ),
     )
 
     # Reduce the update_status frequency until the cluster is deployed
@@ -92,6 +93,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
@@ -101,7 +103,9 @@ async def test_relation_creation(ops_test: OpsTest):
         {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
     )
 
-    await ops_test.model.relate(APPLICATION_APP_NAME, f"{DATABASE_APP_NAME}:{ENDPOINT}")
+    await ops_test.model.relate(
+        f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
+    )
 
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
@@ -112,6 +116,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""

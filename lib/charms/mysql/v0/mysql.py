@@ -67,10 +67,11 @@ error handling on the subclass and in the charm code.
 
 import json
 import logging
+import pathlib
 import re
 import socket
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from tenacity import (
     retry,
@@ -90,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 14
+LIBPATCH = 18
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -214,6 +215,73 @@ class MySQLSetInstanceOptionError(Error):
     """Exception raised when there is an issue setting instance option."""
 
 
+class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
+    """Exception raised when there is an error checking if an instance is backing up.
+
+    We check if an instance is in offline_mode and hidden from mysql-router to determine
+    this.
+    """
+
+
+class MySQLGetInnoDBBufferPoolParametersError(Error):
+    """Exception raised when there is an error computing the innodb buffer pool parameters."""
+
+
+class MySQLExecuteBackupCommandsError(Error):
+    """Exception raised when there is an error executing the backup commands.
+
+    The backup commands are executed in the workload container using the pebble API.
+    """
+
+
+class MySQLDeleteTempBackupDirectoryError(Error):
+    """Exception raised when there is an error deleting the temp backup directory."""
+
+
+class MySQLRetrieveBackupWithXBCloudError(Error):
+    """Exception raised when there is an error retrieving a backup from S3 with xbcloud."""
+
+
+class MySQLPrepareBackupForRestoreError(Error):
+    """Exception raised when there is an error preparing a backup for restore."""
+
+
+class MySQLEmptyDataDirectoryError(Error):
+    """Exception raised when there is an error emptying the mysql data directory."""
+
+
+class MySQLRestoreBackupError(Error):
+    """Exception raised when there is an error restoring a backup."""
+
+
+class MySQLDeleteTempRestoreDirectoryError(Error):
+    """Exception raised when there is an error deleting the temp restore directory."""
+
+
+class MySQLExecError(Error):
+    """Exception raised when there is an error executing commands on the mysql server."""
+
+
+class MySQLStopMySQLDError(Error):
+    """Exception raised when there is an error stopping the MySQLD process."""
+
+
+class MySQLStartMySQLDError(Error):
+    """Exception raised when there is an error starting the MySQLD process."""
+
+
+class MySQLServiceNotRunningError(Error):
+    """Exception raised when the MySQL service is not running."""
+
+
+class MySQLTLSSetupError(Error):
+    """Exception raised when there is an issue setting custom TLS config."""
+
+
+class MySQLKillSessionError(Error):
+    """Exception raised when there is an issue killing a connection."""
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -302,7 +370,9 @@ class MySQLBase(ABC):
 
         try:
             logger.debug(f"Configuring MySQL users for {self.instance_address}")
-            self._run_mysqlcli_script("; ".join(create_root_user_commands))
+            self._run_mysqlcli_script(
+                "; ".join(create_root_user_commands), password=self.root_password
+            )
             # run configure users commands with newly created root user
             self._run_mysqlcli_script(
                 "; ".join(configure_users_commands), password=self.root_password
@@ -499,17 +569,23 @@ class MySQLBase(ABC):
             logger.exception(f"Failed to delete users for relation {relation_id}", exc_info=e)
             raise MySQLDeleteUserForRelationError(e.message)
 
-    def configure_instance(self, restart: bool = True) -> None:
+    def configure_instance(self, restart: bool = True, create_cluster_admin: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster.
 
         Raises MySQLConfigureInstanceError
             if the was an error configuring the instance for use in an InnoDB cluster.
         """
         options = {
-            "clusterAdmin": self.cluster_admin_user,
-            "clusterAdminPassword": self.cluster_admin_password,
             "restart": "true" if restart else "false",
         }
+
+        if create_cluster_admin:
+            options.update(
+                {
+                    "clusterAdmin": self.cluster_admin_user,
+                    "clusterAdminPassword": self.cluster_admin_password,
+                }
+            )
 
         configure_instance_command = (
             f"dba.configure_instance('{self.server_config_user}:{self.server_config_password}@{self.instance_address}', {json.dumps(options)})",
@@ -561,8 +637,8 @@ class MySQLBase(ABC):
                 initializing the juju_units_operations table
         """
         initialize_table_commands = (
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started')",
+            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         try:
@@ -967,10 +1043,9 @@ class MySQLBase(ABC):
         Returns:
             The address of the cluster's primary
         """
-        logger.debug(f"Getting cluster primary member's address from {connect_instance_address}")
-
         if not connect_instance_address:
             connect_instance_address = self.instance_address
+        logger.debug(f"Getting cluster primary member's address from {connect_instance_address}")
 
         get_cluster_primary_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{connect_instance_address}')",
@@ -1160,18 +1235,15 @@ class MySQLBase(ABC):
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""
-        rejoin_command = (
+        reboot_from_outage_command = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(rejoin_command))
+            self._run_mysqlsh_script("\n".join(reboot_from_outage_command))
         except MySQLClientError as e:
-            logger.exception(
-                "Failed to reboot cluster",
-                exc_info=e,
-            )
+            logger.exception("Failed to reboot cluster")
             raise MySQLRebootFromCompleteOutageError(e.message)
 
     def set_instance_offline_mode(self, offline_mode: bool = False) -> None:
@@ -1217,6 +1289,466 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.exception(f"Failed to set option {option} with value {value}", exc_info=e)
             raise MySQLSetInstanceOptionError(e.message)
+
+    def offline_mode_and_hidden_instance_exists(self) -> bool:
+        """Indicates whether an instance exists in offline_mode and hidden from router.
+
+        The pre_backup operations switch an instance to offline_mode and hide it
+        from the mysql-router.
+        """
+        offline_mode_message = "Instance has offline_mode enabled"
+        commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster_topology = dba.get_cluster('{self.cluster_name}').status()['defaultReplicaSet']['topology']",
+            f"selected_instances = [label for label, member in cluster_topology.items() if '{offline_mode_message}' in member.get('instanceErrors', '') and member.get('hiddenFromRouter')]",
+            "print(f'<OFFLINE_MODE_INSTANCES>{len(selected_instances)}</OFFLINE_MODE_INSTANCES>')",
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError as e:
+            logger.exception("Failed to query offline mode instances", exc_info=e)
+            raise MySQLOfflineModeAndHiddenInstanceExistsError(e)
+
+        matches = re.search(r"<OFFLINE_MODE_INSTANCES>(.*)</OFFLINE_MODE_INSTANCES>", output)
+
+        if not matches:
+            raise MySQLOfflineModeAndHiddenInstanceExistsError("Failed to parse command output")
+
+        return matches.group(1) != "0"
+
+    def get_innodb_buffer_pool_parameters(self) -> Tuple[int, Optional[int]]:
+        """Get innodb buffer pool parameters for the instance.
+
+        Returns: a tuple of (innodb_buffer_pool_size, optional(innodb_buffer_pool_chunk_size))
+        """
+        # Reference: based off xtradb-cluster-operator
+        # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L31-L54
+
+        chunk_size_min = 1048576  # 1 mebibyte
+        chunk_size_default = 134217728  # 128 mebibytes
+
+        try:
+            innodb_buffer_pool_chunk_size = None
+            total_memory = self._get_total_memory()
+
+            pool_size = int(total_memory * 0.75)
+            # 1000000000 = 1 gigabyte
+            if total_memory - pool_size < 1000000000:
+                pool_size = int(total_memory * 0.5)
+
+            if pool_size % chunk_size_default != 0:
+                # round pool_size to be a multiple of chunk_size_default
+                pool_size += chunk_size_default - (pool_size % chunk_size_default)
+
+            # 1073741824 = 1 gibibyte
+            if pool_size > 1073741824:
+                chunk_size = int(pool_size / 8)
+
+                if chunk_size % chunk_size_min != 0:
+                    # round chunk_size to a multiple of chunk_size_min
+                    chunk_size += chunk_size_min - (chunk_size % chunk_size_min)
+
+                pool_size = chunk_size * 8
+
+                innodb_buffer_pool_chunk_size = chunk_size
+
+            return (pool_size, innodb_buffer_pool_chunk_size)
+        except Exception as e:
+            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
+            raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
+
+    def _get_total_memory(self) -> int:
+        """Retrieves the total memory of the server where mysql is running."""
+        try:
+            logger.info("Retrieving the total memory of the server")
+
+            """Below is an example output of `free --bytes`:
+               total        used        free      shared  buff/cache   available
+Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
+Swap:     1027600384  1027600384           0
+            """
+            # need to use sh -c to be able to use pipes
+            get_total_memory_command = "free --bytes | awk '/^Mem:/{print $2; exit}'".split()
+
+            total_memory, _ = self._execute_commands(
+                get_total_memory_command,
+                bash=True,
+            )
+            return int(total_memory)
+        except MySQLExecError:
+            logger.exception("Failed to execute commands to query total memory")
+            raise
+
+    def execute_backup_commands(
+        self,
+        s3_bucket: str,
+        s3_directory: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+        xtrabackup_location: str,
+        xbcloud_location: str,
+        xtrabackup_plugin_dir: str,
+        mysqld_socket_file: str,
+        tmp_base_directory: str,
+        defaults_config_file: str,
+        user: str = None,
+        group: str = None,
+    ) -> Tuple[str, str]:
+        """Executes commands to create a backup with the given args."""
+        nproc_command = "nproc".split()
+        make_temp_dir_command = f"mktemp --directory {tmp_base_directory}/xtra_backup_XXXX".split()
+
+        try:
+            nproc, _ = self._execute_commands(nproc_command)
+            tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
+        except MySQLExecError as e:
+            logger.exception("Failed to execute commands prior to running backup")
+            raise MySQLExecuteBackupCommandsError(e.message)
+        except Exception as e:
+            # Catch all other exceptions to prevent the database being stuck in
+            # a bad state due to pre-backup operations
+            logger.exception("Failed to execute commands prior to running backup")
+            raise MySQLExecuteBackupCommandsError(e)
+
+        # TODO: remove flags --no-server-version-check
+        # when MySQL and XtraBackup versions are in sync
+        xtrabackup_commands = f"""
+{xtrabackup_location} --defaults-file={defaults_config_file}
+            --defaults-group=mysqld
+            --no-version-check
+            --parallel={nproc}
+            --user={self.server_config_user}
+            --password={self.server_config_password}
+            --socket={mysqld_socket_file}
+            --lock-ddl
+            --backup
+            --stream=xbstream
+            --xtrabackup-plugin-dir={xtrabackup_plugin_dir}
+            --target-dir={tmp_dir}
+            --no-server-version-check
+    | {xbcloud_location} put
+            --curl-retriable-errors=7
+            --insecure
+            --storage=s3
+            --parallel=10
+            --md5
+            --s3-bucket={s3_bucket}
+            --s3-endpoint={s3_endpoint}
+            {s3_directory}
+""".split()
+
+        try:
+            # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
+            return self._execute_commands(
+                xtrabackup_commands,
+                bash=True,
+                user=user,
+                group=group,
+                env={
+                    "ACCESS_KEY_ID": s3_access_key,
+                    "SECRET_ACCESS_KEY": s3_secret_key,
+                },
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to execute backup commands")
+            raise MySQLExecuteBackupCommandsError(e.message)
+        except Exception as e:
+            # Catch all other exceptions to prevent the database being stuck in
+            # a bad state due to pre-backup operations
+            logger.exception("Failed to execute backup commands")
+            raise MySQLExecuteBackupCommandsError(e)
+
+    def delete_temp_backup_directory(
+        self,
+        tmp_base_directory: str,
+        user: str = None,
+        group: str = None,
+    ) -> None:
+        """Delete the temp backup directory."""
+        delete_temp_dir_command = f"find {tmp_base_directory} -wholename {tmp_base_directory}/xtra_backup_* -delete".split()
+
+        try:
+            self._execute_commands(
+                delete_temp_dir_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to delete temp backup directory")
+            raise MySQLDeleteTempBackupDirectoryError(e.message)
+        except Exception as e:
+            logger.exception("Failed to delete temp backup directory")
+            raise MySQLDeleteTempBackupDirectoryError(e)
+
+    def retrieve_backup_with_xbcloud(
+        self,
+        s3_bucket: str,
+        s3_path: str,
+        s3_access_key: str,
+        s3_secret_key: str,
+        s3_endpoint: str,
+        backup_id: str,
+        mysql_data_directory: str,
+        xbcloud_location: str,
+        xbstream_location: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str, str]:
+        """Retrieve the specified backup from S3.
+
+        The backup is retrieved using xbcloud and stored in a temp dir in the
+        mysql container.
+        """
+        nproc_command = "nproc".split()
+        make_temp_dir_command = f"mktemp --directory {mysql_data_directory}/mysql_sst_XXXX".split()
+
+        try:
+            nproc, _ = self._execute_commands(nproc_command)
+
+            tmp_dir, _ = self._execute_commands(
+                make_temp_dir_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to execute commands prior to running xbcloud get")
+            raise MySQLRetrieveBackupWithXBCloudError(e.message)
+
+        backup_path = str(pathlib.Path(s3_bucket) / s3_path / backup_id)
+
+        retrieve_backup_command = f"""
+{xbcloud_location} get
+        --curl-retriable-errors=7
+        --parallel=10
+        --s3-endpoint={s3_endpoint}
+        s3://{backup_path}
+    | {xbstream_location}
+        --decompress
+        -x
+        -C {tmp_dir}
+        --parallel={nproc}
+""".split()
+
+        try:
+            # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
+            stdout, stderr = self._execute_commands(
+                retrieve_backup_command,
+                bash=True,
+                env={
+                    "ACCESS_KEY_ID": s3_access_key,
+                    "SECRET_ACCESS_KEY": s3_secret_key,
+                },
+                user=user,
+                group=group,
+            )
+            return (stdout, stderr, tmp_dir)
+        except MySQLExecError as e:
+            logger.exception("Failed to retrieve backup")
+            raise MySQLRetrieveBackupWithXBCloudError(e.message)
+        except Exception as e:
+            logger.exception("Failed to retrieve backup")
+            raise MySQLRetrieveBackupWithXBCloudError(e)
+
+    def prepare_backup_for_restore(
+        self,
+        backup_location: str,
+        xtrabackup_location: str,
+        xtrabackup_plugin_dir: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str]:
+        """Prepare the backup in the provided dir for restore."""
+        try:
+            innodb_buffer_pool_size, _ = self.get_innodb_buffer_pool_parameters()
+        except MySQLGetInnoDBBufferPoolParametersError as e:
+            raise MySQLPrepareBackupForRestoreError(e)
+
+        prepare_backup_command = f"""
+{xtrabackup_location} --prepare
+        --use-memory={innodb_buffer_pool_size}
+        --no-version-check
+        --rollback-prepared-trx
+        --xtrabackup-plugin-dir={xtrabackup_plugin_dir}
+        --target-dir={backup_location}
+""".split()
+
+        try:
+            return self._execute_commands(
+                prepare_backup_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to prepare backup for restore")
+            raise MySQLPrepareBackupForRestoreError(e.message)
+        except Exception as e:
+            logger.exception("Failed to prepare backup for restore")
+            raise MySQLPrepareBackupForRestoreError(e)
+
+    def empty_data_files(
+        self,
+        mysql_data_directory: str,
+        user=None,
+        group=None,
+    ) -> None:
+        """Empty the mysql data directory in preparation of backup restore."""
+        empty_data_files_command = f"find {mysql_data_directory} -not -path {mysql_data_directory}/mysql_sst_* -not -path {mysql_data_directory} -delete".split()
+
+        try:
+            self._execute_commands(
+                empty_data_files_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to empty data directory in prep for backup restore")
+            raise MySQLEmptyDataDirectoryError(e.message)
+        except Exception as e:
+            logger.exception("Failed to empty data directory in prep for backup restore")
+            raise MySQLEmptyDataDirectoryError(e)
+
+    def restore_backup(
+        self,
+        backup_location: str,
+        xtrabackup_location: str,
+        defaults_config_file: str,
+        mysql_data_directory: str,
+        xtrabackup_plugin_directory: str,
+        user=None,
+        group=None,
+    ) -> Tuple[str, str]:
+        """Restore the provided prepared backup."""
+        restore_backup_command = f"""
+{xtrabackup_location} --defaults-file={defaults_config_file}
+        --defaults-group=mysqld
+        --datadir={mysql_data_directory}
+        --no-version-check
+        --move-back
+        --force-non-empty-directories
+        --xtrabackup-plugin-dir={xtrabackup_plugin_directory}
+        --target-dir={backup_location}
+""".split()
+
+        try:
+            return self._execute_commands(
+                restore_backup_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to restore backup")
+            raise MySQLRestoreBackupError(e.message)
+        except Exception as e:
+            logger.exception("Failed to restore backup")
+            raise MySQLRestoreBackupError(e)
+
+    def delete_temp_restore_directory(
+        self,
+        mysql_data_directory: str,
+        user=None,
+        group=None,
+    ) -> None:
+        """Delete the temp restore directory from the mysql data directory."""
+        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
+        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/mysql_sst_* -delete".split()
+
+        try:
+            self._execute_commands(
+                delete_temp_restore_directory_command,
+                user=user,
+                group=group,
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to remove temp backup directory")
+            raise MySQLDeleteTempRestoreDirectoryError(e.message)
+
+    @abstractmethod
+    def _execute_commands(
+        self,
+        commands: List[str],
+        bash: bool = False,
+        user: str = None,
+        group: str = None,
+        env: Dict = {},
+    ) -> Tuple[str, str]:
+        """Execute commands on the server where MySQL is running."""
+        raise NotImplementedError
+
+    def tls_setup(
+        self,
+        ca_path: str = "ca.pem",
+        key_path: str = "server-key.pem",
+        cert_path: str = "server-cert.pem",
+        require_tls: bool = False,
+    ) -> None:
+        """Setup TLS files and requirement mode.
+
+        When no arguments, restore to default configuration, i.e. SSL not required.
+
+        Args:
+            ca_path: Path to the CA certificate
+            key_path: Path to the server key_path
+            cert_path: Path to the server certificate
+            require_tls: Require encryption
+        """
+        enable_commands = (
+            f"SET PERSIST ssl_ca='{ca_path}';"
+            f"SET PERSIST ssl_key='{key_path}';"
+            f"SET PERSIST ssl_cert='{cert_path}';"
+            f"SET PERSIST require_secure_transport={'on' if require_tls else 'off'};"
+            "ALTER INSTANCE RELOAD TLS;"
+        )
+
+        try:
+            self._run_mysqlcli_script(
+                enable_commands,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError:
+            raise MySQLTLSSetupError("Failed to set custom TLS configuration")
+
+    def kill_unencrypted_sessions(self) -> None:
+        """Kill non local, non system open unencrypted connections."""
+        kill_connections_command = (
+            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            (
+                'processes = session.run_sql("'
+                "SELECT processlist_id FROM performance_schema.threads WHERE "
+                "connection_type = 'TCP/IP' AND type = 'FOREGROUND';"
+                '")'
+            ),
+            "process_id_list = [id[0] for id in processes.fetch_all()]",
+            'for process_id in process_id_list:\n  session.run_sql(f"KILL CONNECTION {process_id}")',
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(kill_connections_command))
+        except MySQLClientError:
+            logger.exception("Failed to kill external sessions")
+            raise MySQLKillSessionError
+
+    @abstractmethod
+    def is_mysqld_running(self) -> bool:
+        """Returns whether mysqld is running."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_server_connectable(self) -> bool:
+        """Returns whether the server is connectable."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def stop_mysqld(self) -> None:
+        """Stops the mysqld process."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def start_mysqld(self) -> None:
+        """Starts the mysqld process."""
+        raise NotImplementedError
 
     @abstractmethod
     def wait_until_mysql_connection(self) -> None:

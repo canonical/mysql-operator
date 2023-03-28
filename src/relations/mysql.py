@@ -106,6 +106,12 @@ class MySQLRelation(Object):
         database = self.charm.config.get("mysql-interface-database")
 
         if not username or not database:
+            logger.debug("`mysql` legacy interface user or database not defined.")
+            event.defer()
+            return
+
+        # wait until the unit is initialized
+        if not self.charm.unit_peer_data.get("unit-initialized"):
             event.defer()
             return
 
@@ -131,7 +137,7 @@ class MySQLRelation(Object):
             MySQLCreateApplicationDatabaseAndScopedUserError,
             MySQLGetClusterPrimaryAddressError,
         ):
-            self._charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
+            self.charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
             return
 
         updates = {
@@ -167,4 +173,4 @@ class MySQLRelation(Object):
             self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
         except MySQLDeleteUsersForUnitError:
             logger.error("Failed to delete mysql users")
-            self._charm.unit.status = BlockedStatus("Failed to remove relation user")
+            self.charm.unit.status = BlockedStatus("Failed to remove relation user")

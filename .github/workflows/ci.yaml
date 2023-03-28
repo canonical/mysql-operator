@@ -2,6 +2,10 @@
 # See LICENSE file for licensing details.
 name: Tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
   schedule:
@@ -13,7 +17,10 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      - name: 'Foresight: Collect workflow telemetry'
+        uses: runforesight/foresight-workflow-kit-action@v1
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install tox
@@ -25,46 +32,103 @@ jobs:
   unit-test:
     name: Unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      - name: 'Foresight: Collect workflow telemetry'
+        uses: runforesight/foresight-workflow-kit-action@v1
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install tox
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run tests
-        run: tox run -e unit
+        run: tox run -e unit -- --junit-xml=pytest_report.xml
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
+      - name: 'Foresight: Collect test results'
+        uses: runforesight/foresight-test-kit-action@v1
+        if: ${{ success() || failure() }}
+        with:
+          test_framework: PYTEST
+          test_format: JUNIT
+          test_path: pytest_report.xml
+          coverage_format: LCOV/TXT
+          coverage_path: coverage.lcov
+
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 'Foresight: Collect workflow telemetry'
+        uses: runforesight/foresight-workflow-kit-action@v1
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.2.3
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+
+  collect-integration-tests:
+    name: Collect integration test groups
+    needs:
+      - lint
+      - unit-test
+      - lib-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Foresight: Collect workflow telemetry'
+        uses: runforesight/foresight-workflow-kit-action@v1
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install tox
+        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
+        run: python3 -m pip install tox
+      - name: Select test stability level
+        id: select-test-stability
+        run: |
+          if [ "${{ github.event_name }}" == "schedule" ]
+          then
+            echo Running unstable and stable tests
+            echo "mark_expression=" >> $GITHUB_OUTPUT
+          else
+            echo Skipping unstable tests
+            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+          fi
+      - name: Collect test groups
+        id: collect-groups
+        run: tox run -e integration -- tests/integration -m '${{ steps.select-test-stability.outputs.mark_expression }}' --collect-groups
+    outputs:
+      groups: ${{ steps.collect-groups.outputs.groups }}
 
   integration-test:
     strategy:
       fail-fast: false
       matrix:
-        tox-environments:
-          - integration-ha
-          - integration-db-router
-          - integration-shared-db
-          - integration-database
-          - integration-mysql-interface
-          - integration-healing
-          - integration-tls
+        groups: ${{ fromJSON(needs.collect-integration-tests.outputs.groups) }}
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
-          - series: focal
-            bases-index: 0
           - series: jammy
-            bases-index: 1
-    name: ${{ matrix.tox-environments }} | ${{ matrix.ubuntu-versions.series }}
+            bases-index: 0
+    name: ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - lint
       - unit-test
+      - lib-check
       - build
+      - collect-integration-tests
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
+      - name: 'Foresight: Collect workflow telemetry'
+        uses: runforesight/foresight-workflow-kit-action@v1
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup operator environment
@@ -72,13 +136,13 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.29"
+          bootstrap-options: "--agent-version 2.9.42"  # renovate: latest
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.artifact-name }}
-      - name: Select tests
-        id: select-tests
+      - name: Select test stability level
+        id: select-test-stability
         run: |
           if [ "${{ github.event_name }}" == "schedule" ]
           then
@@ -89,6 +153,17 @@ jobs:
             echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }}
+        run: tox run -e integration -- ${{ matrix.groups.path_to_test_file }} --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }} --junit-xml=pytest_report.xml
         env:
+          AWS_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}"
+          AWS_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}"
+          GCP_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}"
+          GCP_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}"
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+      - name: 'Foresight: Collect test results'
+        uses: runforesight/foresight-test-kit-action@v1
+        if: ${{ success() || failure() }}
+        with:
+          test_framework: PYTEST
+          test_format: JUNIT
+          test_path: pytest_report.xml

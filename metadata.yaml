@@ -18,9 +18,7 @@ maintainers:
   - Shayan Patel <shayan.patel@canonical.com>
 peers:
   database-peers:
-    interface: mysql-peers
-  restart:
-    interface: rolling_op
+    interface: mysql_peers
 provides:
   db-router:
     interface: mysql-router
@@ -36,10 +34,13 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+  s3-parameters:
+    interface: s3
+    limit: 1
 storage:
   database:
     type: filesystem
     description: Persistent storage for MySQL data
-    location: /var/lib/mysql
+    location: /var/snap/charmed-mysql/common/var/lib/mysql
 assumes:
   - juju

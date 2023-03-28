@@ -136,7 +136,7 @@ async def get_primary_unit(
         A juju unit that is a MySQL primary
     """
     commands = [
-        "mysqlsh",
+        "charmed-mysql.mysqlsh",
         "--python",
         f"{server_config_username}:{server_config_password}@127.0.0.1",
         "-e",
@@ -156,11 +156,12 @@ async def get_primary_unit(
 
     cluster_status = json.loads(string_output)
 
-    primary_name = [
+    primary_label = [
         label
         for label, member in cluster_status["defaultReplicaSet"]["topology"].items()
         if member["mode"] == "R/W"
-    ][0].replace("-", "/")
+    ][0]
+    primary_name = "/".join(primary_label.rsplit("-", 1))
 
     for unit in ops_test.model.applications[app_name].units:
         if unit.name == primary_name:
@@ -417,7 +418,7 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
         A integer for the process id
     """
     try:
-        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", process)
+        _, raw_pid, _ = await ops_test.juju("ssh", unit_name, "pgrep", "-x", process)
         pid = int(raw_pid.strip())
 
         return pid
@@ -487,7 +488,7 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     return raw_hostname.strip()
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15))
+@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
 def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
     """Wait until network is restored.
 
@@ -527,7 +528,7 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         ops_test: The ops test object passed into every test case
         unit_name: The name of the unit to be tested
     """
-    await ops_test.juju("ssh", unit_name, "sudo", "systemctl", "restart", "mysql")
+    await ops_test.juju("ssh", unit_name, "sudo", "snap", "restart", "charmed-mysql.mysqld")
 
     # hold execution until process is started
     try:

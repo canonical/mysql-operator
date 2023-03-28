@@ -10,11 +10,15 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
+from mysql_vm_helpers import (
+    MySQLCreateCustomMySQLDConfigError,
+    MySQLResetRootPasswordAndStartMySQLDError,
+)
 
 from .helpers import patch_network_get
 
@@ -30,13 +34,15 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("socket.getfqdn", return_value="test-hostname")
+    @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(
-        self, _install_and_configure_mysql_dependencies, _is_data_dir_attached, _check_call
-    ):
+    def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _):
         self.charm.on.install.emit()
+        _install_and_configure_mysql_dependencies.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
@@ -129,8 +135,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
+    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
     def test_on_start(
         self,
+        _create_custom_mysqld_config,
+        _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
         _configure_instance,
@@ -156,8 +166,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
+    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
+    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
     def test_on_start_exceptions(
         self,
+        _create_custom_mysqld_config,
+        _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
         _configure_instance,
@@ -197,6 +211,20 @@ class TestCharm(unittest.TestCase):
 
         # test an exception with creating a cluster
         _create_cluster.side_effect = MySQLCreateClusterError
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        # test an exception with resetting the root password and starting mysqld
+        _reset_root_password_and_start_mysqld.side_effect = (
+            MySQLResetRootPasswordAndStartMySQLDError
+        )
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        # test an exception creating a custom mysqld config
+        _create_custom_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
@@ -244,3 +272,76 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)["password"]
             == "test-password"
         )
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("charm.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
+    @patch("charm.snap_service_operation")
+    @patch("charm.MySQLOperatorCharm._workload_reset")
+    def test_on_update(
+        self,
+        _workload_reset,
+        _snap_service_operation,
+        __reboot_from_complete_outage,
+        _is_data_dir_attached,
+        _get_member_state,
+    ):
+        self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
+        self.harness.set_leader()
+        self.charm.on.config_changed.emit()
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
+        )
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.unit.name,
+            {
+                "member-role": "primary",
+                "member-state": "online",
+                "unit-initialized": "true",
+            },
+        )
+        _get_member_state.return_value = ("online", "primary")
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_not_called()
+        _snap_service_operation.assert_not_called()
+        _workload_reset.assert_not_called()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+        # test instance state = offline
+        _get_member_state.reset_mock()
+        _get_member_state.return_value = ("offline", "primary")
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.unit.name,
+            {
+                "member-state": "offline",
+            },
+        )
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_called_once()
+        _snap_service_operation.assert_not_called()
+        _workload_reset.assert_not_called()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
+
+        # test instance state = unreachable
+        _get_member_state.reset_mock()
+        __reboot_from_complete_outage.reset_mock()
+        _snap_service_operation.return_value = False
+        _workload_reset.return_value = ActiveStatus()
+        _get_member_state.return_value = ("unreachable", "primary")
+
+        self.charm.on.update_status.emit()
+        _get_member_state.assert_called_once()
+        __reboot_from_complete_outage.assert_not_called()
+        _snap_service_operation.assert_called_once()
+        _workload_reset.assert_called_once()
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))

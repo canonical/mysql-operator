@@ -38,6 +38,7 @@ class TestSharedDBRelation(unittest.TestCase):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
+        self.charm.unit_peer_data["unit-initialized"] = "True"
 
         # confirm that the relation databag is empty
         shared_db_relation_databag = self.harness.get_relation_data(
@@ -89,6 +90,7 @@ class TestSharedDBRelation(unittest.TestCase):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
+        self.charm.unit_peer_data["unit-initialized"] = "True"
 
         _create_application_database_and_scoped_user.side_effect = (
             MySQLCreateApplicationDatabaseAndScopedUserError("Can't create user")

@@ -104,6 +104,11 @@ class SharedDBRelation(Object):
         if not self._charm.unit.is_leader():
             return
 
+        # wait until the unit is initialized
+        if not self._charm.unit_peer_data.get("unit-initialized"):
+            event.defer()
+            return
+
         logger.warning("DEPRECATION WARNING - `shared-db` is a legacy interface")
 
         # get relation data

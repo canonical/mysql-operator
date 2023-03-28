@@ -5,13 +5,16 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .high_availability_helpers import get_application_name
+from .high_availability_helpers import (
+    APPLICATION_DEFAULT_APP_NAME,
+    get_application_name,
+)
 
 
 @pytest.fixture()
 async def continuous_writes(ops_test: OpsTest):
     """Starts continuous writes to the MySQL cluster for a test and clear the writes at the end."""
-    application_name = await get_application_name(ops_test, "application")
+    application_name = get_application_name(ops_test, APPLICATION_DEFAULT_APP_NAME)
 
     application_unit = ops_test.model.applications[application_name].units[0]
 

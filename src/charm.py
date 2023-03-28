@@ -5,9 +5,12 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import subprocess
 from typing import Dict, Optional
 
+from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLConfigureInstanceError,
@@ -18,8 +21,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
 )
-from charms.operator_libs_linux.v0.systemd import service_restart, service_stop
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
+from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -36,16 +38,11 @@ from ops.model import (
     StatusBase,
     WaitingStatus,
 )
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_exponential,
-    wait_fixed,
-)
+from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
 
 from constants import (
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     MONITORING_PASSWORD_KEY,
@@ -56,22 +53,25 @@ from constants import (
     REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
+    S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
-    SERVICE_NAME,
 )
 from mysql_vm_helpers import (
     MySQL,
+    MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
     MySQLReconfigureError,
+    MySQLResetRootPasswordAndStartMySQLDError,
+    SnapServiceOperationError,
     instance_hostname,
     is_data_dir_attached,
     reboot_system,
+    snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
-from relations.mysql_tls import MySQLTLS
 from relations.shared_db import SharedDBRelation
 from utils import generate_random_hash, generate_random_password
 
@@ -104,9 +104,6 @@ class MySQLOperatorCharm(CharmBase):
         self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
-        self.restart_manager = RollingOpsManager(
-            charm=self, relation="restart", callback=self._restart
-        )
         self._grafana_agent = COSAgentProvider(
             self,
             metrics_endpoints=[
@@ -116,6 +113,8 @@ class MySQLOperatorCharm(CharmBase):
             logs_rules_dir="./src/alert_rules/loki",
             log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
         )
+        self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
+        self.backups = MySQLBackups(self, self.s3_integrator)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -142,7 +141,9 @@ class MySQLOperatorCharm(CharmBase):
                 after=set_retry_status,
             ):
                 with attempt:
-                    MySQL.install_and_configure_mysql_dependencies()
+                    MySQL.install_and_configure_mysql_dependencies(
+                        self.model.get_binding(PEER).network.bind_address
+                    )
         except RetryError:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
             return
@@ -194,6 +195,9 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLConfigureInstanceError:
             self.unit.status = BlockedStatus("Failed to configure instance for InnoDB")
+            return
+        except MySQLCreateCustomMySQLDConfigError:
+            self.unit.status = BlockedStatus("Failed to create custom mysqld config")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -281,6 +285,12 @@ class MySQLOperatorCharm(CharmBase):
             unit_label
         ):
             self.unit_peer_data["unit-initialized"] = "True"
+            self.unit_peer_data["member-state"] = "online"
+            try:
+                subprocess.check_call(["open-port", "3306/tcp"])
+                subprocess.check_call(["open-port", "33060/tcp"])
+            except subprocess.CalledProcessError:
+                logger.exception("failed to open port")
             self.unit.status = ActiveStatus(self.active_status_message)
 
     def _on_database_storage_detaching(self, _) -> None:
@@ -301,6 +311,46 @@ class MySQLOperatorCharm(CharmBase):
 
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
+
+    def _handle_non_online_instance_status(self, state) -> None:
+        """Helper method to handle non-online instance statuses.
+
+        Invoked from the update status event handler.
+        """
+        if state == "recovering":
+            # server is in the process of becoming an active member
+            logger.info("Instance is being recovered")
+            return
+
+        if state == "offline":
+            # Group Replication is active but the member does not belong to any group
+            all_states = {
+                self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
+            }
+            all_states.add("offline")
+
+            if all_states == {"offline"} and self.unit.is_leader():
+                # All instance are off or its a single unit cluster
+                # reboot cluster from outage from the leader unit
+                logger.debug("Attempting reboot from complete outage.")
+                try:
+                    # reboot from outage forcing it when it a single unit
+                    self._mysql.reboot_from_complete_outage()
+                except MySQLRebootFromCompleteOutageError:
+                    logger.error("Failed to reboot cluster from complete outage.")
+                    self.unit.status = BlockedStatus("failed to recover cluster.")
+
+        if state == "unreachable":
+            try:
+                if not snap_service_operation(
+                    CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
+                ):
+                    # mysqld access not possible and daemon restart fails
+                    # force reset necessary
+                    self.unit.status = MaintenanceStatus("Workload reset")
+                    self.unit.status = self._workload_reset()
+            except SnapServiceOperationError as e:
+                self.unit.status = BlockedStatus(e.message)
 
     def _on_update_status(self, _) -> None:
         """Handle update status.
@@ -339,34 +389,7 @@ class MySQLOperatorCharm(CharmBase):
             else MaintenanceStatus(state)
         )
 
-        if state == "recovering":
-            # server is in the process of becoming an active member
-            logger.info("Instance is being recovered")
-            return
-
-        if state == "offline":
-            # Group Replication is active but the member does not belong to any group
-            all_states = {
-                self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
-            }
-            all_states.add("offline")
-
-            if all_states == {"offline"} and self.unit.is_leader():
-                # All instance are off or its a single unit cluster
-                # reboot cluster from outage from the leader unit
-                logger.debug("Attempting reboot from complete outage.")
-                try:
-                    # reboot from outage forcing it when it a single unit
-                    self._mysql.reboot_from_complete_outage()
-                except MySQLRebootFromCompleteOutageError:
-                    logger.error("Failed to reboot cluster from complete outage.")
-                    self.unit.status = BlockedStatus("failed to recover cluster.")
-
-        if state == "unreachable" and not service_restart(SERVICE_NAME):
-            # mysqld access not possible and daemon restart fails
-            # force reset necessary
-            self.unit.status = MaintenanceStatus("Workload reset")
-            self.unit.status = self._workload_reset()
+        self._handle_non_online_instance_status(state)
 
     # =======================
     #  Custom Action Handlers
@@ -496,6 +519,15 @@ class MySQLOperatorCharm(CharmBase):
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
 
+    @property
+    def s3_integrator_relation_exists(self) -> bool:
+        """Returns whether a relation with the s3 integrator exists."""
+        return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    def is_unit_busy(self) -> bool:
+        """Returns whether the unit is in blocked state and should not run any operations."""
+        return self.unit_peer_data.get("member-state") == "waiting"
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
@@ -520,11 +552,19 @@ class MySQLOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Unknown secret scope.")
 
+    def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
+        """Get the hostname of the unit."""
+        if unit_name:
+            unit = self.model.get_unit(unit_name)
+            return self.peers.data[unit]["instance-hostname"].split(":")[0]
+        return self.unit_peer_data["instance-hostname"].split(":")[0]
+
     @property
-    def active_status_message(self):
+    def active_status_message(self) -> str:
         """Active status message."""
-        role = self.unit_peer_data.get("member-role")
-        return f"Unit is ready: Mode: {'RW' if role == 'primary' else 'RO'}"
+        if self.unit_peer_data.get("member-role") == "primary":
+            return "Primary"
+        return ""
 
     def _workload_initialise(self) -> None:
         """Workload initialisation commands.
@@ -532,13 +572,15 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        self._mysql.create_custom_mysqld_config()
+        self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
         self._mysql.connect_mysql_exporter()
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
-        workload_version = self._mysql.get_mysql_version()
-        self.unit.set_workload_version(workload_version)
+        if workload_version := self._mysql.get_mysql_version():
+            self.unit.set_workload_version(workload_version)
 
     def _create_cluster(self) -> None:
         """Create cluster commands.
@@ -551,6 +593,12 @@ class MySQLOperatorCharm(CharmBase):
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
+        self.unit_peer_data["member-state"] = "online"
+        try:
+            subprocess.check_call(["open-port", "3306/tcp"])
+            subprocess.check_call(["open-port", "33060/tcp"])
+        except subprocess.CalledProcessError:
+            logger.exception("failed to open port")
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
@@ -593,7 +641,7 @@ class MySQLOperatorCharm(CharmBase):
             if not primary_address:
                 logger.debug("Primary not yet defined on peers. Waiting new primary.")
                 return MaintenanceStatus("Workload reset: waiting new primary")
-            service_stop(SERVICE_NAME)
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
@@ -612,49 +660,23 @@ class MySQLOperatorCharm(CharmBase):
             return BlockedStatus("Failed to re-configure instance for InnoDB")
         except MySQLDataPurgeError:
             return BlockedStatus("Failed to purge data dir")
+        except MySQLResetRootPasswordAndStartMySQLDError:
+            return BlockedStatus("Failed to reset root password")
+        except MySQLCreateCustomMySQLDConfigError:
+            return BlockedStatus("Failed to create custom mysqld config")
+        except SnapServiceOperationError as e:
+            return BlockedStatus(e.message)
 
         return ActiveStatus(self.active_status_message)
 
-    def _get_primary_address_from_peers(self) -> str:
+    def _get_primary_address_from_peers(self) -> Optional[str]:
         """Retrieve primary address based on peer data."""
         for unit in self.peers.units:
-            if self.peers.data[unit]["member-role"] == "primary":
+            if (
+                self.peers.data[unit]["member-role"] == "primary"
+                and self.peers.data[unit]["member-state"] == "online"
+            ):
                 return self.peers.data[unit]["instance-hostname"]
-
-    def _restart(self, _) -> None:
-        """Restart server rolling ops callback function.
-
-        Hold execution until server is back in the cluster.
-        Used exclusively for rolling restarts.
-        """
-        logger.debug("Restarting mysqld daemon")
-        if service_restart(SERVICE_NAME):
-            # when restart done right after cluster creation (e.g bundles)
-            # or for single unit deployments, it's necessary reboot the
-            # cluster from outage to restore unit as primary
-            if self.app_peer_data["units-added-to-cluster"] == "1":
-                try:
-                    self._mysql.reboot_from_complete_outage()
-                except MySQLRebootFromCompleteOutageError:
-                    logger.error("Failed to restart single node cluster")
-                    self.unit.status = BlockedStatus("Failed to restart primary")
-                    return
-
-            unit_label = self.unit.name.replace("/", "-")
-
-            try:
-                for attempt in Retrying(stop=stop_after_attempt(24), wait=wait_fixed(5)):
-                    with attempt:
-                        if self._mysql.is_instance_in_cluster(unit_label):
-                            self._on_update_status(None)
-                            return
-                        raise Exception
-            except RetryError:
-                logger.error("Unable to rejoin mysqld instance to the cluster.")
-                self.unit.status = BlockedStatus("Restarted node unable to rejoin the cluster")
-        else:
-            logger.error("Failed to restart mysqld on rolling restart")
-            self.unit.status = BlockedStatus("Failed to restart mysqld")
 
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.

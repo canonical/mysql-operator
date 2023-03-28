@@ -180,7 +180,7 @@ class DBRouterRelation(Object):
             return
 
         try:
-            primary_address = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
         except MySQLGetClusterPrimaryAddressError:
             logger.error("Can't get primary address. Deferring")
             event.defer()
@@ -206,6 +206,11 @@ class DBRouterRelation(Object):
         credentials via the leader unit databag.
         """
         if not self.charm.unit.is_leader():
+            return
+
+        # wait until the unit is initialized
+        if not self.charm.unit_peer_data.get("unit-initialized"):
+            event.defer()
             return
 
         logger.warning("DEPRECATION WARNING - `db-router` is a legacy interface")
