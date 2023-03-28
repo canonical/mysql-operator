@@ -249,6 +249,7 @@ bind-address = 0.0.0.0
 mysqlx-bind-address = 0.0.0.0
 innodb_buffer_pool_size = 1234
 innodb_buffer_pool_chunk_size = 5678
+report_host = 127.0.0.1
 """
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
