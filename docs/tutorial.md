@@ -21,46 +21,31 @@ Before we start, make sure your machine meets the following requirements:
 - Access to the internet for downloading the required snaps and charms.
 
 
-## Prepare LXD
-The fastest, simplest way to get started with Charmed MySQL is to set up a local LXD cloud. LXD is a system container and virtual machine manager; Charmed MySQL will be run in one of these containers and managed by Juju. While this tutorial covers the basics of LXD, you can [explore more LXD here](https://linuxcontainers.org/lxd/getting-started-cli/). LXD comes pre-installed on Ubuntu 20.04. Verify that LXD is installed by entering the command `which lxd` into the command line, this will output:
-```
-/snap/bin/lxd
-```
+## Multipass environment
+[Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses "[cloud-init](https://cloud-init.io/)" standard to install and configure all the necessary parts automatically.
 
-Although LXD is already installed, we need to run `lxd init` to perform post-installation tasks. For this tutorial the default parameters are preferred, and the network bridge should be set to have no IPv6 addresses, since Juju does not support IPv6 addresses with LXD:
+Let's install Multipass from [Snap](https://snapcraft.io/multipass) and launch a new VM using "[charm-dev](https://github.com/canonical/multipass-blueprints/blob/main/v1/charm-dev.yaml)" cloud-init config:
 ```shell
-lxd init --auto
-lxc network set lxdbr0 ipv6.address none
+sudo snap install multipass && \
+multipass launch --cpus 4 --memory 8G --disk 30G --name my-vm charm-dev # tune CPU/RAM/HDD accordingly to your needs 
 ```
+*Note: all 'multipass launch' params are [described here](https://multipass.run/docs/launch-command)*.
 
-You can list all LXD containers by entering the command `lxc list` in to the command line. Although at this point in the tutorial none should exist and you'll only see this as output:
-```
-+------+-------+------+------+------+-----------+
-| NAME | STATE | IPV4 | IPV6 | TYPE | SNAPSHOTS |
-+------+-------+------+------+------+-----------+
-```
-
-
-## Install and prepare Juju
-[Juju](https://juju.is/) is an Operator Lifecycle Manager (OLM) for clouds, bare metal, LXD or Kubernetes. We will be using it to deploy and manage Charmed MySQL. As with LXD, Juju is installed from a snap package:
+Multipass [list of commands](https://multipass.run/docs/multipass-cli-commands) is short and self-explanatory, e.g. show all running VMs:
 ```shell
-sudo snap install juju --classic
+multipass list
 ```
 
-Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed. A controller will be used to deploy and control Charmed MySQL. All we need to do is run the following command to bootstrap a Juju controller named ‘overlord’ to LXD. This bootstrapping processes can take several minutes depending on how provisioned (RAM, CPU, etc.) your machine is:
+As soon as new VM started, enter inside using:
+```shell
+multipass shell my-vm
+```
+*Note: if at any point you'd like to leave Multipass VM, enter `Ctrl+d` or type `exit`*.
+
+All the parts have been pre-installed inside VM already, like LXD and Juju (the files '/var/log/cloud-init.log' and '/var/log/cloud-init-output.log' contain all low-level installation details). Let's bootstrap Juju to use local LXD:
 ```shell
 juju bootstrap localhost overlord
 ```
-
-The Juju controller should exist within an LXD container. You can verify this by entering the command `lxc list` and you should see the following:
-```
-+---------------+---------+-----------------------+------+-----------+-----------+
-|     NAME      |  STATE  |         IPV4          | IPV6 |   TYPE    | SNAPSHOTS |
-+---------------+---------+-----------------------+------+-----------+-----------+
-| juju-<id>     | RUNNING | 10.105.164.235 (eth0) |      | CONTAINER | 0         |
-+---------------+---------+-----------------------+------+-----------+-----------+
-```
-where `<id>` is a unique combination of numbers and letters such as `9d7e4e-0`
 
 The controller can work with different models; models host applications such as Charmed MySQL. Set up a specific model for Charmed MySQL named ‘tutorial’:
 ```shell
@@ -70,11 +55,10 @@ juju add-model tutorial
 You can now view the model you created above by entering the command `juju status` into the command line. You should see the following:
 ```
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial overlord    localhost/localhost  2.9.37   unsupported  23:20:53Z
+tutorial overlord    localhost/localhost  2.9.42   unsupported  23:20:53+01:00
 
 Model "admin/tutorial" is empty.
 ```
-
 
 ## Deploy Charmed MySQL
 To deploy Charmed MySQL, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/mysql?channel=edge) and deploy it to your model:
@@ -90,7 +74,7 @@ juju status --watch 1s
 This command is useful for checking the status of Charmed MySQL and gathering information about the machines hosting Charmed MySQL. Some of the helpful information it displays include IP addresses, ports, state, etc. The command updates the status of Charmed MySQL every second and as the application starts you can watch the status and messages of Charmed MySQL change. Wait until the application is ready - when it is ready, `juju status` will show:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  22:52:47+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  22:52:47+01:00
 
 App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      1  mysql  edge      95  no       Unit is ready: Mode: RW
@@ -215,7 +199,7 @@ juju add-unit mysql -n 2
 You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  23:33:55+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  23:33:55+01:00
 
 App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      3  mysql  edge      95  no
@@ -240,7 +224,7 @@ juju remove-unit mysql/2
 You’ll know that the replica was successfully removed when `juju status --watch 1s` reports:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  23:46:43+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  23:46:43+01:00
 
 App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      2  mysql  edge      95  no
@@ -363,7 +347,7 @@ Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 i
 Checking the deployment progress using `juju status` will show you the `blocked` state for newly deployed charm:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  00:07:00+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:07:00+01:00
 
 App              Version          Status   Scale  Charm            Channel  Rev  Exposed  Message
 data-integrator                   blocked      1  data-integrator  edge       3  no       Please relate the data-integrator with the desired product
@@ -389,7 +373,7 @@ juju relate data-integrator mysql
 Wait for `juju status --watch 1s` to show all applications/units as `active`:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  00:10:27+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:10:27+01:00
 
 App              Version          Status  Scale  Charm            Channel  Rev  Exposed  Message
 data-integrator                   active      1  data-integrator  edge       3  no
@@ -499,7 +483,7 @@ juju deploy tls-certificates-operator --channel=edge --config generate-self-sign
 Wait until the `tls-certificates-operator` is up and active, use `juju status --watch 1s` to monitor the progress:
 ```
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.38   unsupported  00:40:42+01:00
+tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:40:42+01:00
 
 App                        Version          Status  Scale  Charm                      Channel  Rev  Exposed  Message
 mysql                      8.0.32-0ubun...  active      2  mysql                      edge      95  no
@@ -523,26 +507,12 @@ juju relate mysql tls-certificates-operator
 ```
 
 ### Add external TLS certificate
-Like before, connect to the MySQL in one of described above ways and check the TLS certificate in use:
+Use `openssl` to connect to the MySQL and check the TLS certificate in use:
 ```shell
-> mysql -h 10.234.188.135 -uroot -pmy-password -e "SELECT * FROM performance_schema.session_status WHERE VARIABLE_NAME IN ('Ssl_version','Ssl_cipher','Current_tls_cert'))"
-
-+------------------+------------------------+
-| VARIABLE_NAME    | VARIABLE_VALUE         |
-+------------------+------------------------+
-| Current_tls_cert | custom-server-cert.pem |
-| Ssl_cipher       | TLS_AES_256_GCM_SHA384 |
-| Ssl_version      | TLSv1.3                |
-+------------------+------------------------+
-```
-
-Check the TLS certificate issuer:
-```shell
-juju ssh mysql/leader sudo openssl x509 -noout -text -in /var/snap/charmed-mysql/common/mysql/data/custom-server-cert.pem | grep Issuer
-```
-The output should indicate CA configured during TLS operator deployment:
-```
-Issuer: C = US, CN = Tutorial CA
+> openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
+...
+depth=1 C = US, CN = Tutorial CA
+...
 ```
 Congratulations! MySQL is now using TLS certificate generated by the external application `tls-certificates-operator`.
 
@@ -553,27 +523,17 @@ To remove the external TLS and return to the locally generate one, unrelate appl
 juju remove-relation mysql tls-certificates-operator
 ```
 
+Check the TLS certificate in use:
 ```shell
-> mysql -h 10.234.188.135 -uroot -pmy-password -e "SELECT * FROM performance_schema.session_status WHERE VARIABLE_NAME IN ('Ssl_version','Ssl_cipher','Current_tls_cert')"
-
-+------------------+-------------------------+
-| VARIABLE_NAME    | VARIABLE_VALUE          |
-+------------------+-------------------------+
-| Current_tls_cert | server-cert.pem         |
-| Ssl_cipher       | TLS_AES_256_GCM_SHA384  |
-| Ssl_version      | TLSv1.3                 |
-+------------------+-------------------------+
-```
-
-Check the TLS certificate issuer:
-```shell
-juju ssh mysql/leader sudo openssl x509 -noout -text -in /var/lib/mysql/server-cert.pem | grep Issuer
+> openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
 ```
 The output should be similar to:
 ```
+...
 Issuer: CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
+...
 ```
-The Charmed MySQL application returned to the certificate `server-cert.pem` created locally in a moment of the MySQL server installation.
+The Charmed MySQL application reverted to the certificate that was created locally during the MySQL server installation.
 
 ## Next Steps
 In this tutorial we've successfully deployed MySQL, added/removed cluster members, added/removed users to/from the database, and even enabled and disabled TLS. You may now keep your Charmed MySQL deployment running and write to the database or remove it entirely using the steps in [Remove Charmed MySQL and Juju](#remove-charmed-mysql-and-juju). If you're looking for what to do next you can:
@@ -584,22 +544,11 @@ In this tutorial we've successfully deployed MySQL, added/removed cluster member
 - [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
 - [Contribute to the code base](https://github.com/canonical/mysql-operator)
 
-## Remove Charmed MySQL and Juju
-If you're done using Charmed MySQL and Juju and would like to free up resources on your machine, you can remove Charmed MySQL and Juju. *Warning: when you remove Charmed MySQL as shown below you will lose all the data in MySQL. Further, when you remove Juju as shown below you will lose access to any other applications you have hosted on Juju.*
-
-To remove Charmed MySQL and the model it is hosted on run the command:
+## Remove Multipass VM
+If you're done with testing and would like to free up resources on your machine, just remove Multipass VM.
+*Warning: when you remove VM as shown below you will lose all the data in MySQL and any other applications inside Multipass VM!*
 ```shell
-juju destroy-model tutorial --destroy-storage --force
-```
-
-Next step is to remove the Juju controller. You can see all of the available controllers by entering `juju controllers`. To remove the controller enter:
-```shell
-juju destroy-controller overlord --destroy-all-models
-```
-
-Finally to remove Juju altogether, enter:
-```shell
-sudo snap remove juju --purge
+multipass delete --purge my-vm
 ```
 
 # License:
