@@ -61,7 +61,7 @@ jobs:
           credentials: ${{ secrets.CHARMHUB_TOKEN }} # FIXME: current token will expire in 2023-07-04
           github-token: ${{ secrets.GITHUB_TOKEN }}
           use-labels: false
-          fail-build: true
+          fail-build: ${{ github.event_name == 'pull_request' }}
 
   build:
     name: Build charms
