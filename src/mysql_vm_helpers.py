@@ -115,11 +115,8 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies(host_ip_address: str) -> None:
+    def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
-
-        Args:
-            host_ip_address: ip address of the host. Used only for MAAS ephemeral deployments.
 
         Raises
             subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
@@ -135,12 +132,6 @@ class MySQL(MySQLBase):
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
                 charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
-
-            if socket.gethostbyname(socket.getfqdn()) == "127.0.1.1":
-                # append report host ip host_address to the custom config
-                # ref. https://github.com/canonical/mysql-operator/issues/121
-                with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "a") as f:
-                    f.write(f"\nreport_host = {host_ip_address}")
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -184,6 +175,13 @@ class MySQL(MySQLBase):
 
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+
+        resolved_ip = socket.gethostbyname(socket.getfqdn())
+        if resolved_ip.startswith("127") or resolved_ip == "::1":
+            # append report host ip host_address to the custom config
+            # ref. https://github.com/canonical/mysql-operator/issues/121
+            logger.debug("Hostname resolves to loopback. Appending report_host to custom config")
+            content.append(f"report_host = {self.instance_address}")
         content.append("")
 
         # create the mysqld config directory if it does not exist

@@ -16,18 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: 'Foresight: Collect workflow telemetry'
-        uses: runforesight/foresight-workflow-kit-action@v1
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
-      - name: Run linters
-        run: tox run -e lint
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v2
 
   unit-test:
     name: Unit tests
@@ -67,10 +56,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.2.3
+        uses: canonical/charming-actions/check-libraries@2.2.5
         with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          credentials: ${{ secrets.CHARMHUB_TOKEN }} # FIXME: current token will expire in 2023-07-04
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          use-labels: false
+          fail-build: true
 
   build:
     name: Build charms
@@ -94,13 +85,13 @@ jobs:
       - name: Select test stability level
         id: select-test-stability
         run: |
-          if [ "${{ github.event_name }}" == "schedule" ]
+          if [[ "${{ github.event_name }}" == "schedule" ]]
           then
             echo Running unstable and stable tests
-            echo "mark_expression=" >> $GITHUB_OUTPUT
+            echo "mark_expression=" >> "$GITHUB_OUTPUT"
           else
             echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+            echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
       - name: Collect test groups
         id: collect-groups
@@ -144,21 +135,21 @@ jobs:
       - name: Select test stability level
         id: select-test-stability
         run: |
-          if [ "${{ github.event_name }}" == "schedule" ]
+          if [[ "${{ github.event_name }}" == "schedule" ]]
           then
             echo Running unstable and stable tests
-            echo "mark_expression=" >> $GITHUB_OUTPUT
+            echo "mark_expression=" >> "$GITHUB_OUTPUT"
           else
             echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+            echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
       - name: Run integration tests
-        run: tox run -e integration -- ${{ matrix.groups.path_to_test_file }} --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series=${{ matrix.ubuntu-versions.series }} --mysql-charm-bases-index=${{ matrix.ubuntu-versions.bases-index }} --junit-xml=pytest_report.xml
+        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}" --junit-xml=pytest_report.xml
         env:
-          AWS_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}"
-          AWS_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}"
-          GCP_ACCESS_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}"
-          GCP_SECRET_KEY: "${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}"
+          AWS_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}
+          GCP_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}
+          GCP_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
       - name: 'Foresight: Collect test results'
         uses: runforesight/foresight-test-kit-action@v1

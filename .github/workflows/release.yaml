@@ -27,10 +27,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Release charm libraries
-        uses: canonical/charming-actions/release-libraries@2.2.3
+        uses: canonical/charming-actions/release-libraries@2.2.5
         with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          credentials: ${{ secrets.CHARMHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build charm
