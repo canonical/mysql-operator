@@ -35,6 +35,7 @@ from constants import (
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
+    CHARMED_MYSQLD_EXPORTER_SERVICE,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
     MYSQL_DATA_DIR,
@@ -492,27 +493,20 @@ class MySQL(MySQLBase):
             snap.SnapError: if an issue occurs during config setting or restart
         """
         cache = snap.SnapCache()
-        mysqld_exporter = cache[MYSQL_EXPORTER_SNAP_NAME]
+        mysqld_snap = cache[CHARMED_MYSQL_SNAP_NAME]
 
         try:
-            # Set up exporter with connection info and disable metrics
-            mysqld_exporter.set(
+            # Set up exporter credentials
+            mysqld_snap.set(
                 {
-                    "mysql.socket": MYSQLD_SOCK_FILE,
-                    "mysql.user": self.monitoring_user,
-                    "mysql.password": self.monitoring_password,
-                    "collect.auto-increment.columns": "false",
-                    "collect.info-schema.tables": "false",
-                    "collect.info-schema.tablestats": "false",
-                    "collect.perf-schema.indexiowaits": "false",
-                    "collect.perf-schema.tableiowaits": "false",
-                    "collect.perf-schema.tablelocks": "false",
-                    "collect.info-schema.userstats": "false",
-                    "collect.binlog-size": "false",
-                    "collect.info-schema.processlist": "false",
+                    "exporter.user": self.monitoring_user,
+                    "exporter.password": self.monitoring_password,
                 }
             )
-            mysqld_exporter.restart()
+
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "restart"
+            )
         except snap.SnapError as e:
             logger.error(
                 "An exception occurred when setting configs for mysqld-exporter snap. Reason: %s"
