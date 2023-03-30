@@ -70,6 +70,10 @@ class SnapServiceOperationError(Error):
     """Exception raised when there's an error running an operation on a snap service."""
 
 
+class MySQLExporterConnectError(Error):
+    """Exception raised when there's an error setting up MySQL exporter."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -505,12 +509,9 @@ class MySQL(MySQLBase):
             snap_service_operation(
                 CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "restart"
             )
-        except snap.SnapError as e:
-            logger.error(
-                "An exception occurred when setting configs for mysqld-exporter snap. Reason: %s"
-                % e.message
-            )
-            raise
+        except snap.SnapError:
+            logger.exception("An exception occurred when setting up mysqld-exporter.")
+            raise MySQLExporterConnectError
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.

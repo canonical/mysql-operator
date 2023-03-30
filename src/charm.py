@@ -61,6 +61,7 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
+    MySQLExporterConnectError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -196,6 +197,9 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
+            return
+        except MySQLExporterConnectError:
+            self.unit.status = BlockedStatus("Failed to connect to MySQL exporter")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
