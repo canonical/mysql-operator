@@ -108,7 +108,7 @@ class MySQLOperatorCharm(CharmBase):
         self._grafana_agent = COSAgentProvider(
             self,
             metrics_endpoints=[
-                {"path": "/metrics", "port": f"*:{MYSQL_EXPORTER_PORT}"},
+                {"path": "/metrics", "port": MYSQL_EXPORTER_PORT},
             ],
             metrics_rules_dir="./src/alert_rules/prometheus",
             logs_rules_dir="./src/alert_rules/loki",

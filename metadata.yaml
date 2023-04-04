@@ -30,6 +30,7 @@ provides:
     interface: mysql
   cos-agent:
     interface: cos_agent
+    limit: 1
 requires:
   certificates:
     interface: tls-certificates
