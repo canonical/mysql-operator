@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 import pytest
+import urllib3
 import yaml
 from pytest_operator.plugin import OpsTest
 
@@ -40,6 +41,23 @@ TIMEOUT = 17 * 60
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     await high_availability_test_setup(ops_test, mysql_charm_series)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) -> None:
+    """Test that endpoints are running."""
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    application = ops_test.model.applications[mysql_application_name]
+    http = urllib3.PoolManager()
+
+    for unit in application.units:
+        unit_address = await unit.get_public_address()
+        mysql_exporter_url = f"http://{unit_address}:9104/metrics"
+
+        jmx_resp = http.request("GET", mysql_exporter_url)
+
+        assert jmx_resp.status == 200
 
 
 @pytest.mark.group(1)

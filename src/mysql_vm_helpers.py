@@ -35,6 +35,7 @@ from constants import (
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
+    CHARMED_MYSQLD_EXPORTER_SERVICE,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
     MYSQL_DATA_DIR,
@@ -69,6 +70,10 @@ class SnapServiceOperationError(Error):
     """Exception raised when there's an error running an operation on a snap service."""
 
 
+class MySQLExporterConnectError(Error):
+    """Exception raised when there's an error setting up MySQL exporter."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -85,6 +90,8 @@ class MySQL(MySQLBase):
         server_config_password: str,
         cluster_admin_user: str,
         cluster_admin_password: str,
+        monitoring_user: str,
+        monitoring_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -96,6 +103,8 @@ class MySQL(MySQLBase):
             server_config_password: password for the server config user
             cluster_admin_user: user name for the cluster admin user
             cluster_admin_password: password for the cluster admin user
+            monitoring_user: user name for the mysql exporter
+            monitoring_password: password for the monitoring user
         """
         super().__init__(
             instance_address=instance_address,
@@ -105,6 +114,8 @@ class MySQL(MySQLBase):
             server_config_password=server_config_password,
             cluster_admin_user=cluster_admin_user,
             cluster_admin_password=cluster_admin_password,
+            monitoring_user=monitoring_user,
+            monitoring_password=monitoring_password,
         )
 
     @staticmethod
@@ -476,6 +487,31 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def connect_mysql_exporter(self) -> None:
+        """Set up mysqld-exporter config options.
+
+        Raises
+            snap.SnapError: if an issue occurs during config setting or restart
+        """
+        cache = snap.SnapCache()
+        mysqld_snap = cache[CHARMED_MYSQL_SNAP_NAME]
+
+        try:
+            # Set up exporter credentials
+            mysqld_snap.set(
+                {
+                    "exporter.user": self.monitoring_user,
+                    "exporter.password": self.monitoring_password,
+                }
+            )
+
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "restart"
+            )
+        except snap.SnapError:
+            logger.exception("An exception occurred when setting up mysqld-exporter.")
+            raise MySQLExporterConnectError
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.

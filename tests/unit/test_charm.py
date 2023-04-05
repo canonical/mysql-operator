@@ -81,6 +81,7 @@ class TestCharm(unittest.TestCase):
             "root-password",
             "server-config-password",
             "cluster-admin-password",
+            "monitoring-password",
         ]
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
@@ -128,6 +129,7 @@ class TestCharm(unittest.TestCase):
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
+    @patch("mysql_vm_helpers.MySQL.connect_mysql_exporter")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
     @patch("mysql_vm_helpers.MySQL.configure_instance")
@@ -144,6 +146,7 @@ class TestCharm(unittest.TestCase):
         _configure_instance,
         _configure_mysql_users,
         _wait_until_mysql_connection,
+        _connect_mysql_exporter,
         _get_mysql_version,
         _is_data_dir_attached,
         _check_call,

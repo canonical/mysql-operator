@@ -28,6 +28,9 @@ provides:
     interface: mysql_client
   mysql:
     interface: mysql
+  cos-agent:
+    interface: cos_agent
+    limit: 1
 requires:
   certificates:
     interface: tls-certificates

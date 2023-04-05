@@ -50,6 +50,8 @@ class TestMySQLBase(unittest.TestCase):
             "serverconfigpassword",
             "clusteradmin",
             "clusteradminpassword",
+            "monitoring",
+            "monitoringpassword",
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -68,6 +70,8 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
+                "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
+                "GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
                 "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
                 "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",

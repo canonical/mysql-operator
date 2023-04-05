@@ -9,6 +9,7 @@ import subprocess
 from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.s3 import S3Requirer
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
@@ -44,6 +45,9 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
+    MONITORING_PASSWORD_KEY,
+    MONITORING_USERNAME,
+    MYSQL_EXPORTER_PORT,
     PASSWORD_LENGTH,
     PEER,
     REQUIRED_USERNAMES,
@@ -57,6 +61,7 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
+    MySQLExporterConnectError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -100,6 +105,15 @@ class MySQLOperatorCharm(CharmBase):
         self.database_relation = MySQLProvider(self)
         self.mysql_relation = MySQLRelation(self)
         self.tls = MySQLTLS(self)
+        self._grafana_agent = COSAgentProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/metrics", "port": MYSQL_EXPORTER_PORT},
+            ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            logs_rules_dir="./src/alert_rules/loki",
+            log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
+        )
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
 
@@ -142,6 +156,7 @@ class MySQLOperatorCharm(CharmBase):
             ROOT_PASSWORD_KEY,
             SERVER_CONFIG_PASSWORD_KEY,
             CLUSTER_ADMIN_PASSWORD_KEY,
+            MONITORING_PASSWORD_KEY,
         ]
 
         for required_password in required_passwords:
@@ -182,6 +197,9 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
+            return
+        except MySQLExporterConnectError:
+            self.unit.status = BlockedStatus("Failed to connect to MySQL exporter")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -409,6 +427,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key = MONITORING_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -430,6 +450,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = SERVER_CONFIG_PASSWORD_KEY
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key == MONITORING_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -454,6 +476,8 @@ class MySQLOperatorCharm(CharmBase):
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
             CLUSTER_ADMIN_USERNAME,
             self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
+            MONITORING_USERNAME,
+            self.get_secret("app", MONITORING_PASSWORD_KEY),
         )
 
     @property
@@ -555,6 +579,7 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
+        self._mysql.connect_mysql_exporter()
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
