@@ -30,8 +30,8 @@ from tenacity import retry, stop_after_delay, wait_fixed
 from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
-    CHARMED_MYSQL_SNAP_CHANNEL,
     CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQL_SNAP_REVISION,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
@@ -135,7 +135,7 @@ class MySQL(MySQLBase):
 
             if not charmed_mysql.present:
                 logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Latest, channel=CHARMED_MYSQL_SNAP_CHANNEL)
+                charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
