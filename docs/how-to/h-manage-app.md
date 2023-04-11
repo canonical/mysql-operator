@@ -16,7 +16,7 @@ juju remove-relation mysql application
 
 ## Legacy `mysql` interface:
 
-We have also added support for the database legacy relation from the [original version](https://launchpad.net/TODO) of the charm via the `mysql` interface. Please note that these interface is deprecated.
+We have also added support for the database legacy relation via the `mysql` interface. Please note that these interface is deprecated.
 
  ```shell
 juju relate mysql:mysql wordpress

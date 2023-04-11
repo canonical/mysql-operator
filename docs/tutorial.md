@@ -477,7 +477,7 @@ Again, relations come in handy here as TLS is enabled via relations; i.e. by rel
 ### Configure TLS
 Before enabling TLS on Charmed MySQL we must first deploy the `tls-certificates-operator` charm:
 ```shell
-juju deploy tls-certificates-operator --channel=edge --config generate-self-signed-certificates="true" --config ca-common-name="Tutorial CA"
+juju deploy tls-certificates-operator --config generate-self-signed-certificates="true" --config ca-common-name="Tutorial CA"
 ```
 
 Wait until the `tls-certificates-operator` is up and active, use `juju status --watch 1s` to monitor the progress:
@@ -487,7 +487,7 @@ tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:40:42+01:00
 
 App                        Version          Status  Scale  Charm                      Channel  Rev  Exposed  Message
 mysql                      8.0.32-0ubun...  active      2  mysql                      edge      95  no
-tls-certificates-operator                   active      1  tls-certificates-operator  edge      20  no
+tls-certificates-operator                   active      1  tls-certificates-operator  stable    22  no
 
 Unit                          Workload  Agent  Machine  Public address  Ports  Message
 mysql/0*                      active    idle   0        10.234.188.135         Unit is ready: Mode: RW

@@ -37,4 +37,4 @@ To scaling-down the cluster, use `juju remove-unit`:
 juju remove-unit mysql/<unit_id_to_remove>
 ```
 
-Warning: do NOT remove the last unit, it will destroy your data!
+Warning: do NOT remove all units, it will destroy your data!
