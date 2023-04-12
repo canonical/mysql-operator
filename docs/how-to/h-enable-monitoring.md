@@ -47,7 +47,7 @@ juju relate grafana-agent prometheus-receive-remote-write
 
 After this is complete, Grafana will show the new dashboards: `MySQL Exporter` and allows access for Charmed MySQL logs on Loki.
 
-The exmple of `juju status` on Charmed MySQL VM model:
+The example of `juju status` on Charmed MySQL VM model:
 ```shell
 ubuntu@localhost:~$ juju status
 Model      Controller  Cloud/Region         Version  SLA          Timestamp
@@ -70,7 +70,7 @@ Machine  State    Address        Inst id        Series  AZ  Message
 4        started  10.85.186.140  juju-fcde9e-4  jammy       Running
 ```
 
-The exmple of `juju status` on COS K8s model:
+The example of `juju status` on COS K8s model:
 ```shell
 ubuntu@localhost:~$ juju status
 Model  Controller   Cloud/Region        Version  SLA          Timestamp
