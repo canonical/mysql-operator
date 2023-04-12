@@ -1453,9 +1453,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             group="test-group",
         )
 
-        _expected_commands = (
-            "find mysql/data/directory -wholename mysql/data/directory/#mysql_sst_* -delete".split()
-        )
+        _expected_commands = "find mysql/data/directory -wholename mysql/data/directory/#mysql_sst_* -delete".split()
 
         _execute_commands.assert_called_once_with(
             _expected_commands,

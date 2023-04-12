@@ -87,7 +87,10 @@ test stderr"""
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
         return_value=({"bucket": "test-bucket"}, []),
     )
-    @patch("charms.mysql.v0.backups.list_backups_in_s3_path", return_value=[("backup1", "finished"), ("backup2", "failed")])
+    @patch(
+        "charms.mysql.v0.backups.list_backups_in_s3_path",
+        return_value=[("backup1", "finished"), ("backup2", "failed")],
+    )
     def test_on_list_backups(self, _list_backups_in_s3_path, _retrieve_s3_parameters):
         """Test _on_list_backups()."""
         event = MagicMock()
