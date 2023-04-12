@@ -29,7 +29,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 [details=Navigation]
 | Level | Path     | Navlink                         |
 | ----- | -------- | ------------------------------- |
-| 1 | Tutorials | [Tutorials](/t/charmed-mysql-tutorial/8623?channel=latest/edge) |
+| 1 | Tutorials | [Tutorials](/t/charmed-mysql-tutorial/8623?channel=8.0/edge) |
 | 1 | how-tos-coming-soon | [How To -- Coming Soon]() |
 | 1 | explanation-coming-soon | [Explanation -- Coming Soon]() |
 | 1 | reference-coming-soon | [Reference -- Coming Soon]() |
