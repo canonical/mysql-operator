@@ -1009,7 +1009,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test successful execution of execute_backup_commands()."""
         _execute_commands.side_effect = [
             ("16", None),
-            ("/tmp/base/directory/#xtra_backup_ABCD", None),
+            ("/tmp/base/directory/xtra_backup_ABCD", None),
             ("stdout", "stderr"),
         ]
 
@@ -1036,7 +1036,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_nproc_commands = ["nproc"]
         _expected_tmp_dir_commands = (
-            "mktemp --directory /tmp/base/directory/#xtra_backup_XXXX".split()
+            "mktemp --directory /tmp/base/directory/xtra_backup_XXXX".split()
         )
         _expected_xtrabackup_commands = """
 /xtrabackup/location --defaults-file=/defaults/file.cnf
@@ -1050,7 +1050,7 @@ class TestMySQLBase(unittest.TestCase):
             --backup
             --stream=xbstream
             --xtrabackup-plugin-dir=/xtrabackup/plugin/dir
-            --target-dir=/tmp/base/directory/#xtra_backup_ABCD
+            --target-dir=/tmp/base/directory/xtra_backup_ABCD
             --no-server-version-check
     | /xbcloud/location put
             --curl-retriable-errors=7
@@ -1140,7 +1140,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         _execute_commands.assert_called_once_with(
-            "find /temp/base/directory -wholename /temp/base/directory/#xtra_backup_* -delete".split(),
+            "find /temp/base/directory -wholename /temp/base/directory/xtra_backup_* -delete".split(),
             user="test_user",
             group="test_group",
         )

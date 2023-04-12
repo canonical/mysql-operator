@@ -1399,7 +1399,7 @@ Swap:     1027600384  1027600384           0
         """Executes commands to create a backup with the given args."""
         nproc_command = "nproc".split()
         make_temp_dir_command = (
-            f"mktemp --directory {tmp_base_directory}/#xtra_backup_XXXX".split()
+            f"mktemp --directory {tmp_base_directory}/xtra_backup_XXXX".split()
         )
 
         try:
@@ -1469,7 +1469,7 @@ Swap:     1027600384  1027600384           0
         group: str = None,
     ) -> None:
         """Delete the temp backup directory."""
-        delete_temp_dir_command = f"find {tmp_base_directory} -wholename {tmp_base_directory}/#xtra_backup_* -delete".split()
+        delete_temp_dir_command = f"find {tmp_base_directory} -wholename {tmp_base_directory}/xtra_backup_* -delete".split()
 
         try:
             self._execute_commands(
