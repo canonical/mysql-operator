@@ -87,7 +87,7 @@ test stderr"""
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
         return_value=({"bucket": "test-bucket"}, []),
     )
-    @patch("charms.mysql.v0.backups.list_backups_in_s3_path", return_value=["backup1", "backup2"])
+    @patch("charms.mysql.v0.backups.list_backups_in_s3_path", return_value=[("backup1", "finished"), ("backup2", "failed")])
     def test_on_list_backups(self, _list_backups_in_s3_path, _retrieve_s3_parameters):
         """Test _on_list_backups()."""
         event = MagicMock()
@@ -97,7 +97,14 @@ test stderr"""
         _retrieve_s3_parameters.assert_called_once()
         _list_backups_in_s3_path.assert_called_once_with({"bucket": "test-bucket"})
 
-        event.set_results.assert_called_once_with({"backup-ids": '["backup1", "backup2"]'})
+        expected_backups_output = [
+            "backup-id             | backup-type  | backup-status",
+            "----------------------------------------------------",
+            "backup1               | physical     | finished",
+            "backup2               | physical     | failed",
+        ]
+
+        event.set_results.assert_called_once_with({"backups": "\n".join(expected_backups_output)})
         event.fail.assert_not_called()
 
     @patch("charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters")
@@ -840,7 +847,8 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
-    def test_clean_data_dir_and_start_mysqld(self, _delete_temp_restore_directory, _start_mysqld):
+    @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
+    def test_clean_data_dir_and_start_mysqld(self, ___, __, _):
         """Test _clean_data_dir_and_start_mysqld()."""
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
@@ -850,8 +858,9 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
+    @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
     def test_clean_data_dir_and_start_mysqld_failure(
-        self, _delete_temp_restore_directory, _start_mysqld
+        self, _delete_temp_backup_directory, _delete_temp_restore_directory, _start_mysqld
     ):
         """Test failure of _clean_data_dir_and_start_mysqld()."""
         # test failure of start_mysqld()
@@ -860,6 +869,13 @@ Juju Version: test-juju-version
 
         self.assertFalse(success)
         self.assertEquals(error, "Failed to start mysqld")
+
+        # test failure of delete_temp_backup_directory()
+        _delete_temp_backup_directory.side_effect = MySQLDeleteTempBackupDirectoryError()
+        success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
+
+        self.assertFalse(success)
+        self.assertEquals(error, "Failed to delete the temp backup directory")
 
         # test failure of delete_temp_restore_directory()
         _delete_temp_restore_directory.side_effect = MySQLDeleteTempRestoreDirectoryError()
