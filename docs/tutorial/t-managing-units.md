@@ -1,6 +1,6 @@
 # Scale your Charmed MySQL
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8/edge). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
 
 ## Adding and Removing units
 

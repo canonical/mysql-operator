@@ -1,6 +1,6 @@
 # Enable Security in your MySQL deployment 
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8/edge). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
 
 ## Transport Layer Security (TLS)
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed MySQL. This means (re-)configuring TLS on Charmed MySQL is readily available and requires minimal effort on your end.
