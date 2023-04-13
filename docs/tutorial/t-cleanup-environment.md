@@ -1,6 +1,6 @@
 # Cleanup and extra info
 
-This is part of the [Charmed MySQL Tutorial](TODO). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8/edge). Please refer to this page for more information and the overview of the content.
 
 ## Remove Multipass VM
 If you're done with testing and would like to free up resources on your machine, just remove Multipass VM.

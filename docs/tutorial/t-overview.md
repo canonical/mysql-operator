@@ -16,10 +16,10 @@ While this tutorial intends to guide and teach you as you deploy Charmed MySQL, 
 ## Step-by-step guide
 
 Here’s an overview of the steps required with links to our separate tutorials that deal with each individual step:
-* [Set up the environment](TODO)
-* [Deploy PostgreSQL](TODO)
-* [Managing your units](TODO)
-* [Manage passwords](TODO)
-* [Relate your PostgreSQL to other applications](TODO)
-* [Enable security](TODO)
-* [Cleanup your environment](TODO)
+* [Set up the environment](/t/charmed-mysql-tutorial-setup-environment/9924?channel=8/edge)
+* [Deploy PostgreSQL](/t/charmed-mysql-tutorial-deploy-mysql/9912?channel=8/edge)
+* [Managing your units](/t/charmed-mysql-tutorial-managing-units/9920?channel=8/edge)
+* [Manage passwords](/t/charmed-mysql-tutorial-manage-passwords/9918?channel=8/edge)
+* [Relate your PostgreSQL to other applications](/t/charmed-mysql-tutorial-integrations/9916?channel=8/edge)
+* [Enable security](/t/charmed-mysql-tutorial-enable-security/9914?channel=8/edge)
+* [Cleanup your environment](/t/charmed-mysql-tutorial-cleanup-environment/9910?channel=8/edge)

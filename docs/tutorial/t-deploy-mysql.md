@@ -1,6 +1,6 @@
 # Get a Charmed MySQL up and running
 
-This is part of the [Charmed MySQL Tutorial](TODO). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8/edge). Please refer to this page for more information and the overview of the content.
 
 ## Deploy Charmed MySQL
 
