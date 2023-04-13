@@ -110,19 +110,23 @@ juju find-offers <k8s_controller_name>:
 
 A similar output should appear, if `micro` is the k8s controller name and `cos` the model where `cos-lite` has been deployed:
 ```
-Store  URL                   Access  Interfaces                         
-micro  admin/cos.grafana     admin   grafana_dashboard:grafana-dashboard
-micro  admin/cos.prometheus  admin   prometheus_scrape:metrics-endpoint
+Store        URL                                        Access  Interfaces
+<k8s_cos>    admin/cos.grafana-dashboards               admin   grafana_dashboard:grafana-dashboard
+<k8s_cos>    admin/cos.loki-logging                     admin   loki_push_api:logging
+<k8s_cos>    admin/cos.prometheus-receive-remote-write  admin   prometheus-receive-remote-write:receive-remote-write
 . . .
 ```
 
-Now, relate mysql with the `metrics-endpoint` and `grafana-dashboard` interfaces:
+Now, deploy `grafana-agent` (subordinate charm) and relate it with charm `mysql`, later relate `grafana-agent` with offered COS relations:
 ```shell
-juju relate micro:admin/cos.prometheus mysql
-juju relate micro:admin/cos.grafana mysql
+juju deploy grafana-agent
+juju relate mysql:cos-agent grafana-agent
+juju relate grafana-agent grafana-dashboards
+juju relate grafana-agent loki-logging
+juju relate grafana-agent prometheus-receive-remote-write
 ```
 
-After this is complete, Grafana will show two new dashboards: `MySQL Exporter` and `Node Exporter MySQL`
+After this is complete, Grafana will show the new dashboards: `MySQL Exporter` and allows access for Charmed MySQL logs on Loki.
 
 
 ## Contributing
