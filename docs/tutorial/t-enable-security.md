@@ -9,9 +9,7 @@ Again, relations come in handy here as TLS is enabled via relations; i.e. by rel
 
 
 ### Configure TLS
-
 Before enabling TLS on Charmed MySQL we must first deploy the `tls-certificates-operator` charm:
-
 ```shell
 juju deploy tls-certificates-operator --config generate-self-signed-certificates="true" --config ca-common-name="Tutorial CA"
 ```
