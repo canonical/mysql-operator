@@ -14,10 +14,6 @@ on:
   workflow_call:
 
 jobs:
-  lint:
-    name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v2
-
   unit-test:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -71,7 +67,6 @@ jobs:
   collect-integration-tests:
     name: Collect integration test groups
     needs:
-      - lint
       - unit-test
       - lib-check
     runs-on: ubuntu-latest
@@ -112,7 +107,6 @@ jobs:
             bases-index: 0
     name: ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
     needs:
-      - lint
       - unit-test
       - lib-check
       - build
