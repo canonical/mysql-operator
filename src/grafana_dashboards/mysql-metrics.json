@@ -33,7 +33,7 @@
       }
     ]
   },
-  "description": "A quickstart to setup the Prometheus MySQL Exporter with preconfigured dashboards, alerting rules, and recording rules.",
+  "description": "Canonical MySQL charmed operator dashboard for Grafana",
   "editable": true,
   "gnetId": 14057,
   "graphTooltip": 1,
@@ -129,7 +129,7 @@
           "errors": {},
           "expr": "mysql_global_status_uptime{job=~\"$job\", instance=~\"$instance\"}",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "metric": "",
@@ -216,7 +216,7 @@
           "errors": {},
           "expr": "rate(mysql_global_status_queries{job=~\"$job\", instance=~\"$instance\"}[$__interval])",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "metric": "",
@@ -408,7 +408,7 @@
           "errors": {},
           "expr": "sum(max_over_time(mysql_global_status_threads_connected{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Connections",
           "metric": "",
@@ -421,7 +421,7 @@
           "errors": {},
           "expr": "sum(mysql_global_status_max_used_connections{job=~\"$job\", instance=~\"$instance\"})",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Max Used Connections",
           "metric": "",
@@ -435,7 +435,7 @@
           "errors": {},
           "expr": "sum(mysql_global_variables_max_connections{job=~\"$job\", instance=~\"$instance\"})",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Max Connections",
           "metric": "",
@@ -568,7 +568,7 @@
           "expr": "sum(max_over_time(mysql_global_status_threads_connected{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
           "hide": false,
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Peak Threads Connected",
           "metric": "",
@@ -581,7 +581,7 @@
           "errors": {},
           "expr": "sum(max_over_time(mysql_global_status_threads_running{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Peak Threads Running",
           "metric": "",
@@ -591,7 +591,7 @@
         {
           "expr": "sum(avg_over_time(mysql_global_status_threads_running{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Avg Threads Running",
           "refId": "C",
@@ -731,7 +731,7 @@
           "errors": {},
           "expr": "rate(mysql_global_status_questions{job=~\"$job\", instance=~\"$instance\"}[$__interval])",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "metric": "",
@@ -1009,7 +1009,7 @@
           "datasourceErrors": {},
           "errors": {},
           "expr": "sum(rate(mysql_global_status_created_tmp_tables{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Created Tmp Tables",
           "metric": "",
@@ -1021,7 +1021,7 @@
           "datasourceErrors": {},
           "errors": {},
           "expr": "sum(rate(mysql_global_status_created_tmp_disk_tables{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Created Tmp Disk Tables",
           "metric": "",
@@ -1033,7 +1033,7 @@
           "datasourceErrors": {},
           "errors": {},
           "expr": "sum(rate(mysql_global_status_created_tmp_files{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Created Tmp Files",
           "metric": "",
@@ -1148,7 +1148,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_select_full_join{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Select Full Join",
           "metric": "",
@@ -1161,7 +1161,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_select_full_range_join{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Select Full Range Join",
           "metric": "",
@@ -1174,7 +1174,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_select_range{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Select Range",
           "metric": "",
@@ -1187,7 +1187,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_select_range_check{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Select Range Check",
           "metric": "",
@@ -1200,7 +1200,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_select_scan{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Select Scan",
           "metric": "",
@@ -1371,7 +1371,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_sort_scan{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Sort Scan",
           "metric": "",
@@ -1483,7 +1483,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_slow_queries{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Slow Queries",
           "metric": "",
@@ -1615,7 +1615,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_aborted_connects{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Aborted Connects (attempts)",
           "metric": "",
@@ -1628,7 +1628,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_aborted_clients{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Aborted Clients (timeout)",
           "metric": "",
@@ -1744,7 +1744,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_table_locks_immediate{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Table Locks Immediate",
           "metric": "",
@@ -1757,7 +1757,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_table_locks_waited{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Table Locks Waited",
           "metric": "",
@@ -1888,7 +1888,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_bytes_received{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Inbound",
           "metric": "",
@@ -1901,7 +1901,7 @@
           "errors": {},
           "expr": "sum(rate(mysql_global_status_bytes_sent{job=~\"$job\", instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
           "legendFormat": "Outbound",
           "metric": "",
@@ -2246,9 +2246,9 @@
           "expr": "topk(5, rate(mysql_global_status_commands_total{job=~\"$job\", instance=~\"$instance\"}[$__interval])>0)",
           "format": "time_series",
           "hide": false,
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
-          "legendFormat": "Com_{{ command }}",
+          "legendFormat": "Com_{{command}}",
           "metric": "",
           "refId": "B",
           "step": 20
@@ -2358,11 +2358,11 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(mysql_global_status_handlers_total{instance=~\"$host\", handler!~\"commit|rollback|savepoint.*|prepare\"}[$__interval]) or irate(mysql_global_status_handlers_total{instance=~\"$host\", handler!~\"commit|rollback|savepoint.*|prepare\"}[5m])",
+          "expr": "rate(mysql_global_status_handlers_total{instance=~\"$instance\",job=~\"$job\",juju_application=\"$juju_application\",juju_model=\"$juju_model\",juju_model_uuid=\"$juju_model_uuid\",juju_unit=\"$juju_unit\", handler!~\"commit|rollback|savepoint.*|prepare\"}[$__interval]) or irate(mysql_global_status_handlers_total{instance=~\"$instance\",job=~\"$job\",juju_application=\"$juju_application\",juju_model=\"$juju_model\",juju_model_uuid=\"$juju_model_uuid\",juju_unit=\"$juju_unit\", handler!~\"commit|rollback|savepoint.*|prepare\"}[$__interval])",
           "format": "time_series",
-          "interval": "1m",
+          "interval": "2m",
           "intervalFactor": 1,
-          "legendFormat": "{{ handler }}",
+          "legendFormat": "{{handler}}",
           "metric": "",
           "refId": "J",
           "step": 20
@@ -2471,10 +2471,10 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(mysql_global_status_handlers_total{instance=~\"$host\", handler=~\"commit|rollback|savepoint.*|prepare\"}[$__interval]) or irate(mysql_global_status_handlers_total{instance=~\"$host\", handler=~\"commit|rollback|savepoint.*|prepare\"}[5m])",
-          "interval": "1m",
+          "expr": "rate(mysql_global_status_handlers_total{instance=~\"$instance\", handler=~\"commit|rollback|savepoint.*|prepare\"}[$__interval]) or irate(mysql_global_status_handlers_total{instance=~\"$instance\", handler=~\"commit|rollback|savepoint.*|prepare\"}[$__interval])",
+          "interval": "2m",
           "intervalFactor": 1,
-          "legendFormat": "{{ handler }}",
+          "legendFormat": "{{handler}}",
           "metric": "",
           "refId": "A",
           "step": 20
@@ -2485,231 +2485,6 @@
       "timeRegions": [],
       "timeShift": null,
       "title": "MySQL Transaction Handlers",
-      "tooltip": {
-        "msResolution": false,
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "${prometheusds}"
-      },
-      "decimals": 2,
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 82
-      },
-      "hiddenSeries": false,
-      "id": 40,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "hideZero": true,
-        "max": true,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null as zero",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "mysql_info_schema_threads{job=~\"$job\", instance=~\"$instance\"}",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "{{ state }}",
-          "metric": "",
-          "refId": "A",
-          "step": 20
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Process States",
-      "tooltip": {
-        "msResolution": false,
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "${prometheusds}"
-      },
-      "decimals": 2,
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 6,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 89
-      },
-      "hiddenSeries": false,
-      "id": 49,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "hideZero": true,
-        "max": true,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": false,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "topk(5, avg_over_time(mysql_info_schema_threads{job=~\"$job\", instance=~\"$instance\"}[1h]))",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "{{ state }}",
-          "metric": "",
-          "refId": "A",
-          "step": 3600
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": "24h",
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Top Process States Hourly",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -2762,298 +2537,6 @@
       "repeat": null,
       "title": "Query Cache",
       "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "${prometheusds}"
-      },
-      "decimals": 2,
-      "description": "**MySQL Query Cache Memory**\n\nThe query cache has huge scalability problems in that only one thread can do an operation in the query cache at the same time. This serialization is true not only for SELECTs, but also for INSERT/UPDATE/DELETE.\n\nThis also means that the larger the `query_cache_size` is set to, the slower those operations become. In concurrent environments, the MySQL Query Cache quickly becomes a contention point, decreasing performance. MariaDB and AWS Aurora have done work to try and eliminate the query cache contention in their flavors of MySQL, while MySQL 8.0 has eliminated the query cache feature.\n\nThe recommended settings for most environments is to set:\n  ``query_cache_type=0``\n  ``query_cache_size=0``\n\nNote that while you can dynamically change these values, to completely remove the contention point you have to restart the database.",
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 97
-      },
-      "hiddenSeries": false,
-      "id": 46,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "mysql_global_status_qcache_free_memory{job=~\"$job\", instance=~\"$instance\"}",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Free Memory",
-          "metric": "",
-          "refId": "F",
-          "step": 20
-        },
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "mysql_global_variables_query_cache_size{job=~\"$job\", instance=~\"$instance\"}",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Query Cache Size",
-          "metric": "",
-          "refId": "E",
-          "step": 20
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "MySQL Query Cache Memory",
-      "tooltip": {
-        "msResolution": false,
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bytes",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "${prometheusds}"
-      },
-      "decimals": 2,
-      "description": "**MySQL Query Cache Activity**\n\nThe query cache has huge scalability problems in that only one thread can do an operation in the query cache at the same time. This serialization is true not only for SELECTs, but also for INSERT/UPDATE/DELETE.\n\nThis also means that the larger the `query_cache_size` is set to, the slower those operations become. In concurrent environments, the MySQL Query Cache quickly becomes a contention point, decreasing performance. MariaDB and AWS Aurora have done work to try and eliminate the query cache contention in their flavors of MySQL, while MySQL 8.0 has eliminated the query cache feature.\n\nThe recommended settings for most environments is to set:\n``query_cache_type=0``\n``query_cache_size=0``\n\nNote that while you can dynamically change these values, to completely remove the contention point you have to restart the database.",
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 2,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 97
-      },
-      "height": "",
-      "hiddenSeries": false,
-      "id": 45,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": false,
-        "max": true,
-        "min": true,
-        "rightSide": false,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "rate(mysql_global_status_qcache_hits{job=~\"$job\", instance=~\"$instance\"}[$__interval]) or irate(mysql_global_status_qcache_hits{job=~\"$job\", instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Hits",
-          "metric": "",
-          "refId": "B",
-          "step": 20
-        },
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "rate(mysql_global_status_qcache_inserts{job=~\"$job\", instance=~\"$instance\"}[$__interval]) or irate(mysql_global_status_qcache_inserts{job=~\"$job\", instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Inserts",
-          "metric": "",
-          "refId": "C",
-          "step": 20
-        },
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "rate(mysql_global_status_qcache_not_cached{job=~\"$job\", instance=~\"$instance\"}[$__interval]) or irate(mysql_global_status_qcache_not_cached{job=~\"$job\", instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Not Cached",
-          "metric": "",
-          "refId": "D",
-          "step": 20
-        },
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "rate(mysql_global_status_qcache_lowmem_prunes{job=~\"$job\", instance=~\"$instance\"}[$__interval]) or irate(mysql_global_status_qcache_lowmem_prunes{job=~\"$job\", instance=~\"$instance\"}[5m])",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Prunes",
-          "metric": "",
-          "refId": "F",
-          "step": 20
-        },
-        {
-          "calculatedInterval": "2m",
-          "datasourceErrors": {},
-          "errors": {},
-          "expr": "mysql_global_status_qcache_queries_in_cache{job=~\"$job\", instance=~\"$instance\"}",
-          "format": "time_series",
-          "interval": "1m",
-          "intervalFactor": 1,
-          "legendFormat": "Queries in Cache",
-          "metric": "",
-          "refId": "E",
-          "step": 20
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "MySQL Query Cache Activity",
-      "tooltip": {
-        "msResolution": false,
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
     },
     {
       "collapsed": false,
