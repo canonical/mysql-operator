@@ -76,17 +76,22 @@ juju status --relations
 
 **Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided.
 
-This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`:
+This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://juju.is/docs/olm/cross-model-integration).
 
-1. `mysql` is a relation that's used from some k8s charms and can be used in cross-model relations.
+#### `mysql` interface (`mysql` endpoint)
+
+It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://juju.is/docs/olm/cross-model-integration):
 
 ```shell
 juju deploy mysql --channel 8.0
+juju config mysql mysql-interface-database=mediawiki mysql-interface-user=mediawiki
 juju deploy mediawiki
 juju relate mysql:mysql mediawiki:db
 ```
 
-2. `mysql-router` interface (`db-router` endpoint) is a relation that one uses with the [mysql router](https://charmhub.io/mysql-router) charm. The following commands can be executed to deploy and relate to the keystone charm:
+#### `mysql-router` interface (`db-router` endpoint)
+
+It is a relation that one uses with the [mysql router](https://charmhub.io/mysql-router) charm. The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
 juju deploy mysql --channel 8.0
@@ -98,7 +103,9 @@ juju relate mysql:db-router mysql-router:db-router
 
 **Note:** pay attention to deploy identical [series](https://juju.is/docs/olm/deploy-an-application-with-a-specific-series) for `keystone` and `mysql-router` applications (due to the [subordinate](https://juju.is/docs/sdk/charm-types#heading--subordinate-charms) charm nature of `mysql-router`).
 
-3. `mysql-shared` interface (`shared-db` endpoint) is a relation that one uses when the application needs to connect directly to the database cluster.
+#### `mysql-shared` interface (`shared-db` endpoint)
+
+It is a relation that one uses when the application needs to connect directly to the database cluster.
 It is supported by various legacy charms, e.g. [mysql-innodb-cluster](https://charmhub.io/mysql-innodb-cluster).
 The following commands can be executed to deploy and relate to the keystone charm:
 
