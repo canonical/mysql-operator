@@ -175,7 +175,7 @@ Stderr:
 
         backups.append("-" * len(backups[0]))
         for backup_id, backup_status in backup_list:
-            backups.append(f"{backup_id:<21s} | {'physical':<12s} | {backup_status:s}")
+            backups.append(f"{backup_id:<21} | {'physical':<12} | {backup_status}")
 
         return "\n".join(backups)
 
