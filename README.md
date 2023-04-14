@@ -69,7 +69,7 @@ juju status --relations
 # > mysql:database      mysql-test-app:database  mysql_client  regular
 ```
 
-**Note:** In order to relate with this charm, every table created by the related application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/5.7/en/group-replication-requirements.html) enabled in this charm.
+**Note:** In order to relate with this charm, every table created by the related application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
 
 
 ### Legacy relations
