@@ -25,9 +25,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Run tests
         run: tox run -e unit
       - name: Upload Coverage to Codecov
@@ -63,9 +64,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Select test stability level
         id: select-test-stability
         run: |
@@ -103,6 +105,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Setup operator environment
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
