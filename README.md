@@ -2,7 +2,7 @@
 
 ## Description
 
-This repository contains a [Juju Charm](https://charmhub.io/mysql) for deploying [MySQL](https://www.mysql.com/) on virtual machines ([LXD](https://ubuntu.com/lxd)).
+This repository contains a [Juju Charm](https://charmhub.io/mysql) for deploying [MySQL](https://www.mysql.com/) on [virtual machines](https://ubuntu.com/lxd).
 
 To deploy on [Kubernetes](https://microk8s.io/), please use [Charmed MySQL K8s operator](https://charmhub.io/mysql-k8s).
 
@@ -12,7 +12,7 @@ To deploy this charm using Juju 2.9 or later, run:
 
 ```shell
 juju add-model mysql-vm
-juju deploy mysql --channel edge
+juju deploy mysql
 ```
 
 **Note:** the above model must be created on LXD (virtual machines) environment. Use [another](https://charmhub.io/mysql-k8s) charm for K8s!
@@ -53,7 +53,7 @@ Adding a relation is accomplished with `juju relate` (or `juju integrate` for Ju
 
 ```shell
 # Deploy Charmed MySQL cluster with 3 nodes
-juju deploy mysql -n 3
+juju deploy mysql -n 3 --channel 8.0
 
 # Deploy the relevant charms, e.g. mysql-test-app
 juju deploy mysql-test-app
@@ -81,7 +81,7 @@ This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `my
 1. `mysql` is a relation that's used from some k8s charms and can be used in cross-model relations.
 
 ```shell
-juju deploy mysql --channel edge
+juju deploy mysql --channel 8.0
 juju deploy mediawiki
 juju relate mysql:mysql mediawiki:db
 ```
@@ -89,7 +89,7 @@ juju relate mysql:mysql mediawiki:db
 2. `mysql-router` interface (`db-router` endpoint) is a relation that one uses with the [mysql router](https://charmhub.io/mysql-router) charm. The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
-juju deploy mysql --channel edge
+juju deploy mysql --channel 8.0
 juju deploy mysql-router --series focal
 juju deploy keystone --series focal
 juju relate mysql-router keystone
@@ -103,7 +103,7 @@ It is supported by various legacy charms, e.g. [mysql-innodb-cluster](https://ch
 The following commands can be executed to deploy and relate to the keystone charm:
 
 ```shell
-juju deploy mysql --channel edge
+juju deploy mysql --channel 8.0
 juju deploy keystone --series focal
 juju relate keystone:shared-db mysql:shared-db
 ```
