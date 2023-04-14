@@ -1,5 +1,5 @@
 Creating and listing backups requires that you:
-* [Have a Charmed MySQL deployed](https://discourse.charmhub.io/t/charmed-mysql-tutorial-managing-units/TODO)
+* [Have a Charmed MySQL deployed](/t/charmed-mysql-how-to-manage-units/9904?channel=8.0/edge)
 * [Deploy `cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
 Switch to COS K8s environment and offer COS interfaces to be cross-model related with Charmed MySQL VM model:
