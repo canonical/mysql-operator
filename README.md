@@ -12,7 +12,7 @@ To deploy this charm using Juju 2.9 or later, run:
 
 ```shell
 juju add-model mysql-vm
-juju deploy mysql
+juju deploy mysql --channel 8.0
 ```
 
 **Note:** the above model must be created on LXD (virtual machines) environment. Use [another](https://charmhub.io/mysql-k8s) charm for K8s!
