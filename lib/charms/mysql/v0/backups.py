@@ -171,11 +171,11 @@ Stderr:
 
     def _format_backups_list(self, backup_list: Tuple[str, bool]) -> str:
         """Formats the provided list of backups as a table."""
-        backups = ["{:<21s} | {:<12s} | {:s}".format("backup-id", "backup-type", "backup-status")]
+        backups = [f"{'backup-id':<21} | {'backup-type':<12} | backup-status"]
 
         backups.append("-" * len(backups[0]))
         for backup_id, backup_status in backup_list:
-            backups.append("{:<21s} | {:<12s} | {:s}".format(backup_id, "physical", backup_status))
+            backups.append(f"{backup_id:<21s} | {'physical':<12s} | {backup_status:s}")
 
         return "\n".join(backups)
 
