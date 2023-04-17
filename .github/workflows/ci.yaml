@@ -151,6 +151,9 @@ jobs:
           GCP_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}
           GCP_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        if: always()
       - name: 'Foresight: Collect test results'
         uses: runforesight/foresight-test-kit-action@v1
         if: ${{ success() || failure() }}
