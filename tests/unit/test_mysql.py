@@ -1166,7 +1166,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of retrieve_backup_with_xbcloud()."""
         _execute_commands.side_effect = [
             ("16", None),
-            ("mysql/data/directory/mysql_sst_ABCD", None),
+            ("mysql/data/directory/#mysql_sst_ABCD", None),
             ("", None),
         ]
 
@@ -1186,7 +1186,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_nproc_commands = ["nproc"]
         _expected_temp_dir_commands = (
-            "mktemp --directory mysql/data/directory/mysql_sst_XXXX".split()
+            "mktemp --directory mysql/data/directory/#mysql_sst_XXXX".split()
         )
         _expected_retrieve_backup_commands = """
 xbcloud/location get
@@ -1197,7 +1197,7 @@ xbcloud/location get
     | xbstream/location
         --decompress
         -x
-        -C mysql/data/directory/mysql_sst_ABCD
+        -C mysql/data/directory/#mysql_sst_ABCD
         --parallel=16
 """.split()
 
@@ -1366,7 +1366,7 @@ xtrabackup/location --prepare
             group="test-group",
         )
 
-        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/mysql_sst_* -not -path mysql/data/directory -delete".split()
+        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/#mysql_sst_* -not -path mysql/data/directory -delete".split()
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
@@ -1453,9 +1453,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             group="test-group",
         )
 
-        _expected_commands = (
-            "find mysql/data/directory -wholename mysql/data/directory/mysql_sst_* -delete".split()
-        )
+        _expected_commands = "find mysql/data/directory -wholename mysql/data/directory/#mysql_sst_* -delete".split()
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
