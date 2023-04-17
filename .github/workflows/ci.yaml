@@ -72,7 +72,6 @@ jobs:
     needs:
       - lint
       - unit-test
-      - lib-check
     runs-on: ubuntu-latest
     steps:
       - name: 'Foresight: Collect workflow telemetry'
@@ -112,7 +111,6 @@ jobs:
     needs:
       - lint
       - unit-test
-      - lib-check
       - build
       - collect-integration-tests
     runs-on: ubuntu-latest
