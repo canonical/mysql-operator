@@ -68,7 +68,6 @@ jobs:
     name: Collect integration test groups
     needs:
       - unit-test
-      - lib-check
     runs-on: ubuntu-latest
     steps:
       - name: 'Foresight: Collect workflow telemetry'
@@ -108,7 +107,6 @@ jobs:
     name: ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - unit-test
-      - lib-check
       - build
       - collect-integration-tests
     runs-on: ubuntu-latest
