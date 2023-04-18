@@ -69,6 +69,7 @@ jobs:
   
   release:
     name: Release charm to Charmhub branch
+    if: ${{ github.event_name == 'pull_request' }}
     needs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
