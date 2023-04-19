@@ -858,7 +858,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test the successful execution of grant_privileges_to_user."""
         expected_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
+                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
                 "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_user'@'%' WITH GRANT OPTION\")",
             )
         )
@@ -873,7 +873,7 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
+                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
                 "session.run_sql(\"GRANT SELECT, UPDATE ON *.* TO 'test_user'@'%'\")",
             )
         )
