@@ -661,10 +661,10 @@ class MySQL(MySQLBase):
         os.chmod(path, mode=permission)
 
 
-def is_data_dir_attached() -> bool:
+def is_volume_mounted() -> bool:
     """Returns if data directory is attached."""
     try:
-        subprocess.check_call(["mountpoint", "-q", MYSQL_DATA_DIR])
+        subprocess.check_call(["mountpoint", "-q", CHARMED_MYSQL_COMMON_DIRECTORY])
         return True
     except subprocess.CalledProcessError:
         return False

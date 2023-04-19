@@ -38,7 +38,7 @@ class TestCharm(unittest.TestCase):
     @patch("socket.getfqdn", return_value="test-hostname")
     @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
     def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _):
         self.charm.on.install.emit()
@@ -48,14 +48,14 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Retrying", return_value=Retrying(stop=stop_after_attempt(1)))
     @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch(
         "mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies", side_effect=Exception()
     )
     def test_on_install_exception(
         self,
         _install_and_configure_mysql_dependencies,
-        _is_data_dir_attached,
+        _is_volume_mounted,
         _check_call,
         _retrying,
     ):
@@ -127,7 +127,7 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
     @patch("mysql_vm_helpers.MySQL.connect_mysql_exporter")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
@@ -148,7 +148,7 @@ class TestCharm(unittest.TestCase):
         _wait_until_mysql_connection,
         _connect_mysql_exporter,
         _get_mysql_version,
-        _is_data_dir_attached,
+        _is_volume_mounted,
         _check_call,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
@@ -161,7 +161,7 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_data_dir_attached", return_value=True)
+    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
@@ -176,7 +176,7 @@ class TestCharm(unittest.TestCase):
         _initialize_juju_units_operations_table,
         _configure_instance,
         _configure_mysql_users,
-        _is_data_dir_attached,
+        _is_volume_mounted,
         _check_call,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
@@ -275,7 +275,7 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.get_member_state")
-    @patch("charm.is_data_dir_attached", return_value=True)
+    @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
     @patch("charm.MySQLOperatorCharm._workload_reset")
@@ -284,7 +284,7 @@ class TestCharm(unittest.TestCase):
         _workload_reset,
         _snap_service_operation,
         __reboot_from_complete_outage,
-        _is_data_dir_attached,
+        _is_volume_mounted,
         _get_member_state,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
