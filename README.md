@@ -37,17 +37,18 @@ juju destroy-model mysql-vm --destroy-storage --yes
 
 Please follow the [tutorial guide](https://discourse.charmhub.io/t/charmed-mysql-tutorial/8623) with detailed explanation how to access DB, configure cluster, change credentials and/or enable TLS.
 
-## Relations
+## Integrations ([relations](https://juju.is/docs/olm/relations))
 
 The charm supports modern `mysql_client` and legacy `mysql`, `mysql-shared`, `mysql-router` interfaces (in a backward compatible mode).
 
-**Note:** do NOT relate both modern and legacy interfaces simultaneously.
+**Note:** do NOT relate both modern and legacy interfaces simultaneously!
 
-
-### Modern relations
+### Modern interfaces
 
 This charm implements the [provides data platform library](https://charmhub.io/data-platform-libs/libraries/database_provides), with the modern `mysql_client` interface.
 To relate to it, use the [requires data-platform library](https://charmhub.io/data-platform-libs/libraries/database_requires).
+
+#### Modern `mysql_client` interface (`database` endpoint):
 
 Adding a relation is accomplished with `juju relate` (or `juju integrate` for Juju 3.x) via endpoint `database`. Example:
 
@@ -71,14 +72,13 @@ juju status --relations
 
 **Note:** In order to relate with this charm, every table created by the related application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
 
-
-### Legacy relations
+### Legacy interfaces
 
 **Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided.
 
 This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://juju.is/docs/olm/cross-model-integration).
 
-#### `mysql` interface (`mysql` endpoint)
+#### Legacy `mysql` interface (`mysql` endpoint)
 
 It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://juju.is/docs/olm/cross-model-integration):
 
@@ -115,47 +115,10 @@ juju deploy keystone --series focal
 juju relate keystone:shared-db mysql:shared-db
 ```
 
-## Monitoring
-
-The Charmed MySQL Operator comes with several exporters by default. The metrics can be queried by accessing the following endpoints:
-
-- MySQL exporter: `http://<unit-ip>:9104/metrics`
-
-Additionally, the charm provides integration with the [Canonical Observability Stack](https://charmhub.io/topics/canonical-observability-stack).
-
-Deploy `cos-lite` bundle in a Kubernetes environment. This can be done by following the [deployment tutorial](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s). Since the Charmed MySQL Operator is deployed on a machine environment, it is needed to offer the endpoints of the COS relations. The [offers-overlay](https://github.com/canonical/cos-lite-bundle/blob/main/overlays/offers-overlay.yaml) can be used, and this step is shown on the COS tutorial.
-
-Once COS is deployed, we can find the offers from the mysql model:
-```shell
-# We are on the Kubernetes controller, for the cos model. Switch to mysql model
-juju switch <machine_controller_name>:<mysql_model_name>
-
-juju find-offers <k8s_controller_name>:
-```
-
-A similar output should appear, if `micro` is the k8s controller name and `cos` the model where `cos-lite` has been deployed:
-```
-Store        URL                                        Access  Interfaces
-<k8s_cos>    admin/cos.grafana-dashboards               admin   grafana_dashboard:grafana-dashboard
-<k8s_cos>    admin/cos.loki-logging                     admin   loki_push_api:logging
-<k8s_cos>    admin/cos.prometheus-receive-remote-write  admin   prometheus-receive-remote-write:receive-remote-write
-. . .
-```
-
-Now, deploy `grafana-agent` (subordinate charm) and relate it with charm `mysql`, later relate `grafana-agent` with offered COS relations:
-```shell
-juju deploy grafana-agent
-juju relate mysql:cos-agent grafana-agent
-juju relate grafana-agent grafana-dashboards
-juju relate grafana-agent loki-logging
-juju relate grafana-agent prometheus-receive-remote-write
-```
-
-After this is complete, Grafana will show the new dashboards: `MySQL Exporter` and allows access for Charmed MySQL logs on Loki.
-
+## Security
+Security issues in the Charmed MySQL VM Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
 
 ## Contributing
-
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this
 charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/mysql-operator/blob/main/CONTRIBUTING.md) for developer guidance.
 

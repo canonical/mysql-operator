@@ -8,7 +8,7 @@ this operator.
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
   ](https://github.com/canonical/mysql-operator/issues) explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach
-  us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/data-platform)
+  us at [public Canonical Data Platform channel](https://chat.charmhub.io/charmhub/channels/data-platform)
   or [Discourse](https://discourse.charmhub.io/).
 - Familiarising yourself with the [Charmed Operator Framework](https://juju.is/docs/sdk) library
   will help you a lot when working on new features or bug fixes.
@@ -31,11 +31,11 @@ source venv/bin/activate
 ### Testing
 
 ```shell
-tox run -e format        # update your code according to linting rules
-tox run -e lint          # code style
-tox run -e unit          # unit tests
-tox run -e integration   # integration tests
-tox                      # runs 'lint' and 'unit' environments
+tox run -e format          # update your code according to linting rules
+tox run -e lint            # code style
+tox run -e unit            # unit tests
+tox run -e integration-*   # integration tests
+tox                        # runs 'lint' and 'unit' environments
 ```
 
 ## Build charm
