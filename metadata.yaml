@@ -1,48 +1,59 @@
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 name: mysql
-display-name: MySQL
+display-name: Charmed MySQL
+summary: Charmed MySQL VM operator
 description: |
-  MySQL charm for machines
-docs: https://discourse.charmhub.io/t/charmed-mysql-documentation/9925
-summary: |
   MySQL is a widely used, open-source relational database management system
   (RDBMS). MySQL InnoDB cluster provides a complete high availability solution
   for MySQL via Group Replication.
+
+  This charm supports MySQL 8.0 in bare-metal/virtual-machines.
+docs: https://discourse.charmhub.io/t/charmed-mysql-documentation/9925
 source: https://github.com/canonical/mysql-operator
 issues: https://github.com/canonical/mysql-operator/issues
-
-  This charm supports MySQL 8 on machines.
+website:
+  - https://ubuntu.com/data/mysql
+  - https://charmhub.io/mysql
+  - https://github.com/canonical/mysql-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
 maintainers:
   - Paulo Machado <paulo.machado@canonical.com>
   - Shayan Patel <shayan.patel@canonical.com>
+
 peers:
   database-peers:
     interface: mysql_peers
+
 provides:
-  db-router:
-    interface: mysql-router
-  shared-db:
-    interface: mysql-shared
   database:
     interface: mysql_client
   mysql:
     interface: mysql
+  db-router:
+    interface: mysql-router
+  shared-db:
+    interface: mysql-shared
   cos-agent:
     interface: cos_agent
     limit: 1
+
 requires:
   certificates:
     interface: tls-certificates
     limit: 1
+    optional: true
   s3-parameters:
     interface: s3
     limit: 1
+    optional: true
+
 storage:
   database:
     type: filesystem
-    description: Persistent storage for MySQL data
+    description: Persistent storage for data
     location: /var/snap/charmed-mysql/common
+
 assumes:
   - juju
