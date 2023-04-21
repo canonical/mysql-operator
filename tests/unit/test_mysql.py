@@ -33,7 +33,6 @@ from charms.mysql.v0.mysql import (
     MySQLRemoveInstanceRetryError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
-    MySQLUpgradeUserForMySQLRouterError,
 )
 
 
@@ -812,43 +811,6 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
         self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
-
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
-    )
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_upgrade_user_for_mysqlrouter(self, _run_mysqlsh_script, _get_cluster_primary_address):
-        """Test the successful execution of upgrade_user_for_mysqlrouter."""
-        expected_commands = "\n".join(
-            (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
-                "cluster = dba.get_cluster('test_cluster')",
-                'cluster.setup_router_account(\'test_user@%\', {"update": "true"})',
-            )
-        )
-
-        self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
-
-        _run_mysqlsh_script.assert_called_once_with(expected_commands)
-
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
-    )
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_upgrade_user_for_mysqlrouter_exception(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
-        """Test an exception during the execution of upgrade_user_for_mysqlrouter."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error upgrading user")
-
-        with self.assertRaises(MySQLUpgradeUserForMySQLRouterError):
-            self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
-
-        _run_mysqlsh_script.side_effect = None
-        _get_cluster_primary_address.return_value = None
-
-        with self.assertRaises(MySQLUpgradeUserForMySQLRouterError):
-            self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
 
     @patch(
         "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
