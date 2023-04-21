@@ -17,7 +17,6 @@ from charms.mysql.v0.mysql import (
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
     MySQLGrantPrivilegesToUserError,
-    MySQLUpgradeUserForMySQLRouterError,
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
 from ops.framework import Object
@@ -229,7 +228,6 @@ class MySQLProvider(Object):
             MySQLCreateApplicationDatabaseAndScopedUserError,
             MySQLGetMySQLVersionError,
             MySQLGetClusterMembersAddressesError,
-            MySQLUpgradeUserForMySQLRouterError,
             MySQLGrantPrivilegesToUserError,
             MySQLClientError,
         ) as e:
