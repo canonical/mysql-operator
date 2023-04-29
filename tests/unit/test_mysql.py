@@ -1023,7 +1023,6 @@ class TestMySQLBase(unittest.TestCase):
     | /xbcloud/location put
             --curl-retriable-errors=7
             --insecure
-            --storage=s3
             --parallel=10
             --md5
             --storage=S3
