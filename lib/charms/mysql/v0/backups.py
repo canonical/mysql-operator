@@ -137,6 +137,10 @@ class MySQLBackups(Object):
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "auto")
         s3_parameters.setdefault("s3-api-version", "auto")
+
+        # Clean up extra slash symbols to avoid issues on 3rd-party storages
+        # like Ceph Object Gateway (radosgw)
+        s3_parameters["endpoint"] = s3_parameters["endpoint"].rstrip("/")
         s3_parameters["path"] = s3_parameters["path"].strip("/")
 
         return s3_parameters, []
