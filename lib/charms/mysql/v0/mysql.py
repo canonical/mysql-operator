@@ -1394,7 +1394,6 @@ Swap:     1027600384  1027600384           0
     | {xbcloud_location} put
             --curl-retriable-errors=7
             --insecure
-            --storage=s3
             --parallel=10
             --md5
             --storage=S3
