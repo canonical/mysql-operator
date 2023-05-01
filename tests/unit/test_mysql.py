@@ -33,7 +33,6 @@ from charms.mysql.v0.mysql import (
     MySQLRemoveInstanceRetryError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
-    MySQLUpgradeUserForMySQLRouterError,
 )
 
 
@@ -817,48 +816,11 @@ class TestMySQLBase(unittest.TestCase):
         "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
     )
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_upgrade_user_for_mysqlrouter(self, _run_mysqlsh_script, _get_cluster_primary_address):
-        """Test the successful execution of upgrade_user_for_mysqlrouter."""
-        expected_commands = "\n".join(
-            (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
-                "cluster = dba.get_cluster('test_cluster')",
-                'cluster.setup_router_account(\'test_user@%\', {"update": "true"})',
-            )
-        )
-
-        self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
-
-        _run_mysqlsh_script.assert_called_once_with(expected_commands)
-
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
-    )
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_upgrade_user_for_mysqlrouter_exception(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
-        """Test an exception during the execution of upgrade_user_for_mysqlrouter."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error upgrading user")
-
-        with self.assertRaises(MySQLUpgradeUserForMySQLRouterError):
-            self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
-
-        _run_mysqlsh_script.side_effect = None
-        _get_cluster_primary_address.return_value = None
-
-        with self.assertRaises(MySQLUpgradeUserForMySQLRouterError):
-            self.mysql.upgrade_user_for_mysqlrouter("test_user", "%")
-
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
-    )
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_grant_privileges_to_user(self, _run_mysqlsh_script, _get_cluster_primary_address):
         """Test the successful execution of grant_privileges_to_user."""
         expected_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
+                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
                 "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_user'@'%' WITH GRANT OPTION\")",
             )
         )
@@ -873,7 +835,7 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_commands = "\n".join(
             (
-                "shell.connect('clusteradmin:clusteradminpassword@1.1.1.1:3306')",
+                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
                 "session.run_sql(\"GRANT SELECT, UPDATE ON *.* TO 'test_user'@'%'\")",
             )
         )
@@ -1014,11 +976,17 @@ class TestMySQLBase(unittest.TestCase):
         ]
 
         stdout, stderr = self.mysql.execute_backup_commands(
-            "s3_bucket",
             "s3_directory",
-            "s3_access_key",
-            "s3_secret_key",
-            "s3_endpoint",
+            {
+                "path": "s3_path",
+                "region": "s3_region",
+                "bucket": "s3_bucket",
+                "access-key": "s3_access_key",
+                "secret-key": "s3_secret_key",
+                "endpoint": "s3_endpoint",
+                "s3-api-version": "s3_api_version",
+                "s3-uri-style": "s3_uri_style",
+            },
             "/xtrabackup/location",
             "/xbcloud/location",
             "/xtrabackup/plugin/dir",
@@ -1055,11 +1023,14 @@ class TestMySQLBase(unittest.TestCase):
     | /xbcloud/location put
             --curl-retriable-errors=7
             --insecure
-            --storage=s3
             --parallel=10
             --md5
+            --storage=S3
+            --s3-region=s3_region
             --s3-bucket=s3_bucket
             --s3-endpoint=s3_endpoint
+            --s3-api-version=s3_api_version
+            --s3-bucket-lookup=s3_uri_style
             s3_directory
 """.split()
 
@@ -1089,11 +1060,17 @@ class TestMySQLBase(unittest.TestCase):
         _execute_commands.side_effect = MySQLExecError("failure")
 
         args = [
-            "s3_bucket",
             "s3_directory",
-            "s3_access_key",
-            "s3_secret_key",
-            "s3_endpoint",
+            {
+                "path": "s3_path",
+                "region": "s3_region",
+                "bucket": "s3_bucket",
+                "access-key": "s3_access_key",
+                "secret-key": "s3_secret_key",
+                "endpoint": "s3_endpoint",
+                "s3-api-version": "s3_api_version",
+                "s3-uri-style": "s3_uri_style",
+            },
             "/xtrabackup/location",
             "/xbcloud/location",
             "/xtrabackup/plugin/dir",
@@ -1166,17 +1143,22 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of retrieve_backup_with_xbcloud()."""
         _execute_commands.side_effect = [
             ("16", None),
-            ("mysql/data/directory/mysql_sst_ABCD", None),
+            ("mysql/data/directory/#mysql_sst_ABCD", None),
             ("", None),
         ]
 
         self.mysql.retrieve_backup_with_xbcloud(
-            "s3-bucket",
-            "s3-path",
-            "s3-access-key",
-            "s3-secret-key",
-            "s3-endpoint",
             "backup-id",
+            {
+                "path": "s3_path",
+                "region": "s3_region",
+                "bucket": "s3_bucket",
+                "access-key": "s3_access_key",
+                "secret-key": "s3_secret_key",
+                "endpoint": "s3_endpoint",
+                "s3-api-version": "s3_api_version",
+                "s3-uri-style": "s3_uri_style",
+            },
             "mysql/data/directory",
             "xbcloud/location",
             "xbstream/location",
@@ -1186,18 +1168,23 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_nproc_commands = ["nproc"]
         _expected_temp_dir_commands = (
-            "mktemp --directory mysql/data/directory/mysql_sst_XXXX".split()
+            "mktemp --directory mysql/data/directory/#mysql_sst_XXXX".split()
         )
         _expected_retrieve_backup_commands = """
 xbcloud/location get
         --curl-retriable-errors=7
         --parallel=10
-        --s3-endpoint=s3-endpoint
-        s3://s3-bucket/s3-path/backup-id
+        --storage=S3
+        --s3-region=s3_region
+        --s3-bucket=s3_bucket
+        --s3-endpoint=s3_endpoint
+        --s3-bucket-lookup=s3_uri_style
+        --s3-api-version=s3_api_version
+        s3_path/backup-id
     | xbstream/location
         --decompress
         -x
-        -C mysql/data/directory/mysql_sst_ABCD
+        -C mysql/data/directory/#mysql_sst_ABCD
         --parallel=16
 """.split()
 
@@ -1211,8 +1198,8 @@ xbcloud/location get
                         _expected_retrieve_backup_commands,
                         bash=True,
                         env={
-                            "ACCESS_KEY_ID": "s3-access-key",
-                            "SECRET_ACCESS_KEY": "s3-secret-key",
+                            "ACCESS_KEY_ID": "s3_access_key",
+                            "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
                         user="test-user",
                         group="test-group",
@@ -1235,12 +1222,17 @@ xbcloud/location get
 
         with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
             self.mysql.retrieve_backup_with_xbcloud(
-                "s3-bucket",
-                "s3-path",
-                "s3-access-key",
-                "s3-secret-key",
-                "s3-endpoint",
                 "backup-id",
+                {
+                    "path": "s3_path",
+                    "region": "s3_region",
+                    "bucket": "s3_bucket",
+                    "access-key": "s3_access_key",
+                    "secret-key": "s3_secret_key",
+                    "endpoint": "s3_endpoint",
+                    "s3-api-version": "s3_api_version",
+                    "s3-uri-style": "s3_uri_style",
+                },
                 "mysql/data/directory",
                 "xbcloud/location",
                 "xbstream/location",
@@ -1255,12 +1247,17 @@ xbcloud/location get
 
         with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
             self.mysql.retrieve_backup_with_xbcloud(
-                "s3-bucket",
-                "s3-path",
-                "s3-access-key",
-                "s3-secret-key",
-                "s3-endpoint",
                 "backup-id",
+                {
+                    "path": "s3_path",
+                    "region": "s3_region",
+                    "bucket": "s3_bucket",
+                    "access-key": "s3_access_key",
+                    "secret-key": "s3_secret_key",
+                    "endpoint": "s3_endpoint",
+                    "s3-api-version": "s3_api_version",
+                    "s3-uri-style": "s3_uri_style",
+                },
                 "mysql/data/directory",
                 "xbcloud/location",
                 "xbstream/location",
@@ -1274,12 +1271,17 @@ xbcloud/location get
 
         with self.assertRaises(MySQLRetrieveBackupWithXBCloudError):
             self.mysql.retrieve_backup_with_xbcloud(
-                "s3-bucket",
-                "s3-path",
-                "s3-access-key",
-                "s3-secret-key",
-                "s3-endpoint",
                 "backup-id",
+                {
+                    "path": "s3_path",
+                    "region": "s3_region",
+                    "bucket": "s3_bucket",
+                    "access-key": "s3_access_key",
+                    "secret-key": "s3_secret_key",
+                    "endpoint": "s3_endpoint",
+                    "s3-api-version": "s3_api_version",
+                    "s3-uri-style": "s3_uri_style",
+                },
                 "mysql/data/directory",
                 "xbcloud/location",
                 "xbstream/location",
@@ -1366,7 +1368,7 @@ xtrabackup/location --prepare
             group="test-group",
         )
 
-        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/mysql_sst_* -not -path mysql/data/directory -delete".split()
+        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/#mysql_sst_* -not -path mysql/data/directory -delete".split()
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
@@ -1453,9 +1455,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             group="test-group",
         )
 
-        _expected_commands = (
-            "find mysql/data/directory -wholename mysql/data/directory/mysql_sst_* -delete".split()
-        )
+        _expected_commands = "find mysql/data/directory -wholename mysql/data/directory/#mysql_sst_* -delete".split()
 
         _execute_commands.assert_called_once_with(
             _expected_commands,

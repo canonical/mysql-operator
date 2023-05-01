@@ -17,7 +17,6 @@ from charms.mysql.v0.mysql import (
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
     MySQLGrantPrivilegesToUserError,
-    MySQLUpgradeUserForMySQLRouterError,
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
 from ops.framework import Object
@@ -220,9 +219,8 @@ class MySQLProvider(Object):
             )
 
             if "mysqlrouter" in extra_user_roles:
-                self.charm._mysql.upgrade_user_for_mysqlrouter(db_user, "%")
                 self.charm._mysql.grant_privileges_to_user(
-                    db_user, "%", ["CREATE USER"], with_grant_option=True
+                    db_user, "%", ["ALL PRIVILEGES"], with_grant_option=True
                 )
 
             logger.info(f"Created user for app {remote_app}")
@@ -230,7 +228,6 @@ class MySQLProvider(Object):
             MySQLCreateApplicationDatabaseAndScopedUserError,
             MySQLGetMySQLVersionError,
             MySQLGetClusterMembersAddressesError,
-            MySQLUpgradeUserForMySQLRouterError,
             MySQLGrantPrivilegesToUserError,
             MySQLClientError,
         ) as e:
