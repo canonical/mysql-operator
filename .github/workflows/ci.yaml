@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "${{ toJSON(github.event.pull_request.*.name) }}"
+      - run: echo "${{ toJSON(github.event.pull_request.labels.*.name) }}"
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -57,7 +57,7 @@ jobs:
   
   release:
     name: Release charm to Charmhub branch
-    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.*.name , 'foo') }}
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name , 'foo') }}
     needs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
