@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - run: echo "${{ github.event.pull_request.*.name }}"
       - name: 'Foresight: Collect workflow telemetry'
         uses: runforesight/foresight-workflow-kit-action@v1
       - name: Checkout
