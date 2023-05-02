@@ -66,7 +66,7 @@ from mysql_vm_helpers import (
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
     instance_hostname,
-    is_data_dir_attached,
+    is_volume_mounted,
     reboot_system,
     snap_service_operation,
 )
@@ -125,7 +125,7 @@ class MySQLOperatorCharm(CharmBase):
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
-        if not is_data_dir_attached():
+        if not is_volume_mounted():
             self._reboot_on_detached_storage(event)
             return
 
@@ -362,7 +362,7 @@ class MySQLOperatorCharm(CharmBase):
         if (
             not self.cluster_initialized
             or not self.unit_peer_data.get("member-role")
-            or not is_data_dir_attached()
+            or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
             return
@@ -618,7 +618,7 @@ class MySQLOperatorCharm(CharmBase):
             return False
 
         # Safeguard against storage not attached
-        if not is_data_dir_attached():
+        if not is_volume_mounted():
             self._reboot_on_detached_storage(event)
             return False
 

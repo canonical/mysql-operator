@@ -270,19 +270,13 @@ class MySQL(MySQLBase):
 
     def execute_backup_commands(
         self,
-        s3_bucket: str,
         s3_directory: str,
-        s3_access_key: str,
-        s3_secret_key: str,
-        s3_endpoint: str,
+        s3_parameters: Dict[str, str],
     ) -> Tuple[str, str]:
         """Executes commands to create a backup."""
         return super().execute_backup_commands(
-            s3_bucket,
             s3_directory,
-            s3_access_key,
-            s3_secret_key,
-            s3_endpoint,
+            s3_parameters,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
@@ -303,21 +297,13 @@ class MySQL(MySQLBase):
 
     def retrieve_backup_with_xbcloud(
         self,
-        s3_bucket: str,
-        s3_path: str,
-        s3_access_key: str,
-        s3_secret_key: str,
-        s3_endpoint: str,
         backup_id: str,
+        s3_parameters: Dict[str, str],
     ) -> Tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
         return super().retrieve_backup_with_xbcloud(
-            s3_bucket,
-            s3_path,
-            s3_access_key,
-            s3_secret_key,
-            s3_endpoint,
             backup_id,
+            s3_parameters,
             MYSQL_DATA_DIR,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
@@ -448,6 +434,7 @@ class MySQL(MySQLBase):
             )
             return (process.stdout.strip(), process.stderr.strip())
         except subprocess.CalledProcessError as e:
+            logger.debug(f"Failed command: {commands}; user={user}; group={group}")
             raise MySQLExecError(e.stderr)
 
     def is_mysqld_running(self) -> bool:
@@ -661,10 +648,10 @@ class MySQL(MySQLBase):
         os.chmod(path, mode=permission)
 
 
-def is_data_dir_attached() -> bool:
+def is_volume_mounted() -> bool:
     """Returns if data directory is attached."""
     try:
-        subprocess.check_call(["mountpoint", "-q", MYSQL_DATA_DIR])
+        subprocess.check_call(["mountpoint", "-q", CHARMED_MYSQL_COMMON_DIRECTORY])
         return True
     except subprocess.CalledProcessError:
         return False

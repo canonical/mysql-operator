@@ -617,7 +617,7 @@ Juju Version: test-juju-version
         _pre_restore_checks.assert_called_once()
         _retrieve_s3_parameters.assert_called_once()
         _fetch_and_check_existence_of_s3_path.assert_called_once_with(
-            expected_s3_parameters, "/path/test-backup-id.md5"
+            "/path/test-backup-id.md5", expected_s3_parameters
         )
         _pre_restore.assert_called_once()
         _restore.assert_called_once_with("test-backup-id", expected_s3_parameters)
