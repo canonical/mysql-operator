@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "${{ github.event.pull_request.*.name }}"
+      - run: echo "${{ toJSON(github.event.pull_request.*.name) }}"
       - name: Checkout
         uses: actions/checkout@v3
         with:
