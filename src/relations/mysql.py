@@ -8,8 +8,8 @@ import logging
 
 from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
-    MySQLDeleteUsersForUnitError,
-    MySQLGetClusterPrimaryAddressError, MySQLDeleteUsersForRelationError,
+    MySQLDeleteUsersForRelationError,
+    MySQLGetClusterPrimaryAddressError,
 )
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
