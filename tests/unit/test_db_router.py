@@ -87,7 +87,11 @@ class TestDBRouter(unittest.TestCase):
             "mysqlrouteruser", "super_secure_password", "1.1.1.3", "app/0"
         )
         _create_application_database_and_scoped_user.assert_called_once_with(
-            "keystone_database", "keystone_user", "super_secure_password", "1.1.1.2", "app/0"
+            "keystone_database",
+            "keystone_user",
+            "super_secure_password",
+            "1.1.1.2",
+            unit_name="app/0",
         )
 
         # confirm that credentials in the mysql leader unit databag is set correctly

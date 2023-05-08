@@ -66,7 +66,11 @@ class TestSharedDBRelation(unittest.TestCase):
         # 2 calls during start-up events, and 1 calls during the shared_db_relation_changed event
         self.assertEqual(_generate_random_password.call_count, 1)
         _create_application_database_and_scoped_user.assert_called_once_with(
-            "shared_database", "shared_user", "super_secure_password", "1.1.1.3", "other-app/0"
+            "shared_database",
+            "shared_user",
+            "super_secure_password",
+            "1.1.1.3",
+            unit_name="other-app/0",
         )
 
         # confirm that the relation databag is populated

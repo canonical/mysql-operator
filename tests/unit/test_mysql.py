@@ -750,22 +750,7 @@ class TestMySQLBase(unittest.TestCase):
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_user_for_relation(self, _run_mysqlsh_script, _get_cluster_primary_address):
-        """Test delete_user_for_relation() method."""
-        self.mysql.delete_users_for_relation(40)
-
-        expected_commands = "\n".join(
-            (
-                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                "session.run_sql(\"DROP USER IF EXISTS 'relation-40'@'%';\")",
-            )
-        )
-        _get_cluster_primary_address.assert_called_once()
-        _run_mysqlsh_script.assert_called_once_with(expected_commands)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_user_for_relation_failure(
+    def test_delete_users_for_relation_failure(
         self, _run_mysqlsh_script, _get_cluster_primary_address
     ):
         """Test failure to delete users for relation."""
