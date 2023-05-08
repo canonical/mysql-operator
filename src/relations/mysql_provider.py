@@ -12,7 +12,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
-    MySQLDeleteUserForRelationError,
+    MySQLDeleteUsersForRelationError,
     MySQLGetClusterEndpointsError,
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
@@ -215,7 +215,7 @@ class MySQLProvider(Object):
             # TODO:
             # add setup of tls, tls_ca and status
             self.charm._mysql.create_application_database_and_scoped_user(
-                db_name, db_user, db_pass, "%", remote_app
+                db_name, db_user, db_pass, "%"
             )
 
             if "mysqlrouter" in extra_user_roles:
@@ -251,8 +251,8 @@ class MySQLProvider(Object):
 
         try:
             relation_id = event.relation.id
-            self.charm._mysql.delete_user_for_relation(relation_id)
+            self.charm._mysql.delete_users_for_relation(relation_id)
             logger.info(f"Removed user for relation {relation_id}")
-        except (MySQLDeleteUserForRelationError, KeyError):
+        except (MySQLDeleteUsersForRelationError, KeyError):
             logger.error(f"Failed to delete user for relation {relation_id}")
             return

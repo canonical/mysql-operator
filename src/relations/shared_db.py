@@ -155,7 +155,7 @@ class SharedDBRelation(Object):
 
         try:
             self._charm._mysql.create_application_database_and_scoped_user(
-                database_name, database_user, password, remote_host, joined_unit
+                database_name, database_user, password, remote_host, unit_name=joined_unit
             )
 
             # set the relation data for consumption

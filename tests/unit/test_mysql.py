@@ -20,7 +20,7 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterError,
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
-    MySQLDeleteUserForRelationError,
+    MySQLDeleteUsersForRelationError,
     MySQLDeleteUsersForUnitError,
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
@@ -215,7 +215,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         self.mysql.create_application_database_and_scoped_user(
-            "test-database", "test-username", "test-password", "1.1.1.1", "app/0"
+            "test-database", "test-username", "test-password", "1.1.1.1", unit_name="app/0"
         )
 
         self.assertEqual(_run_mysqlsh_script.call_count, 2)
@@ -241,7 +241,7 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(MySQLCreateApplicationDatabaseAndScopedUserError):
             self.mysql.create_application_database_and_scoped_user(
-                "test_database", "test_username", "test_password", "1.1.1.1", "app/.0"
+                "test_database", "test_username", "test_password", "1.1.1.1", unit_name="app/.0"
             )
 
     @patch(
@@ -752,7 +752,7 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_user_for_relation(self, _run_mysqlsh_script, _get_cluster_primary_address):
         """Test delete_user_for_relation() method."""
-        self.mysql.delete_user_for_relation(40)
+        self.mysql.delete_users_for_relation(40)
 
         expected_commands = "\n".join(
             (
@@ -771,8 +771,8 @@ class TestMySQLBase(unittest.TestCase):
         """Test failure to delete users for relation."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
-        with self.assertRaises(MySQLDeleteUserForRelationError):
-            self.mysql.delete_user_for_relation(40)
+        with self.assertRaises(MySQLDeleteUsersForRelationError):
+            self.mysql.delete_users_for_relation(40)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_cluster_members_addresses(self, _run_mysqlsh_script):
