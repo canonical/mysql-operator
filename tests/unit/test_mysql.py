@@ -21,7 +21,6 @@ from charms.mysql.v0.mysql import (
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
     MySQLDeleteUsersForRelationError,
-    MySQLDeleteUsersForUnitError,
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
