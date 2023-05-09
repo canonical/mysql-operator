@@ -8,7 +8,7 @@ import logging
 
 from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
-    MySQLDeleteUsersForRelationError,
+    MySQLDeleteUsersForUnitError,
     MySQLGetClusterPrimaryAddressError,
 )
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
@@ -128,7 +128,7 @@ class MySQLRelation(Object):
                 username,
                 password,
                 "%",
-                relation_id=event.relation.id,
+                unit_name="mysql-legacy-relation",
             )
 
             primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
@@ -170,7 +170,7 @@ class MySQLRelation(Object):
         logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
 
         try:
-            self.charm._mysql.delete_users_for_relation(event.relation.id)
-        except MySQLDeleteUsersForRelationError:
+            self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
+        except MySQLDeleteUsersForUnitError:
             logger.error("Failed to delete mysql users")
             self.charm.unit.status = BlockedStatus("Failed to remove relation user")

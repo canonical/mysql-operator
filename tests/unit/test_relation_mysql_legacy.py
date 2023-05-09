@@ -54,7 +54,7 @@ class TestMariaDBRelation(unittest.TestCase):
             "mysql",
             "super_secure_password",
             "%",
-            relation_id=self.maria_db_relation_id,
+            unit_name="mysql-legacy-relation",
         )
 
         _get_cluster_primary_address.assert_called_once()
@@ -79,7 +79,7 @@ class TestMariaDBRelation(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
-    @patch("mysql_vm_helpers.MySQL.delete_users_for_relation")
+    @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch(
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_databag",
         return_value="super_secure_password",
@@ -89,7 +89,7 @@ class TestMariaDBRelation(unittest.TestCase):
         self,
         _create_application_database_and_scoped_user,
         _get_or_set_password_in_peer_databag,
-        _delete_users_for_relation,
+        _delete_users_for_unit,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
     ):
@@ -100,4 +100,4 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.maria_db_relation_id, "other-app/0")
 
         self.harness.remove_relation(self.maria_db_relation_id)
-        _delete_users_for_relation.assert_called_once_with(self.maria_db_relation_id)
+        _delete_users_for_unit.assert_called_once_with("mysql-legacy-relation")
