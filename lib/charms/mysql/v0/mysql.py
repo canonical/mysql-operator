@@ -544,7 +544,9 @@ class MySQLBase(ABC):
         drop_users_command = [
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
         ]
-        drop_users_command.extend(self._get_statements_to_delete_users_with_attribute("unit_name", f"'{unit_name}'"))
+        drop_users_command.extend(
+            self._get_statements_to_delete_users_with_attribute("unit_name", f"'{unit_name}'")
+        )
         try:
             self._run_mysqlsh_script("\n".join(drop_users_command))
         except MySQLClientError as e:
