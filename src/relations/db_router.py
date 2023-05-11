@@ -150,7 +150,7 @@ class DBRouterRelation(Object):
                         requested_user.username,
                         password,
                         requested_user.hostname,
-                        user_unit_name,
+                        unit_name=user_unit_name,
                     )
 
             user_passwords[requested_user.application_name] = password

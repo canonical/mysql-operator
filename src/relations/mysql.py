@@ -128,7 +128,7 @@ class MySQLRelation(Object):
                 username,
                 password,
                 "%",
-                "mysql-legacy-relation",
+                unit_name="mysql-legacy-relation",
             )
 
             primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]

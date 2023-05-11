@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import patch
 
-from charms.mysql.v0.mysql import MySQLDeleteUserForRelationError
+from charms.mysql.v0.mysql import MySQLDeleteUsersForRelationError
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
@@ -85,25 +85,25 @@ class TestDatase(unittest.TestCase):
         _get_mysql_version.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.delete_user_for_relation")
-    def test_database_broken(self, _delete_user_for_relation):
+    @patch("mysql_vm_helpers.MySQL.delete_users_for_relation")
+    def test_database_broken(self, _delete_users_for_relation):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         self.harness.remove_relation(self.database_relation_id)
 
-        _delete_user_for_relation.assert_called_once_with(self.database_relation_id)
+        _delete_users_for_relation.assert_called_once_with(self.database_relation_id)
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.delete_user_for_relation")
-    def test_database_broken_failure(self, _delete_user_for_relation):
+    @patch("mysql_vm_helpers.MySQL.delete_users_for_relation")
+    def test_database_broken_failure(self, _delete_users_for_relation):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
-        _delete_user_for_relation.side_effect = MySQLDeleteUserForRelationError()
+        _delete_users_for_relation.side_effect = MySQLDeleteUsersForRelationError()
 
         self.harness.remove_relation(self.database_relation_id)
 
-        _delete_user_for_relation.assert_called_once()
+        _delete_users_for_relation.assert_called_once()

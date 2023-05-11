@@ -50,7 +50,11 @@ class TestMariaDBRelation(unittest.TestCase):
 
         self.assertEqual(_get_or_set_password_in_peer_databag.call_count, 1)
         _create_application_database_and_scoped_user.assert_called_once_with(
-            "default_database", "mysql", "super_secure_password", "%", "mysql-legacy-relation"
+            "default_database",
+            "mysql",
+            "super_secure_password",
+            "%",
+            unit_name="mysql-legacy-relation",
         )
 
         _get_cluster_primary_address.assert_called_once()
