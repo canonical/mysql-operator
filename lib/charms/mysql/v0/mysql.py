@@ -90,7 +90,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 26
+LIBPATCH = 27
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -275,6 +275,10 @@ class MySQLTLSSetupError(Error):
 
 class MySQLKillSessionError(Error):
     """Exception raised when there is an issue killing a connection."""
+
+
+class MySQLRescanClusterError(Error):
+    """Exception raised when there is an issue rescanning the cluster."""
 
 
 class MySQLBase(ABC):
@@ -824,8 +828,22 @@ class MySQLBase(ABC):
             output = self._run_mysqlsh_script("\n".join(status_commands))
             output_dict = json.loads(output.lower())
             return output_dict
+        except MySQLClientError:
+            logger.exception(f"Failed to get cluster status for {self.cluster_name}")
+
+    def rescan_cluster(self) -> Optional[dict]:
+        """Rescan the cluster."""
+        rescan_cluster_command = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "cluster.rescan()",
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(rescan_cluster_command))
         except MySQLClientError as e:
-            logger.exception(f"Failed to get cluster status for {self.cluster_name}", exc_info=e)
+            logger.exception(f"Failed to get rescan cluster {self.cluster_name}")
+            raise MySQLRescanClusterError(e.message)
 
     def get_cluster_endpoints(self, get_ips: bool = True) -> Tuple[str, str, str]:
         """Use get_cluster_status to return endpoints tuple.
@@ -1423,6 +1441,10 @@ Swap:     1027600384  1027600384           0
 """.split()
 
         try:
+            logger.debug(
+                f"Command to create backup: {' '.join(xtrabackup_commands).replace(self.server_config_password, 'xxxxxxxxxxxx')}"
+            )
+
             # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
             return self._execute_commands(
                 xtrabackup_commands,
@@ -1453,6 +1475,10 @@ Swap:     1027600384  1027600384           0
         delete_temp_dir_command = f"find {tmp_base_directory} -wholename {tmp_base_directory}/xtra_backup_* -delete".split()
 
         try:
+            logger.debug(
+                f"Command to delete temp backup directory: {' '.join(delete_temp_dir_command)}"
+            )
+
             self._execute_commands(
                 delete_temp_dir_command,
                 user=user,
@@ -1516,6 +1542,8 @@ Swap:     1027600384  1027600384           0
 """.split()
 
         try:
+            logger.debug(f"Command to retrieve backup: {' '.join(retrieve_backup_command)}")
+
             # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
             stdout, stderr = self._execute_commands(
                 retrieve_backup_command,
@@ -1527,6 +1555,14 @@ Swap:     1027600384  1027600384           0
                 user=user,
                 group=group,
             )
+
+            # When `xbcloud get` errors, it exits with code 0. So we check the output explicitly
+            if stdout and "download completed." not in stdout.lower():
+                logger.exception(f"Failed to retrieve backup with error: {stderr}")
+                raise MySQLRetrieveBackupWithXBCloudError(
+                    "Error retrieving backup with xbcloud get"
+                )
+
             return (stdout, stderr, tmp_dir)
         except MySQLExecError as e:
             logger.exception("Failed to retrieve backup")
@@ -1559,6 +1595,10 @@ Swap:     1027600384  1027600384           0
 """.split()
 
         try:
+            logger.debug(
+                f"Command to prepare backup for restore: {' '.join(prepare_backup_command)}"
+            )
+
             return self._execute_commands(
                 prepare_backup_command,
                 user=user,
@@ -1581,6 +1621,7 @@ Swap:     1027600384  1027600384           0
         empty_data_files_command = f"find {mysql_data_directory} -not -path {mysql_data_directory}/#mysql_sst_* -not -path {mysql_data_directory} -delete".split()
 
         try:
+            logger.debug(f"Command to empty data directory: {' '.join(empty_data_files_command)}")
             self._execute_commands(
                 empty_data_files_command,
                 user=user,
@@ -1616,6 +1657,8 @@ Swap:     1027600384  1027600384           0
 """.split()
 
         try:
+            logger.debug(f"Command to restore backup: {' '.join(restore_backup_command)}")
+
             return self._execute_commands(
                 restore_backup_command,
                 user=user,
@@ -1639,6 +1682,9 @@ Swap:     1027600384  1027600384           0
         delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/#mysql_sst_* -delete".split()
 
         try:
+            logger.debug(
+                f"Command to delete temp restore directory: {' '.join(delete_temp_restore_directory_command)}"
+            )
             self._execute_commands(
                 delete_temp_restore_directory_command,
                 user=user,
