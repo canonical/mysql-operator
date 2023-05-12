@@ -12,12 +12,13 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLDeleteUserError,
     MySQLDeleteUsersForRelationError,
     MySQLGetClusterEndpointsError,
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
     MySQLGrantPrivilegesToUserError,
-    MySQLRemoveRouterFromMetadataError, MySQLDeleteUserError,
+    MySQLRemoveRouterFromMetadataError,
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
 from ops.framework import Object
