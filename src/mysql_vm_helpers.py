@@ -92,6 +92,8 @@ class MySQL(MySQLBase):
         cluster_admin_password: str,
         monitoring_user: str,
         monitoring_password: str,
+        backups_user: str,
+        backups_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -105,6 +107,8 @@ class MySQL(MySQLBase):
             cluster_admin_password: password for the cluster admin user
             monitoring_user: user name for the mysql exporter
             monitoring_password: password for the monitoring user
+            backups_user: user name used to create backups
+            backups_password: password for the backups user
         """
         super().__init__(
             instance_address=instance_address,
@@ -116,6 +120,8 @@ class MySQL(MySQLBase):
             cluster_admin_password=cluster_admin_password,
             monitoring_user=monitoring_user,
             monitoring_password=monitoring_password,
+            backups_user=backups_user,
+            backups_password=backups_password,
         )
 
     @staticmethod

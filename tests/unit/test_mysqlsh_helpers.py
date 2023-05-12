@@ -42,6 +42,8 @@ class TestMySQL(unittest.TestCase):
             "clusteradminpassword",
             "monitoring",
             "monitoringpassword",
+            "backups",
+            "backupspassword",
         )
 
     @patch("tempfile.NamedTemporaryFile")
@@ -295,11 +297,15 @@ innodb_buffer_pool_chunk_size = 5678
     def test_execute_commands(self, _run):
         """Test a successful execution of _execute_commands."""
         self.mysql._execute_commands(
-            ["ls", "-la"], bash=True, user="test_user", group="test_group", env={"envA": "valueA"}
+            ["ls", "-la", "|", "wc", "-l"],
+            bash=True,
+            user="test_user",
+            group="test_group",
+            env={"envA": "valueA"},
         )
 
         _run.assert_called_once_with(
-            ["bash", "-c", "ls -la"],
+            ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
             env={

@@ -50,6 +50,8 @@ class TestMySQLBase(unittest.TestCase):
             "clusteradminpassword",
             "monitoring",
             "monitoringpassword",
+            "backups",
+            "backupspassword",
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -61,6 +63,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
                 "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
+                "FLUSH PRIVILEGES",
             )
         )
 
@@ -70,6 +73,11 @@ class TestMySQLBase(unittest.TestCase):
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
                 "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
                 "GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'",
+                "CREATE USER 'backups'@'%' IDENTIFIED BY 'backupspassword'",
+                "GRANT BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.log_status TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.keyring_component_status TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
                 "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
                 "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
@@ -954,8 +962,8 @@ class TestMySQLBase(unittest.TestCase):
             --defaults-group=mysqld
             --no-version-check
             --parallel=16
-            --user=serverconfig
-            --password=serverconfigpassword
+            --user=backups
+            --password=backupspassword
             --socket=/mysqld/socket/file.sock
             --lock-ddl
             --backup

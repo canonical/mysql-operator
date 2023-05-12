@@ -301,6 +301,8 @@ class MySQLBase(ABC):
         cluster_admin_password: str,
         monitoring_user: str,
         monitoring_password: str,
+        backups_user: str,
+        backups_password: str,
     ):
         """Initialize the MySQL class.
 
@@ -314,6 +316,8 @@ class MySQLBase(ABC):
             cluster_admin_password: password for the cluster admin user
             monitoring_user: user name for the mysql exporter
             monitoring_password: password for the monitoring user
+            backups_user: user name used to create backups
+            backups_password: password for the backups user
         """
         self.instance_address = instance_address
         self.cluster_name = cluster_name
@@ -324,6 +328,8 @@ class MySQLBase(ABC):
         self.cluster_admin_password = cluster_admin_password
         self.monitoring_user = monitoring_user
         self.monitoring_password = monitoring_password
+        self.backups_user = backups_user
+        self.backups_password = backups_password
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
@@ -352,14 +358,22 @@ class MySQLBase(ABC):
         create_root_user_commands = (
             f"CREATE USER 'root'@'%' IDENTIFIED BY '{self.root_password}'",
             "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
+            "FLUSH PRIVILEGES",
         )
 
         # commands to be run from mysql client with root user and password set above
+        # privileges for the backups user:
+        #   https://docs.percona.com/percona-xtrabackup/8.0/using_xtrabackup/privileges.html#permissions-and-privileges-needed
         configure_users_commands = (
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
             f"CREATE USER '{self.monitoring_user}'@'%' IDENTIFIED BY '{self.monitoring_password}' WITH MAX_USER_CONNECTIONS 3",
             f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.monitoring_user}'@'%'",
+            f"CREATE USER '{self.backups_user}'@'%' IDENTIFIED BY '{self.backups_password}'",
+            f"GRANT BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '{self.backups_user}'@'%'",
+            f"GRANT SELECT ON performance_schema.log_status TO '{self.backups_user}'@'%'",
+            f"GRANT SELECT ON performance_schema.keyring_component_status TO '{self.backups_user}'@'%'",
+            f"GRANT SELECT ON performance_schema.replication_group_members TO '{self.backups_user}'@'%'",
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
             f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
             f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM root@'%'",
@@ -840,6 +854,7 @@ class MySQLBase(ABC):
         )
 
         try:
+            logger.debug("Rescanning the cluster")
             self._run_mysqlsh_script("\n".join(rescan_cluster_command))
         except MySQLClientError as e:
             logger.exception(f"Failed to get rescan cluster {self.cluster_name}")
@@ -1417,8 +1432,8 @@ Swap:     1027600384  1027600384           0
             --defaults-group=mysqld
             --no-version-check
             --parallel={nproc}
-            --user={self.server_config_user}
-            --password={self.server_config_password}
+            --user={self.backups_user}
+            --password={self.backups_password}
             --socket={mysqld_socket_file}
             --lock-ddl
             --backup
@@ -1442,7 +1457,7 @@ Swap:     1027600384  1027600384           0
 
         try:
             logger.debug(
-                f"Command to create backup: {' '.join(xtrabackup_commands).replace(self.server_config_password, 'xxxxxxxxxxxx')}"
+                f"Command to create backup: {' '.join(xtrabackup_commands).replace(self.backups_password, 'xxxxxxxxxxxx')}"
             )
 
             # ACCESS_KEY_ID and SECRET_ACCESS_KEY envs auto picked by xbcloud
