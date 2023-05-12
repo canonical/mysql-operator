@@ -421,7 +421,7 @@ class MySQL(MySQLBase):
         """
         try:
             if bash:
-                commands = ["bash", "-c", " ".join(commands)]
+                commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
 
             process = subprocess.run(
                 commands,

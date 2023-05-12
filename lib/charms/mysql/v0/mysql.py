@@ -1555,14 +1555,6 @@ Swap:     1027600384  1027600384           0
                 user=user,
                 group=group,
             )
-
-            # When `xbcloud get` errors, it exits with code 0. So we check the output explicitly
-            if stdout and "download completed." not in stdout.lower():
-                logger.exception(f"Failed to retrieve backup with error: {stderr}")
-                raise MySQLRetrieveBackupWithXBCloudError(
-                    "Error retrieving backup with xbcloud get"
-                )
-
             return (stdout, stderr, tmp_dir)
         except MySQLExecError as e:
             logger.exception("Failed to retrieve backup")
