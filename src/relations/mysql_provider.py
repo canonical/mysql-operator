@@ -212,15 +212,24 @@ class MySQLProvider(Object):
             self.database.set_endpoints(relation_id, rw_endpoints)
             self.database.set_version(relation_id, db_version)
             self.database.set_read_only_endpoints(relation_id, ro_endpoints)
-            # TODO:
-            # add setup of tls, tls_ca and status
-            self.charm._mysql.create_application_database_and_scoped_user(
-                db_name, db_user, db_pass, "%"
-            )
 
             if "mysqlrouter" in extra_user_roles:
+                self.charm._mysql.create_application_database_and_scoped_user(
+                    db_name,
+                    db_user,
+                    db_pass,
+                    "%",
+                    # MySQL Router charm does not need a new database
+                    create_database=False,
+                )
                 self.charm._mysql.grant_privileges_to_user(
                     db_user, "%", ["ALL PRIVILEGES"], with_grant_option=True
+                )
+            else:
+                # TODO:
+                # add setup of tls, tls_ca and status
+                self.charm._mysql.create_application_database_and_scoped_user(
+                    db_name, db_user, db_pass, "%"
                 )
 
             logger.info(f"Created user for app {remote_app}")
