@@ -263,7 +263,6 @@ class MySQLProvider(Object):
             logger.info(f"Removed user for relation {relation_id}")
         except (MySQLDeleteUsersForRelationError, KeyError):
             logger.error(f"Failed to delete user for relation {relation_id}")
-            return
 
     def _on_database_provides_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Remove MySQL Router cluster metadata & router user for departing unit."""
