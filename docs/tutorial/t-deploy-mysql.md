@@ -1,12 +1,12 @@
 # Get a Charmed MySQL up and running
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0). Please refer to this page for more information and the overview of the content.
 
 ## Deploy Charmed MySQL
 
-To deploy Charmed MySQL, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/mysql?channel=edge) and deploy it to your model:
+To deploy Charmed MySQL, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/mysql?channel=8.0) and deploy it to your model:
 ```shell
-juju deploy mysql --channel edge
+juju deploy mysql --channel 8.0
 ```
 
 Juju will now fetch Charmed MySQL and begin deploying it to the LXD cloud. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. You can track the progress by running:
@@ -15,15 +15,15 @@ juju status --watch 1s
 ```
 
 This command is useful for checking the status of Charmed MySQL and gathering information about the machines hosting Charmed MySQL. Some of the helpful information it displays include IP addresses, ports, state, etc. The command updates the status of Charmed MySQL every second and as the application starts you can watch the status and messages of Charmed MySQL change. Wait until the application is ready - when it is ready, `juju status` will show:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  22:52:47+01:00
 
-App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
-mysql  8.0.32-0ubun...  active      1  mysql  edge      95  no       Unit is ready: Mode: RW
+App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
+mysql  8.0.32-0ubun...  active      1  mysql  8.0/stable  147  no
 
 Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Unit is ready: Mode: RW
+mysql/0*  active    idle   0        10.234.188.135         Primary
 
 Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
@@ -61,10 +61,10 @@ juju run-action mysql/leader get-password username=myuser --wait
 ```
 
 The host’s IP address can be found with `juju status` (the unit hosting the MySQL application):
-```
+```shell
 ...
 Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Unit is ready: Mode: RW
+mysql/0*  active    idle   0        10.234.188.135         Primary
 ...
 ```
 
@@ -80,7 +80,7 @@ juju ssh mysql/leader
 ```
 
 Inside the Juju virtual machine the `root` user can access MySQL DB simply calling `mysql`:
-```
+```shell
 > juju ssh mysql/leader
 
 Welcome to Ubuntu 22.04.1 LTS (GNU/Linux 5.19.0-29-generic x86_64)
@@ -115,7 +115,7 @@ mysql>
 *Note: if at any point you'd like to leave the mysql client, enter `Ctrl+d` or type `exit`*.
 
 You can now interact with MySQL directly using any [MySQL Queries](https://dev.mysql.com/doc/refman/8.0/en/entering-queries.html). For example entering `SELECT VERSION(), CURRENT_DATE;` should output something like:
-```
+```shell
 mysql> SELECT VERSION(), CURRENT_DATE;
 +-------------------------+--------------+
 | VERSION()               | CURRENT_DATE |
