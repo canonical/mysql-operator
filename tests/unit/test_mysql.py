@@ -30,6 +30,7 @@ from charms.mysql.v0.mysql import (
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
 )
@@ -705,6 +706,27 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.get_cluster_status()
         _json_loads.assert_not_called()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_rescan_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of rescan_cluster()."""
+        self.mysql.rescan_cluster()
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "cluster.rescan()",
+            )
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_rescan_cluster_failure(self, _run_mysqlsh_script):
+        """Test an exception executing rescan_cluster()."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLRescanClusterError):
+            self.mysql.rescan_cluster()
 
     def test_error(self):
         """Test Error class."""

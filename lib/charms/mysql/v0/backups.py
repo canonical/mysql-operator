@@ -141,7 +141,7 @@ class MySQLBackups(Object):
 
         # Strip whitespaces from all parameters
         for key, value in s3_parameters.items():
-            if type(value) == "str":
+            if isinstance(value, str):
                 s3_parameters[key] = value.strip()
 
         # Clean up extra slash symbols to avoid issues on 3rd-party storages
