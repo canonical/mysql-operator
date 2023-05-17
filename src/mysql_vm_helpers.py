@@ -493,9 +493,7 @@ class MySQL(MySQLBase):
                 }
             )
 
-            snap_service_operation(
-                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "restart"
-            )
+            mysqld_snap.start(services=[CHARMED_MYSQLD_EXPORTER_SERVICE], enable=True)
         except snap.SnapError:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
             raise MySQLExporterConnectError
