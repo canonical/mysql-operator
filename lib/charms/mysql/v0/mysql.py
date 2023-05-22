@@ -90,7 +90,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 26
+LIBPATCH = 27
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -275,6 +275,10 @@ class MySQLTLSSetupError(Error):
 
 class MySQLKillSessionError(Error):
     """Exception raised when there is an issue killing a connection."""
+
+
+class MySQLRescanClusterError(Error):
+    """Exception raised when there is an issue rescanning the cluster."""
 
 
 class MySQLBase(ABC):
@@ -614,7 +618,7 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureInstanceError(e.message)
 
-    def create_cluster(self, unit_label: str) -> None:
+    def create_cluster(self, unit_label: str, unit_address: str) -> None:
         """Create an InnoDB cluster with Group Replication enabled.
 
         Raises MySQLCreateClusterError if there was an issue creating the cluster.
@@ -623,6 +627,7 @@ class MySQLBase(ABC):
         # since it will encrypt gr members communication by default
         options = {
             "communicationStack": "MySQL",
+            "localAddress": f"{unit_address}:3306",
         }
 
         commands = (
@@ -689,6 +694,7 @@ class MySQLBase(ABC):
         options = {
             "password": self.cluster_admin_password,
             "label": instance_unit_label,
+            "localAddress": f"{instance_address}:3306",
         }
 
         connect_commands = (
@@ -757,25 +763,39 @@ class MySQLBase(ABC):
             )
             return False
 
-    def remove_obsoletes_instance(self, from_instance: Optional[str] = None) -> None:
-        """Purge obsoletes instances from cluster metadata.
+    def rescan_cluster(
+        self,
+        from_instance: Optional[str] = None,
+        remove_instances: bool = False,
+        add_instances: bool = False,
+    ) -> None:
+        """Rescan the cluster.
 
         Args:
             from_instance: member instance to run the command from (fallback to current one)
+            remove_instance: whether to remove non-active instances from the metadata
+            add_instances: whether to add new instances to the metadata
         """
-        auto_remove_command = (
+        options = {}
+        if remove_instances:
+            options["removeInstances"] = "auto"
+        if add_instances:
+            options["addInstances"] = "auto"
+
+        rescan_cluster_commands = (
             (
                 f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@"
                 f"{from_instance or self.instance_address}')"
             ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "cluster.rescan({'removeInstances':'auto'})",
+            f"cluster.rescan({json.dumps(options)})",
         )
         try:
-            logger.debug("Removing obsolete instances")
-            self._run_mysqlsh_script("\n".join(auto_remove_command))
-        except MySQLClientError:
-            logger.warning("No instance removed")
+            logger.debug("Rescanning cluster")
+            self._run_mysqlsh_script("\n".join(rescan_cluster_commands))
+        except MySQLClientError as e:
+            logger.exception("Error rescanning the cluster")
+            raise MySQLRescanClusterError(e.message)
 
     def is_instance_in_cluster(self, unit_label: str) -> bool:
         """Confirm if instance is in the cluster.
