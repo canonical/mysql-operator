@@ -1,3 +1,5 @@
+# How to enable monitoring
+
 Creating and listing backups requires that you:
 * [Have a Charmed MySQL deployed](/t/charmed-mysql-how-to-manage-units/9904?channel=8.0/edge)
 * [Deploy `cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
@@ -7,7 +9,7 @@ Switch to COS K8s environment and offer COS interfaces to be cross-model related
 # Switch to Kubernetes controller, for the cos model.
 juju switch <k8s_controller>:<cos_model_name>
 
-juju offer grafana.grafana-dashboards grafana-dashboards
+juju offer grafana:grafana-dashboard grafana-dashboards
 juju offer loki:logging loki-logging
 juju offer prometheus:receive-remote-write prometheus-receive-remote-write
 ```
@@ -97,3 +99,5 @@ grafana-dashboards               grafana      grafana-k8s     64   1/1        gr
 loki-logging                     loki         loki-k8s        60   1/1        logging               loki_push_api            provider
 prometheus-receive-remote-write  prometheus   prometheus-k8s  103  1/1        receive-remote-write  prometheus_remote_write  provider
 ```
+
+To connect Grafana WEB interface, follow the COS section "[Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)".

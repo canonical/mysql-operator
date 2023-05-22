@@ -233,12 +233,11 @@ class TestMySQL(unittest.TestCase):
 
         _snap_cache.assert_not_called()
 
-    @patch("socket.gethostbyname", return_value="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
     @patch("pathlib.Path")
     @patch("builtins.open")
     def test_create_custom_mysqld_config(
-        self, _open, _path, _get_innodb_buffer_pool_parameters, _gethostbyname
+        self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test successful execution of create_custom_mysqld_config."""
         _path_mock = MagicMock()
@@ -254,12 +253,12 @@ bind-address = 0.0.0.0
 mysqlx-bind-address = 0.0.0.0
 innodb_buffer_pool_size = 1234
 innodb_buffer_pool_chunk_size = 5678
+report_host = 127.0.0.1
 """
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
         _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
-        _gethostbyname.assert_called_once()
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),

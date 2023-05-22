@@ -1,5 +1,3 @@
-## Charmed MySQL Documentation
-
 The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/).
 
 MySQL is the world’s most popular open source database. A relational database stores data in separate tables rather than putting all the data in one big storeroom. The database structure is organized into physical files optimized for speed. The logical data model, with objects such as data tables, views, rows, and columns, offers a flexible programming environment.
@@ -9,7 +7,7 @@ This MySQL operator charm comes in two flavours to deploy and operate MySQL on [
 [note type="positive"]
 **"Charmed MySQL", "MariaDB", "OSM MariaDB", "Percona Cluster" or "Mysql Innodb Cluster"?**
 
-"Charmed MySQL" operator is a new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators providing backward compatibility.
+This "Charmed MySQL" operator is a new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators [providing](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) all juju-interfaces of legacy charmsz.
 [/note]
 
 ## Project and community
@@ -23,8 +21,8 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 
 | | |
 |--|--|
-|  [Tutorials -- Coming Soon]()</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides -- Coming Soon]() </br> Step-by-step guides covering key operations and common tasks |
-| [Reference -- Coming Soon]() </br> Technical information - specifications, APIs, architecture | [Explanation -- Coming Soon]() </br> Concepts - discussion and clarification of key topics  |
+|  [Tutorials](/t/charmed-mysql-tutorial-overview/9922)</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides](/t/charmed-mysql-how-to-manage-units/9904) </br> Step-by-step guides covering key operations and common tasks |
+| [Reference](https://charmhub.io/mysql/actions) </br> Technical information - specifications, APIs, architecture | [Explanation](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) </br> Concepts - discussion and clarification of key topics  |
 
 # Navigation
 
@@ -43,7 +41,8 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2     | h-manage-units                | [Manage units](/t/charmed-mysql-how-to-manage-units/9904)                                  |
 | 2     | h-enable-encryption           | [Enable encryption](/t/charmed-mysql-how-to-enable-encryption/9898)                        |
 | 2     | h-manage-app                  | [Manage applications](/t/charmed-mysql-how-to-manage-app/9902)                             |
-| 2     | h-configure-s3                | [Configure S3](/t/charmed-mysql-how-to-configure-s3/9894)                                  |
+| 2     | h-configure-s3-aws                | [Configure S3 AWS](/t/charmed-mysql-how-to-configure-s3-for-aws/9894)   |
+| 2     | h-configure-s3-radosgw  | [Configure S3 RadosGW](/t/charmed-mysql-how-to-configure-s3-for-radosgw/10318)  |
 | 2     | h-create-and-list-backups     | [Create and List Backups](/t/charmed-mysql-how-to-create-and-list-backups/9896)            |
 | 2     | h-restore-backup              | [Restore a Backup](/t/charmed-mysql-how-to-restore-backup/9908)                            |
 | 2     | h-migrate-cluster-via-restore | [Cluster Migration with Restore](/t/charmed-mysql-how-to-migrate-cluster-via-restore/9906) |
@@ -52,6 +51,10 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2     | r-actions                     | [Actions](https://charmhub.io/mysql/actions)                                               |
 | 2     | r-configurations              | [Configurations](https://charmhub.io/mysql/configure)                                      |
 | 2     | r-libraries                   | [Libraries](https://charmhub.io/mysql/libraries/helpers)                                   |
+| 2     | r-integrations                   | [Integrations](https://charmhub.io/mysql/integrations)                                   |
+| 1     | explanation                    | [Explanation]()                                                                                                      |
+| 2     | e-interfaces                | [ Interfaces/endpoints](/t/charmed-mysql-explanations-interfaces-endpoints/10250)
+|
 
 # Redirects
 

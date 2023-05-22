@@ -7,7 +7,6 @@ import logging
 import os
 import pathlib
 import shutil
-import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Tuple

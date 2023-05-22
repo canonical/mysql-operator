@@ -1,6 +1,6 @@
 # Enable Security in your MySQL deployment 
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0). Please refer to this page for more information and the overview of the content.
 
 ## Transport Layer Security (TLS)
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed MySQL. This means (re-)configuring TLS on Charmed MySQL is readily available and requires minimal effort on your end.
@@ -15,17 +15,17 @@ juju deploy tls-certificates-operator --config generate-self-signed-certificates
 ```
 
 Wait until the `tls-certificates-operator` is up and active, use `juju status --watch 1s` to monitor the progress:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:40:42+01:00
 
-App                        Version          Status  Scale  Charm                      Channel  Rev  Exposed  Message
-mysql                      8.0.32-0ubun...  active      2  mysql                      edge      95  no
-tls-certificates-operator                   active      1  tls-certificates-operator  stable    22  no
+App                        Version          Status  Scale  Charm                      Channel     Rev  Exposed  Message
+mysql                      8.0.32-0ubun...  active      2  mysql                      8.0/stable  147  no
+tls-certificates-operator                   active      1  tls-certificates-operator  stable      22   no
 
 Unit                          Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*                      active    idle   0        10.234.188.135         Unit is ready: Mode: RW
-mysql/1                       active    idle   1        10.234.188.214         Unit is ready: Mode: RO
+mysql/0*                      active    idle   0        10.234.188.135         Primary
+mysql/1                       active    idle   1        10.234.188.214
 tls-certificates-operator/1*  active    idle   6        10.234.188.19
 
 Machine  State    Address         Inst id        Series  AZ  Message
@@ -62,7 +62,7 @@ Check the TLS certificate in use:
 > openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
 ```
 The output should be similar to:
-```
+```shell
 ...
 Issuer: CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
 ...

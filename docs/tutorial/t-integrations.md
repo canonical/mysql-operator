@@ -12,24 +12,24 @@ Before relating to a charmed application, we must first deploy our charmed appli
 juju deploy data-integrator --channel edge --config database-name=test-database
 ```
 The expected output:
-```
+```shell
 Located charm "data-integrator" in charm-hub, revision 3
 Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 in channel edge on jammy
 ```
 
 Checking the deployment progress using `juju status` will show you the `blocked` state for newly deployed charm:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:07:00+01:00
 
-App              Version          Status   Scale  Charm            Channel  Rev  Exposed  Message
-data-integrator                   blocked      1  data-integrator  edge       3  no       Please relate the data-integrator with the desired product
-mysql            8.0.32-0ubun...  active       2  mysql            edge      95  no
+App              Version          Status   Scale  Charm            Channel     Rev  Exposed  Message
+data-integrator                   blocked      1  data-integrator  edge        3    no       Please relate the data-integrator with the desired product
+mysql            8.0.32-0ubun...  active       2  mysql            8.0/stable  147  no
 
 Unit                Workload  Agent  Machine  Public address  Ports  Message
 data-integrator/1*  blocked   idle   4        10.234.188.85          Please relate the data-integrator with the desired product
-mysql/0*            active    idle   0        10.234.188.135         Unit is ready: Mode: RW
-mysql/1             active    idle   1        10.234.188.214         Unit is ready: Mode: RO
+mysql/0*            active    idle   0        10.234.188.135         Primary
+mysql/1             active    idle   1        10.234.188.214
 
 Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
@@ -44,18 +44,18 @@ Now that the Database Integrator Charm has been set up, we can relate it to MySQ
 juju relate data-integrator mysql
 ```
 Wait for `juju status --watch 1s` to show all applications/units as `active`:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:10:27+01:00
 
-App              Version          Status  Scale  Charm            Channel  Rev  Exposed  Message
-data-integrator                   active      1  data-integrator  edge       3  no
-mysql            8.0.32-0ubun...  active      2  mysql            edge      95  no
+App              Version          Status  Scale  Charm            Channel     Rev  Exposed  Message
+data-integrator                   active      1  data-integrator  edge        3    no
+mysql            8.0.32-0ubun...  active      2  mysql            8.0/stable  147  no
 
 Unit                Workload  Agent  Machine  Public address  Ports  Message
 data-integrator/1*  active    idle   4        10.234.188.85
-mysql/0*            active    idle   0        10.234.188.135         Unit is ready: Mode: RW
-mysql/1             active    idle   1        10.234.188.214         Unit is ready: Mode: RO
+mysql/0*            active    idle   0        10.234.188.135         Primary
+mysql/1             active    idle   1        10.234.188.214
 
 Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
@@ -124,7 +124,7 @@ mysql -h 10.234.188.135 -P 3306 -urelation-4 -pFbflReIypeRhDH4UZ90pbUvi -e "show
 ```
 
 This will output an error message:
-```
+```shell
 ERROR 1045 (28000): Access denied for user 'relation-4'@'_gateway.lxd' (using password: YES)
 ```
 As this user no longer exists. This is expected as `juju remove-relation mysql data-integrator` also removes the user.
