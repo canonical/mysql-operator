@@ -236,9 +236,7 @@ class TestMySQL(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
     @patch("pathlib.Path")
     @patch("builtins.open")
-    def test_create_custom_mysqld_config(
-        self, _open, _path, _get_innodb_buffer_pool_parameters
-    ):
+    def test_create_custom_mysqld_config(self, _open, _path, _get_innodb_buffer_pool_parameters):
         """Test successful execution of create_custom_mysqld_config."""
         _path_mock = MagicMock()
         _path.return_value = _path_mock
