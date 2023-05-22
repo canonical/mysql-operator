@@ -516,7 +516,7 @@ class MySQLBase(ABC):
     @staticmethod
     def _get_statements_to_delete_users_with_attribute(
         attribute_name: str, attribute_value: str
-    ) -> list[str]:
+    ) -> List[str]:
         """Generate mysqlsh statements to delete users with an attribute.
 
         Args:
@@ -618,7 +618,7 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureInstanceError(e.message)
 
-    def create_cluster(self, unit_label: str, unit_address: str) -> None:
+    def create_cluster(self, unit_label: str) -> None:
         """Create an InnoDB cluster with Group Replication enabled.
 
         Raises MySQLCreateClusterError if there was an issue creating the cluster.
@@ -627,7 +627,6 @@ class MySQLBase(ABC):
         # since it will encrypt gr members communication by default
         options = {
             "communicationStack": "MySQL",
-            "localAddress": f"{unit_address}:3306",
         }
 
         commands = (
@@ -694,7 +693,6 @@ class MySQLBase(ABC):
         options = {
             "password": self.cluster_admin_password,
             "label": instance_unit_label,
-            "localAddress": f"{instance_address}:3306",
         }
 
         connect_commands = (
@@ -773,7 +771,7 @@ class MySQLBase(ABC):
 
         Args:
             from_instance: member instance to run the command from (fallback to current one)
-            remove_instance: whether to remove non-active instances from the metadata
+            remove_instances: whether to remove non-active instances from the metadata
             add_instances: whether to add new instances to the metadata
         """
         options = {}

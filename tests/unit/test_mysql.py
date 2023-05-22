@@ -311,11 +311,11 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         create_cluster_commands = (
             "shell.connect('serverconfig:serverconfigpassword@127.0.0.1')",
-            'cluster = dba.create_cluster(\'test_cluster\', {"communicationStack": "MySQL", "localAddress": "1.2.3.4:3306"})',
+            'cluster = dba.create_cluster(\'test_cluster\', {"communicationStack": "MySQL"})',
             "cluster.set_instance_option('127.0.0.1', 'label', 'mysql-0')",
         )
 
-        self.mysql.create_cluster("mysql-0", "1.2.3.4")
+        self.mysql.create_cluster("mysql-0")
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(create_cluster_commands))
 
@@ -325,7 +325,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateClusterError):
-            self.mysql.create_cluster("mysql-0", "1.2.3.4")
+            self.mysql.create_cluster("mysql-0")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_add_instance_to_cluster(self, _run_mysqlsh_script):
@@ -334,7 +334,7 @@ class TestMySQLBase(unittest.TestCase):
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
             "cluster = dba.get_cluster('test_cluster')",
             "cluster.add_instance('clusteradmin@127.0.0.2', {\"password\": "
-            '"clusteradminpassword", "label": "mysql-1", "localAddress": "127.0.0.2:3306", "recoveryMethod": "auto"})',
+            '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
         )
 
         self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")

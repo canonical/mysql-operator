@@ -21,6 +21,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
+    MySQLRescanClusterError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
@@ -615,9 +616,7 @@ class MySQLOperatorCharm(CharmBase):
         Create a cluster from the current unit and initialise operations database.
         """
         unit_label = self.unit.name.replace("/", "-")
-        unit_private_address = self._get_unit_ip(self.unit)
-
-        self._mysql.create_cluster(unit_label, unit_private_address)
+        self._mysql.create_cluster(unit_label)
         self._mysql.initialize_juju_units_operations_table()
 
         self.app_peer_data["units-added-to-cluster"] = "1"
