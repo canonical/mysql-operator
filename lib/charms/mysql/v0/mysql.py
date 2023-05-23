@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 30
+LIBPATCH = 31
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -293,6 +293,10 @@ class MySQLKillSessionError(Error):
 
 class MySQLLockAcquisitionError(Error):
     """Exception raised when a lock fails to be acquired."""
+
+
+class MySQLRescanClusterError(Error):
+    """Exception raised when there is an issue rescanning the cluster."""
 
 
 @dataclasses.dataclass
@@ -852,25 +856,39 @@ class MySQLBase(ABC):
             )
             return False
 
-    def remove_obsoletes_instance(self, from_instance: Optional[str] = None) -> None:
-        """Purge obsoletes instances from cluster metadata.
+    def rescan_cluster(
+        self,
+        from_instance: Optional[str] = None,
+        remove_instances: bool = False,
+        add_instances: bool = False,
+    ) -> None:
+        """Rescan the cluster.
 
         Args:
             from_instance: member instance to run the command from (fallback to current one)
+            remove_instances: whether to remove non-active instances from the metadata
+            add_instances: whether to add new instances to the metadata
         """
-        auto_remove_command = (
+        options = {}
+        if remove_instances:
+            options["removeInstances"] = "auto"
+        if add_instances:
+            options["addInstances"] = "auto"
+
+        rescan_cluster_commands = (
             (
                 f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@"
                 f"{from_instance or self.instance_address}')"
             ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "cluster.rescan({'removeInstances':'auto'})",
+            f"cluster.rescan({json.dumps(options)})",
         )
         try:
-            logger.debug("Removing obsolete instances")
-            self._run_mysqlsh_script("\n".join(auto_remove_command))
-        except MySQLClientError:
-            logger.warning("No instance removed")
+            logger.debug("Rescanning cluster")
+            self._run_mysqlsh_script("\n".join(rescan_cluster_commands))
+        except MySQLClientError as e:
+            logger.exception("Error rescanning the cluster")
+            raise MySQLRescanClusterError(e.message)
 
     def is_instance_in_cluster(self, unit_label: str) -> bool:
         """Confirm if instance is in the cluster.

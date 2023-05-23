@@ -344,11 +344,12 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
 
-
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
+    def test_add_instance_to_cluster_exception(
+        self, _run_mysqlsh_script, _acquire_lock, _release_lock
+    ):
         """Test exceptions raised while running add_instance_to_cluster."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
