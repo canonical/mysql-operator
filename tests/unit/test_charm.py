@@ -274,6 +274,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
@@ -286,6 +287,7 @@ class TestCharm(unittest.TestCase):
         __reboot_from_complete_outage,
         _is_volume_mounted,
         _get_member_state,
+        _get_cluster_node_count,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
@@ -309,6 +311,8 @@ class TestCharm(unittest.TestCase):
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
         _workload_reset.assert_not_called()
+        _is_volume_mounted.assert_called_once()
+        _get_cluster_node_count.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 

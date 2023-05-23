@@ -288,6 +288,7 @@ class TestMySQLBase(unittest.TestCase):
             "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), "
             "status varchar(20), primary key(task))",
             "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "INSERT INTO mysql.juju_units_operations values ('unit-add', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         self.mysql.initialize_juju_units_operations_table()
@@ -327,8 +328,10 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster("mysql-0")
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
+    @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster(self, _run_mysqlsh_script):
+    def test_add_instance_to_cluster(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
         """Test a successful execution of create_cluster."""
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
@@ -341,8 +344,11 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
 
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
+    @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script):
+    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
         """Test exceptions raised while running add_instance_to_cluster."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
