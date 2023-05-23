@@ -7,8 +7,10 @@ Note: The TLS settings here are for self-signed-certificates which are not recom
 ```shell
 # deploy the TLS charm
 juju deploy tls-certificates-operator
+
 # add the necessary configurations for TLS
 juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA"
+
 # to enable TLS relate the two applications
 juju relate tls-certificates-operator mysql
 ```
@@ -23,9 +25,9 @@ Updates to private keys for certificate signing requests (CSR) can be made via t
 openssl genrsa -out internal-key.pem 3072
 ```
 
-* apply newly generated internal key on juju leader:
+* apply newly generated internal key on each juju unit:
 
-```
+```shell
 juju run-action mysql/0 set-tls-private-key "internal-key=$(base64 -w0 internal-key.pem)" --wait
 juju run-action mysql/1 set-tls-private-key "internal-key=$(base64 -w0 internal-key.pem)" --wait
 juju run-action mysql/2 set-tls-private-key "internal-key=$(base64 -w0 internal-key.pem)" --wait
@@ -33,7 +35,7 @@ juju run-action mysql/2 set-tls-private-key "internal-key=$(base64 -w0 internal-
 
 * updates can also be done with auto-generated keys with
 
-```
+```shell
 juju run-action mysql/0 set-tls-private-key --wait
 juju run-action mysql/1 set-tls-private-key --wait
 juju run-action mysql/2 set-tls-private-key --wait

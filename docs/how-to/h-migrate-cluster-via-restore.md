@@ -1,15 +1,19 @@
-This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/charmed-mysql-how-to-restore-backup/9908?channel=8.0/edge)
+# How to restore foreign backup
+
+This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/charmed-mysql-how-to-restore-backup/9908?channel=8.0)
 
 Restoring a backup from a previous cluster to a current cluster requires that you:
 - Have a single unit Charmed MySQL deployed and running
 - Access to S3 storage
-- [Have configured settings for S3 storage](/t/charmed-mysql-how-to-configure-s3/9894?channel=8.0/edge)
+- [Have configured settings for S3 storage](/t/charmed-mysql-how-to-configure-s3/9894?channel=8.0)
 - Have the backups from the previous cluster in your S3-storage
 - Have the passwords from your previous cluster
 
 When you restore a backup from an old cluster, it will restore the password from the previous cluster to your current cluster. Set the password of your current cluster to the previous cluster’s password:
 ```shell
-juju run-action mysql/leader set-password password=<previous cluster password> --wait
+juju run-action mysql/leader set-password username=root password=<previous cluster password> --wait
+juju run-action mysql/leader set-password username=clusteradmin password=<previous cluster password> --wait
+juju run-action mysql/leader set-password username=serverconfig password=<previous cluster password> --wait
 ```
 
 To view the available backups to restore you can enter the command `list-backups`:

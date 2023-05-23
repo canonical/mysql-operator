@@ -16,17 +16,17 @@ juju add-unit mysql -n 2
 ```
 
 You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  23:33:55+01:00
 
-App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
-mysql  8.0.32-0ubun...  active      3  mysql  edge      95  no
+App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
+mysql  8.0.32-0ubun...  active      3  mysql  8.0/stable  147  no
 
 Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Unit is ready: Mode: RW
-mysql/1   active    idle   1        10.234.188.214         Unit is ready: Mode: RO
-mysql/2   active    idle   2        10.234.188.6           Unit is ready: Mode: RO
+mysql/0*  active    idle   0        10.234.188.135         Primary
+mysql/1   active    idle   1        10.234.188.214
+mysql/2   active    idle   2        10.234.188.6
 
 Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
@@ -41,18 +41,21 @@ juju remove-unit mysql/2
 ```
 
 You’ll know that the replica was successfully removed when `juju status --watch 1s` reports:
-```
+```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  2.9.42   unsupported  23:46:43+01:00
 
-App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
-mysql  8.0.32-0ubun...  active      2  mysql  edge      95  no
+App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
+mysql  8.0.32-0ubun...  active      2  mysql  8.0/stable  147  no
 
 Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Unit is ready: Mode: RW
-mysql/1   active    idle   1        10.234.188.214         Unit is ready: Mode: RO
+mysql/0*  active    idle   0        10.234.188.135         Primary
+mysql/1   active    idle   1        10.234.188.214
 
 Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
 1        started  10.234.188.214  juju-ff9064-1  jammy       Running
 ```
+
+### Scaling limitations
+**Note**: the maximum number of Charmed MySQL K8s units in a single Juju application is 9. It is a limitation of MySQL Group replication, read more about all limitations [here](https://dev.mysql.com/doc/refman/8.0/en/group-replication-limitations.html).
