@@ -540,7 +540,7 @@ class MySQLBase(ABC):
     @staticmethod
     def _get_statements_to_delete_users_with_attribute(
         attribute_name: str, attribute_value: str
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate mysqlsh statements to delete users with an attribute.
 
         Args:
@@ -558,7 +558,7 @@ class MySQLBase(ABC):
 
     def get_mysql_router_users_for_unit(
         self, *, relation_id: int, mysql_router_unit_name: str
-    ) -> List[RouterUser]:
+    ) -> list[RouterUser]:
         """Get users for related MySQL Router unit.
 
         For each user, get username & router ID attribute.

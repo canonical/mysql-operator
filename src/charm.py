@@ -606,9 +606,9 @@ class MySQLOperatorCharm(CharmBase):
         # Check if host is a peer.
         elif unit in self.peers.data:
             return str(self.peers.data[unit].get("private-address"))
-        # Return None if the unit is not a peer neither the current unit.
+        # Raise exception if the unit is not a peer neither the current unit.
         else:
-            return None
+            return ValueError("Invalid unit")
 
     def _create_cluster(self) -> None:
         """Create cluster commands.
