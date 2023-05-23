@@ -75,7 +75,7 @@ class TestMySQLBase(unittest.TestCase):
                 "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
                 "GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'",
                 "CREATE USER 'backups'@'%' IDENTIFIED BY 'backupspassword'",
-                "GRANT BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'",
+                "GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'",
                 "GRANT SELECT ON performance_schema.log_status TO 'backups'@'%'",
                 "GRANT SELECT ON performance_schema.keyring_component_status TO 'backups'@'%'",
                 "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
