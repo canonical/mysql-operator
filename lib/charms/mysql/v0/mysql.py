@@ -364,13 +364,14 @@ class MySQLBase(ABC):
         # commands to be run from mysql client with root user and password set above
         # privileges for the backups user:
         #   https://docs.percona.com/percona-xtrabackup/8.0/using_xtrabackup/privileges.html#permissions-and-privileges-needed
+        # CONNECTION_ADMIN added to provide it privileges to connect to offline_mode node
         configure_users_commands = (
             f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
             f"CREATE USER '{self.monitoring_user}'@'%' IDENTIFIED BY '{self.monitoring_password}' WITH MAX_USER_CONNECTIONS 3",
             f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.monitoring_user}'@'%'",
             f"CREATE USER '{self.backups_user}'@'%' IDENTIFIED BY '{self.backups_password}'",
-            f"GRANT BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '{self.backups_user}'@'%'",
+            f"GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '{self.backups_user}'@'%'",
             f"GRANT SELECT ON performance_schema.log_status TO '{self.backups_user}'@'%'",
             f"GRANT SELECT ON performance_schema.keyring_component_status TO '{self.backups_user}'@'%'",
             f"GRANT SELECT ON performance_schema.replication_group_members TO '{self.backups_user}'@'%'",
