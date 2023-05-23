@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 30
+LIBPATCH = 31
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -937,21 +937,6 @@ class MySQLBase(ABC):
             return output_dict
         except MySQLClientError:
             logger.exception(f"Failed to get cluster status for {self.cluster_name}")
-
-    def rescan_cluster(self) -> Optional[dict]:
-        """Rescan the cluster."""
-        rescan_cluster_command = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-            f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "cluster.rescan()",
-        )
-
-        try:
-            logger.debug("Rescanning the cluster")
-            self._run_mysqlsh_script("\n".join(rescan_cluster_command))
-        except MySQLClientError as e:
-            logger.exception(f"Failed to get rescan cluster {self.cluster_name}")
-            raise MySQLRescanClusterError(e.message)
 
     def get_cluster_endpoints(self, get_ips: bool = True) -> Tuple[str, str, str]:
         """Use get_cluster_status to return endpoints tuple.

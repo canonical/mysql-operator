@@ -715,7 +715,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
                 "cluster = dba.get_cluster('test_cluster')",
-                "cluster.rescan()",
+                "cluster.rescan({})",
             )
         )
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
