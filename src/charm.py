@@ -603,12 +603,8 @@ class MySQLOperatorCharm(CharmBase):
         """Get the IP address of a specific unit."""
         if unit == self.unit:
             return str(self.model.get_binding(PEER).network.bind_address)
-        # Check if host is a peer.
-        elif unit in self.peers.data:
-            return str(self.peers.data[unit].get("private-address"))
-        # Raise exception if the unit is not a peer neither the current unit.
-        else:
-            return ValueError("Invalid unit")
+
+        return str(self.peers.data[unit].get("private-address"))
 
     def _create_cluster(self) -> None:
         """Create cluster commands.
