@@ -16,10 +16,12 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
     MySQLRebootFromCompleteOutageError,
+    MySQLRescanClusterError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
@@ -36,6 +38,7 @@ from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
     StatusBase,
+    Unit,
     WaitingStatus,
 )
 from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
@@ -231,13 +234,12 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
-        event_unit_data = event.relation.data.get(event.unit)
-        if not event_unit_data:
+        if not event.relation.data.get(event.unit):
             # bypass when unit is no longer available
             logger.warning(f"Unit {event.unit.name} is no longer available")
             return
 
-        event_unit_address = event_unit_data["private-address"]
+        event_unit_address = self._get_unit_ip(event.unit)
         event_unit_label = event.unit.name.replace("/", "-")
 
         # Defer if the instance is not configured for use in an InnoDB cluster
@@ -393,6 +395,19 @@ class MySQLOperatorCharm(CharmBase):
 
         self._handle_non_online_instance_status(state)
 
+        if self.unit.is_leader():
+            try:
+                primary_address = self._mysql.get_cluster_primary_address()
+            except MySQLGetClusterPrimaryAddressError:
+                self.unit.status = MaintenanceStatus("Unable to query cluster primary")
+                return
+
+            if not primary_address:
+                self.unit.status = MaintenanceStatus("Unable to find cluster primary")
+                return
+
+            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+
     # =======================
     #  Custom Action Handlers
     # =======================
@@ -469,7 +484,7 @@ class MySQLOperatorCharm(CharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.model.get_binding(PEER).network.bind_address,
+            self._get_unit_ip(self.unit),
             self.app_peer_data["cluster-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
             SERVER_CONFIG_USERNAME,
@@ -584,6 +599,13 @@ class MySQLOperatorCharm(CharmBase):
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
 
+    def _get_unit_ip(self, unit: Unit) -> Optional[str]:
+        """Get the IP address of a specific unit."""
+        if unit == self.unit:
+            return str(self.model.get_binding(PEER).network.bind_address)
+
+        return str(self.peers.data[unit].get("private-address"))
+
     def _create_cluster(self) -> None:
         """Create cluster commands.
 
@@ -592,10 +614,12 @@ class MySQLOperatorCharm(CharmBase):
         unit_label = self.unit.name.replace("/", "-")
         self._mysql.create_cluster(unit_label)
         self._mysql.initialize_juju_units_operations_table()
+
         self.app_peer_data["units-added-to-cluster"] = "1"
         self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-role"] = "primary"
         self.unit_peer_data["member-state"] = "online"
+
         try:
             subprocess.check_call(["open-port", "3306/tcp"])
             subprocess.check_call(["open-port", "33060/tcp"])
@@ -643,31 +667,36 @@ class MySQLOperatorCharm(CharmBase):
             if not primary_address:
                 logger.debug("Primary not yet defined on peers. Waiting new primary.")
                 return MaintenanceStatus("Workload reset: waiting new primary")
+
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
             self._mysql.reset_data_dir()
             self._mysql.reconfigure_mysqld()
             self._workload_initialise()
-            unit_label = self.unit.name.replace("/", "-")
+
             # On a full reset, member must firstly be removed from cluster metadata
-            self._mysql.remove_obsoletes_instance(from_instance=primary_address)
+            self._mysql.rescan_cluster(from_instance=primary_address, remove_instances=True)
             # Re-add the member as if it's the first time
+
+            unit_label = self.unit.name.replace("/", "-")
             self._mysql.add_instance_to_cluster(
-                self._mysql.instance_address, unit_label, from_instance=primary_address
+                self._get_unit_ip(self.unit), unit_label, from_instance=primary_address
             )
         except MySQLReconfigureError:
-            return BlockedStatus("Failed to re-initialize MySQL data-dir")
+            return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
         except MySQLConfigureMySQLUsersError:
-            return BlockedStatus("Failed to re-initialize MySQL users")
+            return MaintenanceStatus("Failed to re-initialize MySQL users")
         except MySQLConfigureInstanceError:
-            return BlockedStatus("Failed to re-configure instance for InnoDB")
+            return MaintenanceStatus("Failed to re-configure instance for InnoDB")
         except MySQLDataPurgeError:
-            return BlockedStatus("Failed to purge data dir")
+            return MaintenanceStatus("Failed to purge data dir")
         except MySQLResetRootPasswordAndStartMySQLDError:
-            return BlockedStatus("Failed to reset root password")
+            return MaintenanceStatus("Failed to reset root password")
         except MySQLCreateCustomMySQLDConfigError:
-            return BlockedStatus("Failed to create custom mysqld config")
+            return MaintenanceStatus("Failed to create custom mysqld config")
+        except MySQLRescanClusterError:
+            return MaintenanceStatus("Failed to rescan cluster and remove obsolete instances")
         except SnapServiceOperationError as e:
-            return BlockedStatus(e.message)
+            return MaintenanceStatus(e.message)
 
         return ActiveStatus(self.active_status_message)
 
