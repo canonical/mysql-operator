@@ -731,7 +731,7 @@ class MySQLOperatorCharm(CharmBase):
                     f"Cluster reached max size of {GR_MAX_MEMBERS} units. Standby."
                 )
                 logger.warning(
-                    f"Cluster reached max size of {GR_MAX_MEMBERS} unit. This unit will stay as standby."
+                    f"Cluster reached max size of {GR_MAX_MEMBERS} units. This unit will stay as standby."
                 )
                 return
 
