@@ -650,15 +650,6 @@ class MySQLOperatorCharm(CharmBase):
 
         return ActiveStatus(self.active_status_message)
 
-    def _get_primary_address_from_peers(self) -> Optional[str]:
-        """Retrieve primary address based on peer data."""
-        for unit in self.peers.units:
-            if (
-                self.peers.data[unit].get("member-role") == "primary"
-                and self.peers.data[unit].get("member-state") == "online"
-            ):
-                return self.peers.data[unit].get("instance-hostname")
-
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.
 
@@ -682,6 +673,18 @@ class MySQLOperatorCharm(CharmBase):
             and not self.unit_peer_data.get("unit-initialized")
         )
 
+    def _get_primary_from_online_peer(self) -> Optional[str]:
+        """Get the primary address from an online peer."""
+        for unit in self.peers.units:
+            if self.peers.data[unit].get("member-state") == "online":
+                try:
+                    return self._mysql.get_cluster_primary_address(
+                        connect_instance_address=self.peers.data[unit]["instance-hostname"]
+                    )
+                except MySQLGetClusterPrimaryAddressError:
+                    # try next unit
+                    continue
+
     def _join_unit_to_cluster(self) -> None:
         """Join the unit to the cluster.
 
@@ -696,7 +699,7 @@ class MySQLOperatorCharm(CharmBase):
 
         # Add new instance to the cluster
         try:
-            cluster_primary = self._get_primary_address_from_peers()
+            cluster_primary = self._get_primary_from_online_peer()
             if not cluster_primary:
                 self.unit.status = WaitingStatus("waiting to get cluster primary from peers")
                 logger.debug("waiting: unable to retrieve the cluster primary from peers")
