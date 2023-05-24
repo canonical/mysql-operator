@@ -450,11 +450,6 @@ class MySQLOperatorCharm(CharmBase):
         return self.model.get_relation(PEER)
 
     @property
-    def unit_ip(self):
-        """Returns the IP address of the unit."""
-        return self.model.get_binding(PEER).network.bind_address
-
-    @property
     def _is_peer_data_set(self):
         """Returns True if the peer relation data is set."""
         return (
@@ -693,7 +688,7 @@ class MySQLOperatorCharm(CharmBase):
         Try to join the unit from the primary unit.
         """
         instance_label = self.unit.name.replace("/", "-")
-        instance_address = self.unit_ip
+        instance_address = self._get_unit_ip(self.unit)
 
         if self._mysql.is_instance_in_cluster(instance_label):
             logger.debug("instance already in cluster")
