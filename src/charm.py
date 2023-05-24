@@ -287,6 +287,14 @@ class MySQLOperatorCharm(CharmBase):
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
+            primary = self._get_primary_from_online_peer()
+            if (
+                primary
+                and self._mysql.get_cluster_node_count(from_instance=primary) == GR_MAX_MEMBERS
+            ):
+                # Reset variables to allow unit join the cluster
+                self.unit_peer_data["member-state"] = "waiting"
+                del self.unit_peer_data["unit-initialized"]
 
         if state == "unreachable":
             try:
@@ -314,6 +322,7 @@ class MySQLOperatorCharm(CharmBase):
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
+            and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
         ):
@@ -690,7 +699,7 @@ class MySQLOperatorCharm(CharmBase):
             if self.peers.data[unit].get("member-state") == "online":
                 try:
                     return self._mysql.get_cluster_primary_address(
-                        connect_instance_address=self.peers.data[unit]["instance-hostname"]
+                        connect_instance_address=self._get_unit_ip(unit)
                     )
                 except MySQLGetClusterPrimaryAddressError:
                     # try next unit
@@ -706,6 +715,7 @@ class MySQLOperatorCharm(CharmBase):
 
         if self._mysql.is_instance_in_cluster(instance_label):
             logger.debug("instance already in cluster")
+            self.unit_peer_data["unit-initialized"] = "True"
             return
 
         # Add new instance to the cluster
