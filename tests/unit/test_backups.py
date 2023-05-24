@@ -15,6 +15,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
+    MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
     MySQLServiceNotRunningError,
@@ -896,10 +897,12 @@ Juju Version: test-juju-version
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
+    @patch("mysql_vm_helpers.MySQL.rescan_cluster")
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore(
         self,
         _get_member_state,
+        _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
         _wait_until_mysql_connection,
@@ -919,6 +922,7 @@ Juju Version: test-juju-version
         _wait_until_mysql_connection.assert_called_once()
         _create_cluster.assert_called_once()
         _initialize_juju_units_operations_table.assert_called_once()
+        _rescan_cluster.assert_called_once()
         _get_member_state.assert_called_once()
 
         self.assertTrue(isinstance(self.charm.unit.status, ActiveStatus))
@@ -932,10 +936,12 @@ Juju Version: test-juju-version
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
+    @patch("mysql_vm_helpers.MySQL.rescan_cluster")
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore_failure(
         self,
         _get_member_state,
+        _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
         _wait_until_mysql_connection,
@@ -951,6 +957,14 @@ Juju Version: test-juju-version
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
         self.assertEquals(error_message, "Failed to retrieve member state in restored instance")
+        self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
+
+        # test failure of rescan_cluster()
+        _rescan_cluster.side_effect = MySQLRescanClusterError()
+
+        success, error_message = self.mysql_backups._post_restore()
+        self.assertFalse(success)
+        self.assertEquals(error_message, "Failed to rescan the cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of initialize_juju_units_operations_table()
@@ -981,7 +995,7 @@ Juju Version: test-juju-version
         )
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
-        # test failure of wait_until_mysql_connection()
+        # test failure of configure_instance()
         _configure_instance.side_effect = MySQLConfigureInstanceError()
 
         success, error_message = self.mysql_backups._post_restore()
