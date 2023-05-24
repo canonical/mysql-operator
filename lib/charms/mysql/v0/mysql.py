@@ -793,6 +793,7 @@ class MySQLBase(ABC):
                 f"@{from_instance or self.instance_address}')"
             ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "shell.options['dba.restartWaitTimeout'] = 3600",
         )
 
         for recovery_method in ["auto", "clone"]:
