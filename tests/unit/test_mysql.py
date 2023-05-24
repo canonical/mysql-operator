@@ -336,6 +336,7 @@ class TestMySQLBase(unittest.TestCase):
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
             "cluster = dba.get_cluster('test_cluster')",
+            "shell.options['dba.restartWaitTimeout'] = 3600",
             "cluster.add_instance('clusteradmin@127.0.0.2', {\"password\": "
             '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
         )
