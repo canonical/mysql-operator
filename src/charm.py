@@ -356,6 +356,8 @@ class MySQLOperatorCharm(CharmBase):
                 return
 
             self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+            # Set active status when primary is known
+            self.app.status = ActiveStatus()
 
     # =======================
     #  Custom Action Handlers
