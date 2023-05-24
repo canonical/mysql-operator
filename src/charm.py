@@ -44,6 +44,8 @@ from ops.model import (
 from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
 
 from constants import (
+    BACKUPS_PASSWORD_KEY,
+    BACKUPS_USERNAME,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -160,6 +162,7 @@ class MySQLOperatorCharm(CharmBase):
             SERVER_CONFIG_PASSWORD_KEY,
             CLUSTER_ADMIN_PASSWORD_KEY,
             MONITORING_PASSWORD_KEY,
+            BACKUPS_PASSWORD_KEY,
         ]
 
         for required_password in required_passwords:
@@ -395,6 +398,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
         elif username == MONITORING_USERNAME:
             secret_key = MONITORING_PASSWORD_KEY
+        elif username == BACKUPS_USERNAME:
+            secret_key = BACKUPS_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -418,6 +423,8 @@ class MySQLOperatorCharm(CharmBase):
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
         elif username == MONITORING_USERNAME:
             secret_key = MONITORING_PASSWORD_KEY
+        elif username == BACKUPS_USERNAME:
+            secret_key = BACKUPS_PASSWORD_KEY
         else:
             raise RuntimeError("Invalid username.")
 
@@ -444,6 +451,8 @@ class MySQLOperatorCharm(CharmBase):
             self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY),
             MONITORING_USERNAME,
             self.get_secret("app", MONITORING_PASSWORD_KEY),
+            BACKUPS_USERNAME,
+            self.get_secret("app", BACKUPS_PASSWORD_KEY),
         )
 
     @property

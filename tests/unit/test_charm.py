@@ -82,6 +82,7 @@ class TestCharm(unittest.TestCase):
             "server-config-password",
             "cluster-admin-password",
             "monitoring-password",
+            "backups-password",
         ]
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)

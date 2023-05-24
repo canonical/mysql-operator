@@ -30,6 +30,7 @@ from charms.mysql.v0.mysql import (
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
 )
@@ -50,6 +51,8 @@ class TestMySQLBase(unittest.TestCase):
             "clusteradminpassword",
             "monitoring",
             "monitoringpassword",
+            "backups",
+            "backupspassword",
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -61,6 +64,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
                 "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
+                "FLUSH PRIVILEGES",
             )
         )
 
@@ -70,6 +74,11 @@ class TestMySQLBase(unittest.TestCase):
                 "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
                 "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
                 "GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'",
+                "CREATE USER 'backups'@'%' IDENTIFIED BY 'backupspassword'",
+                "GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.log_status TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.keyring_component_status TO 'backups'@'%'",
+                "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
                 "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
                 "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
@@ -706,6 +715,27 @@ class TestMySQLBase(unittest.TestCase):
         self.mysql.get_cluster_status()
         _json_loads.assert_not_called()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_rescan_cluster(self, _run_mysqlsh_script):
+        """Test a successful execution of rescan_cluster()."""
+        self.mysql.rescan_cluster()
+        expected_commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "cluster = dba.get_cluster('test_cluster')",
+                "cluster.rescan({})",
+            )
+        )
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_rescan_cluster_failure(self, _run_mysqlsh_script):
+        """Test an exception executing rescan_cluster()."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLRescanClusterError):
+            self.mysql.rescan_cluster()
+
     def test_error(self):
         """Test Error class."""
         error = Error("Error message")
@@ -962,8 +992,8 @@ class TestMySQLBase(unittest.TestCase):
             --defaults-group=mysqld
             --no-version-check
             --parallel=16
-            --user=serverconfig
-            --password=serverconfigpassword
+            --user=backups
+            --password=backupspassword
             --socket=/mysqld/socket/file.sock
             --lock-ddl
             --backup
