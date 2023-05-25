@@ -9,7 +9,7 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
     Error,
@@ -529,7 +529,9 @@ class MySQL(MySQLBase):
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 raise MySQLClientError(e.stderr)
 
-    def _run_mysqlcli_script(self, script: str, user: str = "root", password: str = None) -> str:
+    def _run_mysqlcli_script(
+        self, script: str, user: str = "root", password: str = None, timeout: Optional[int] = None
+    ) -> str:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance root user.
@@ -539,6 +541,7 @@ class MySQL(MySQLBase):
             script: raw SQL script string
             user: (optional) user to invoke the mysql cli script with (default is "root")
             password: (optional) password to invoke the mysql cli script with
+            timeout: (optional) time before the query should timeout
         """
         command = [
             CHARMED_MYSQL,
@@ -554,7 +557,9 @@ class MySQL(MySQLBase):
             command.append(f"--password={password}")
 
         try:
-            return subprocess.check_output(command, stderr=subprocess.PIPE).decode("utf-8")
+            return subprocess.check_output(
+                command, stderr=subprocess.PIPE, timeout=timeout
+            ).decode("utf-8")
         except subprocess.CalledProcessError as e:
             raise MySQLClientError(e.stderr)
 

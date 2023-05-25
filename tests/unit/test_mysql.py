@@ -704,7 +704,7 @@ class TestMySQLBase(unittest.TestCase):
                 "print(cluster.status())",
             )
         )
-        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+        _run_mysqlsh_script.assert_called_once_with(expected_commands, timeout=30)
 
     @patch("json.loads")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
