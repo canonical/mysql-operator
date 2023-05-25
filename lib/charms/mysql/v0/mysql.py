@@ -872,6 +872,34 @@ class MySQLBase(ABC):
             )
             return False
 
+    def are_locks_acquired(self, from_instance: Optional[str] = None) -> bool:
+        """Report if any topology change is being executed.
+
+        Query the mysql.juju_units_operations table for any
+        in-progress lock for either unit add or removal.
+
+        Args:
+            from_instance: member instance to run the command from (fallback to current one)
+        """
+        commands = (
+            (
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}"
+                f"@{from_instance or self.instance_address}')"
+            ),
+            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
+            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
+        )
+        try:
+            output = self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            # log error and fallback to assuming topology is changing
+            logger.exception("Failed to get locks count")
+            return True
+
+        matches = re.search(r"<LOCKS>(\d)</LOCKS>", output)
+
+        return int(matches.group(1)) > 0 if matches else False
+
     def rescan_cluster(
         self,
         from_instance: Optional[str] = None,

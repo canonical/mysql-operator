@@ -367,9 +367,15 @@ class MySQLOperatorCharm(CharmBase):
                 self.unit.status = MaintenanceStatus("Unable to find cluster primary")
                 return
 
-            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
             # Set active status when primary is known
             self.app.status = ActiveStatus()
+
+            if self._mysql.are_locks_acquired(from_instance=primary_address):
+                logger.debug("Skip cluster rescan while locks are acquired")
+                return
+
+            # Only rescan cluster when topology is not changing
+            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
 
     # =======================
     #  Custom Action Handlers
@@ -723,14 +729,14 @@ class MySQLOperatorCharm(CharmBase):
             cluster_primary = self._get_primary_from_online_peer()
             if not cluster_primary:
                 self.unit.status = WaitingStatus("waiting to get cluster primary from peers")
-                logger.debug("waiting: unable to retrieve the cluster primary from peers")
+                logger.debug("waiting: unable to retrieve the cluster primary from online peer")
                 return
 
             if self._mysql.get_cluster_node_count(from_instance=cluster_primary) == GR_MAX_MEMBERS:
                 self.unit.status = BlockedStatus(
                     f"Cluster reached max size of {GR_MAX_MEMBERS} units. Standby."
                 )
-                logger.warning(
+                logger.info(
                     f"Cluster reached max size of {GR_MAX_MEMBERS} units. This unit will stay as standby."
                 )
                 return

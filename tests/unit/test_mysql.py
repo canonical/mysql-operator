@@ -1516,6 +1516,18 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_are_locks_acquired(self, _run_mysqlsh_script):
+        """Test are_locks_acquired."""
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
+            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
+        )
+        _run_mysqlsh_script.return_value = "<LOCKS>0</LOCKS>"
+        assert self.mysql.are_locks_acquired() is False
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):
