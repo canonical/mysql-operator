@@ -68,7 +68,7 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script(self, _check_output):
         """Test a successful execution of run_mysqlsh_script."""
-        self.mysql._run_mysqlcli_script("script")
+        self.mysql._run_mysqlcli_script("script", timeout=10)
 
         _check_output.assert_called_once_with(
             [
@@ -81,6 +81,7 @@ class TestMySQL(unittest.TestCase):
                 "script",
             ],
             stderr=subprocess.PIPE,
+            timeout=10,
         )
 
     @patch("subprocess.check_output")
