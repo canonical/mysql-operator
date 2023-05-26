@@ -260,6 +260,7 @@ class MySQL(MySQLBase):
                     self.wait_until_mysql_connection()
                 except MySQLServiceNotRunningError:
                     raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
+
     @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
     def wait_until_mysql_connection(self) -> None:
         """Wait until a connection to MySQL has been obtained.
