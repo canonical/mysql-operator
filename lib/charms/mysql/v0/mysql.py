@@ -836,9 +836,10 @@ class MySQLBase(ABC):
                 logger.debug(
                     f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
                 )
-        self._release_lock(
-            from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
-        )
+            finally:
+                self._release_lock(
+                    from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
+                )
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
