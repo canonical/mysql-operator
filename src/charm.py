@@ -371,7 +371,7 @@ class MySQLOperatorCharm(CharmBase):
             self.app.status = ActiveStatus()
 
             if self._mysql.are_locks_acquired(from_instance=primary_address):
-                logger.debug("Skip cluster rescan while locks are acquired")
+                logger.debug("Skip cluster rescan while locks are held")
                 return
 
             # Only rescan cluster when topology is not changing
