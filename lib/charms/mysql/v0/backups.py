@@ -50,6 +50,7 @@ import logging
 import pathlib
 from typing import Dict, List, Optional, Tuple
 
+from constants import MYSQL_DATA_DIR
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
