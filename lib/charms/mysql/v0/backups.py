@@ -50,7 +50,6 @@ import logging
 import pathlib
 from typing import Dict, List, Optional, Tuple
 
-from constants import MYSQL_DATA_DIR
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
@@ -81,6 +80,8 @@ from ops.charm import ActionEvent, CharmBase
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
 from ops.model import ActiveStatus, BlockedStatus
+
+from constants import MYSQL_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +232,9 @@ Stderr:
             return
 
         if not self.charm._mysql.is_mysqld_running():
-            logger.warning(f"Backup failed: process mysqld is not running on {self.charm.unit.name}")
+            logger.warning(
+                f"Backup failed: process mysqld is not running on {self.charm.unit.name}"
+            )
             event.fail("Process mysqld not running")
             return
 

@@ -287,7 +287,9 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY) -> None:
+    def delete_temp_backup_directory(
+        self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
+    ) -> None:
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
             from_directory,
