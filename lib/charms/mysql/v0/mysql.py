@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 32
+LIBPATCH = 33
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 
@@ -1592,7 +1592,7 @@ Swap:     1027600384  1027600384           0
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
         user=None,
@@ -1601,11 +1601,12 @@ Swap:     1027600384  1027600384           0
         """Retrieve the specified backup from S3.
 
         The backup is retrieved using xbcloud and stored in a temp dir in the
-        mysql container.
+        mysql container. This temp dir is supposed to be on the same volume as
+        the mysql data directory to reduce latency for IOPS.
         """
         nproc_command = "nproc".split()
         make_temp_dir_command = (
-            f"mktemp --directory {mysql_data_directory}/#mysql_sst_XXXX".split()
+            f"mktemp --directory {temp_restore_directory}/#mysql_sst_XXXX".split()
         )
 
         try:
@@ -1762,13 +1763,13 @@ Swap:     1027600384  1027600384           0
 
     def delete_temp_restore_directory(
         self,
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         user=None,
         group=None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
-        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
-        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/#mysql_sst_* -delete".split()
+        logger.info(f"Deleting temp restore directory in {temp_restore_directory}")
+        delete_temp_restore_directory_command = f"find {temp_restore_directory} -wholename {temp_restore_directory}/#mysql_sst_* -delete".split()
 
         try:
             logger.debug(

@@ -281,16 +281,16 @@ class MySQL(MySQLBase):
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
             MYSQLD_SOCK_FILE,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             MYSQLD_DEFAULTS_CONFIG_FILE,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(self) -> None:
+    def delete_temp_backup_directory(self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY) -> None:
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
-            MYSQL_DATA_DIR,
+            from_directory,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
@@ -304,7 +304,7 @@ class MySQL(MySQLBase):
         return super().retrieve_backup_with_xbcloud(
             backup_id,
             s3_parameters,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
             user=ROOT_SYSTEM_USER,
@@ -393,7 +393,7 @@ class MySQL(MySQLBase):
     def delete_temp_restore_directory(self) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         super().delete_temp_restore_directory(
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
