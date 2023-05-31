@@ -4,6 +4,7 @@ import dataclasses
 import json
 import os
 from pathlib import Path
+import subprocess
 from typing import Optional
 
 import pytest
@@ -108,6 +109,15 @@ def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
             )
         else:
             return await _build_charm(charm_path)
+
+    subprocess.run(
+        ["juju", "set-model-constraints", "--model", ops_test.model.info.name, "mem=1G"],
+        check=True,
+    )
+    subprocess.run(
+        'juju model-config logging-config="<root>=INFO;unit=DEBUG"'.split(),
+        check=True,
+    )
 
     ops_test.build_charm = build_charm
     return ops_test
