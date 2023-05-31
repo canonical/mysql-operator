@@ -115,7 +115,7 @@ def ops_test(ops_test: OpsTest, pytestconfig) -> OpsTest:
         check=True,
     )
     subprocess.run(
-        'juju model-config logging-config="<root>=INFO;unit=DEBUG"'.split(),
+        "juju model-config logging-config=<root>=INFO;unit=DEBUG".split(),
         check=True,
     )
 
