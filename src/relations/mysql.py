@@ -67,7 +67,8 @@ class MySQLRelation(Object):
 
         if username_in_databag:
             if (
-                username_in_databag != username_in_config
+                username_in_config
+                and username_in_databag != username_in_config
                 and not self.charm._mysql.does_mysql_user_exist(username_in_databag, "%")
             ):
                 self.charm.app_peer_data["mysql-interface-user"] = username_in_config
@@ -216,3 +217,6 @@ class MySQLRelation(Object):
         except MySQLDeleteUsersForUnitError:
             logger.error("Failed to delete mysql users")
             self.charm.unit.status = BlockedStatus("Failed to remove relation user")
+
+        del self.charm.app_peer_data["mysql-interface-user"]
+        del self.charm.app_peer_data["mysql-interface-database"]
