@@ -57,6 +57,55 @@ class MySQLRelation(Object):
 
         return password
 
+    def _get_or_generate_username(self, event_relation_id: int) -> str:
+        """Retrieve username from config or generate a new one.
+
+        Then store it in the peer databag. Assumes that the caller is a leader unit.
+        """
+        username_in_databag = self.charm.app_peer_data.get("mysql-interface-user")
+        username_in_config = self.charm.config.get("mysql-interface-user")
+
+        if username_in_databag:
+            if (
+                username_in_databag != username_in_config
+                and not self.charm._mysql.does_mysql_user_exist(username_in_databag, "%")
+            ):
+                self.charm.app_peer_data["mysql-interface-user"] = username_in_config
+                return username_in_config
+
+            return username_in_databag
+
+        if username_in_config:
+            self.charm.app_peer_data["mysql-interface-user"] = username_in_config
+            return username_in_config
+
+        generated_username = f"relation-{event_relation_id}"
+        self.charm.app_peer_data["mysql-interface-user"] = generated_username
+        return generated_username
+
+    def _get_or_generate_database(self, event_relation_id: int) -> str:
+        """Retrieve database from config or generate a new one.
+
+        Then store it in the peer databag. Assumes that the caller is a leader unit.
+        """
+        database_in_databag = self.charm.app_peer_data.get("mysql-interface-database")
+        database_in_config = self.charm.config.get("mysql-interface-database")
+
+        if database_in_databag:
+            if database_in_databag != database_in_config:
+                self.charm.app_peer_data["mysql-interface-database"] = database_in_config
+                return database_in_config
+
+            return database_in_databag
+
+        if database_in_config:
+            self.charm.app_peer_data["mysql-interface-database"] = database_in_config
+            return database_in_config
+
+        generated_database = f"database-{event_relation_id}"
+        self.charm.app_peer_data["mysql-interface-database"] = generated_database
+        return generated_database
+
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event.
 
@@ -100,20 +149,13 @@ class MySQLRelation(Object):
 
         logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
 
-        # username and database are defined in application config
-        # if not defined, defaults applies
-        username = self.charm.config.get("mysql-interface-user")
-        database = self.charm.config.get("mysql-interface-database")
-
-        if not username or not database:
-            logger.debug("`mysql` legacy interface user or database not defined.")
-            event.defer()
-            return
-
         # wait until the unit is initialized
         if not self.charm.unit_peer_data.get("unit-initialized"):
             event.defer()
             return
+
+        username = self._get_or_generate_username(event.relation.id)
+        database = self._get_or_generate_database(event.relation.id)
 
         # Only execute if the application user does not exist
         # since it could have been created by another related app
