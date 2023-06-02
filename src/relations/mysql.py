@@ -120,6 +120,9 @@ class MySQLRelation(Object):
         username = self.charm.config.get("mysql-interface-user")
         database = self.charm.config.get("mysql-interface-database")
 
+        if not username or not database:
+            return
+
         if self.charm._mysql.does_mysql_user_exist(username, "%"):
             logger.error(f"User '{username}'@'%' already exists")
             return
