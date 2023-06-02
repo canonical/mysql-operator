@@ -232,9 +232,7 @@ Stderr:
             return
 
         if not self.charm._mysql.is_mysqld_running():
-            logger.error(
-                f"Backup failed: process mysqld is not running on {self.charm.unit.name}"
-            )
+            logger.error(f"Backup failed: process mysqld is not running on {self.charm.unit.name}")
             event.fail("Process mysqld not running")
             return
 
