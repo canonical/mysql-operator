@@ -1458,12 +1458,11 @@ class MySQLBase(ABC):
             raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
 
     def get_max_connections(self) -> int:
-        """Calculate max_connections parameter for the instance.
-        """
+        """Calculate max_connections parameter for the instance."""
         # Reference: based off xtradb-cluster-operator
         # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
 
-        bytes_per_connection = 12582912 # 12 Megabytes
+        bytes_per_connection = 12582912  # 12 Megabytes
         total_memory = None
 
         try:

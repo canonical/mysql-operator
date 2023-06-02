@@ -172,9 +172,11 @@ class MySQL(MySQLBase):
                 innodb_buffer_pool_size,
                 innodb_buffer_pool_chunk_size,
             ) = self.get_innodb_buffer_pool_parameters()
-        max_connections = self.get_max_connections()
+            max_connections = self.get_max_connections()
         except MySQLGetAutoTunningParametersError:
-            raise MySQLCreateCustomMySQLDConfigError("Failed to compute mysql parameters automatically")
+            raise MySQLCreateCustomMySQLDConfigError(
+                "Failed to compute mysql parameters automatically"
+            )
 
         content = [
             "[mysqld]",
