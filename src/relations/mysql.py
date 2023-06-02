@@ -30,6 +30,7 @@ class MySQLRelation(Object):
         self.charm = charm
 
         self.framework.observe(self.charm.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(
             self.charm.on[LEGACY_MYSQL].relation_created, self._on_mysql_relation_created
         )
@@ -58,54 +59,30 @@ class MySQLRelation(Object):
         return password
 
     def _get_or_generate_username(self, event_relation_id: int) -> str:
-        """Retrieve username from config or generate a new one.
+        """Retrieve username from databag or config or generate a new one.
 
-        Then store it in the peer databag. Assumes that the caller is a leader unit.
+        Assumes that the caller is the leader unit.
         """
-        username_in_databag = self.charm.app_peer_data.get("mysql-interface-user")
-        username_in_config = self.charm.config.get("mysql-interface-user")
-
-        if username_in_databag:
-            if (
-                username_in_config
-                and username_in_databag != username_in_config
-                and not self.charm._mysql.does_mysql_user_exist(username_in_databag, "%")
-            ):
-                self.charm.app_peer_data["mysql-interface-user"] = username_in_config
-                return username_in_config
-
-            return username_in_databag
-
-        if username_in_config:
-            self.charm.app_peer_data["mysql-interface-user"] = username_in_config
-            return username_in_config
-
-        generated_username = f"relation-{event_relation_id}"
-        self.charm.app_peer_data["mysql-interface-user"] = generated_username
-        return generated_username
+        username = (
+            self.charm.app_peer_data.get("mysql-interface-user")
+            or self.charm.config.get("mysql-interface-user")
+            or f"relation-{event_relation_id}"
+        )
+        self.charm.app_peer_data["mysql-interface-user"] = username
+        return username
 
     def _get_or_generate_database(self, event_relation_id: int) -> str:
-        """Retrieve database from config or generate a new one.
+        """Retrieve database from databag or config or generate a new one.
 
-        Then store it in the peer databag. Assumes that the caller is a leader unit.
+        Assumes that the caller is the leader unit.
         """
-        database_in_databag = self.charm.app_peer_data.get("mysql-interface-database")
-        database_in_config = self.charm.config.get("mysql-interface-database")
-
-        if database_in_databag:
-            if database_in_databag != database_in_config:
-                self.charm.app_peer_data["mysql-interface-database"] = database_in_config
-                return database_in_config
-
-            return database_in_databag
-
-        if database_in_config:
-            self.charm.app_peer_data["mysql-interface-database"] = database_in_config
-            return database_in_config
-
-        generated_database = f"database-{event_relation_id}"
-        self.charm.app_peer_data["mysql-interface-database"] = generated_database
-        return generated_database
+        database_name = (
+            self.charm.app_peer_data.get("mysql-interface-database")
+            or self.charm.config.get("mysql-interface-database")
+            or f"database-{event_relation_id}"
+        )
+        self.charm.app_peer_data["mysql-interface-database"] = database_name
+        return database_name
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event.
@@ -130,6 +107,70 @@ class MySQLRelation(Object):
             # Assign the cluster primary's address as the database host
             primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
             relation_databag[self.charm.unit]["host"] = primary_address
+
+    def _on_config_changed(self, _) -> None:
+        """Handle the change of the username/database in config."""
+        if not self.charm.unit.is_leader():
+            return
+
+        # the mysql-relation-created event has not yet fired
+        if not self.charm.app_peer_data.get("mysql-interface-user"):
+            return
+
+        username = self.charm.config.get("mysql-interface-user")
+        database = self.charm.config.get("mysql-interface-database")
+
+        if self.charm._mysql.does_mysql_user_exist(username, "%"):
+            logger.error(f"User '{username}'@'%' already exists")
+            return
+
+        if (
+            username == self.charm.app_peer_data["mysql-interface-user"]
+            and database == self.charm.app_peer_data["mysql-interface-database"]
+        ):
+            return
+
+        try:
+            self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
+        except MySQLDeleteUsersForUnitError:
+            logger.error("Failed to delete mysql users")
+            self.charm.unit.status = BlockedStatus("Failed to remove relation user")
+
+        password = self._get_or_set_password_in_peer_databag(username)
+
+        try:
+            self.charm._mysql.create_application_database_and_scoped_user(
+                database,
+                username,
+                password,
+                "%",
+                unit_name="mysql-legacy-relation",
+            )
+
+            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+
+        except (
+            MySQLCreateApplicationDatabaseAndScopedUserError,
+            MySQLGetClusterPrimaryAddressError,
+        ):
+            self.charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
+            return
+
+        updates = {
+            "database": database,
+            "host": primary_address,
+            "password": password,
+            "port": "3306",
+            "root_password": self.charm.app_peer_data["root-password"],
+            "user": username,
+        }
+
+        self.charm.app_peer_data["mysql-interface-user"] = username
+        self.charm.app_peer_data["mysql-interface-database"] = database
+        self.charm.app_peer_data["mysql_relation_data"] = json.dumps(updates)
+
+        for relation in self.charm.model.relations.get(LEGACY_MYSQL, []):
+            relation.data[self.charm.unit].update(updates)
 
     def _on_mysql_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handle the legacy 'mysql' relation created event.
