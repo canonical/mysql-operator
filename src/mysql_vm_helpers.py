@@ -16,7 +16,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
@@ -172,14 +172,16 @@ class MySQL(MySQLBase):
                 innodb_buffer_pool_size,
                 innodb_buffer_pool_chunk_size,
             ) = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError:
-            raise MySQLCreateCustomMySQLDConfigError("Failed to compute innodb buffer pool size")
+        max_connections = self.get_max_connections()
+        except MySQLGetAutoTunningParametersError:
+            raise MySQLCreateCustomMySQLDConfigError("Failed to compute mysql parameters automatically")
 
         content = [
             "[mysqld]",
             "bind-address = 0.0.0.0",
             "mysqlx-bind-address = 0.0.0.0",
             f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+            f"max_connections = {max_connections}",
         ]
 
         if innodb_buffer_pool_chunk_size:

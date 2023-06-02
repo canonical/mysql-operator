@@ -24,7 +24,7 @@ from charms.mysql.v0.mysql import (
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
@@ -914,7 +914,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
         _get_total_memory.side_effect = MySQLExecError
 
-        with self.assertRaises(MySQLGetInnoDBBufferPoolParametersError):
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
             self.mysql.get_innodb_buffer_pool_parameters()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
@@ -1319,7 +1319,7 @@ xtrabackup/location --prepare
                 group="test-group",
             )
 
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError()
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError()
         with self.assertRaises(MySQLPrepareBackupForRestoreError):
             self.mysql.prepare_backup_for_restore(
                 "backup/location",

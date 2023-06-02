@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, call, patch
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
@@ -280,7 +280,7 @@ report_host = 127.0.0.1
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
