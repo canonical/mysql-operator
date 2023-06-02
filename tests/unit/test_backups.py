@@ -990,9 +990,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEqual(
-            error_message, "Failed to configure restored instance for InnoDB cluster"
-        )
+        self.assertEqual(error_message, "Failed to configure restored instance for InnoDB cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of configure_instance()
@@ -1000,9 +998,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEqual(
-            error_message, "Failed to configure restored instance for InnoDB cluster"
-        )
+        self.assertEqual(error_message, "Failed to configure restored instance for InnoDB cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of _clean_data_dir_and_start_mysqld()
