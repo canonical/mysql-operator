@@ -297,6 +297,7 @@ class TestMySQLBase(unittest.TestCase):
             "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), "
             "status varchar(20), primary key(task))",
             "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "INSERT INTO mysql.juju_units_operations values ('unit-add', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         self.mysql.initialize_juju_units_operations_table()
@@ -336,12 +337,15 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster("mysql-0")
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
+    @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster(self, _run_mysqlsh_script):
+    def test_add_instance_to_cluster(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
         """Test a successful execution of create_cluster."""
         add_instance_to_cluster_commands = (
             "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
             "cluster = dba.get_cluster('test_cluster')",
+            "shell.options['dba.restartWaitTimeout'] = 3600",
             "cluster.add_instance('clusteradmin@127.0.0.2', {\"password\": "
             '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
         )
@@ -350,8 +354,12 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
+    @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster_exception(self, _run_mysqlsh_script):
+    def test_add_instance_to_cluster_exception(
+        self, _run_mysqlsh_script, _acquire_lock, _release_lock
+    ):
         """Test exceptions raised while running add_instance_to_cluster."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
@@ -1506,6 +1514,18 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.mysql.kill_unencrypted_sessions()
 
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_are_locks_acquired(self, _run_mysqlsh_script):
+        """Test are_locks_acquired."""
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
+            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
+        )
+        _run_mysqlsh_script.return_value = "<LOCKS>0</LOCKS>"
+        assert self.mysql.are_locks_acquired() is False
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
     def test_abstract_methods(self):

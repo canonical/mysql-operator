@@ -91,9 +91,10 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 32
+LIBPATCH = 33
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
+UNIT_ADD_LOCKNAME = "unit-add"
 
 
 class Error(Exception):
@@ -288,6 +289,10 @@ class MySQLTLSSetupError(Error):
 
 class MySQLKillSessionError(Error):
     """Exception raised when there is an issue killing a connection."""
+
+
+class MySQLLockAcquisitionError(Error):
+    """Exception raised when a lock fails to be acquired."""
 
 
 class MySQLRescanClusterError(Error):
@@ -746,8 +751,12 @@ class MySQLBase(ABC):
                 initializing the juju_units_operations table
         """
         initialize_table_commands = (
-            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor "
+            "varchar(20), status varchar(20), primary key(task))",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', "
+            "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_ADD_LOCKNAME}', '', "
+            "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         try:
@@ -788,12 +797,18 @@ class MySQLBase(ABC):
             "label": instance_unit_label,
         }
 
+        if not self._acquire_lock(
+            from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
+        ):
+            raise MySQLLockAcquisitionError("Lock not acquired")
+
         connect_commands = (
             (
                 f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
                 f"@{from_instance or self.instance_address}')"
             ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "shell.options['dba.restartWaitTimeout'] = 3600",
         )
 
         for recovery_method in ["auto", "clone"]:
@@ -816,11 +831,19 @@ class MySQLBase(ABC):
                         f"Failed to add instance {instance_address} to cluster {self.cluster_name} on {self.instance_address}",
                         exc_info=e,
                     )
+                    self._release_lock(
+                        from_instance or self.instance_address,
+                        instance_unit_label,
+                        UNIT_ADD_LOCKNAME,
+                    )
                     raise MySQLAddInstanceToClusterError(e.message)
 
                 logger.debug(
                     f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
                 )
+        self._release_lock(
+            from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
+        )
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
@@ -853,6 +876,34 @@ class MySQLBase(ABC):
                 f"Failed to confirm instance configuration for {instance_address} with error {e.message}",
             )
             return False
+
+    def are_locks_acquired(self, from_instance: Optional[str] = None) -> bool:
+        """Report if any topology change is being executed.
+
+        Query the mysql.juju_units_operations table for any
+        in-progress lock for either unit add or removal.
+
+        Args:
+            from_instance: member instance to run the command from (fallback to current one)
+        """
+        commands = (
+            (
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}"
+                f"@{from_instance or self.instance_address}')"
+            ),
+            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
+            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
+        )
+        try:
+            output = self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            # log error and fallback to assuming topology is changing
+            logger.exception("Failed to get locks count")
+            return True
+
+        matches = re.search(r"<LOCKS>(\d)</LOCKS>", output)
+
+        return int(matches.group(1)) > 0 if matches else False
 
     def rescan_cluster(
         self,
@@ -937,6 +988,29 @@ class MySQLBase(ABC):
             return output_dict
         except MySQLClientError:
             logger.exception(f"Failed to get cluster status for {self.cluster_name}")
+
+    def get_cluster_node_count(self, from_instance: Optional[str] = None) -> int:
+        """Retrieve current count of cluster nodes.
+
+        Returns:
+            Amount of cluster nodes.
+        """
+        size_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
+            f"@{from_instance or self.instance_address}')",
+            'result = session.run_sql("SELECT COUNT(*) FROM performance_schema.replication_group_members")',
+            'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(size_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get node count", exc_info=e)
+            return 0
+
+        matches = re.search(r"<NODES>(\d)</NODES>", output)
+
+        return int(matches.group(1)) if matches else 0
 
     def get_cluster_endpoints(self, get_ips: bool = True) -> Tuple[str, str, str]:
         """Use get_cluster_status to return endpoints tuple.
@@ -1098,7 +1172,11 @@ class MySQLBase(ABC):
             "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
         )
 
-        output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+        try:
+            output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+        except MySQLClientError:
+            logger.debug("Failed to acquire lock")
+            return False
         matches = re.search(r"<ACQUIRED_LOCK>(\d)</ACQUIRED_LOCK>", output)
         if not matches:
             return False
