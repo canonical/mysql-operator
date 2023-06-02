@@ -143,23 +143,21 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLCheckUserExistenceError):
             self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_configure_mysqlrouter_user(self, _run_mysqlsh_script, _get_cluster_primary_address):
+    def test_configure_mysqlrouter_user(self, _run_mysqlsh_script):
         """Test the successful execution of configure_mysqlrouter_user."""
-        _get_cluster_primary_address.return_value = "2.2.2.2"
         _run_mysqlsh_script.return_value = ""
 
         _expected_create_mysqlrouter_user_commands = "\n".join(
             (
-                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
                 "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
             )
         )
 
         _expected_mysqlrouter_user_grant_commands = "\n".join(
             (
-                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
                 "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION;\")",
                 "session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1';\")",
                 "session.run_sql(\"GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1';\")",
@@ -197,25 +195,15 @@ class TestMySQLBase(unittest.TestCase):
                 "test_username", "test_password", "1.1.1.1", "app/0"
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database_and_scoped_user(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
+    def test_create_application_database_and_scoped_user(self, _run_mysqlsh_script):
         """Test the successful execution of create_application_database_and_scoped_user."""
-        _get_cluster_primary_address.return_value = "2.2.2.2"
         _run_mysqlsh_script.return_value = ""
-
-        _expected_create_database_commands = "\n".join(
-            (
-                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
-                'session.run_sql("CREATE DATABASE IF NOT EXISTS `test-database`;")',
-            )
-        )
 
         _expected_create_scoped_user_commands = "\n".join(
             (
-                "shell.connect('serverconfig:serverconfigpassword@2.2.2.2')",
+                "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
+                'session.run_sql("CREATE DATABASE IF NOT EXISTS `test-database`;")',
                 'session.run_sql("CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY \'test-password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
                 'session.run_sql("GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;")',
                 'session.run_sql("GRANT ALL PRIVILEGES ON `test-database`.* TO `test-username`@`1.1.1.1`;")',
@@ -226,16 +214,10 @@ class TestMySQLBase(unittest.TestCase):
             "test-database", "test-username", "test-password", "1.1.1.1", unit_name="app/0"
         )
 
-        self.assertEqual(_run_mysqlsh_script.call_count, 2)
+        self.assertEqual(_run_mysqlsh_script.call_count, 1)
 
         self.assertEqual(
-            sorted(_run_mysqlsh_script.mock_calls),
-            sorted(
-                [
-                    call(_expected_create_database_commands),
-                    call(_expected_create_scoped_user_commands),
-                ]
-            ),
+            _run_mysqlsh_script.mock_calls, [call(_expected_create_scoped_user_commands)]
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
@@ -630,9 +612,8 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_commands = "\n".join(
             [
-                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-                "cluster = dba.get_cluster('test_cluster')",
-                "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+                "shell.connect_to_primary('clusteradmin:clusteradminpassword@127.0.0.1')",
+                "primary_address = shell.parse_uri(session.uri)['host']",
                 "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
             ]
         )
@@ -653,9 +634,8 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_commands = "\n".join(
             [
-                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.2')",
-                "cluster = dba.get_cluster('test_cluster')",
-                "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+                "shell.connect_to_primary('clusteradmin:clusteradminpassword@127.0.0.2')",
+                "primary_address = shell.parse_uri(session.uri)['host']",
                 "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
             ]
         )
@@ -793,15 +773,12 @@ class TestMySQLBase(unittest.TestCase):
 
         self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
 
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="1.1.1.1:3306"
-    )
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_grant_privileges_to_user(self, _run_mysqlsh_script, _get_cluster_primary_address):
+    def test_grant_privileges_to_user(self, _run_mysqlsh_script):
         """Test the successful execution of grant_privileges_to_user."""
         expected_commands = "\n".join(
             (
-                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
+                "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
                 "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_user'@'%' WITH GRANT OPTION\")",
             )
         )
@@ -816,14 +793,13 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_commands = "\n".join(
             (
-                "shell.connect('serverconfig:serverconfigpassword@1.1.1.1:3306')",
+                "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
                 "session.run_sql(\"GRANT SELECT, UPDATE ON *.* TO 'test_user'@'%'\")",
             )
         )
 
         self.mysql.grant_privileges_to_user("test_user", "%", ["SELECT", "UPDATE"])
 
-        _get_cluster_primary_address.assert_called()
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
     @patch(
