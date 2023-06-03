@@ -237,10 +237,14 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.assert_not_called()
 
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
-    def test_create_custom_mysqld_config(self, _open, _path, _get_innodb_buffer_pool_parameters):
+    def test_create_custom_mysqld_config(
+        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+    ):
         """Test successful execution of create_custom_mysqld_config."""
+        self.maxDiff = None
         _path_mock = MagicMock()
         _path.return_value = _path_mock
 
@@ -249,14 +253,20 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.create_custom_mysqld_config()
 
-        config = """[mysqld]
-bind-address = 0.0.0.0
-mysqlx-bind-address = 0.0.0.0
-innodb_buffer_pool_size = 1234
-innodb_buffer_pool_chunk_size = 5678
-report_host = 127.0.0.1
-"""
+        config = "\n".join(
+            (
+                "[mysqld]",
+                "bind-address = 0.0.0.0",
+                "mysqlx-bind-address = 0.0.0.0",
+                "innodb_buffer_pool_size = 1234",
+                "max_connections = 111",
+                "innodb_buffer_pool_chunk_size = 5678",
+                "report_host = 127.0.0.1",
+                "",
+            )
+        )
 
+        _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
         _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
