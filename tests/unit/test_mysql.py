@@ -923,6 +923,21 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLExecError):
             self.mysql._get_total_memory()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
+    def test_get_max_connections(self, _get_total_memory):
+        _get_total_memory.return_value = 16484458496
+
+        self.assertEqual(1310, self.mysql.get_max_connections())
+
+        _get_total_memory.return_value = 12582910
+
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            self.mysql.get_max_connections()
+
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            _get_total_memory.side_effect = MySQLExecError
+            self.mysql.get_max_connections()
+
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_execute_backup_commands(self, _execute_commands):
         """Test successful execution of execute_backup_commands()."""

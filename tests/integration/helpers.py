@@ -797,6 +797,29 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
     return random_chars
 
 
+async def retrieve_database_variable_value(
+    ops_test: OpsTest, unit: Unit, variable_name: str
+) -> str:
+    """Retrieve a database variable value as a string.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit: The unit to retrieve the variable
+        variable_name: The name of the variable to retrieve
+    Returns:
+        The variable value (str)
+    """
+    unit_ip = await get_unit_ip(ops_test, unit.name)
+    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
+    queries = [f"SELECT @@{variable_name};"]
+
+    output = await execute_queries_on_unit(
+        unit_ip, SERVER_CONFIG_USERNAME, server_config_password, queries
+    )
+
+    return output[0]
+
+
 async def get_tls_ca(
     ops_test: OpsTest,
     unit_name: str,

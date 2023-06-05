@@ -1514,8 +1514,8 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size = chunk_size
 
             return (pool_size, innodb_buffer_pool_chunk_size)
-        except Exception as e:
-            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
+        except Exception:
+            logger.exception("Failed to compute innodb buffer pool parameters")
             raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
 
     def get_max_connections(self) -> int:
@@ -1524,16 +1524,16 @@ class MySQLBase(ABC):
         # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
 
         bytes_per_connection = 12582912  # 12 Megabytes
-        total_memory = None
+        total_memory = 0
 
         try:
             total_memory = self._get_total_memory()
-        except Exception as e:
-            logger.exception("Failed to retrieve total memory", exc_info=e)
+        except Exception:
+            logger.exception("Failed to retrieve total memory")
             raise MySQLGetAutoTunningParametersError("Error retrieving total memory")
 
-        if not total_memory or total_memory < bytes_per_connection:
-            logger.exception("Not enough memory for running MySQL: %i", total_memory)
+        if total_memory < bytes_per_connection:
+            logger.error(f"Not enough memory for running MySQL: {total_memory=}")
             raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
 
         return total_memory // bytes_per_connection
