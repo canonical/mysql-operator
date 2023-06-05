@@ -374,7 +374,7 @@ class TestMySQL(unittest.TestCase):
         self.mysql.start_mysqld()
 
         _snap_service_operation.assert_called_once_with(
-            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True
         )
         _wait_until_mysql_connection.assert_called_once()
 
