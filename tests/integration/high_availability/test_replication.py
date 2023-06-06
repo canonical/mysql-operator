@@ -64,7 +64,6 @@ async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) ->
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.dev
 async def test_custom_variables(ops_test: OpsTest, mysql_charm_series) -> None:
     """Query database for custom variables."""
     mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
