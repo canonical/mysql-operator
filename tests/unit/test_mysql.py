@@ -24,7 +24,7 @@ from charms.mysql.v0.mysql import (
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
@@ -898,7 +898,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
         _get_total_memory.side_effect = MySQLExecError
 
-        with self.assertRaises(MySQLGetInnoDBBufferPoolParametersError):
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
             self.mysql.get_innodb_buffer_pool_parameters()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
@@ -922,6 +922,21 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(MySQLExecError):
             self.mysql._get_total_memory()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
+    def test_get_max_connections(self, _get_total_memory):
+        _get_total_memory.return_value = 16484458496
+
+        self.assertEqual(1310, self.mysql.get_max_connections())
+
+        _get_total_memory.return_value = 12582910
+
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            self.mysql.get_max_connections()
+
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            _get_total_memory.side_effect = MySQLExecError
+            self.mysql.get_max_connections()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_execute_backup_commands(self, _execute_commands):
@@ -1303,7 +1318,7 @@ xtrabackup/location --prepare
                 group="test-group",
             )
 
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError()
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError()
         with self.assertRaises(MySQLPrepareBackupForRestoreError):
             self.mysql.prepare_backup_for_restore(
                 "backup/location",

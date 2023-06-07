@@ -232,7 +232,7 @@ class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
     """
 
 
-class MySQLGetInnoDBBufferPoolParametersError(Error):
+class MySQLGetAutoTunningParametersError(Error):
     """Exception raised when there is an error computing the innodb buffer pool parameters."""
 
 
@@ -1018,6 +1018,7 @@ class MySQLBase(ABC):
 
         def _get_host_ip(host: str) -> str:
             try:
+                port = None
                 if ":" in host:
                     host, port = host.split(":")
 
@@ -1513,9 +1514,29 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size = chunk_size
 
             return (pool_size, innodb_buffer_pool_chunk_size)
-        except Exception as e:
-            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
-            raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
+        except Exception:
+            logger.exception("Failed to compute innodb buffer pool parameters")
+            raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
+
+    def get_max_connections(self) -> int:
+        """Calculate max_connections parameter for the instance."""
+        # Reference: based off xtradb-cluster-operator
+        # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
+
+        bytes_per_connection = 12582912  # 12 Megabytes
+        total_memory = 0
+
+        try:
+            total_memory = self._get_total_memory()
+        except Exception:
+            logger.exception("Failed to retrieve total memory")
+            raise MySQLGetAutoTunningParametersError("Error retrieving total memory")
+
+        if total_memory < bytes_per_connection:
+            logger.error(f"Not enough memory for running MySQL: {total_memory=}")
+            raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
+
+        return total_memory // bytes_per_connection
 
     def _get_total_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
@@ -1732,7 +1753,7 @@ Swap:     1027600384  1027600384           0
         """Prepare the backup in the provided dir for restore."""
         try:
             innodb_buffer_pool_size, _ = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError as e:
+        except MySQLGetAutoTunningParametersError as e:
             raise MySQLPrepareBackupForRestoreError(e)
 
         prepare_backup_command = f"""
