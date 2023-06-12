@@ -16,6 +16,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLCreateClusterSetError,
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
@@ -218,13 +219,17 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         try:
-            # Create the cluster from the leader unit
+            # Create the cluster and cluster set from the leader unit
             self._create_cluster()
+            self._create_cluter_set()
             self.unit.status = ActiveStatus(self.active_status_message)
-        except MySQLCreateClusterError:
-            self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
-        except MySQLInitializeJujuOperationsTableError:
-            self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
+        except (
+            MySQLCreateClusterError,
+            MySQLCreateClusterSetError,
+            MySQLInitializeJujuOperationsTableError,
+        ) as e:
+            logger.exception("Failed to create cluster")
+            raise e
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
@@ -601,6 +606,14 @@ class MySQLOperatorCharm(CharmBase):
             subprocess.check_call(["open-port", "33060/tcp"])
         except subprocess.CalledProcessError:
             logger.exception("failed to open port")
+
+    def _create_cluter_set(self) -> None:
+        """Create cluster set from initialized cluster."""
+        # domain name generated if not set in configuration
+        domain_name = (
+            self.config.get("cluster-set-domain-name") or f"cluster_set_{generate_random_hash()}"
+        )
+        self._mysql.create_cluster_set(domain_name)
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.

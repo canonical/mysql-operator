@@ -127,6 +127,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
@@ -153,6 +154,7 @@ class TestCharm(unittest.TestCase):
         _is_volume_mounted,
         _check_call,
         _stop_mysqld,
+        _create_cluster_set,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)

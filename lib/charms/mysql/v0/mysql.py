@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 34
+LIBPATCH = 35
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -157,6 +157,10 @@ class MySQLConfigureInstanceError(Error):
 
 class MySQLCreateClusterError(Error):
     """Exception raised when there is an issue creating an InnoDB cluster."""
+
+
+class MySQLCreateClusterSetError(Error):
+    """Exception raised when there is an issue creating an Cluster Set."""
 
 
 class MySQLAddInstanceToClusterError(Error):
@@ -730,6 +734,24 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLCreateClusterError(e.message)
+
+    def create_cluster_set(self, domain_name: str) -> None:
+        """Create a cluster set for the cluster on cluster primary.
+
+        Raises MySQLCreateClusterSetError on cluster set creation failure.
+        """
+        commands = (
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.create_cluster_set('{domain_name}')",
+        )
+
+        try:
+            logger.debug(f"Creating cluster set name {domain_name}")
+            self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            logger.exception("Failed to add instance to cluster set on instance")
+            raise MySQLCreateClusterSetError
 
     def initialize_juju_units_operations_table(self) -> None:
         """Initialize the mysql.juju_units_operations table using the serverconfig user.

@@ -18,6 +18,7 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureRouterUserError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
+    MySQLCreateClusterSetError,
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
     MySQLDeleteUsersForRelationError,
@@ -318,6 +319,27 @@ class TestMySQLBase(unittest.TestCase):
 
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster("mysql-0")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_cluster_set(self, _run_mysqlsh_script):
+        """Test a successful execution of create_cluster."""
+        create_cluster_commands = (
+            "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.create_cluster_set('cluster-0')",
+        )
+
+        self.mysql.create_cluster_set("cluster-0")
+
+        _run_mysqlsh_script.assert_called_once_with("\n".join(create_cluster_commands))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_cluster_set_exceptions(self, _run_mysqlsh_script):
+        """Test exceptions raised while running create_cluster."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLCreateClusterSetError):
+            self.mysql.create_cluster_set("cluster-0")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
