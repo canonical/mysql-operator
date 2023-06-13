@@ -45,6 +45,7 @@ class TestMySQLBase(unittest.TestCase):
         self.mysql = MySQLBase(
             "127.0.0.1",
             "test_cluster",
+            "test_cluster_set",
             "password",
             "serverconfig",
             "serverconfigpassword",
@@ -326,10 +327,10 @@ class TestMySQLBase(unittest.TestCase):
         create_cluster_commands = (
             "shell.connect_to_primary('serverconfig:serverconfigpassword@127.0.0.1')",
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.create_cluster_set('cluster-0')",
+            "cluster.create_cluster_set('test_cluster_set')",
         )
 
-        self.mysql.create_cluster_set("cluster-0")
+        self.mysql.create_cluster_set()
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(create_cluster_commands))
 
@@ -339,7 +340,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateClusterSetError):
-            self.mysql.create_cluster_set("cluster-0")
+            self.mysql.create_cluster_set()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)

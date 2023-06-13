@@ -178,11 +178,13 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        # Set the cluster name in the peer relation databag if it is not already set
-        if not self.app_peer_data.get("cluster-name"):
-            self.app_peer_data["cluster-name"] = (
-                self.config.get("cluster-name") or f"cluster_{generate_random_hash()}"
-            )
+        # Set the cluster and cluster-set name in the peer relation databag
+        # if it is not already set
+        for key in ("cluster-name", "cluster-set-name"):
+            if not self.app_peer_data.get(key):
+                self.app_peer_data[key] = (
+                    self.config.get(key) or f"cluster_{generate_random_hash()}"
+                )
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -464,6 +466,7 @@ class MySQLOperatorCharm(CharmBase):
         return MySQL(
             self._get_unit_ip(self.unit),
             self.app_peer_data["cluster-name"],
+            self.app_peer_data["cluster-set-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
             SERVER_CONFIG_USERNAME,
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
@@ -609,11 +612,7 @@ class MySQLOperatorCharm(CharmBase):
 
     def _create_cluter_set(self) -> None:
         """Create cluster set from initialized cluster."""
-        # domain name generated if not set in configuration
-        domain_name = (
-            self.config.get("cluster-set-domain-name") or f"cluster_set_{generate_random_hash()}"
-        )
-        self._mysql.create_cluster_set(domain_name)
+        self._mysql.create_cluster_set()
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
