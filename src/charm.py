@@ -31,6 +31,7 @@ from ops.charm import (
     InstallEvent,
     RelationChangedEvent,
     StartEvent,
+    UpgradeCharmEvent,
 )
 from ops.main import main
 from ops.model import (
@@ -96,6 +97,7 @@ class MySQLOperatorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.database_storage_detaching, self._on_database_storage_detaching
         )
@@ -376,6 +378,23 @@ class MySQLOperatorCharm(CharmBase):
 
             # Only rescan cluster when topology is not changing
             self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+
+    def _on_upgrade_charm(self, event: UpgradeCharmEvent) -> None:
+        """Upgrade charm on single unit deployment."""
+        if len(self.peers.units) > 0:
+            logger.error("Upgrade charm it's only available on single unit deployment")
+            # raise?
+            return
+        if not isinstance(self.unit.status, ActiveStatus):
+            logger.debug("Upgrade charm only on active status")
+            event.defer()
+            return
+
+        self.unit.status = MaintenanceStatus("Upgrading charm")
+        self._mysql.update_snap()
+        self._mysql.start_mysqld()
+        self._mysql.wait_until_mysql_connection()
+        self._on_update_status(None)
 
     # =======================
     #  Custom Action Handlers

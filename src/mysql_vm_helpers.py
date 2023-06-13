@@ -73,6 +73,10 @@ class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
 
 
+class MySQLSnapUpdateError(Error):
+    """Exception raised when snap update failed."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -658,6 +662,21 @@ class MySQL(MySQLBase):
 
         shutil.chown(path, owner, group)
         os.chmod(path, mode=permission)
+
+    def update_snap(self) -> None:
+        """Update charmed-mysql snap."""
+        logger.info("Updating MySQL snap")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+        if charmed_mysql.revision == CHARMED_MYSQL_SNAP_REVISION:
+            return
+        try:
+            charmed_mysql.ensure(
+                snap.SnapState.Latest, revision=CHARMED_MYSQL_SNAP_REVISION, channel="8.0/edge"
+            )
+        except snap.SnapError:
+            logger.exception("Failed to update MySQL snap")
+            raise MySQLSnapUpdateError("Failed to update MySQL snap")
 
 
 def is_volume_mounted() -> bool:
