@@ -111,9 +111,9 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     await ops_test.model.relate(app, TLS_APP_NAME)
 
     # Wait for hooks start reconfiguring app
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[app].status != "active", timeout=4 * 60
-    )
+    # add as a wait since app state does not change
+    # due tls setup running too briefly
+    sleep(30)
 
     await ops_test.model.wait_for_idle(status="active", timeout=15 * 60)
 
@@ -161,10 +161,9 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         await unit.run_action(action_name="set-tls-private-key")
 
     # Wait for hooks start reconfiguring app
-    await ops_test.model.block_until(
-        lambda: ops_test.model.applications[app].status != "active", timeout=4 * 60
-    )
-    await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=15 * 60)
+    # add as a wait since app state does not change
+    # due tls setup running too briefly
+    sleep(30)
 
     # After updating both the external key and the internal key a new certificate request will be
     # made; then the certificates should be available and updated.

@@ -127,6 +127,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
@@ -151,6 +152,7 @@ class TestCharm(unittest.TestCase):
         _get_mysql_version,
         _is_volume_mounted,
         _check_call,
+        _stop_mysqld,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -161,6 +163,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
@@ -179,6 +182,7 @@ class TestCharm(unittest.TestCase):
         _configure_mysql_users,
         _is_volume_mounted,
         _check_call,
+        _stop_mysqld,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -275,6 +279,8 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.are_locks_acquired", return_value=False)
+    @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
     @patch("mysql_vm_helpers.MySQL.rescan_cluster")
@@ -291,6 +297,8 @@ class TestCharm(unittest.TestCase):
         _rescan_cluster,
         _get_cluster_primary_address,
         _get_member_state,
+        _get_cluster_node_count,
+        _are_locks_acquired,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
@@ -314,6 +322,8 @@ class TestCharm(unittest.TestCase):
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
         _workload_reset.assert_not_called()
+        _is_volume_mounted.assert_called_once()
+        _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
         _rescan_cluster.assert_called_once()
 
@@ -342,7 +352,6 @@ class TestCharm(unittest.TestCase):
         _rescan_cluster.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
-
         # test instance state = unreachable
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()

@@ -16,7 +16,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
@@ -172,14 +172,18 @@ class MySQL(MySQLBase):
                 innodb_buffer_pool_size,
                 innodb_buffer_pool_chunk_size,
             ) = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError:
-            raise MySQLCreateCustomMySQLDConfigError("Failed to compute innodb buffer pool size")
+            max_connections = self.get_max_connections()
+        except MySQLGetAutoTunningParametersError:
+            raise MySQLCreateCustomMySQLDConfigError(
+                "Failed to compute mysql parameters automatically"
+            )
 
         content = [
             "[mysqld]",
             "bind-address = 0.0.0.0",
             "mysqlx-bind-address = 0.0.0.0",
             f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+            f"max_connections = {max_connections}",
         ]
 
         if innodb_buffer_pool_chunk_size:
@@ -197,6 +201,7 @@ class MySQL(MySQLBase):
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
+        logger.debug("Resetting root user password and starting mysqld")
         with tempfile.NamedTemporaryFile(
             dir=MYSQLD_CONFIG_DIRECTORY,
             prefix="z-custom-init-file.",
@@ -208,11 +213,12 @@ class MySQL(MySQLBase):
                 dir=CHARMED_MYSQL_COMMON_DIRECTORY,
                 prefix="alter-root-user.",
                 suffix=".sql",
-                mode="w+",
+                mode="w",
                 encoding="utf-8",
             ) as _sql_file:
                 _sql_file.write(
-                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';"
+                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
+                    "FLUSH PRIVILEGES;"
                 )
                 _sql_file.flush()
 
@@ -259,14 +265,16 @@ class MySQL(MySQLBase):
                 except MySQLServiceNotRunningError:
                     raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
-    @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
+    @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
     def wait_until_mysql_connection(self) -> None:
         """Wait until a connection to MySQL has been obtained.
 
-        Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
+        Retry every 5 seconds for 120 seconds if there is an issue obtaining a connection.
         """
+        logger.debug("Waiting for MySQL connection")
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
+        logger.debug("MySQL connection possible")
 
     def execute_backup_commands(
         self,
@@ -466,7 +474,7 @@ class MySQL(MySQLBase):
         )
 
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True)
             self.wait_until_mysql_connection()
         except (
             MySQLServiceNotRunningError,
@@ -494,8 +502,9 @@ class MySQL(MySQLBase):
                     "exporter.password": self.monitoring_password,
                 }
             )
-
-            mysqld_snap.start(services=[CHARMED_MYSQLD_EXPORTER_SERVICE], enable=True)
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start", True
+            )
         except snap.SnapError:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
             raise MySQLExporterConnectError
@@ -681,13 +690,14 @@ def instance_hostname():
         return None
 
 
-def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
+def snap_service_operation(snapname: str, service: str, operation: str, enable=False) -> bool:
     """Helper function to run an operation on a snap service.
 
     Args:
         snapname: The name of the snap
         service: The name of the service
         operation: The name of the operation (restart, start, stop)
+        enable: (optional) A bool indicating if the service should be enabled or disabled on start
 
     Returns:
         a bool indicating if the operation was successful.
@@ -706,7 +716,7 @@ def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
             selected_snap.restart(services=[service])
             return selected_snap.services[service]["active"]
         elif operation == "start":
-            selected_snap.start(services=[service])
+            selected_snap.start(services=[service], enable=enable)
             return selected_snap.services[service]["active"]
         else:
             selected_snap.stop(services=[service])
