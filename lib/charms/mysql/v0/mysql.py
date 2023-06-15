@@ -236,7 +236,7 @@ class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
     """
 
 
-class MySQLGetInnoDBBufferPoolParametersError(Error):
+class MySQLGetAutoTunningParametersError(Error):
     """Exception raised when there is an error computing the innodb buffer pool parameters."""
 
 
@@ -1043,6 +1043,7 @@ class MySQLBase(ABC):
 
         def _get_host_ip(host: str) -> str:
             try:
+                port = None
                 if ":" in host:
                     host, port = host.split(":")
 
@@ -1538,9 +1539,29 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size = chunk_size
 
             return (pool_size, innodb_buffer_pool_chunk_size)
-        except Exception as e:
-            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
-            raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
+        except Exception:
+            logger.exception("Failed to compute innodb buffer pool parameters")
+            raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
+
+    def get_max_connections(self) -> int:
+        """Calculate max_connections parameter for the instance."""
+        # Reference: based off xtradb-cluster-operator
+        # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
+
+        bytes_per_connection = 12582912  # 12 Megabytes
+        total_memory = 0
+
+        try:
+            total_memory = self._get_total_memory()
+        except Exception:
+            logger.exception("Failed to retrieve total memory")
+            raise MySQLGetAutoTunningParametersError("Error retrieving total memory")
+
+        if total_memory < bytes_per_connection:
+            logger.error(f"Not enough memory for running MySQL: {total_memory=}")
+            raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
+
+        return total_memory // bytes_per_connection
 
     def _get_total_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
@@ -1678,7 +1699,7 @@ Swap:     1027600384  1027600384           0
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
         user=None,
@@ -1687,11 +1708,12 @@ Swap:     1027600384  1027600384           0
         """Retrieve the specified backup from S3.
 
         The backup is retrieved using xbcloud and stored in a temp dir in the
-        mysql container.
+        mysql container. This temp dir is supposed to be on the same volume as
+        the mysql data directory to reduce latency for IOPS.
         """
         nproc_command = "nproc".split()
         make_temp_dir_command = (
-            f"mktemp --directory {mysql_data_directory}/#mysql_sst_XXXX".split()
+            f"mktemp --directory {temp_restore_directory}/#mysql_sst_XXXX".split()
         )
 
         try:
@@ -1757,7 +1779,7 @@ Swap:     1027600384  1027600384           0
         """Prepare the backup in the provided dir for restore."""
         try:
             innodb_buffer_pool_size, _ = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError as e:
+        except MySQLGetAutoTunningParametersError as e:
             raise MySQLPrepareBackupForRestoreError(e)
 
         prepare_backup_command = f"""
@@ -1848,13 +1870,13 @@ Swap:     1027600384  1027600384           0
 
     def delete_temp_restore_directory(
         self,
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         user=None,
         group=None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
-        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
-        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/#mysql_sst_* -delete".split()
+        logger.info(f"Deleting temp restore directory in {temp_restore_directory}")
+        delete_temp_restore_directory_command = f"find {temp_restore_directory} -wholename {temp_restore_directory}/#mysql_sst_* -delete".split()
 
         try:
             logger.debug(
