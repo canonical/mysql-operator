@@ -178,13 +178,12 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        # Set the cluster and cluster-set name in the peer relation databag
-        # if it is not already set
-        for key in ("cluster-name", "cluster-set-domain-name"):
-            if not self.app_peer_data.get(key):
-                self.app_peer_data[key] = (
-                    self.config.get(key) or f"cluster_{generate_random_hash()}"
-                )
+        # Create and set cluster and cluster-set names in the peer relation databag
+        common_hash = generate_random_hash()
+        self.app_peer_data.setdefault(
+            "cluster-name", self.config.get("cluster-name", f"cluster-{common_hash}")
+        )
+        self.app_peer_data.setdefault("cluster-set-domain-name", f"cluster-set-{common_hash}")
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
