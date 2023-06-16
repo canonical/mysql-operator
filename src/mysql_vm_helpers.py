@@ -185,6 +185,7 @@ class MySQL(MySQLBase):
             "[mysqld]",
             "bind-address = 0.0.0.0",
             "mysqlx-bind-address = 0.0.0.0",
+            f"report_host = {self.instance_address}",
             f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
             f"max_connections = {max_connections}",
         ]
@@ -192,7 +193,10 @@ class MySQL(MySQLBase):
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        content.append(f"report_host = {self.instance_address}")
+        if self._get_total_memory() < 2000000000:
+            # further reduce memory usage for small instances
+            content.append("performance-schema-instrument='memory/%=OFF'")
+
         content.append("")
 
         # create the mysqld config directory if it does not exist
