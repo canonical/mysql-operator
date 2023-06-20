@@ -7,7 +7,7 @@ This MySQL operator charm comes in two flavours to deploy and operate MySQL on [
 [note type="positive"]
 **"Charmed MySQL", "MariaDB", "OSM MariaDB", "Percona Cluster" or "Mysql Innodb Cluster"?**
 
-This "Charmed MySQL" operator is a new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators [providing](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) all juju-interfaces of legacy charmsz.
+This "Charmed MySQL" operator is a new "[Charmed Operator SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators [providing](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) all juju-interfaces of legacy charms.
 [/note]
 
 ## Project and community
@@ -47,14 +47,15 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2     | h-restore-backup              | [Restore a Backup](/t/charmed-mysql-how-to-restore-backup/9908)                            |
 | 2     | h-migrate-cluster-via-restore | [Cluster Migration with Restore](/t/charmed-mysql-how-to-migrate-cluster-via-restore/9906) |
 | 2     | h-enable-monitoring           | [Enable Monitoring](/t/charmed-mysql-how-to-enable-monitoring/9900)                        |
+| 2     | h-async-replication           | [ClusterSet: async replication](/t/charmed-mysql-how-to-clusterset-async-replication/10931)                        |
 | 1     | reference                     | [Reference]()                                                                              |
 | 2     | r-actions                     | [Actions](https://charmhub.io/mysql/actions)                                               |
 | 2     | r-configurations              | [Configurations](https://charmhub.io/mysql/configure)                                      |
 | 2     | r-libraries                   | [Libraries](https://charmhub.io/mysql/libraries/helpers)                                   |
 | 2     | r-integrations                   | [Integrations](https://charmhub.io/mysql/integrations)                                   |
 | 1     | explanation                    | [Explanation]()                                                                                                      |
-| 2     | e-interfaces                | [ Interfaces/endpoints](/t/charmed-mysql-explanations-interfaces-endpoints/10250)
-|
+| 2     | e-interfaces                | [Interfaces/endpoints](/t/charmed-mysql-explanations-interfaces-endpoints/10250) |
+| 2     | e-legacy-charm  | [Legacy charm](/t/charmed-mysql-explanations-legacy-charm/10788) |
 
 # Redirects
 
