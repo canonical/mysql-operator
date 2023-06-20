@@ -9,8 +9,6 @@ For simplicity, we deploy both MySQL InnoDB Clusters into the same model, but th
 
 ![MySQL_async_ClusterSet|690x586](upload://t8RCVAmkq1Hp5BwJM85ZJwxkREP.png) 
 
-**Note**: MySQL Router part is not available in the document now. To be continued...
-
 ## Bootstrap
 Bootstrap two MySQL InnoDB Clusters (Rome and Lisbon) and test application to generate SQL traffic:
 ```shell
@@ -77,7 +75,7 @@ juju ssh mysql-1st/leader charmed-mysql.mysqlsh --py -h127.0.0.1 -uclusteradmin 
 ```
 
 ## Check the status
-Chech the Juju and MySQL InnoDB Cluster(Set) statuses:
+Check the Juju and MySQL InnoDB Cluster(Set) statuses:
 ```shell
 juju status
 
