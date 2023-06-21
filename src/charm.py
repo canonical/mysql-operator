@@ -409,7 +409,9 @@ class MySQLOperatorCharm(CharmBase):
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            event.fail(f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
             return
 
         if username == ROOT_USERNAME:
@@ -436,7 +438,9 @@ class MySQLOperatorCharm(CharmBase):
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            event.fail(f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
             return
 
         if username == ROOT_USERNAME:
