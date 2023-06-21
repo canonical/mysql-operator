@@ -77,6 +77,7 @@ from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
+    stop_after_delay,
     wait_fixed,
     wait_random,
 )
@@ -91,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 34
+LIBPATCH = 35
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -297,6 +298,22 @@ class MySQLLockAcquisitionError(Error):
 
 class MySQLRescanClusterError(Error):
     """Exception raised when there is an issue rescanning the cluster."""
+
+
+class MySQLUninstallGroupReplicationError(Error):
+    """Exception raised when there is an issue uninstalling group replication."""
+
+
+class MySQLGetVariableValueError(Error):
+    """Exception raised when there is an issue getting variable value."""
+
+
+class MySQLDropMetadataSchemaError(Error):
+    """Exception raised when there is an issue dropping the metadata schema."""
+
+
+class MySQLSuperReadOnlyEnabledError(Error):
+    """Exception raised when the super_read_only variable is eneabled."""
 
 
 @dataclasses.dataclass
@@ -1864,6 +1881,85 @@ Swap:     1027600384  1027600384           0
         except MySQLExecError as e:
             logger.exception("Failed to remove temp backup directory")
             raise MySQLDeleteTempRestoreDirectoryError(e.message)
+
+    @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
+    def wait_until_super_read_only_disabled(self) -> None:
+        """Wait until the super_read_only variable is disabled.
+
+        Retry every 5 seconds for 120 seconds if the variable is enabled.
+        """
+        logger.info("Waiting until MySQL super_read_only is disabled")
+        if self.get_variable_value("super_read_only") == "ON":
+            logger.info("MySQL super_read_only enabled. Retrying in 5 seconds")
+            raise MySQLSuperReadOnlyEnabledError("MySQL super_read_only enabled")
+        logger.info("MySQL super_read_only disabled")
+
+    def uninstall_group_replication(self) -> None:
+        """Uninstalls group replication plugin after setting super_read_only off."""
+        disable_super_read_only_command = "SET GLOBAL super_read_only = 0"
+        uninstall_group_replication_commands = (
+            "STOP group_replication",
+            "UNINSTALL PLUGIN group_replication",
+        )
+
+        try:
+            logger.error(f"super_read_only = {self.get_variable_value('super_read_only')}")
+
+            logger.info("Disabling super_read_only")
+            self._run_mysqlcli_script(
+                disable_super_read_only_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+
+            logger.error(f"super_read_only = {self.get_variable_value('super_read_only')}")
+
+            self.wait_until_super_read_only_disabled()
+
+            logger.error(f"super_read_only = {self.get_variable_value('super_read_only')}")
+
+            logger.info("Uninstalling group replication plugin after disabling super_read_only")
+            self._run_mysqlcli_script(
+                "; ".join(uninstall_group_replication_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError as e:
+            logger.exception("Failed to uninstall plugin group replication")
+            raise MySQLUninstallGroupReplicationError(e.message)
+
+    def get_variable_value(self, variable_name: str) -> None:
+        """Retrieves the value of the provided variable from MySQL."""
+        retrieve_variable_command = f"SHOW VARIABLES LIKE '{variable_name}'"
+
+        try:
+            logger.info(f"Retrieving value of variable {variable_name}")
+            output = self._run_mysqlcli_script(
+                retrieve_variable_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+            return output.split("\n")[1].split()[1]
+        except MySQLClientError as e:
+            logger.exception(f"Failed to retrieve variable {variable_name}")
+            raise MySQLGetVariableValueError(e.message)
+
+    def drop_metadata_schema(self) -> None:
+        """Drop the metadata schema."""
+        options = {
+            "clearReadOnly": "true",
+            "force": "true",
+        }
+        commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"dba.drop_metadata_schema({json.dumps(options)})",
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError as e:
+            logger.exception("Failed to drop the metadata schema")
+            raise MySQLDropMetadataSchemaError(e)
 
     @abstractmethod
     def _execute_commands(

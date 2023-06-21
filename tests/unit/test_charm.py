@@ -363,11 +363,12 @@ class TestCharm(unittest.TestCase):
         _get_member_state.return_value = ("unreachable", "primary")
 
         self.charm.on.update_status.emit()
+
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
         _workload_reset.assert_called_once()
-        _get_cluster_primary_address.assert_called_once()
+        _get_cluster_primary_address.assert_called()
         _rescan_cluster.assert_called_once()
 
-        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+        self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))

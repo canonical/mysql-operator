@@ -73,6 +73,10 @@ class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
 
 
+class MySQLServiceRunningError(Error):
+    """Exception raised when MySQL is running but is expected to be stopped."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -276,6 +280,17 @@ class MySQL(MySQLBase):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
         logger.debug("MySQL connection possible")
 
+    @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
+    def wait_until_mysql_stopped(self) -> None:
+        """Wait until mysql has been stopped.
+
+        Retry every 5 seconds for 120 seconds if mysql has not been stopped.
+        """
+        logger.debug("Waiting until MySQL is stopped")
+        if os.path.exists(MYSQLD_SOCK_FILE):
+            raise MySQLServiceRunningError("MySQL socket file found")
+        logger.debug("MySQL connection not possible")
+
     def execute_backup_commands(
         self,
         s3_directory: str,
@@ -462,7 +477,14 @@ class MySQL(MySQLBase):
 
         try:
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-        except SnapServiceOperationError as e:
+            self.wait_until_mysql_stopped()
+        except (
+            SnapServiceOperationError,
+            MySQLServiceRunningError,
+        ) as e:
+            if isinstance(e, MySQLServiceRunningError):
+                logger.exception("Failed to stop mysqld")
+
             raise MySQLStopMySQLDError(e.message)
 
     def start_mysqld(self) -> None:

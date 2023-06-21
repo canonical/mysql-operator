@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import socket
 import subprocess
 from typing import Dict, Optional
 
@@ -16,9 +17,11 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLDropMetadataSchemaError,
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
+    MySQLGetVariableValueError,
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
     MySQLRebootFromCompleteOutageError,
@@ -70,6 +73,9 @@ from mysql_vm_helpers import (
     MySQLExporterConnectError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
+    MySQLServiceNotRunningError,
+    MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
     SnapServiceOperationError,
     instance_hostname,
     is_volume_mounted,
@@ -233,13 +239,15 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
-        if self._is_unit_waiting_to_join_cluster():
-            self._join_unit_to_cluster()
-            for port in ["3306", "33060"]:
-                try:
-                    subprocess.check_call(["open-port", f"{port}/tcp"])
-                except subprocess.CalledProcessError:
-                    logger.exception(f"failed to open port {port}")
+        if not self._is_unit_waiting_to_join_cluster():
+            return
+
+        self._join_unit_to_cluster()
+        for port in ["3306", "33060"]:
+            try:
+                subprocess.check_call(["open-port", f"{port}/tcp"])
+            except subprocess.CalledProcessError:
+                logger.exception(f"failed to open port {port}")
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
@@ -308,6 +316,106 @@ class MySQLOperatorCharm(CharmBase):
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
 
+    def _handle_potential_change_in_ip_address(self) -> bool:
+        """Helper method to handle potential change in unit ip address.
+
+        Returns a boolean indicating whether the report_host is the same as the
+        unit ip address.
+        """
+        if not self._mysql.is_mysqld_running():
+            # return true to allow other self-healing scenarios in update-status
+            # to proceed
+            return True
+
+        try:
+            report_host = self._mysql.get_variable_value("report_host")
+        except MySQLGetVariableValueError:
+            report_host = None
+
+        try:
+            hostname = socket.gethostname()
+            unit_ip = socket.gethostbyname(hostname)
+
+            if report_host and report_host != unit_ip:
+                logger.info(
+                    "Restarting mysqld, since it was started with --super-read-only option"
+                )
+                self._mysql.stop_mysqld()
+                self._mysql.start_mysqld()
+
+                self._mysql.uninstall_group_replication()
+
+                logger.info("Restarting mysqld with updated report_host value")
+                self._mysql.create_custom_mysqld_config()
+                self._mysql.stop_mysqld()
+                self._mysql.start_mysqld()
+                self._mysql.wait_until_mysql_connection()
+
+                if self.app.planned_units() > 1:
+                    logger.info("Joining unit to cluster after IP address change")
+                    self._join_unit_to_cluster()
+                else:
+                    logger.info("Dropping metadata schema")
+                    self._mysql.drop_metadata_schema()
+
+                    logger.info("Re-creating cluster and initializing juju operations table")
+                    unit_label = self.unit.name.replace("/", "-")
+                    self._mysql.create_cluster(unit_label)
+                    self._mysql.initialize_juju_units_operations_table()
+
+                    self._mysql.rescan_cluster()
+        except (
+            MySQLStopMySQLDError,
+            MySQLStartMySQLDError,
+            MySQLServiceNotRunningError,
+            MySQLDropMetadataSchemaError,
+            MySQLCreateClusterError,
+            MySQLInitializeJujuOperationsTableError,
+            MySQLRescanClusterError,
+        ):
+            logger.exception("Unable to handle potential change in ip address")
+            self.unit.status = MaintenanceStatus("Unable to handle change in ip address")
+            return False
+
+        try:
+            # Re-query report_host in case it changed
+            report_host = self._mysql.get_variable_value("report_host")
+        except MySQLGetVariableValueError:
+            report_host = None
+
+        return report_host == unit_ip
+
+    def _set_status_and_potentially_rescan(self, state: str, role: str) -> None:
+        """Helper function to set unit status and potentially rescan cluster."""
+        try:
+            primary_address = self._mysql.get_cluster_primary_address()
+        except MySQLGetClusterPrimaryAddressError:
+            self.unit.status = MaintenanceStatus("Unable to query cluster primary")
+            return
+
+        if not primary_address:
+            self.unit.status = MaintenanceStatus("Unable to find cluster primary")
+            return
+
+        # set unit status based on member-{state,role}
+        self.unit.status = (
+            ActiveStatus(self.active_status_message)
+            if state == "online"
+            else MaintenanceStatus(state)
+        )
+
+        if self.unit.is_leader():
+            # Set active status when primary is known
+            self.app.status = ActiveStatus()
+
+        if role == "primary":
+            if self._mysql.are_locks_acquired(from_instance=primary_address):
+                logger.debug("Skip cluster rescan while locks are held")
+                return
+
+            # Only rescan cluster when topology is not changing
+            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+
     def _on_update_status(self, _) -> None:
         """Handle update status.
 
@@ -347,35 +455,12 @@ class MySQLOperatorCharm(CharmBase):
             state = self.unit_peer_data["member-state"] = "unreachable"
         logger.info(f"Unit workload member-state is {state} with member-role {role}")
 
-        # set unit status based on member-{state,role}
-        self.unit.status = (
-            ActiveStatus(self.active_status_message)
-            if state == "online"
-            else MaintenanceStatus(state)
-        )
+        if not self._handle_potential_change_in_ip_address():
+            return
 
         self._handle_non_online_instance_status(state)
 
-        if self.unit.is_leader():
-            try:
-                primary_address = self._mysql.get_cluster_primary_address()
-            except MySQLGetClusterPrimaryAddressError:
-                self.unit.status = MaintenanceStatus("Unable to query cluster primary")
-                return
-
-            if not primary_address:
-                self.unit.status = MaintenanceStatus("Unable to find cluster primary")
-                return
-
-            # Set active status when primary is known
-            self.app.status = ActiveStatus()
-
-            if self._mysql.are_locks_acquired(from_instance=primary_address):
-                logger.debug("Skip cluster rescan while locks are held")
-                return
-
-            # Only rescan cluster when topology is not changing
-            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+        self._set_status_and_potentially_rescan(state, role)
 
     # =======================
     #  Custom Action Handlers
