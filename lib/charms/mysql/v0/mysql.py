@@ -160,6 +160,10 @@ class MySQLCreateClusterError(Error):
     """Exception raised when there is an issue creating an InnoDB cluster."""
 
 
+class MySQLCreateClusterSetError(Error):
+    """Exception raised when there is an issue creating an Cluster Set."""
+
+
 class MySQLAddInstanceToClusterError(Error):
     """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
 
@@ -337,6 +341,7 @@ class MySQLBase(ABC):
         self,
         instance_address: str,
         cluster_name: str,
+        cluster_set_name: str,
         root_password: str,
         server_config_user: str,
         server_config_password: str,
@@ -352,6 +357,7 @@ class MySQLBase(ABC):
         Args:
             instance_address: address of the targeted instance
             cluster_name: cluster name
+            cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
             server_config_user: user name for the server config user
             server_config_password: password for the server config user
@@ -364,6 +370,7 @@ class MySQLBase(ABC):
         """
         self.instance_address = instance_address
         self.cluster_name = cluster_name
+        self.cluster_set_name = cluster_set_name
         self.root_password = root_password
         self.server_config_user = server_config_user
         self.server_config_password = server_config_password
@@ -747,6 +754,24 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLCreateClusterError(e.message)
+
+    def create_cluster_set(self) -> None:
+        """Create a cluster set for the cluster on cluster primary.
+
+        Raises MySQLCreateClusterSetError on cluster set creation failure.
+        """
+        commands = (
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.create_cluster_set('{self.cluster_set_name}')",
+        )
+
+        try:
+            logger.debug(f"Creating cluster set name {self.cluster_set_name}")
+            self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            logger.exception("Failed to add instance to cluster set on instance")
+            raise MySQLCreateClusterSetError
 
     def initialize_juju_units_operations_table(self) -> None:
         """Initialize the mysql.juju_units_operations table using the serverconfig user.
@@ -1691,7 +1716,7 @@ Swap:     1027600384  1027600384           0
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
         user=None,
@@ -1700,11 +1725,12 @@ Swap:     1027600384  1027600384           0
         """Retrieve the specified backup from S3.
 
         The backup is retrieved using xbcloud and stored in a temp dir in the
-        mysql container.
+        mysql container. This temp dir is supposed to be on the same volume as
+        the mysql data directory to reduce latency for IOPS.
         """
         nproc_command = "nproc".split()
         make_temp_dir_command = (
-            f"mktemp --directory {mysql_data_directory}/#mysql_sst_XXXX".split()
+            f"mktemp --directory {temp_restore_directory}/#mysql_sst_XXXX".split()
         )
 
         try:
@@ -1861,13 +1887,13 @@ Swap:     1027600384  1027600384           0
 
     def delete_temp_restore_directory(
         self,
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         user=None,
         group=None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
-        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
-        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/#mysql_sst_* -delete".split()
+        logger.info(f"Deleting temp restore directory in {temp_restore_directory}")
+        delete_temp_restore_directory_command = f"find {temp_restore_directory} -wholename {temp_restore_directory}/#mysql_sst_* -delete".split()
 
         try:
             logger.debug(

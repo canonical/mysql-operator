@@ -88,6 +88,7 @@ class MySQL(MySQLBase):
         self,
         instance_address: str,
         cluster_name: str,
+        cluster_set_name: str,
         root_password: str,
         server_config_user: str,
         server_config_password: str,
@@ -103,6 +104,7 @@ class MySQL(MySQLBase):
         Args:
             instance_address: address of the targeted instance
             cluster_name: cluster name
+            cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
             server_config_user: user name for the server config user
             server_config_password: password for the server config user
@@ -116,6 +118,7 @@ class MySQL(MySQLBase):
         super().__init__(
             instance_address=instance_address,
             cluster_name=cluster_name,
+            cluster_set_name=cluster_set_name,
             root_password=root_password,
             server_config_user=server_config_user,
             server_config_password=server_config_password,
@@ -304,16 +307,18 @@ class MySQL(MySQLBase):
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
             MYSQLD_SOCK_FILE,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             MYSQLD_DEFAULTS_CONFIG_FILE,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(self) -> None:
+    def delete_temp_backup_directory(
+        self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
+    ) -> None:
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
-            MYSQL_DATA_DIR,
+            from_directory,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
@@ -327,7 +332,7 @@ class MySQL(MySQLBase):
         return super().retrieve_backup_with_xbcloud(
             backup_id,
             s3_parameters,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
             user=ROOT_SYSTEM_USER,
@@ -416,7 +421,7 @@ class MySQL(MySQLBase):
     def delete_temp_restore_directory(self) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         super().delete_temp_restore_directory(
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
