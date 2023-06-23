@@ -8,6 +8,7 @@ import logging
 import subprocess
 from typing import Dict, Optional
 
+import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -75,6 +76,7 @@ from mysql_vm_helpers import (
     instance_hostname,
     is_volume_mounted,
     reboot_system,
+    snap,
     snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
@@ -93,6 +95,7 @@ class MySQLOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.remove, self._on_remove)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -145,6 +148,7 @@ class MySQLOperatorCharm(CharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
+                retry=tenacity.retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -154,6 +158,10 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = WaitingStatus("Waiting to start MySQL")
+
+    def _on_remove(self, _):
+        """Handle the remove event."""
+        MySQL.uninstall_mysql_snap()
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event."""

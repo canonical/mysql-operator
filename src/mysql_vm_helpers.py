@@ -22,7 +22,6 @@ from charms.mysql.v0.mysql import (
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
-from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
@@ -131,19 +130,24 @@ class MySQL(MySQLBase):
         """Install and configure MySQL dependencies.
 
         Raises
-            subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
-            apt.PackageNotFoundError, apt.PackageError: if issue install mysql server
-            snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
+            subprocess.CalledProcessError: if issue creating mysqlsh common dir
+            snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
+        logger.debug("Retrieving snap cache")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+        if charmed_mysql.present:
+            logger.error(
+                f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
+            )
+            raise Exception(
+                f"Multiple {CHARMED_MYSQL_SNAP_NAME} snap installs not supported on one machine"
+            )
+
         try:
             # install the charmed-mysql snap
-            logger.debug("Retrieving snap cache")
-            cache = snap.SnapCache()
-            charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-
-            if not charmed_mysql.present:
-                logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            logger.debug("Installing charmed-mysql snap")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -153,9 +157,6 @@ class MySQL(MySQLBase):
 
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
-            raise
-        except (apt.PackageNotFoundError, apt.PackageError) as e:
-            logger.exception("Failed to install apt packages", exc_info=e)
             raise
         except (snap.SnapNotFoundError, snap.SnapError) as e:
             logger.exception("Failed to install snaps", exc_info=e)
