@@ -285,7 +285,6 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
-    @patch("mysql_vm_helpers.MySQL.rescan_cluster")
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
@@ -296,7 +295,6 @@ class TestCharm(unittest.TestCase):
         _snap_service_operation,
         __reboot_from_complete_outage,
         _is_volume_mounted,
-        _rescan_cluster,
         _get_cluster_primary_address,
         _get_member_state,
         _get_cluster_node_count,
@@ -327,14 +325,12 @@ class TestCharm(unittest.TestCase):
         _is_volume_mounted.assert_called_once()
         _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
-        _rescan_cluster.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         # test instance state = offline
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
-        _rescan_cluster.reset_mock()
 
         _get_member_state.return_value = ("offline", "primary")
         self.harness.update_relation_data(
@@ -351,13 +347,11 @@ class TestCharm(unittest.TestCase):
         _snap_service_operation.assert_not_called()
         _workload_reset.assert_not_called()
         _get_cluster_primary_address.assert_called_once()
-        _rescan_cluster.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
         # test instance state = unreachable
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
-        _rescan_cluster.reset_mock()
 
         __reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
@@ -370,6 +364,5 @@ class TestCharm(unittest.TestCase):
         _snap_service_operation.assert_called_once()
         _workload_reset.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
-        _rescan_cluster.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
