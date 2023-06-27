@@ -281,7 +281,6 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.are_locks_acquired", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
@@ -289,8 +288,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
     @patch("charm.MySQLOperatorCharm._workload_reset")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_on_update(
         self,
+        _,
         _workload_reset,
         _snap_service_operation,
         __reboot_from_complete_outage,
@@ -298,7 +299,6 @@ class TestCharm(unittest.TestCase):
         _get_cluster_primary_address,
         _get_member_state,
         _get_cluster_node_count,
-        _are_locks_acquired,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
