@@ -197,13 +197,7 @@ class MySQL(MySQLBase):
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        resolved_ip = socket.gethostbyname(socket.getfqdn())
-        if resolved_ip.startswith("127") or resolved_ip == "::1":
-            # append report host ip host_address to the custom config
-            # ref. https://github.com/canonical/mysql-operator/issues/121
-            logger.debug("Hostname resolves to loopback. Appending report_host to custom config")
-            content.append(f"report_host = {self.instance_address}")
-
+        content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
 
         # create the mysqld config directory if it does not exist

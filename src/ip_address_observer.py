@@ -125,8 +125,12 @@ def main():
         ip_address = _get_local_ip()
 
         if not previous_ip_address:
+            print(f"Setting initial ip address to {ip_address}")
+            sys.stdout.flush()
             previous_ip_address = ip_address
         elif ip_address != previous_ip_address:
+            print(f"Detected ip address change from {previous_ip_address} to {ip_address}")
+            sys.stdout.flush()
             previous_ip_address = ip_address
             dispatch(run_command, unit, charm_directory)
 

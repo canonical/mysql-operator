@@ -80,7 +80,7 @@ class MySQLMachineHostnameResolution(Object):
 
         with open("/etc/hosts", "r") as hosts_file:
             for line in hosts_file:
-                if line.strip() == "" or line.startswith("#") or "# unit=" not in line:
+                if "# unit=" not in line:
                     continue
 
                 ip, fqdn, hostname = line.split("#")[0].strip().split()
