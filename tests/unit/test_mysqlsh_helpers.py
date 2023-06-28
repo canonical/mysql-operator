@@ -241,8 +241,9 @@ class TestMySQL(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
+    @patch("socket.getfqdn", return_value="1.2.3.4")
     def test_create_custom_mysqld_config(
-        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+        self, _, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
     ):
         """Test successful execution of create_custom_mysqld_config."""
         self.maxDiff = None
@@ -262,6 +263,7 @@ class TestMySQL(unittest.TestCase):
                 "innodb_buffer_pool_size = 1234",
                 "max_connections = 111",
                 "innodb_buffer_pool_chunk_size = 5678",
+                "report_host = 1.2.3.4",
                 "",
             )
         )
