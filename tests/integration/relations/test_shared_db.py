@@ -155,7 +155,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, mysql_charm_series: 
     """
     charm = await ops_test.build_charm(".")
 
-    config = {"cluster-name": CLUSTER_NAME}
+    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
     await ops_test.model.deploy(
         charm,
         application_name=APP_NAME,

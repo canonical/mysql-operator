@@ -252,7 +252,7 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.create_custom_mysqld_config()
+        self.mysql.create_custom_mysqld_config(profile="production")
 
         config = "\n".join(
             (
@@ -300,7 +300,7 @@ class TestMySQL(unittest.TestCase):
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.create_custom_mysqld_config()
+            self.mysql.create_custom_mysqld_config(profile="production")
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):

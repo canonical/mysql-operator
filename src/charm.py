@@ -578,7 +578,7 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config()
+        self._mysql.create_custom_mysqld_config(profile=self.config.get("profile"))
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
