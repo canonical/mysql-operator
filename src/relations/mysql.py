@@ -124,7 +124,7 @@ class MySQLRelation(Object):
             return
 
         if self.charm._mysql.does_mysql_user_exist(username, "%"):
-            logger.error(f"User '{username}'@'%' already exists")
+            logger.info(f"User '{username}'@'%' already exists")
             return
 
         if (
