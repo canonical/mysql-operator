@@ -52,12 +52,18 @@ juju run-action mysql-2nd/leader set-password username=clusteradmin password=${c
 juju run-action mysql-2nd/leader set-password username=serverconfig password=${serverconfig_password_1st} --wait
 ```
 
+## Pause operators
+
+To avoid any damage by the operator, we should pause all activities there, until re-configuration is finished. WIP: [DPE-2183](https://warthogs.atlassian.net/browse/DPE-2183), [DPE-2184](https://warthogs.atlassian.net/browse/DPE-2184).
+
+**TODO**: pause all MySQL Clusters (in ClusterSet) and all mysql-routers (as Juju `update-status` might trigger [cluster.rescan()](https://dev.mysql.com/doc/dev/mysqlsh-api-javascript/8.0/classmysqlsh_1_1dba_1_1_cluster.html#a96c63d07c753c4482d60fc6eea9a895f) and produce troubles for Cluster members are being synced via mysql-shell).
+
 ## Destroy the 2nd Cluster (to be re-created inside the ClusterSet)
 It is NOT possible to "merge" two different MySQL InnoDB Clusters due to [different GTID](https://dev.mysql.com/doc/mysql-shell/8.0/en/innodb-clusterset-rejoin.html) on both Clusters. We are going to dissolve the second Cluster to re-create it as a clone of the first one:
 ```shell
 juju ssh mysql-2nd/leader charmed-mysql.mysqlsh --py -h127.0.0.1 -uclusteradmin -p${clusteradmin_password_1st}
 
-> dba.get_cluster().dissolve() # answer YES to all questions, remember IPs of all cluster members
+> dba.get_cluster().dissolve(); # answer YES to all questions, remember IPs of all cluster members
 ```
 
 ## Re-create the 2nd Cluster as 1st Cluster clone
@@ -69,9 +75,10 @@ Create the second cluster as a clone copy of the first cluster under the first C
 juju ssh mysql-1st/leader charmed-mysql.mysqlsh --py -h127.0.0.1 -uclusteradmin -p${clusteradmin_password_1st}
 
 > cs = dba.get_cluster_set()
-> cluster2 = cs.create_replica_cluster("clusteradmin@FIXME_IP_1:3306", "FIXME_LISBON", recoveryProgress=1, timeout=10, recoveryMethod='clone')
-> cluster2.add_instance('clusteradmin@FIXME_IP_2:3306', label="mysql-2nd-1")
-> cluster2.add_instance('clusteradmin@FIXME_IP_3:3306', label="mysql-2nd-2")
+> cluster2 = cs.create_replica_cluster("clusteradmin@FIXME_IP_1:3306", "FIXME_LISBON", recoveryProgress=1, timeout=10, recoveryMethod='clone');
+> cluster2.set_instance_option('clusteradmin@FIXME_IP_1:3306', 'label', 'mysql-2nd-0'); 
+> cluster2.add_instance('clusteradmin@FIXME_IP_2:3306', label="mysql-2nd-1", recoveryMethod='clone');
+> cluster2.add_instance('clusteradmin@FIXME_IP_3:3306', label="mysql-2nd-2", recoveryMethod='clone');
 ```
 
 ## Check the status
@@ -129,16 +136,7 @@ juju ssh mysql-1st/leader charmed-mysql.mysqlsh --py -h127.0.0.1 -uclusteradmin 
             "status": "OK", 
             "statusText": "Cluster is ONLINE and can tolerate up to ONE failure.", 
             "topology": {
-                "10.18.215.21:3306": {
-                    "address": "10.18.215.21:3306", 
-                    "memberRole": "SECONDARY", 
-                    "mode": "R/O", 
-                    "replicationLagFromImmediateSource": "", 
-                    "replicationLagFromOriginalSource": "", 
-                    "status": "ONLINE", 
-                    "version": "8.0.32"
-                }, 
-                "10.18.215.60:3306": {
+                "mysql-2nd-0": {
                     "address": "10.18.215.60:3306", 
                     "memberRole": "PRIMARY", 
                     "mode": "R/O", 
@@ -148,6 +146,15 @@ juju ssh mysql-1st/leader charmed-mysql.mysqlsh --py -h127.0.0.1 -uclusteradmin 
                     "version": "8.0.32"
                 }, 
                 "mysql-2nd-1": {
+                    "address": "10.18.215.21:3306", 
+                    "memberRole": "SECONDARY", 
+                    "mode": "R/O", 
+                    "replicationLagFromImmediateSource": "", 
+                    "replicationLagFromOriginalSource": "", 
+                    "status": "ONLINE", 
+                    "version": "8.0.32"
+                }, 
+                "mysql-2nd-2": {
                     "address": "10.18.215.87:3306", 
                     "memberRole": "SECONDARY", 
                     "mode": "R/O", 
@@ -314,8 +321,12 @@ mysql-router-2nd:database            application-2nd:database             mysql_
 mysql-router-2nd:mysql-router-peers  mysql-router-2nd:mysql-router-peers  mysql_router_peers  peer         
 ```
 
-## ClusterSet/Cluster Switchovers
+## ClusterSet/Cluster Scaling
 to be continued...
+
+## ClusterSet/Cluster Switchovers
+
+Read the general [ClusterSet Emergency Failover](https://dev.mysql.com/doc/mysql-shell/8.0/en/innodb-clusterset-failover.html). Juju, to be continued...
 
 ## Appendix
  * [Jira Epic](https://warthogs.atlassian.net/browse/DPE-2147): [VM](https://warthogs.atlassian.net/browse/DPE-2148) and [K8s](https://warthogs.atlassian.net/browse/DPE-2149) cases.

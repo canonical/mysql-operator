@@ -22,11 +22,14 @@ The "modern" charm provides temporary support for the legacy interfaces:
   mysql:
     charm: mysql
     channel: 8.0/stable
+    trust: true
 ```
 
 * **proper migration**: migrate the application to the new interface "[mysql_client](https://github.com/canonical/charm-relation-interfaces)". The application will connect MySQL using "[data_interfaces](https://charmhub.io/data-platform-libs/libraries/data_interfaces)" library from "[data-platform-libs](https://github.com/canonical/data-platform-libs/)" via endpoint `database`.
 
 **Warning**: NO in-place upgrades possible! Legacy charm cannot be upgraded to Operator-framework-based one. To move DB data, the second/modern DB application must be launched nearby and data should be copied from "legacy" application to the "modern" one. Canonical Data Platform team will prepare the copy&paste guide. Please [contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you need migration instructions.
+
+**Note**: the `trust` option must be enabled if [ Role Based Access Control (RBAC)](https://kubernetes.io/docs/concepts/security/rbac-good-practices/) is in use on your Kubernetes.
 
 ## How to deploy old "legacy" mysql charm
 
