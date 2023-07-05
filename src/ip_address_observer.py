@@ -86,7 +86,7 @@ class IPAddressObserver(Object):
         observer_pid = int(self.charm.unit_peer_data["observer-pid"])
 
         try:
-            os.kill(observer_pid, signal.SIGINT)
+            os.kill(observer_pid, signal.SIGTERM)
             logger.info(f"Stopped running IP address observer process with PID {observer_pid}")
             del self.charm.unit_peer_data["observer-pid"]
         except OSError:
