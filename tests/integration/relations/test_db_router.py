@@ -120,7 +120,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: 
     """
     charm = await ops_test.build_charm(".")
 
-    config = {"cluster-name": CLUSTER_NAME}
+    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     mysql_app = await ops_test.model.deploy(
         charm, application_name=APP_NAME, config=config, num_units=1, series=mysql_charm_series

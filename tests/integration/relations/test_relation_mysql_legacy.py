@@ -41,7 +41,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
 
-    config = {"cluster-name": CLUSTER_NAME}
+    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     await asyncio.gather(
         ops_test.model.deploy(
