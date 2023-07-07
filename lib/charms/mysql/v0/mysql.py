@@ -73,6 +73,8 @@ import socket
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+import ops
+from ops.charm import ActionEvent, CharmBase
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -80,6 +82,23 @@ from tenacity import (
     wait_fixed,
     wait_random,
 )
+
+from constants import (
+    BACKUPS_PASSWORD_KEY,
+    BACKUPS_USERNAME,
+    CLUSTER_ADMIN_PASSWORD_KEY,
+    CLUSTER_ADMIN_USERNAME,
+    MONITORING_PASSWORD_KEY,
+    MONITORING_USERNAME,
+    PASSWORD_LENGTH,
+    PEER,
+    REQUIRED_USERNAMES,
+    ROOT_PASSWORD_KEY,
+    ROOT_USERNAME,
+    SERVER_CONFIG_PASSWORD_KEY,
+    SERVER_CONFIG_USERNAME,
+)
+from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +110,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 35
+LIBPATCH = 36
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -309,6 +328,229 @@ class RouterUser:
 
     username: str
     router_id: str
+
+
+class MySQLCharmBase(CharmBase):
+    """Base class to encapsulate charm related functionality.
+
+    Meant as a means to share common charm related code between the MySQL VM and
+    K8s charms.
+    """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.app_secrets, self.unit_secrets = None, None
+
+    def _on_get_password(self, event: ActionEvent) -> None:
+        """Action used to retrieve the system user's password."""
+        username = event.params.get("username") or ROOT_USERNAME
+
+        if username not in REQUIRED_USERNAMES:
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
+
+        if username == ROOT_USERNAME:
+            secret_key = ROOT_PASSWORD_KEY
+        elif username == SERVER_CONFIG_USERNAME:
+            secret_key = SERVER_CONFIG_PASSWORD_KEY
+        elif username == CLUSTER_ADMIN_USERNAME:
+            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key = MONITORING_PASSWORD_KEY
+        elif username == BACKUPS_USERNAME:
+            secret_key = BACKUPS_PASSWORD_KEY
+        else:
+            raise RuntimeError("Invalid username.")
+
+        event.set_results({"username": username, "password": self.get_secret("app", secret_key)})
+
+    def _on_set_password(self, event: ActionEvent) -> None:
+        """Action used to update/rotate the system user's password."""
+        if not self.unit.is_leader():
+            event.fail("set-password action can only be run on the leader unit.")
+            return
+
+        username = event.params.get("username") or ROOT_USERNAME
+
+        if username not in REQUIRED_USERNAMES:
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
+
+        if username == ROOT_USERNAME:
+            secret_key = ROOT_PASSWORD_KEY
+        elif username == SERVER_CONFIG_USERNAME:
+            secret_key = SERVER_CONFIG_PASSWORD_KEY
+        elif username == CLUSTER_ADMIN_USERNAME:
+            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
+        elif username == MONITORING_USERNAME:
+            secret_key = MONITORING_PASSWORD_KEY
+        elif username == BACKUPS_USERNAME:
+            secret_key = BACKUPS_PASSWORD_KEY
+        else:
+            raise RuntimeError("Invalid username.")
+
+        new_password = event.params.get("password") or generate_random_password(PASSWORD_LENGTH)
+
+        self._mysql.update_user_password(username, new_password)
+
+        self.set_secret("app", secret_key, new_password)
+
+    def _get_cluster_status(self, event: ActionEvent) -> None:
+        """Action used  to retrieve the cluster status."""
+        status = self._mysql.get_cluster_status()
+        if status:
+            event.set_results(
+                {
+                    "success": True,
+                    "status": status,
+                }
+            )
+        else:
+            event.set_results(
+                {
+                    "success": False,
+                    "message": "Failed to read cluster status.  See logs for more information.",
+                }
+            )
+
+    @property
+    def peers(self):
+        """Retrieve the peer relation (`ops.model.Relation`)."""
+        return self.model.get_relation(PEER)
+
+    @property
+    def cluster_initialized(self):
+        """Returns True if the cluster is initialized."""
+        return self.app_peer_data.get("units-added-to-cluster", "0") >= "1"
+
+    @property
+    def unit_initialized(self):
+        """Return True if the unit is initialized."""
+        return self.unit_peer_data.get("unit-initialized") == "True"
+
+    @property
+    def app_peer_data(self) -> Dict:
+        """Application peer relation data object."""
+        if self.peers is None:
+            return {}
+
+        return self.peers.data[self.app]
+
+    @property
+    def unit_peer_data(self) -> Dict:
+        """Unit peer relation data object."""
+        if self.peers is None:
+            return {}
+
+        return self.peers.data[self.unit]
+
+    @property
+    def _is_peer_data_set(self):
+        return (
+            self.app_peer_data.get("cluster-name")
+            and self.get_secret("app", ROOT_PASSWORD_KEY)
+            and self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
+            and self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY)
+            and self.get_secret("app", MONITORING_PASSWORD_KEY)
+            and self.get_secret("app", BACKUPS_PASSWORD_KEY)
+        )
+
+    def _get_secret_from_juju(self, scope: str, key: str) -> Optional[str]:
+        """Retrieve and return the secret from the juju secret storage."""
+        if scope == "unit":
+            secret_id = self.unit_peer_data.get("secret-id")
+
+            if not self.unit_secrets and not secret_id:
+                return None
+
+            if not self.unit_secrets:
+                secret = self.model.get_secret(id=secret_id)
+                content = secret.get_content()
+                self.unit_secrets = content
+
+            return self.unit_secrets.get(key)
+
+        secret_id = self.app_peer_data.get("secret-id")
+
+        if not self.app_secrets and not secret_id:
+            return None
+
+        if not self.app_secrets:
+            secret = self.model.get_secret(id=secret_id)
+            content = secret.get_content()                
+            self.app_secrets = content
+
+        return self.app_secrets.get(key)
+
+    def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
+        """Retrieve and return the secret from the peer relation databag."""
+        if scope == "unit":
+            return self.unit_peer_data.get(key)
+
+        return self.app_peer_data.get(key)
+
+    def get_secret(self, scope: str, key: str) -> Optional[str]:
+        """Get secret from the secret storage."""
+        if scope not in ["unit", "app"]:
+            raise RuntimeError("Invalid secret scope")
+
+        if ops.jujuversion.JujuVersion.from_environ().has_secrets:
+            return self._get_secret_from_juju(scope, key)
+
+        return self._get_secret_from_databag(scope, key)
+
+    def _set_secret_in_databag(self, scope: str, key: str, value: str) -> None:
+        """Set secret in the peer relation databag."""
+        if not value:
+            if scope == "unit":
+                del self.unit_peer_data[key]
+            else:
+                del self.app_peer_data[key]
+            return
+
+        if scope == "unit":
+            self.unit_peer_data.update({key: value})
+            return
+
+        self.app_peer_data.update({key: value})
+
+    def _set_secret_in_juju(self, scope: str, key: str, value: str) -> None:
+        """Set the secret in the juju secret storage."""
+        if scope == "unit":
+            secret_id = self.unit_peer_data.get("secret-id")
+        else:
+            secret_id = self.app_peer_data.get("secret-id")
+
+        if secret_id:
+            secret = self.model.get_secret(id=secret_id)
+            content = secret.get_content()
+        else:
+            content = {}
+
+        content[key] = value
+        secret = self.app.add_secret(content)
+
+        if scope == "unit":
+            self.unit_peer_data["secret-id"] = secret.id
+            self.unit_secrets = content
+        else:
+            self.app_peer_data["secret-id"] = secret.id
+            self.app_secrets = content
+
+    def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+        """Set a secret in the secret storage."""
+        if scope not in ["unit", "app"]:
+            raise RuntimeError("Invalid secret scope")
+
+        if ops.jujuversion.JujuVersion.from_environ().has_secrets:
+            return self._set_secret_in_juju(scope, key, value)
+
+        return self._set_secret_in_databag(scope, key, value)
 
 
 class MySQLBase(ABC):
