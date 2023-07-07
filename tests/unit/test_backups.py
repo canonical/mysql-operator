@@ -151,7 +151,7 @@ test stderr"""
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value="test-juju-version")
+    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
@@ -170,6 +170,8 @@ test stderr"""
         _datetime,
     ):
         """Test _on_create_backup()."""
+        _from_environ.return_value.__str__.return_value = "test-juju-version"
+
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
 
         expected_metadata = f"""Date Backup Requested: 2023-03-07%13:43:15Z
@@ -187,7 +189,7 @@ Juju Version: test-juju-version
 
         _retrieve_s3_parameters.assert_called_once()
         _can_unit_perform_backup.assert_called_once()
-        _from_environ.assert_called_once()
+        _from_environ.assert_called()
         _upload_content_to_s3.assert_called_once_with(
             expected_metadata, f"{expected_backup_path}.metadata", expected_s3_params
         )
@@ -207,7 +209,7 @@ Juju Version: test-juju-version
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value="test-juju-version")
+    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
@@ -226,6 +228,8 @@ Juju Version: test-juju-version
         _datetime,
     ):
         """Test failure of _on_create_backup()."""
+        _from_environ.return_value.__str__.return_value = "test-juju-version"
+
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
 
         # test failure with _post_backup
@@ -327,8 +331,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_can_unit_perform_backup_failure(
         self,
+        _,
         _get_member_state,
         _offline_mode_and_hidden_instance_exists,
     ):
@@ -377,8 +383,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_pre_backup(
         self,
+        _,
         _set_instance_offline_mode,
         _set_instance_option,
     ):
@@ -545,8 +553,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_pre_restore_checks_failure(
         self,
+        _,
         _is_unit_busy,
         _is_server_connectable,
     ):

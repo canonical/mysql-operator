@@ -152,13 +152,14 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         original_tls[unit.name]["cert"] = await unit_file_md5(
             ops_test,
             unit.name,
-            f"/var/snap/charmed-mysql/common/var/lib/mysql/data/{TLS_SSL_CERT_FILE}",
+            f"/var/snap/charmed-mysql/common/var/lib/mysql/{TLS_SSL_CERT_FILE}",
         )
 
     # set key using auto-generated key for each unit
     # not asserting actions run due false positives on CI
     for unit in ops_test.model.applications[app].units:
-        await unit.run_action(action_name="set-tls-private-key")
+        action = await unit.run_action(action_name="set-tls-private-key")
+        action.wait()
 
     # Wait for hooks start reconfiguring app
     # add as a wait since app state does not change

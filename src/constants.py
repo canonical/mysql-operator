@@ -19,20 +19,13 @@ SERVER_CONFIG_PASSWORD_KEY = "server-config-password"
 CLUSTER_ADMIN_PASSWORD_KEY = "cluster-admin-password"
 MONITORING_PASSWORD_KEY = "monitoring-password"
 BACKUPS_PASSWORD_KEY = "backups-password"
-REQUIRED_USERNAMES = [
-    ROOT_USERNAME,
-    SERVER_CONFIG_USERNAME,
-    CLUSTER_ADMIN_USERNAME,
-    MONITORING_USERNAME,
-    BACKUPS_USERNAME,
-]
 TLS_RELATION = "certificates"
 TLS_SSL_CA_FILE = "custom-ca.pem"
 TLS_SSL_KEY_FILE = "custom-server-key.pem"
 TLS_SSL_CERT_FILE = "custom-server-cert.pem"
 MYSQL_EXPORTER_PORT = "9104"
 CHARMED_MYSQL_SNAP_NAME = "charmed-mysql"
-CHARMED_MYSQL_SNAP_REVISION = 51
+CHARMED_MYSQL_SNAP_REVISION = 66  # MySQL v8.0.33
 CHARMED_MYSQLD_EXPORTER_SERVICE = "mysqld-exporter"
 CHARMED_MYSQLD_SERVICE = "mysqld"
 CHARMED_MYSQL = "charmed-mysql.mysql"
@@ -51,3 +44,6 @@ CHARMED_MYSQL_XBSTREAM_LOCATION = "/snap/bin/charmed-mysql.xbstream"
 XTRABACKUP_PLUGIN_DIR = "/snap/charmed-mysql/current/usr/lib/xtrabackup/plugin"
 ROOT_SYSTEM_USER = "root"
 GR_MAX_MEMBERS = 9
+HOSTNAME_DETAILS = "hostname-details"
+SECRET_ID_KEY = "secret-id"
+COS_AGENT_RELATION_NAME = "cos-agent"

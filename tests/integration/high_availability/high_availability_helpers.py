@@ -137,7 +137,7 @@ async def deploy_and_scale_mysql(
 
     charm = await ops_test.build_charm(".")
 
-    config = {"cluster-name": CLUSTER_NAME}
+    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     async with ops_test.fast_forward():
         await ops_test.model.deploy(

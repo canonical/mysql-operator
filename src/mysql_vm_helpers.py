@@ -7,11 +7,13 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
+    BYTES_1MiB,
     Error,
     MySQLBase,
     MySQLClientError,
@@ -22,7 +24,6 @@ from charms.mysql.v0.mysql import (
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
-from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
@@ -71,6 +72,10 @@ class SnapServiceOperationError(Error):
 
 class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
+
+
+class MySQLFlushHostCacheError(Error):
+    """Exception raised when there's an error flushing the MySQL host cache."""
 
 
 class MySQL(MySQLBase):
@@ -131,19 +136,30 @@ class MySQL(MySQLBase):
         """Install and configure MySQL dependencies.
 
         Raises
-            subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
-            apt.PackageNotFoundError, apt.PackageError: if issue install mysql server
-            snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
+            subprocess.CalledProcessError: if issue creating mysqlsh common dir
+            snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
+        logger.debug("Retrieving snap cache")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+        # This charm can override/use an existing snap installation only if the snap was previously
+        # installed by this charm.
+        # Otherwise, the snap could be in use by another charm (e.g. MySQL Router charm).
+        installed_by_mysql_server_file = pathlib.Path(
+            CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
+        )
+        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
+            logger.error(
+                f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
+            )
+            raise Exception(
+                f"Multiple {CHARMED_MYSQL_SNAP_NAME} snap installs not supported on one machine"
+            )
+
         try:
             # install the charmed-mysql snap
-            logger.debug("Retrieving snap cache")
-            cache = snap.SnapCache()
-            charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-
-            if not charmed_mysql.present:
-                logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            logger.debug("Installing charmed-mysql snap")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -151,35 +167,43 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
-        except subprocess.CalledProcessError as e:
-            logger.exception("Failed to execute subprocess command", exc_info=e)
+            subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+
+            installed_by_mysql_server_file.touch(exist_ok=True)
+        except subprocess.CalledProcessError:
+            logger.exception("Failed to execute subprocess command")
             raise
-        except (apt.PackageNotFoundError, apt.PackageError) as e:
-            logger.exception("Failed to install apt packages", exc_info=e)
+        except (snap.SnapNotFoundError, snap.SnapError):
+            logger.exception("Failed to install snaps")
             raise
-        except (snap.SnapNotFoundError, snap.SnapError) as e:
-            logger.exception("Failed to install snaps", exc_info=e)
-            raise
-        except Exception as e:
-            logger.exception("Encountered an unexpected exception", exc_info=e)
+        except Exception:
+            logger.exception("Encountered an unexpected exception")
             raise
 
-    def create_custom_mysqld_config(self) -> None:
+    def create_custom_mysqld_config(self, profile: str) -> None:
         """Create custom mysql config file.
 
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        try:
-            (
-                innodb_buffer_pool_size,
-                innodb_buffer_pool_chunk_size,
-            ) = self.get_innodb_buffer_pool_parameters()
-            max_connections = self.get_max_connections()
-        except MySQLGetAutoTunningParametersError:
-            raise MySQLCreateCustomMySQLDConfigError(
-                "Failed to compute mysql parameters automatically"
-            )
+        group_replication_message_cache_size = None
+        if profile == "testing":
+            innodb_buffer_pool_size = 20 * BYTES_1MiB
+            innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
+            group_replication_message_cache_size = 128 * BYTES_1MiB
+            max_connections = 20
+        else:
+            try:
+                (
+                    innodb_buffer_pool_size,
+                    innodb_buffer_pool_chunk_size,
+                    group_replication_message_cache_size,
+                ) = self.get_innodb_buffer_pool_parameters()
+                max_connections = self.get_max_connections()
+            except MySQLGetAutoTunningParametersError:
+                raise MySQLCreateCustomMySQLDConfigError(
+                    "Failed to compute mysql parameters automatically"
+                )
 
         content = [
             "[mysqld]",
@@ -192,7 +216,12 @@ class MySQL(MySQLBase):
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        content.append(f"report_host = {self.instance_address}")
+        if group_replication_message_cache_size:
+            content.append(
+                f"loose-group_replication_message_cache_size = {group_replication_message_cache_size}"
+            )
+
+        content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
 
         # create the mysqld config directory if it does not exist
@@ -477,7 +506,7 @@ class MySQL(MySQLBase):
         )
 
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True)
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
             self.wait_until_mysql_connection()
         except (
             MySQLServiceNotRunningError,
@@ -487,6 +516,21 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def flush_host_cache(self) -> None:
+        """Flush the MySQL in-memory host cache."""
+        flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
+
+        try:
+            logger.info("Truncating the MySQL host cache")
+            self._run_mysqlcli_script(
+                flush_host_cache_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError as e:
+            logger.exception("Failed to truncate the MySQL host cache")
+            raise MySQLFlushHostCacheError(e.message)
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
@@ -506,11 +550,21 @@ class MySQL(MySQLBase):
                 }
             )
             snap_service_operation(
-                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start", True
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start"
             )
         except snap.SnapError:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
-            raise MySQLExporterConnectError
+            raise MySQLExporterConnectError("Error setting up mysqld-exporter")
+
+    def stop_mysql_exporter(self) -> None:
+        """Stop the mysqld exporter."""
+        try:
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "stop"
+            )
+        except snap.SnapError:
+            logger.exception("An exception occurred when stopping mysqld-exporter")
+            raise MySQLExporterConnectError("Error stopping mysqld-exporter")
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
@@ -528,11 +582,13 @@ class MySQL(MySQLBase):
             _file.write(script)
             _file.flush()
 
-            # Specify python as this is not the default in the deb version
-            # of the mysql-shell snap
             command = [CHARMED_MYSQLSH, "--no-wizard", "--python", "-f", _file.name]
 
             try:
+                # need to change permissions since charmed-mysql.mysqlsh runs as
+                # snap_daemon
+                shutil.chown(_file.name, user="snap_daemon", group="root")
+
                 return subprocess.check_output(
                     command, stderr=subprocess.PIPE, timeout=timeout
                 ).decode("utf-8")
@@ -693,7 +749,7 @@ def instance_hostname():
         return None
 
 
-def snap_service_operation(snapname: str, service: str, operation: str, enable=False) -> bool:
+def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
     """Helper function to run an operation on a snap service.
 
     Args:
@@ -719,10 +775,10 @@ def snap_service_operation(snapname: str, service: str, operation: str, enable=F
             selected_snap.restart(services=[service])
             return selected_snap.services[service]["active"]
         elif operation == "start":
-            selected_snap.start(services=[service], enable=enable)
+            selected_snap.start(services=[service], enable=True)
             return selected_snap.services[service]["active"]
         else:
-            selected_snap.stop(services=[service])
+            selected_snap.stop(services=[service], disable=True)
             return not selected_snap.services[service]["active"]
     except snap.SnapError:
         error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"
