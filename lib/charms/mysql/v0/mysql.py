@@ -482,7 +482,7 @@ class MySQLCharmBase(CharmBase):
 
         if not self.app_secrets:
             secret = self.model.get_secret(id=secret_id)
-            content = secret.get_content()                
+            content = secret.get_content()
             self.app_secrets = content
 
         return self.app_secrets.get(key)
@@ -529,11 +529,20 @@ class MySQLCharmBase(CharmBase):
         if secret_id:
             secret = self.model.get_secret(id=secret_id)
             content = secret.get_content()
-        else:
-            content = {}
 
-        content[key] = value
-        secret = self.app.add_secret(content)
+            if not value:
+                del content[key]
+            else:
+                content[key] = value
+
+            secret.set_content(content)
+            logger.info(f"Updated secret {secret_id}")
+        else:
+            content = {
+                key: value,
+            }
+            secret = self.app.add_secret(content)
+            logger.info(f"Added secret {secret_id}")
 
         if scope == "unit":
             self.unit_peer_data["secret-id"] = secret.id
