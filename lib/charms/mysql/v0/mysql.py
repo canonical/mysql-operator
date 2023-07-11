@@ -466,6 +466,7 @@ class MySQLCharmBase(CharmBase):
             secret_id = self.unit_peer_data.get("secret-id")
 
             if not self.unit_secrets and not secret_id:
+                logger.info("Getting a secret when no secrets added in juju")
                 return None
 
             if not self.unit_secrets:
@@ -473,11 +474,13 @@ class MySQLCharmBase(CharmBase):
                 content = secret.get_content()
                 self.unit_secrets = content
 
+            logger.info(f"Retrieved secret {key} for unit")
             return self.unit_secrets.get(key)
 
         secret_id = self.app_peer_data.get("secret-id")
 
         if not self.app_secrets and not secret_id:
+            logger.info("Getting a secret when no secrets added in juju")
             return None
 
         if not self.app_secrets:
@@ -485,6 +488,7 @@ class MySQLCharmBase(CharmBase):
             content = secret.get_content()
             self.app_secrets = content
 
+        logger.info(f"Retrieved secret {key} for app")
         return self.app_secrets.get(key)
 
     def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
