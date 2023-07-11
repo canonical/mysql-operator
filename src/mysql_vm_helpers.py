@@ -136,7 +136,13 @@ class MySQL(MySQLBase):
         logger.debug("Retrieving snap cache")
         cache = snap.SnapCache()
         charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-        if charmed_mysql.present:
+        # This charm can override/use an existing snap installation only if the snap was previously
+        # installed by this charm.
+        # Otherwise, the snap could be in use by another charm (e.g. MySQL Router charm).
+        installed_by_mysql_server_file = pathlib.Path(
+            CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
+        )
+        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
             logger.error(
                 f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
             )
@@ -155,6 +161,7 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
+            installed_by_mysql_server_file.touch(exist_ok=True)
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
             raise

@@ -95,7 +95,6 @@ class MySQLOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.remove, self._on_remove)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -158,10 +157,6 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         self.unit.status = WaitingStatus("Waiting to start MySQL")
-
-    def _on_remove(self, _):
-        """Handle the remove event."""
-        MySQL.uninstall_mysql_snap()
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event."""
