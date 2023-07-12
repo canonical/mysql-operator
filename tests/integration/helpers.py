@@ -42,8 +42,8 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    action = await unit.run(command)
-    return action.results.get("Stdout", None)
+    action = await unit.run(command, block=True)
+    return action.results.get("stdout", None)
 
 
 def generate_random_string(length: int) -> str:
@@ -145,7 +145,7 @@ async def get_primary_unit(
     raw_output = await run_command_on_unit(unit, " ".join(commands))
 
     if not raw_output:
-        raise ValueError("Command return nothing")
+        raise ValueError("Command returns nothing")
 
     matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
     if not matches:
