@@ -297,7 +297,7 @@ class TestMySQL(unittest.TestCase):
                 "innodb_buffer_pool_size = 20971520",
                 "max_connections = 20",
                 "innodb_buffer_pool_chunk_size = 1048576",
-                "report_host = 127.0.0.1",
+                "report_host = 1.2.3.4",
                 "",
             )
         )
