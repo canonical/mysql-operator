@@ -404,7 +404,10 @@ class MySQLOperatorCharm(CharmBase):
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            raise RuntimeError("Invalid username.")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
 
         if username == ROOT_USERNAME:
             secret_key = ROOT_PASSWORD_KEY
@@ -424,12 +427,16 @@ class MySQLOperatorCharm(CharmBase):
     def _on_set_password(self, event: ActionEvent) -> None:
         """Action used to update/rotate the system user's password."""
         if not self.unit.is_leader():
-            raise RuntimeError("set-password action can only be run on the leader unit.")
+            event.fail("set-password action can only be run on the leader unit.")
+            return
 
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            raise RuntimeError("Invalid username.")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
 
         if username == ROOT_USERNAME:
             secret_key = ROOT_PASSWORD_KEY
@@ -566,7 +573,7 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config()
+        self._mysql.create_custom_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()

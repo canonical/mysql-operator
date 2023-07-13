@@ -253,7 +253,7 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.create_custom_mysqld_config()
+        self.mysql.create_custom_mysqld_config(profile="production")
 
         config = "\n".join(
             (
@@ -285,6 +285,35 @@ class TestMySQL(unittest.TestCase):
             ),
         )
 
+        # Test `testing` profile
+        _open_mock.reset_mock()
+        self.mysql.create_custom_mysqld_config(profile="testing")
+
+        config = "\n".join(
+            (
+                "[mysqld]",
+                "bind-address = 0.0.0.0",
+                "mysqlx-bind-address = 0.0.0.0",
+                "innodb_buffer_pool_size = 20971520",
+                "max_connections = 20",
+                "innodb_buffer_pool_chunk_size = 1048576",
+                "report_host = 127.0.0.1",
+                "",
+            )
+        )
+
+        self.assertEqual(
+            sorted(_open_mock.mock_calls),
+            sorted(
+                [
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
+                    call().__enter__(),
+                    call().write(config),
+                    call().__exit__(None, None, None),
+                ]
+            ),
+        )
+
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
     @patch("pathlib.Path")
     @patch("builtins.open")
@@ -301,7 +330,7 @@ class TestMySQL(unittest.TestCase):
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.create_custom_mysqld_config()
+            self.mysql.create_custom_mysqld_config(profile="production")
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):
@@ -398,3 +427,21 @@ class TestMySQL(unittest.TestCase):
 
         with self.assertRaises(MySQLStartMySQLDError):
             self.mysql.start_mysqld()
+
+    @patch("subprocess.check_call")
+    @patch("os.path.exists", return_value=True)
+    @patch("mysql_vm_helpers.snap")
+    def test_install_snap(self, _snap, _path_exists, _check_call):
+        """Test execution of install_snap()."""
+        _cache = MagicMock()
+        _mysql_snap = MagicMock()
+        _snap.SnapCache.return_value = _cache
+
+        _cache[CHARMED_MYSQL_SNAP_NAME] = _mysql_snap
+
+        _mysql_snap.present = False
+        _path_exists.return_value = False
+
+        self.mysql.install_and_configure_mysql_dependencies()
+
+        _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)

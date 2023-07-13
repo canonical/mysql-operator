@@ -169,22 +169,27 @@ class MySQL(MySQLBase):
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
 
-    def create_custom_mysqld_config(self) -> None:
+    def create_custom_mysqld_config(self, profile: str) -> None:
         """Create custom mysql config file.
 
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        try:
-            (
-                innodb_buffer_pool_size,
-                innodb_buffer_pool_chunk_size,
-            ) = self.get_innodb_buffer_pool_parameters()
-            max_connections = self.get_max_connections()
-        except MySQLGetAutoTunningParametersError:
-            raise MySQLCreateCustomMySQLDConfigError(
-                "Failed to compute mysql parameters automatically"
-            )
+        if profile == "testing":
+            innodb_buffer_pool_size = 20971520
+            innodb_buffer_pool_chunk_size = 1048576
+            max_connections = 20
+        else:
+            try:
+                (
+                    innodb_buffer_pool_size,
+                    innodb_buffer_pool_chunk_size,
+                ) = self.get_innodb_buffer_pool_parameters()
+                max_connections = self.get_max_connections()
+            except MySQLGetAutoTunningParametersError:
+                raise MySQLCreateCustomMySQLDConfigError(
+                    "Failed to compute mysql parameters automatically"
+                )
 
         content = [
             "[mysqld]",
