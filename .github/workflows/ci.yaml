@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - run: echo "${{ toJSON(github.event.pull_request.labels.*.name) }}"
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -53,6 +54,19 @@ jobs:
   build:
     name: Build charms
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+  
+  release:
+    name: Release charm to Charmhub branch
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name , 'foo') }}
+    needs:
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
+    with:
+      channel: 8.0/edge/pr-${{ github.event.pull_request.number }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      create-github-release: false
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
 
   collect-integration-tests:
     name: Collect integration test groups
