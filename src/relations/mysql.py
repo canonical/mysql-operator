@@ -145,7 +145,7 @@ class MySQLRelation(Object):
             "host": primary_address,
             "password": password,
             "port": "3306",
-            "root_password": self.charm.app_peer_data["root-password"],
+            "root_password": self.charm.get_secret("app", "root-password"),
             "user": username,
         }
 
