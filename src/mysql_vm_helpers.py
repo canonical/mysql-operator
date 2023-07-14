@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
@@ -70,6 +71,10 @@ class SnapServiceOperationError(Error):
 
 class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
+
+
+class MySQLFlushHostCacheError(Error):
+    """Exception raised when there's an error flushing the MySQL host cache."""
 
 
 class MySQL(MySQLBase):
@@ -205,7 +210,7 @@ class MySQL(MySQLBase):
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        content.append(f"report_host = {self.instance_address}")
+        content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
 
         # create the mysqld config directory if it does not exist
@@ -500,6 +505,21 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def flush_host_cache(self) -> None:
+        """Flush the MySQL in-memory host cache."""
+        flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
+
+        try:
+            logger.info("Truncating the MySQL host cache")
+            self._run_mysqlcli_script(
+                flush_host_cache_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError as e:
+            logger.exception("Failed to truncate the MySQL host cache")
+            raise MySQLFlushHostCacheError(e.message)
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
