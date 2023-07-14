@@ -8,6 +8,7 @@ import logging
 import subprocess
 from typing import Dict, Optional
 
+import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -75,6 +76,7 @@ from mysql_vm_helpers import (
     instance_hostname,
     is_volume_mounted,
     reboot_system,
+    snap,
     snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
@@ -145,6 +147,7 @@ class MySQLOperatorCharm(CharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
+                retry=tenacity.retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
