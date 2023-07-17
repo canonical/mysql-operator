@@ -13,12 +13,16 @@ from charms.mysql.v0.mysql import (
 )
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import Object
-from ops.model import BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus
 
 from constants import LEGACY_MYSQL, PASSWORD_LENGTH
 from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
+
+MYSQL_RELATION_DATA_KEY = "mysql_relation_data"
+MYSQL_RELATION_USER_KEY = "mysql-interface-user"
+MYSQL_RELATION_DATABASE_KEY = "mysql-interface-database"
 
 
 class MySQLRelation(Object):
@@ -39,8 +43,8 @@ class MySQLRelation(Object):
             self.charm.on[LEGACY_MYSQL].relation_broken, self._on_mysql_relation_broken
         )
 
-    def _get_or_set_password_in_peer_databag(self, username: str) -> str:
-        """Get a user's password from the peer databag if it exists, else populate a password.
+    def _get_or_set_password_in_peer_secrets(self, username: str) -> str:
+        """Get a user's password from the peer secrets, if it exists, else populate a password.
 
         Args:
             username: The mysql username
@@ -48,14 +52,13 @@ class MySQLRelation(Object):
         Returns:
             a string representing the password for the mysql user
         """
-        peer_databag = self.charm.app_peer_data
-
-        if peer_databag.get(f"{username}_password"):
-            return peer_databag.get(f"{username}_password")
+        password_key = f"{username}_password"
+        password = self.charm.get_secret("app", password_key)
+        if password:
+            return password
 
         password = generate_random_password(PASSWORD_LENGTH)
-        peer_databag[f"{username}_password"] = password
-
+        self.charm.set_secret("app", password_key, password)
         return password
 
     def _get_or_generate_username(self, event_relation_id: int) -> str:
@@ -63,26 +66,20 @@ class MySQLRelation(Object):
 
         Assumes that the caller is the leader unit.
         """
-        username = (
-            self.charm.app_peer_data.get("mysql-interface-user")
-            or self.charm.config.get("mysql-interface-user")
-            or f"relation-{event_relation_id}"
+        return self.charm.app_peer_data.setdefault(
+            MYSQL_RELATION_USER_KEY,
+            self.charm.config.get(MYSQL_RELATION_USER_KEY, f"relation-{event_relation_id}"),
         )
-        self.charm.app_peer_data["mysql-interface-user"] = username
-        return username
 
     def _get_or_generate_database(self, event_relation_id: int) -> str:
         """Retrieve database from databag or config or generate a new one.
 
         Assumes that the caller is the leader unit.
         """
-        database_name = (
-            self.charm.app_peer_data.get("mysql-interface-database")
-            or self.charm.config.get("mysql-interface-database")
-            or f"database-{event_relation_id}"
+        return self.charm.app_peer_data.setdefault(
+            MYSQL_RELATION_DATABASE_KEY,
+            self.charm.config.get(MYSQL_RELATION_DATABASE_KEY, f"database-{event_relation_id}"),
         )
-        self.charm.app_peer_data["mysql-interface-database"] = database_name
-        return database_name
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event.
@@ -94,7 +91,7 @@ class MySQLRelation(Object):
         if not self.charm._is_peer_data_set:
             return
 
-        relation_data = json.loads(self.charm.app_peer_data.get("mysql_relation_data", "{}"))
+        relation_data = json.loads(self.charm.app_peer_data.get(MYSQL_RELATION_DATA_KEY, "{}"))
 
         for relation in self.charm.model.relations.get(LEGACY_MYSQL, []):
             relation_databag = relation.data
@@ -113,70 +110,33 @@ class MySQLRelation(Object):
         if not self.charm.unit.is_leader():
             return
 
+        config_username = self.charm.config.get(MYSQL_RELATION_USER_KEY)
+        config_database = self.charm.config.get(MYSQL_RELATION_DATABASE_KEY)
+        if not config_username and not config_database:
+            return
+
+        current_username = self.charm.app_peer_data.get(MYSQL_RELATION_USER_KEY)
+        current_database = self.charm.app_peer_data.get(MYSQL_RELATION_DATABASE_KEY)
+
         # the mysql-relation-created event has not yet fired
-        if not self.charm.app_peer_data.get("mysql-interface-user"):
+        # the config options will be factored in when the relation is formed
+        if not current_username:
             return
 
-        username = self.charm.config.get("mysql-interface-user")
-        database = self.charm.config.get("mysql-interface-database")
+        mysql_relation_exists = len(self.model.relations[LEGACY_MYSQL])
 
-        if not username or not database:
-            return
-
-        if self.charm._mysql.does_mysql_user_exist(username, "%"):
-            logger.info(f"User '{username}'@'%' already exists")
-            return
-
-        if (
-            username == self.charm.app_peer_data["mysql-interface-user"]
-            and database == self.charm.app_peer_data["mysql-interface-database"]
-        ):
-            return
-
-        try:
-            self.charm._mysql.delete_users_for_unit("mysql-legacy-relation")
-        except MySQLDeleteUsersForUnitError:
-            logger.error("Failed to delete mysql users")
-            self.charm.unit.status = BlockedStatus("Failed to remove relation user")
-
-        password = self._get_or_set_password_in_peer_databag(username)
-
-        try:
-            self.charm._mysql.create_application_database_and_scoped_user(
-                database,
-                username,
-                password,
-                "%",
-                unit_name="mysql-legacy-relation",
-            )
-
-            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
-
-        except (
-            MySQLCreateApplicationDatabaseAndScopedUserError,
-            MySQLGetClusterPrimaryAddressError,
-        ):
-            self.charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
-            return
-
-        updates = {
-            "database": database,
-            "host": primary_address,
-            "password": password,
-            "port": "3306",
-            "root_password": self.charm.app_peer_data["root-password"],
-            "user": username,
-        }
-
-        self.charm.app_peer_data["mysql-interface-user"] = username
-        self.charm.app_peer_data["mysql-interface-database"] = database
-        self.charm.app_peer_data["mysql_relation_data"] = json.dumps(updates)
-
-        for relation in self.charm.model.relations.get(LEGACY_MYSQL, []):
-            relation.data[self.charm.unit].update(updates)
+        if isinstance(self.charm.unit.status, ActiveStatus) and mysql_relation_exists:
+            if config_username != current_username:
+                self.charm.unit.status = BlockedStatus(
+                    f"Remove `mysql` relations in order to change `{MYSQL_RELATION_USER_KEY}` config"
+                )
+            if config_database != current_database:
+                self.charm.unit.status = BlockedStatus(
+                    f"Remove `mysql` relations in order to change `{MYSQL_RELATION_DATABASE_KEY}` config"
+                )
 
     def _on_mysql_relation_created(self, event: RelationCreatedEvent) -> None:
-        """Handle the legacy 'mysql' relation created event.
+        """Handle the legacy `mysql` relation created event.
 
         Will set up the database and the scoped application user. The connection
         data (relation data) is then copied into the peer relation databag (to
@@ -207,7 +167,7 @@ class MySQLRelation(Object):
         if self.charm._mysql.does_mysql_user_exist(username, "%"):
             return
 
-        password = self._get_or_set_password_in_peer_databag(username)
+        password = self._get_or_set_password_in_peer_secrets(username)
 
         try:
             self.charm._mysql.create_application_database_and_scoped_user(
@@ -224,7 +184,7 @@ class MySQLRelation(Object):
             MySQLCreateApplicationDatabaseAndScopedUserError,
             MySQLGetClusterPrimaryAddressError,
         ):
-            self.charm.unit.status = BlockedStatus("Failed to initialize mysql relation")
+            self.charm.unit.status = BlockedStatus("Failed to initialize `mysql` relation")
             return
 
         updates = {
@@ -238,11 +198,14 @@ class MySQLRelation(Object):
 
         event.relation.data[self.charm.unit].update(updates)
 
+        self.charm.app_peer_data[MYSQL_RELATION_USER_KEY] = username
+        self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY] = database
+
         # Store the relation data into the peer relation databag
         self.charm.app_peer_data["mysql_relation_data"] = json.dumps(updates)
 
     def _on_mysql_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle the 'mysql' legacy relation broken event.
+        """Handle the `mysql` legacy relation broken event.
 
         Delete the application user created in the relation created
         event handler.
@@ -262,5 +225,5 @@ class MySQLRelation(Object):
             logger.error("Failed to delete mysql users")
             self.charm.unit.status = BlockedStatus("Failed to remove relation user")
 
-        del self.charm.app_peer_data["mysql-interface-user"]
-        del self.charm.app_peer_data["mysql-interface-database"]
+        del self.charm.app_peer_data[MYSQL_RELATION_USER_KEY]
+        del self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY]
