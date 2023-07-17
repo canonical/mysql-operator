@@ -91,9 +91,10 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 32
+LIBPATCH = 36
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
+UNIT_ADD_LOCKNAME = "unit-add"
 
 
 class Error(Exception):
@@ -156,6 +157,10 @@ class MySQLConfigureInstanceError(Error):
 
 class MySQLCreateClusterError(Error):
     """Exception raised when there is an issue creating an InnoDB cluster."""
+
+
+class MySQLCreateClusterSetError(Error):
+    """Exception raised when there is an issue creating an Cluster Set."""
 
 
 class MySQLAddInstanceToClusterError(Error):
@@ -231,7 +236,7 @@ class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
     """
 
 
-class MySQLGetInnoDBBufferPoolParametersError(Error):
+class MySQLGetAutoTunningParametersError(Error):
     """Exception raised when there is an error computing the innodb buffer pool parameters."""
 
 
@@ -290,6 +295,10 @@ class MySQLKillSessionError(Error):
     """Exception raised when there is an issue killing a connection."""
 
 
+class MySQLLockAcquisitionError(Error):
+    """Exception raised when a lock fails to be acquired."""
+
+
 class MySQLRescanClusterError(Error):
     """Exception raised when there is an issue rescanning the cluster."""
 
@@ -315,6 +324,7 @@ class MySQLBase(ABC):
         self,
         instance_address: str,
         cluster_name: str,
+        cluster_set_name: str,
         root_password: str,
         server_config_user: str,
         server_config_password: str,
@@ -330,6 +340,7 @@ class MySQLBase(ABC):
         Args:
             instance_address: address of the targeted instance
             cluster_name: cluster name
+            cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
             server_config_user: user name for the server config user
             server_config_password: password for the server config user
@@ -342,6 +353,7 @@ class MySQLBase(ABC):
         """
         self.instance_address = instance_address
         self.cluster_name = cluster_name
+        self.cluster_set_name = cluster_set_name
         self.root_password = root_password
         self.server_config_user = server_config_user
         self.server_config_password = server_config_password
@@ -465,20 +477,18 @@ class MySQLBase(ABC):
             if there is an issue creating and configuring the mysqlrouter user
         """
         try:
-            primary_address = self.get_cluster_primary_address()
-
             escaped_mysqlrouter_user_attributes = json.dumps({"unit_name": unit_name}).replace(
                 '"', r"\""
             )
             # Using server_config_user as we are sure it has create user grants
             create_mysqlrouter_user_commands = (
-                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+                f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
                 f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_mysqlrouter_user_attributes}';\")",
             )
 
             # Using server_config_user as we are sure it has create user grants
             mysqlrouter_user_grant_commands = (
-                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+                f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
                 f"session.run_sql(\"GRANT CREATE USER ON *.* TO '{username}'@'{hostname}' WITH GRANT OPTION;\")",
                 f"session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'{hostname}';\")",
                 f"session.run_sql(\"GRANT SELECT ON mysql.user TO '{username}'@'{hostname}';\")",
@@ -525,26 +535,28 @@ class MySQLBase(ABC):
         if unit_name is not None:
             attributes["unit_name"] = unit_name
         try:
-            primary_address = self.get_cluster_primary_address()
-
             # Using server_config_user as we are sure it has create database grants
+            connect_command = (
+                f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            )
             create_database_commands = (
-                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f'session.run_sql("CREATE DATABASE IF NOT EXISTS `{database_name}`;")',
             )
 
             escaped_user_attributes = json.dumps(attributes).replace('"', r"\"")
             # Using server_config_user as we are sure it has create user grants
             create_scoped_user_commands = (
-                f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
                 f"session.run_sql(\"CREATE USER `{username}`@`{hostname}` IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_user_attributes}';\")",
                 f'session.run_sql("GRANT USAGE ON *.* TO `{username}`@`{hostname}`;")',
                 f'session.run_sql("GRANT ALL PRIVILEGES ON `{database_name}`.* TO `{username}`@`{hostname}`;")',
             )
 
             if create_database:
-                self._run_mysqlsh_script("\n".join(create_database_commands))
-            self._run_mysqlsh_script("\n".join(create_scoped_user_commands))
+                commands = connect_command + create_database_commands + create_scoped_user_commands
+            else:
+                commands = connect_command + create_scoped_user_commands
+
+            self._run_mysqlsh_script("\n".join(commands))
         except MySQLClientError as e:
             logger.exception(
                 f"Failed to create application database {database_name} and scoped user {username}@{hostname}",
@@ -603,12 +615,9 @@ class MySQLBase(ABC):
         Raises:
             MySQLDeleteUsersForUnitError if there is an error deleting users for the unit
         """
-        primary_address = self.get_cluster_primary_address()
-        if not primary_address:
-            raise MySQLDeleteUsersForUnitError("Unable to query cluster primary address")
         # Using server_config_user as we are sure it has drop user grants
         drop_users_command = [
-            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
         ]
         drop_users_command.extend(
             self._get_statements_to_delete_users_with_attribute("unit_name", f"'{unit_name}'")
@@ -629,11 +638,8 @@ class MySQLBase(ABC):
             MySQLDeleteUsersForRelationError if there is an error deleting users for the relation
         """
         user = f"relation-{str(relation_id)}"
-        primary_address = self.get_cluster_primary_address()
-        if not primary_address:
-            raise MySQLDeleteUsersForRelationError("Unable to query cluster primary address")
         drop_users_command = [
-            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"session.run_sql(\"DROP USER IF EXISTS '{user}'@'%';\")",
         ]
         # If the relation is with a MySQL Router charm application, delete any users
@@ -649,11 +655,8 @@ class MySQLBase(ABC):
 
     def delete_user(self, username: str) -> None:
         """Delete user."""
-        primary_address = self.get_cluster_primary_address()
-        if not primary_address:
-            raise MySQLDeleteUserError("Unable to query cluster primary address")
         drop_user_command = [
-            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{primary_address}')",
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"session.run_sql(\"DROP USER `{username}`@'%'\")",
         ]
         try:
@@ -664,11 +667,8 @@ class MySQLBase(ABC):
 
     def remove_router_from_cluster_metadata(self, router_id: str) -> None:
         """Remove MySQL Router from InnoDB Cluster metadata."""
-        primary_address = self.get_cluster_primary_address()
-        if not primary_address:
-            raise MySQLRemoveRouterFromMetadataError("Unable to query cluster primary address")
         command = [
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
+            f"shell.connect_to_primary('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             "cluster = dba.get_cluster()",
             f'cluster.remove_router_metadata("{router_id}")',
         ]
@@ -738,6 +738,24 @@ class MySQLBase(ABC):
             )
             raise MySQLCreateClusterError(e.message)
 
+    def create_cluster_set(self) -> None:
+        """Create a cluster set for the cluster on cluster primary.
+
+        Raises MySQLCreateClusterSetError on cluster set creation failure.
+        """
+        commands = (
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.create_cluster_set('{self.cluster_set_name}')",
+        )
+
+        try:
+            logger.debug(f"Creating cluster set name {self.cluster_set_name}")
+            self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            logger.exception("Failed to add instance to cluster set on instance")
+            raise MySQLCreateClusterSetError
+
     def initialize_juju_units_operations_table(self) -> None:
         """Initialize the mysql.juju_units_operations table using the serverconfig user.
 
@@ -746,8 +764,12 @@ class MySQLBase(ABC):
                 initializing the juju_units_operations table
         """
         initialize_table_commands = (
-            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor "
+            "varchar(20), status varchar(20), primary key(task))",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', "
+            "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_ADD_LOCKNAME}', '', "
+            "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         try:
@@ -788,12 +810,18 @@ class MySQLBase(ABC):
             "label": instance_unit_label,
         }
 
+        if not self._acquire_lock(
+            from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
+        ):
+            raise MySQLLockAcquisitionError("Lock not acquired")
+
         connect_commands = (
             (
                 f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
                 f"@{from_instance or self.instance_address}')"
             ),
             f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "shell.options['dba.restartWaitTimeout'] = 3600",
         )
 
         for recovery_method in ["auto", "clone"]:
@@ -816,11 +844,19 @@ class MySQLBase(ABC):
                         f"Failed to add instance {instance_address} to cluster {self.cluster_name} on {self.instance_address}",
                         exc_info=e,
                     )
+                    self._release_lock(
+                        from_instance or self.instance_address,
+                        instance_unit_label,
+                        UNIT_ADD_LOCKNAME,
+                    )
                     raise MySQLAddInstanceToClusterError(e.message)
 
                 logger.debug(
                     f"Failed to add instance {instance_address} to cluster {self.cluster_name} with recovery method 'auto'. Trying method 'clone'"
                 )
+        self._release_lock(
+            from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
+        )
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
@@ -853,6 +889,34 @@ class MySQLBase(ABC):
                 f"Failed to confirm instance configuration for {instance_address} with error {e.message}",
             )
             return False
+
+    def are_locks_acquired(self, from_instance: Optional[str] = None) -> bool:
+        """Report if any topology change is being executed.
+
+        Query the mysql.juju_units_operations table for any
+        in-progress lock for either unit add or removal.
+
+        Args:
+            from_instance: member instance to run the command from (fallback to current one)
+        """
+        commands = (
+            (
+                f"shell.connect('{self.server_config_user}:{self.server_config_password}"
+                f"@{from_instance or self.instance_address}')"
+            ),
+            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
+            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
+        )
+        try:
+            output = self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError:
+            # log error and fallback to assuming topology is changing
+            logger.exception("Failed to get locks count")
+            return True
+
+        matches = re.search(r"<LOCKS>(\d)</LOCKS>", output)
+
+        return int(matches.group(1)) > 0 if matches else False
 
     def rescan_cluster(
         self,
@@ -936,7 +1000,30 @@ class MySQLBase(ABC):
             output_dict = json.loads(output.lower())
             return output_dict
         except MySQLClientError:
-            logger.exception(f"Failed to get cluster status for {self.cluster_name}")
+            logger.error(f"Failed to get cluster status for {self.cluster_name}")
+
+    def get_cluster_node_count(self, from_instance: Optional[str] = None) -> int:
+        """Retrieve current count of cluster nodes.
+
+        Returns:
+            Amount of cluster nodes.
+        """
+        size_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
+            f"@{from_instance or self.instance_address}')",
+            'result = session.run_sql("SELECT COUNT(*) FROM performance_schema.replication_group_members")',
+            'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(size_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get node count", exc_info=e)
+            return 0
+
+        matches = re.search(r"<NODES>(\d)</NODES>", output)
+
+        return int(matches.group(1)) if matches else 0
 
     def get_cluster_endpoints(self, get_ips: bool = True) -> Tuple[str, str, str]:
         """Use get_cluster_status to return endpoints tuple.
@@ -956,6 +1043,7 @@ class MySQLBase(ABC):
 
         def _get_host_ip(host: str) -> str:
             try:
+                port = None
                 if ":" in host:
                     host, port = host.split(":")
 
@@ -1098,7 +1186,11 @@ class MySQLBase(ABC):
             "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
         )
 
-        output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+        try:
+            output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+        except MySQLClientError:
+            logger.debug("Failed to acquire lock")
+            return False
         matches = re.search(r"<ACQUIRED_LOCK>(\d)</ACQUIRED_LOCK>", output)
         if not matches:
             return False
@@ -1171,9 +1263,8 @@ class MySQLBase(ABC):
         logger.debug(f"Getting cluster primary member's address from {connect_instance_address}")
 
         get_cluster_primary_commands = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{connect_instance_address}')",
-            f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "primary_address = sorted([cluster_member['address'] for cluster_member in cluster.status()['defaultReplicaSet']['topology'].values() if cluster_member['mode'] == 'R/W'])[0]",
+            f"shell.connect_to_primary('{self.cluster_admin_user}:{self.cluster_admin_password}@{connect_instance_address}')",
+            "primary_address = shell.parse_uri(session.uri)['host']",
             "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
         )
 
@@ -1256,12 +1347,8 @@ class MySQLBase(ABC):
         Raises:
             MySQLGrantPrivilegesToUserError if there is an issue granting privileges to a user
         """
-        cluster_primary = self.get_cluster_primary_address()
-        if not cluster_primary:
-            raise MySQLGrantPrivilegesToUserError("Failed to get cluster primary address")
-
         grant_privileges_commands = (
-            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{cluster_primary}')",
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"session.run_sql(\"GRANT {', '.join(privileges)} ON *.* TO '{username}'@'{hostname}'{' WITH GRANT OPTION' if with_grant_option else ''}\")",
         )
 
@@ -1306,8 +1393,8 @@ class MySQLBase(ABC):
             A tuple(str) with the MEMBER_STATE and MEMBER_ROLE within the cluster.
         """
         member_state_query = (
-            "SELECT MEMBER_STATE, MEMBER_ROLE FROM"
-            " performance_schema.replication_group_members WHERE MEMBER_ID = @@server_uuid"
+            "SELECT MEMBER_STATE, MEMBER_ROLE, MEMBER_ID, @@server_uuid"
+            " FROM performance_schema.replication_group_members"
         )
 
         try:
@@ -1323,13 +1410,27 @@ class MySQLBase(ABC):
             )
             raise MySQLGetMemberStateError(e.message)
 
+        # output is like:
+        # 'MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\nONLINE\tPRIMARY\t<uuid>\t<uuid>\n'
         lines = output.lower().split("\n")
         if len(lines) < 2:
             raise MySQLGetMemberStateError("No member state retrieved")
 
-        results = lines[1].split()
-        # no member role defined when member state is 'offline'
-        return results[0], results[1] if len(results) == 2 else "unknown"
+        for line in lines[1:]:
+            # results will be like:
+            # ['online', 'primary', 'a6c00302-1c07-11ee-bca1-...', 'a6c00302-1c07-11ee-bca1-...']
+            results = line.split("\t")
+            if results[2] == results[3]:
+                # filter server uuid
+                return results[0], results[1] or "unknown"
+
+        if len(lines) == 2:
+            # Instance just know it own state
+            # sometimes member_id is not populated
+            results = lines[1].split("\t")
+            return results[0], results[1] or "unknown"
+
+        raise MySQLGetMemberStateError("No member state retrieved")
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""
@@ -1452,9 +1553,29 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size = chunk_size
 
             return (pool_size, innodb_buffer_pool_chunk_size)
-        except Exception as e:
-            logger.exception("Failed to compute innodb buffer pool parameters", exc_info=e)
-            raise MySQLGetInnoDBBufferPoolParametersError("Error retrieving total free memory")
+        except Exception:
+            logger.exception("Failed to compute innodb buffer pool parameters")
+            raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
+
+    def get_max_connections(self) -> int:
+        """Calculate max_connections parameter for the instance."""
+        # Reference: based off xtradb-cluster-operator
+        # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
+
+        bytes_per_connection = 12582912  # 12 Megabytes
+        total_memory = 0
+
+        try:
+            total_memory = self._get_total_memory()
+        except Exception:
+            logger.exception("Failed to retrieve total memory")
+            raise MySQLGetAutoTunningParametersError("Error retrieving total memory")
+
+        if total_memory < bytes_per_connection:
+            logger.error(f"Not enough memory for running MySQL: {total_memory=}")
+            raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
+
+        return total_memory // bytes_per_connection
 
     def _get_total_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
@@ -1592,7 +1713,7 @@ Swap:     1027600384  1027600384           0
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
         user=None,
@@ -1601,11 +1722,12 @@ Swap:     1027600384  1027600384           0
         """Retrieve the specified backup from S3.
 
         The backup is retrieved using xbcloud and stored in a temp dir in the
-        mysql container.
+        mysql container. This temp dir is supposed to be on the same volume as
+        the mysql data directory to reduce latency for IOPS.
         """
         nproc_command = "nproc".split()
         make_temp_dir_command = (
-            f"mktemp --directory {mysql_data_directory}/#mysql_sst_XXXX".split()
+            f"mktemp --directory {temp_restore_directory}/#mysql_sst_XXXX".split()
         )
 
         try:
@@ -1671,7 +1793,7 @@ Swap:     1027600384  1027600384           0
         """Prepare the backup in the provided dir for restore."""
         try:
             innodb_buffer_pool_size, _ = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError as e:
+        except MySQLGetAutoTunningParametersError as e:
             raise MySQLPrepareBackupForRestoreError(e)
 
         prepare_backup_command = f"""
@@ -1762,13 +1884,13 @@ Swap:     1027600384  1027600384           0
 
     def delete_temp_restore_directory(
         self,
-        mysql_data_directory: str,
+        temp_restore_directory: str,
         user=None,
         group=None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
-        logger.info(f"Deleting temp restore directory in {mysql_data_directory}")
-        delete_temp_restore_directory_command = f"find {mysql_data_directory} -wholename {mysql_data_directory}/#mysql_sst_* -delete".split()
+        logger.info(f"Deleting temp restore directory in {temp_restore_directory}")
+        delete_temp_restore_directory_command = f"find {temp_restore_directory} -wholename {temp_restore_directory}/#mysql_sst_* -delete".split()
 
         try:
             logger.debug(

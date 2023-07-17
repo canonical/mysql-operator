@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, call, patch
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
@@ -35,6 +35,7 @@ class TestMySQL(unittest.TestCase):
         self.mysql = MySQL(
             "127.0.0.1",
             "test_cluster",
+            "test_cluster_set",
             "password",
             "serverconfig",
             "serverconfigpassword",
@@ -237,29 +238,69 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.assert_not_called()
 
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
-    def test_create_custom_mysqld_config(self, _open, _path, _get_innodb_buffer_pool_parameters):
+    @patch("socket.getfqdn", return_value="1.2.3.4")
+    def test_create_custom_mysqld_config(
+        self, _, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+    ):
         """Test successful execution of create_custom_mysqld_config."""
+        self.maxDiff = None
         _path_mock = MagicMock()
         _path.return_value = _path_mock
 
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.create_custom_mysqld_config()
+        self.mysql.create_custom_mysqld_config(profile="production")
 
-        config = """[mysqld]
-bind-address = 0.0.0.0
-mysqlx-bind-address = 0.0.0.0
-innodb_buffer_pool_size = 1234
-innodb_buffer_pool_chunk_size = 5678
-report_host = 127.0.0.1
-"""
+        config = "\n".join(
+            (
+                "[mysqld]",
+                "bind-address = 0.0.0.0",
+                "mysqlx-bind-address = 0.0.0.0",
+                "innodb_buffer_pool_size = 1234",
+                "max_connections = 111",
+                "innodb_buffer_pool_chunk_size = 5678",
+                "report_host = 1.2.3.4",
+                "",
+            )
+        )
 
+        _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
         _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
+
+        self.assertEqual(
+            sorted(_open_mock.mock_calls),
+            sorted(
+                [
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
+                    call().__enter__(),
+                    call().write(config),
+                    call().__exit__(None, None, None),
+                ]
+            ),
+        )
+
+        # Test `testing` profile
+        _open_mock.reset_mock()
+        self.mysql.create_custom_mysqld_config(profile="testing")
+
+        config = "\n".join(
+            (
+                "[mysqld]",
+                "bind-address = 0.0.0.0",
+                "mysqlx-bind-address = 0.0.0.0",
+                "innodb_buffer_pool_size = 20971520",
+                "max_connections = 20",
+                "innodb_buffer_pool_chunk_size = 1048576",
+                "report_host = 1.2.3.4",
+                "",
+            )
+        )
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
@@ -280,7 +321,7 @@ report_host = 127.0.0.1
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetInnoDBBufferPoolParametersError
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
@@ -289,7 +330,7 @@ report_host = 127.0.0.1
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.create_custom_mysqld_config()
+            self.mysql.create_custom_mysqld_config(profile="production")
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):
@@ -364,7 +405,7 @@ report_host = 127.0.0.1
         self.mysql.start_mysqld()
 
         _snap_service_operation.assert_called_once_with(
-            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True
         )
         _wait_until_mysql_connection.assert_called_once()
 
@@ -386,3 +427,19 @@ report_host = 127.0.0.1
 
         with self.assertRaises(MySQLStartMySQLDError):
             self.mysql.start_mysqld()
+
+    @patch("pathlib.Path")
+    @patch("subprocess.check_call")
+    @patch("os.path.exists", return_value=True)
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_install_snap(self, _cache, _path_exists, _check_call, _pathlib):
+        """Test execution of install_snap()."""
+        _mysql_snap = MagicMock()
+        _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
+
+        _mysql_snap.present = False
+        _path_exists.return_value = False
+
+        self.mysql.install_and_configure_mysql_dependencies()
+
+        _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)

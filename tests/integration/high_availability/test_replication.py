@@ -18,6 +18,7 @@ from ..helpers import (
     get_primary_unit,
     get_primary_unit_wrapper,
     get_server_config_credentials,
+    retrieve_database_variable_value,
     scale_application,
 )
 from .high_availability_helpers import (
@@ -58,6 +59,22 @@ async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) ->
         jmx_resp = http.request("GET", mysql_exporter_url)
 
         assert jmx_resp.status == 200
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_custom_variables(ops_test: OpsTest, mysql_charm_series) -> None:
+    """Query database for custom variables."""
+    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    application = ops_test.model.applications[mysql_application_name]
+
+    for unit in application.units:
+        custom_vars = {}
+        custom_vars["max_connections"] = 20
+        for k, v in custom_vars.items():
+            logger.info(f"Checking that {k} is set to {v} on {unit.name}")
+            value = await retrieve_database_variable_value(ops_test, unit, k)
+            assert value == v, f"Variable {k} is not set to {v}"
 
 
 @pytest.mark.group(1)

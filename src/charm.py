@@ -8,6 +8,7 @@ import logging
 import subprocess
 from typing import Dict, Optional
 
+import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -16,10 +17,12 @@ from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
+    MySQLCreateClusterSetError,
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLLockAcquisitionError,
     MySQLRebootFromCompleteOutageError,
     MySQLRescanClusterError,
 )
@@ -29,7 +32,6 @@ from ops.charm import (
     CharmBase,
     InstallEvent,
     RelationChangedEvent,
-    RelationJoinedEvent,
     StartEvent,
 )
 from ops.main import main
@@ -50,6 +52,7 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
+    GR_MAX_MEMBERS,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
@@ -62,6 +65,7 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
+from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -73,6 +77,7 @@ from mysql_vm_helpers import (
     instance_hostname,
     is_volume_mounted,
     reboot_system,
+    snap,
     snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
@@ -99,7 +104,6 @@ class MySQLOperatorCharm(CharmBase):
             self.on.database_storage_detaching, self._on_database_storage_detaching
         )
 
-        self.framework.observe(self.on[PEER].relation_joined, self._on_peer_relation_joined)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
@@ -121,6 +125,7 @@ class MySQLOperatorCharm(CharmBase):
         )
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
+        self.hostname_resolution = MySQLMachineHostnameResolution(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -144,6 +149,7 @@ class MySQLOperatorCharm(CharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
+                retry=tenacity.retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -177,11 +183,12 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        # Set the cluster name in the peer relation databag if it is not already set
-        if not self.app_peer_data.get("cluster-name"):
-            self.app_peer_data["cluster-name"] = (
-                self.config.get("cluster-name") or f"cluster_{generate_random_hash()}"
-            )
+        # Create and set cluster and cluster-set names in the peer relation databag
+        common_hash = generate_random_hash()
+        self.app_peer_data.setdefault(
+            "cluster-name", self.config.get("cluster-name", f"cluster-{common_hash}")
+        )
+        self.app_peer_data.setdefault("cluster-set-domain-name", f"cluster-set-{common_hash}")
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -218,60 +225,17 @@ class MySQLOperatorCharm(CharmBase):
             return
 
         try:
-            # Create the cluster from the leader unit
+            # Create the cluster and cluster set from the leader unit
             self._create_cluster()
+            self._create_cluter_set()
             self.unit.status = ActiveStatus(self.active_status_message)
-        except MySQLCreateClusterError:
-            self.unit.status = BlockedStatus("Failed to create the InnoDB cluster")
-        except MySQLInitializeJujuOperationsTableError:
-            self.unit.status = BlockedStatus("Failed to initialize juju units operations table")
-
-    def _on_peer_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Handle the peer relation joined event."""
-        # Only execute in the unit leader
-        if not self.unit.is_leader():
-            return
-
-        # Defer if the unit is not initialised
-        if not self.unit_peer_data.get("unit-initialized"):
-            event.defer()
-            return
-
-        if not event.relation.data.get(event.unit):
-            # bypass when unit is no longer available
-            logger.warning(f"Unit {event.unit.name} is no longer available")
-            return
-
-        event_unit_address = self._get_unit_ip(event.unit)
-        event_unit_label = event.unit.name.replace("/", "-")
-
-        # Defer if the instance is not configured for use in an InnoDB cluster
-        # Every instance gets configured for use in an InnoDB cluster on start
-        if not self._mysql.is_instance_configured_for_innodb(event_unit_address, event_unit_label):
-            event.defer()
-            return
-
-        # Safeguard against event deferral
-        if self._mysql.is_instance_in_cluster(event_unit_label):
-            logger.debug(
-                f"Unit {event_unit_label} is already part of the cluster, skipping add to cluster."
-            )
-            return
-
-        # Add the instance to the cluster. This operation uses locks to ensure that
-        # only one instance is added to the cluster at a time
-        # (so only one instance is involved in a state transfer at a time)
-        try:
-            self._mysql.add_instance_to_cluster(event_unit_address, event_unit_label)
-        except MySQLAddInstanceToClusterError:
-            # won't fail leader due to issues in instance
-            return
-
-        # Update 'units-added-to-cluster' counter in the peer relation databag
-        # in order to trigger a relation_changed event which will move the added unit
-        # into ActiveStatus
-        units_started = int(self.app_peer_data["units-added-to-cluster"])
-        self.app_peer_data["units-added-to-cluster"] = str(units_started + 1)
+        except (
+            MySQLCreateClusterError,
+            MySQLCreateClusterSetError,
+            MySQLInitializeJujuOperationsTableError,
+        ) as e:
+            logger.exception("Failed to create cluster")
+            raise e
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
@@ -280,25 +244,13 @@ class MySQLOperatorCharm(CharmBase):
             event.defer()
             return
 
-        if self.unit_peer_data.get("unit-initialized"):
-            # Skip setting initialisation flag when already done
-            # and execute an update_status call
-            self._on_update_status(None)
-            return
-
-        # Update the unit's status to ActiveStatus if it was added to the cluster
-        unit_label = self.unit.name.replace("/", "-")
-        if isinstance(self.unit.status, WaitingStatus) and self._mysql.is_instance_in_cluster(
-            unit_label
-        ):
-            self.unit_peer_data["unit-initialized"] = "True"
-            self.unit_peer_data["member-state"] = "online"
-            try:
-                subprocess.check_call(["open-port", "3306/tcp"])
-                subprocess.check_call(["open-port", "33060/tcp"])
-            except subprocess.CalledProcessError:
-                logger.exception("failed to open port")
-            self.unit.status = ActiveStatus(self.active_status_message)
+        if self._is_unit_waiting_to_join_cluster():
+            self._join_unit_to_cluster()
+            for port in ["3306", "33060"]:
+                try:
+                    subprocess.check_call(["open-port", f"{port}/tcp"])
+                except subprocess.CalledProcessError:
+                    logger.exception(f"failed to open port {port}")
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
@@ -346,6 +298,14 @@ class MySQLOperatorCharm(CharmBase):
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
+            primary = self._get_primary_from_online_peer()
+            if (
+                primary
+                and self._mysql.get_cluster_node_count(from_instance=primary) == GR_MAX_MEMBERS
+            ):
+                # Reset variables to allow unit join the cluster
+                self.unit_peer_data["member-state"] = "waiting"
+                del self.unit_peer_data["unit-initialized"]
 
         if state == "unreachable":
             try:
@@ -373,11 +333,20 @@ class MySQLOperatorCharm(CharmBase):
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
+            and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
         ):
             # avoid changing status while in initialisation
             return
+
+        if self._is_unit_waiting_to_join_cluster():
+            self._join_unit_to_cluster()
+            return
+
+        nodes = self._mysql.get_cluster_node_count()
+        if nodes > 0 and self.unit.is_leader():
+            self.app_peer_data["units-added-to-cluster"] = str(nodes)
 
         # retrieve and persist state for every unit
         try:
@@ -409,7 +378,8 @@ class MySQLOperatorCharm(CharmBase):
                 self.unit.status = MaintenanceStatus("Unable to find cluster primary")
                 return
 
-            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
+            # Set active status when primary is known
+            self.app.status = ActiveStatus()
 
     # =======================
     #  Custom Action Handlers
@@ -437,7 +407,10 @@ class MySQLOperatorCharm(CharmBase):
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            raise RuntimeError("Invalid username.")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
 
         if username == ROOT_USERNAME:
             secret_key = ROOT_PASSWORD_KEY
@@ -457,12 +430,16 @@ class MySQLOperatorCharm(CharmBase):
     def _on_set_password(self, event: ActionEvent) -> None:
         """Action used to update/rotate the system user's password."""
         if not self.unit.is_leader():
-            raise RuntimeError("set-password action can only be run on the leader unit.")
+            event.fail("set-password action can only be run on the leader unit.")
+            return
 
         username = event.params.get("username") or ROOT_USERNAME
 
         if username not in REQUIRED_USERNAMES:
-            raise RuntimeError("Invalid username.")
+            event.fail(
+                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+            )
+            return
 
         if username == ROOT_USERNAME:
             secret_key = ROOT_PASSWORD_KEY
@@ -471,7 +448,7 @@ class MySQLOperatorCharm(CharmBase):
         elif username == CLUSTER_ADMIN_USERNAME:
             secret_key = CLUSTER_ADMIN_PASSWORD_KEY
         elif username == MONITORING_USERNAME:
-            secret_key == MONITORING_PASSWORD_KEY
+            secret_key = MONITORING_PASSWORD_KEY
         elif username == BACKUPS_USERNAME:
             secret_key = BACKUPS_PASSWORD_KEY
         else:
@@ -493,6 +470,7 @@ class MySQLOperatorCharm(CharmBase):
         return MySQL(
             self._get_unit_ip(self.unit),
             self.app_peer_data["cluster-name"],
+            self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
             SERVER_CONFIG_USERNAME,
             self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
@@ -598,12 +576,13 @@ class MySQLOperatorCharm(CharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config()
+        self._mysql.create_custom_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
         self._mysql.connect_mysql_exporter()
+        self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
@@ -634,6 +613,10 @@ class MySQLOperatorCharm(CharmBase):
             subprocess.check_call(["open-port", "33060/tcp"])
         except subprocess.CalledProcessError:
             logger.exception("failed to open port")
+
+    def _create_cluter_set(self) -> None:
+        """Create cluster set from initialized cluster."""
+        self._mysql.create_cluster_set()
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
@@ -709,15 +692,6 @@ class MySQLOperatorCharm(CharmBase):
 
         return ActiveStatus(self.active_status_message)
 
-    def _get_primary_address_from_peers(self) -> Optional[str]:
-        """Retrieve primary address based on peer data."""
-        for unit in self.peers.units:
-            if (
-                self.peers.data[unit]["member-role"] == "primary"
-                and self.peers.data[unit]["member-state"] == "online"
-            ):
-                return self.peers.data[unit]["instance-hostname"]
-
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.
 
@@ -730,6 +704,85 @@ class MySQLOperatorCharm(CharmBase):
         logger.error("Data directory not attached. Reboot unit.")
         self.unit.status = WaitingStatus("Data directory not attached")
         reboot_system()
+
+    def _is_unit_waiting_to_join_cluster(self) -> bool:
+        """Return if the unit is waiting to join the cluster."""
+        # alternatively, we could check if the instance is configured
+        # and have an empty performance_schema.replication_group_members table
+        return (
+            self.unit_peer_data.get("member-state") == "waiting"
+            and self.unit_peer_data.get("unit-configured") == "True"
+            and not self.unit_peer_data.get("unit-initialized")
+        )
+
+    def _get_primary_from_online_peer(self) -> Optional[str]:
+        """Get the primary address from an online peer."""
+        for unit in self.peers.units:
+            if self.peers.data[unit].get("member-state") == "online":
+                try:
+                    return self._mysql.get_cluster_primary_address(
+                        connect_instance_address=self._get_unit_ip(unit)
+                    )
+                except MySQLGetClusterPrimaryAddressError:
+                    # try next unit
+                    continue
+
+    def _join_unit_to_cluster(self) -> None:
+        """Join the unit to the cluster.
+
+        Try to join the unit from the primary unit.
+        """
+        instance_label = self.unit.name.replace("/", "-")
+        instance_address = self._get_unit_ip(self.unit)
+
+        if self._mysql.is_instance_in_cluster(instance_label):
+            logger.debug("instance already in cluster")
+            self.unit_peer_data["unit-initialized"] = "True"
+            return
+
+        # Add new instance to the cluster
+        try:
+            cluster_primary = self._get_primary_from_online_peer()
+            if not cluster_primary:
+                self.unit.status = WaitingStatus("waiting to get cluster primary from peers")
+                logger.debug("waiting: unable to retrieve the cluster primary from online peer")
+                return
+
+            if self._mysql.get_cluster_node_count(from_instance=cluster_primary) == GR_MAX_MEMBERS:
+                self.unit.status = BlockedStatus(
+                    f"Cluster reached max size of {GR_MAX_MEMBERS} units. Standby."
+                )
+                logger.info(
+                    f"Cluster reached max size of {GR_MAX_MEMBERS} units. This unit will stay as standby."
+                )
+                return
+
+            if self._mysql.are_locks_acquired(from_instance=cluster_primary):
+                self.unit.status = WaitingStatus("waiting to join in queue.")
+                logger.debug("waiting: cluster locks are acquired")
+                return
+
+            self.unit.status = MaintenanceStatus("joining the cluster")
+
+            # Add the instance to the cluster. This operation uses locks to ensure that
+            # only one instance is added to the cluster at a time
+            # (so only one instance is involved in a state transfer at a time)
+            self._mysql.add_instance_to_cluster(
+                instance_address, instance_label, from_instance=cluster_primary
+            )
+            logger.debug(f"Added instance {instance_address} to cluster")
+
+            # Update 'units-added-to-cluster' counter in the peer relation databag
+            self.unit_peer_data["unit-initialized"] = "True"
+            self.unit_peer_data["member-state"] = "online"
+            self.unit.status = ActiveStatus(self.active_status_message)
+            logger.debug(f"Instance {instance_label} is cluster member")
+
+        except MySQLAddInstanceToClusterError:
+            logger.debug(f"Unable to add instance {instance_address} to cluster.")
+        except MySQLLockAcquisitionError:
+            self.unit.status = WaitingStatus("waiting to join the cluster")
+            logger.debug("Waiting to joing the cluster, failed to acquire lock.")
 
 
 if __name__ == "__main__":

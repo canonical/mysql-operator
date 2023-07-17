@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
@@ -16,13 +17,12 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetInnoDBBufferPoolParametersError,
+    MySQLGetAutoTunningParametersError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
-from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
@@ -73,6 +73,10 @@ class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
 
 
+class MySQLFlushHostCacheError(Error):
+    """Exception raised when there's an error flushing the MySQL host cache."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -84,6 +88,7 @@ class MySQL(MySQLBase):
         self,
         instance_address: str,
         cluster_name: str,
+        cluster_set_name: str,
         root_password: str,
         server_config_user: str,
         server_config_password: str,
@@ -99,6 +104,7 @@ class MySQL(MySQLBase):
         Args:
             instance_address: address of the targeted instance
             cluster_name: cluster name
+            cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
             server_config_user: user name for the server config user
             server_config_password: password for the server config user
@@ -112,6 +118,7 @@ class MySQL(MySQLBase):
         super().__init__(
             instance_address=instance_address,
             cluster_name=cluster_name,
+            cluster_set_name=cluster_set_name,
             root_password=root_password,
             server_config_user=server_config_user,
             server_config_password=server_config_password,
@@ -128,19 +135,30 @@ class MySQL(MySQLBase):
         """Install and configure MySQL dependencies.
 
         Raises
-            subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
-            apt.PackageNotFoundError, apt.PackageError: if issue install mysql server
-            snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
+            subprocess.CalledProcessError: if issue creating mysqlsh common dir
+            snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
+        logger.debug("Retrieving snap cache")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+        # This charm can override/use an existing snap installation only if the snap was previously
+        # installed by this charm.
+        # Otherwise, the snap could be in use by another charm (e.g. MySQL Router charm).
+        installed_by_mysql_server_file = pathlib.Path(
+            CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
+        )
+        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
+            logger.error(
+                f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
+            )
+            raise Exception(
+                f"Multiple {CHARMED_MYSQL_SNAP_NAME} snap installs not supported on one machine"
+            )
+
         try:
             # install the charmed-mysql snap
-            logger.debug("Retrieving snap cache")
-            cache = snap.SnapCache()
-            charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-
-            if not charmed_mysql.present:
-                logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            logger.debug("Installing charmed-mysql snap")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -148,11 +166,9 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
+            installed_by_mysql_server_file.touch(exist_ok=True)
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
-            raise
-        except (apt.PackageNotFoundError, apt.PackageError) as e:
-            logger.exception("Failed to install apt packages", exc_info=e)
             raise
         except (snap.SnapNotFoundError, snap.SnapError) as e:
             logger.exception("Failed to install snaps", exc_info=e)
@@ -161,31 +177,40 @@ class MySQL(MySQLBase):
             logger.exception("Encountered an unexpected exception", exc_info=e)
             raise
 
-    def create_custom_mysqld_config(self) -> None:
+    def create_custom_mysqld_config(self, profile: str) -> None:
         """Create custom mysql config file.
 
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        try:
-            (
-                innodb_buffer_pool_size,
-                innodb_buffer_pool_chunk_size,
-            ) = self.get_innodb_buffer_pool_parameters()
-        except MySQLGetInnoDBBufferPoolParametersError:
-            raise MySQLCreateCustomMySQLDConfigError("Failed to compute innodb buffer pool size")
+        if profile == "testing":
+            innodb_buffer_pool_size = 20971520
+            innodb_buffer_pool_chunk_size = 1048576
+            max_connections = 20
+        else:
+            try:
+                (
+                    innodb_buffer_pool_size,
+                    innodb_buffer_pool_chunk_size,
+                ) = self.get_innodb_buffer_pool_parameters()
+                max_connections = self.get_max_connections()
+            except MySQLGetAutoTunningParametersError:
+                raise MySQLCreateCustomMySQLDConfigError(
+                    "Failed to compute mysql parameters automatically"
+                )
 
         content = [
             "[mysqld]",
             "bind-address = 0.0.0.0",
             "mysqlx-bind-address = 0.0.0.0",
             f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+            f"max_connections = {max_connections}",
         ]
 
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        content.append(f"report_host = {self.instance_address}")
+        content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
 
         # create the mysqld config directory if it does not exist
@@ -197,6 +222,7 @@ class MySQL(MySQLBase):
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
+        logger.debug("Resetting root user password and starting mysqld")
         with tempfile.NamedTemporaryFile(
             dir=MYSQLD_CONFIG_DIRECTORY,
             prefix="z-custom-init-file.",
@@ -208,11 +234,12 @@ class MySQL(MySQLBase):
                 dir=CHARMED_MYSQL_COMMON_DIRECTORY,
                 prefix="alter-root-user.",
                 suffix=".sql",
-                mode="w+",
+                mode="w",
                 encoding="utf-8",
             ) as _sql_file:
                 _sql_file.write(
-                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';"
+                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
+                    "FLUSH PRIVILEGES;"
                 )
                 _sql_file.flush()
 
@@ -259,14 +286,16 @@ class MySQL(MySQLBase):
                 except MySQLServiceNotRunningError:
                     raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
-    @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
+    @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
     def wait_until_mysql_connection(self) -> None:
         """Wait until a connection to MySQL has been obtained.
 
-        Retry every 5 seconds for 30 seconds if there is an issue obtaining a connection.
+        Retry every 5 seconds for 120 seconds if there is an issue obtaining a connection.
         """
+        logger.debug("Waiting for MySQL connection")
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
+        logger.debug("MySQL connection possible")
 
     def execute_backup_commands(
         self,
@@ -281,16 +310,18 @@ class MySQL(MySQLBase):
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
             MYSQLD_SOCK_FILE,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             MYSQLD_DEFAULTS_CONFIG_FILE,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(self) -> None:
+    def delete_temp_backup_directory(
+        self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
+    ) -> None:
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
-            MYSQL_DATA_DIR,
+            from_directory,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
@@ -304,7 +335,7 @@ class MySQL(MySQLBase):
         return super().retrieve_backup_with_xbcloud(
             backup_id,
             s3_parameters,
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
             user=ROOT_SYSTEM_USER,
@@ -393,7 +424,7 @@ class MySQL(MySQLBase):
     def delete_temp_restore_directory(self) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         super().delete_temp_restore_directory(
-            MYSQL_DATA_DIR,
+            CHARMED_MYSQL_COMMON_DIRECTORY,
             user=ROOT_SYSTEM_USER,
             group=ROOT_SYSTEM_USER,
         )
@@ -464,7 +495,7 @@ class MySQL(MySQLBase):
         )
 
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True)
             self.wait_until_mysql_connection()
         except (
             MySQLServiceNotRunningError,
@@ -474,6 +505,21 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def flush_host_cache(self) -> None:
+        """Flush the MySQL in-memory host cache."""
+        flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
+
+        try:
+            logger.info("Truncating the MySQL host cache")
+            self._run_mysqlcli_script(
+                flush_host_cache_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError as e:
+            logger.exception("Failed to truncate the MySQL host cache")
+            raise MySQLFlushHostCacheError(e.message)
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
@@ -492,8 +538,9 @@ class MySQL(MySQLBase):
                     "exporter.password": self.monitoring_password,
                 }
             )
-
-            mysqld_snap.start(services=[CHARMED_MYSQLD_EXPORTER_SERVICE], enable=True)
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start", True
+            )
         except snap.SnapError:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
             raise MySQLExporterConnectError
@@ -679,13 +726,14 @@ def instance_hostname():
         return None
 
 
-def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
+def snap_service_operation(snapname: str, service: str, operation: str, enable=False) -> bool:
     """Helper function to run an operation on a snap service.
 
     Args:
         snapname: The name of the snap
         service: The name of the service
         operation: The name of the operation (restart, start, stop)
+        enable: (optional) A bool indicating if the service should be enabled or disabled on start
 
     Returns:
         a bool indicating if the operation was successful.
@@ -704,7 +752,7 @@ def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
             selected_snap.restart(services=[service])
             return selected_snap.services[service]["active"]
         elif operation == "start":
-            selected_snap.start(services=[service])
+            selected_snap.start(services=[service], enable=enable)
             return selected_snap.services[service]["active"]
         else:
             selected_snap.stop(services=[service])

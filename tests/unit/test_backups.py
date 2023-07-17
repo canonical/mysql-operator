@@ -327,8 +327,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_can_unit_perform_backup_failure(
         self,
+        _,
         _get_member_state,
         _offline_mode_and_hidden_instance_exists,
     ):
@@ -377,8 +379,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_pre_backup(
         self,
+        _,
         _set_instance_offline_mode,
         _set_instance_option,
     ):
@@ -545,8 +549,10 @@ Juju Version: test-juju-version
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
+    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_pre_restore_checks_failure(
         self,
+        _,
         _is_unit_busy,
         _is_server_connectable,
     ):
@@ -872,21 +878,21 @@ Juju Version: test-juju-version
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
         self.assertFalse(success)
-        self.assertEquals(error, "Failed to start mysqld")
+        self.assertEqual(error, "Failed to start mysqld")
 
         # test failure of delete_temp_backup_directory()
         _delete_temp_backup_directory.side_effect = MySQLDeleteTempBackupDirectoryError()
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
         self.assertFalse(success)
-        self.assertEquals(error, "Failed to delete the temp backup directory")
+        self.assertEqual(error, "Failed to delete the temp backup directory")
 
         # test failure of delete_temp_restore_directory()
         _delete_temp_restore_directory.side_effect = MySQLDeleteTempRestoreDirectoryError()
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
         self.assertFalse(success)
-        self.assertEquals(error, "Failed to delete the temp restore directory")
+        self.assertEqual(error, "Failed to delete the temp restore directory")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
@@ -956,7 +962,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(error_message, "Failed to retrieve member state in restored instance")
+        self.assertEqual(error_message, "Failed to retrieve member state in restored instance")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of rescan_cluster()
@@ -964,7 +970,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(error_message, "Failed to rescan the cluster")
+        self.assertEqual(error_message, "Failed to rescan the cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of initialize_juju_units_operations_table()
@@ -974,7 +980,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(error_message, "Failed to initialize the juju operations table")
+        self.assertEqual(error_message, "Failed to initialize the juju operations table")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of create_cluster()
@@ -982,7 +988,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(error_message, "Failed to create InnoDB cluster on restored instance")
+        self.assertEqual(error_message, "Failed to create InnoDB cluster on restored instance")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of wait_until_mysql_connection()
@@ -990,9 +996,7 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(
-            error_message, "Failed to configure restored instance for InnoDB cluster"
-        )
+        self.assertEqual(error_message, "Failed to configure restored instance for InnoDB cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of configure_instance()
@@ -1000,14 +1004,12 @@ Juju Version: test-juju-version
 
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(
-            error_message, "Failed to configure restored instance for InnoDB cluster"
-        )
+        self.assertEqual(error_message, "Failed to configure restored instance for InnoDB cluster")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of _clean_data_dir_and_start_mysqld()
         _clean_data_dir_and_start_mysqld.return_value = False, "failed to clean data dir"
         success, error_message = self.mysql_backups._post_restore()
         self.assertFalse(success)
-        self.assertEquals(error_message, "failed to clean data dir")
+        self.assertEqual(error_message, "failed to clean data dir")
         self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
