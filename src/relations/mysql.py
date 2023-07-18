@@ -110,30 +110,22 @@ class MySQLRelation(Object):
         if not self.charm.unit.is_leader():
             return
 
-        config_username = self.charm.config.get(MYSQL_RELATION_USER_KEY)
-        config_database = self.charm.config.get(MYSQL_RELATION_DATABASE_KEY)
-        if not config_username and not config_database:
+        if not (
+            self.charm.app_peer_data.get(MYSQL_RELATION_USER_KEY)
+            and self.charm.app_peer_data.get(MYSQL_RELATION_DATABASE_KEY)
+        ):
             return
 
-        current_username = self.charm.app_peer_data.get(MYSQL_RELATION_USER_KEY)
-        current_database = self.charm.app_peer_data.get(MYSQL_RELATION_DATABASE_KEY)
-
-        # the mysql-relation-created event has not yet fired
-        # the config options will be factored in when the relation is formed
-        if not current_username:
-            return
-
-        mysql_relation_exists = len(self.model.relations[LEGACY_MYSQL])
-
-        if isinstance(self.charm.unit.status, ActiveStatus) and mysql_relation_exists:
-            if config_username != current_username:
-                self.charm.unit.status = BlockedStatus(
-                    f"Remove `mysql` relations in order to change `{MYSQL_RELATION_USER_KEY}` config"
-                )
-            if config_database != current_database:
-                self.charm.unit.status = BlockedStatus(
-                    f"Remove `mysql` relations in order to change `{MYSQL_RELATION_DATABASE_KEY}` config"
-                )
+        if isinstance(self.charm.unit.status, ActiveStatus) and len(
+            self.model.relations.get(LEGACY_MYSQL, [])
+        ):
+            for key in (MYSQL_RELATION_USER_KEY, MYSQL_RELATION_DATABASE_KEY):
+                config_value = self.charm.config.get(key)
+                if config_value and config_value != self.charm.app_peer_data.get(key):
+                    self.charm.app.status = BlockedStatus(
+                        f"Remove `mysql` relations in order to change `{key}` config"
+                    )
+                    return
 
     def _on_mysql_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handle the legacy `mysql` relation created event.
@@ -230,8 +222,8 @@ class MySQLRelation(Object):
         del self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY]
 
         if isinstance(
-            self.charm.unit.status, BlockedStatus
-        ) and self.charm.unit.status.message.startswith(
+            self.charm.app.status, BlockedStatus
+        ) and self.charm.app.status.message.startswith(
             "Remove `mysql` relations in order to change"
         ):
-            self.charm.unit.status = ActiveStatus()
+            self.charm.app.status = ActiveStatus()
