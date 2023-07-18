@@ -91,6 +91,9 @@ class MySQLMachineHostnameResolution(Object):
 
     def _potentially_update_etc_hosts(self, _) -> None:
         """Potentially update the /etc/hosts file with new hostname to IP for units."""
+        if not self.charm._is_peer_data_set:
+            return
+
         host_details = self._get_host_details()
         if not host_details:
             logger.debug("No hostnames in the peer databag. Skipping update of /etc/hosts")
