@@ -121,7 +121,7 @@ class MySQLRelation(Object):
         ):
             for key in (MYSQL_RELATION_USER_KEY, MYSQL_RELATION_DATABASE_KEY):
                 config_value = self.charm.config.get(key)
-                if config_value and config_value != self.charm.app_peer_data.get(key):
+                if config_value and config_value != self.charm.app_peer_data[key]:
                     self.charm.app.status = BlockedStatus(
                         f"Remove `mysql` relations in order to change `{key}` config"
                     )
