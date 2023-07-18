@@ -116,8 +116,8 @@ class MySQLRelation(Object):
         ):
             return
 
-        if isinstance(self.charm.unit.status, ActiveStatus) and len(
-            self.model.relations.get(LEGACY_MYSQL, [])
+        if isinstance(self.charm.unit.status, ActiveStatus) and self.model.relations.get(
+            LEGACY_MYSQL
         ):
             for key in (MYSQL_RELATION_USER_KEY, MYSQL_RELATION_DATABASE_KEY):
                 config_value = self.charm.config.get(key)
