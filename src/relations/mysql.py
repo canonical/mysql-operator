@@ -68,7 +68,7 @@ class MySQLRelation(Object):
         """
         return self.charm.app_peer_data.setdefault(
             MYSQL_RELATION_USER_KEY,
-            self.charm.config.get(MYSQL_RELATION_USER_KEY, f"relation-{event_relation_id}"),
+            self.charm.config.get(MYSQL_RELATION_USER_KEY) or f"relation-{event_relation_id}",
         )
 
     def _get_or_generate_database(self, event_relation_id: int) -> str:
@@ -78,7 +78,7 @@ class MySQLRelation(Object):
         """
         return self.charm.app_peer_data.setdefault(
             MYSQL_RELATION_DATABASE_KEY,
-            self.charm.config.get(MYSQL_RELATION_DATABASE_KEY, f"database-{event_relation_id}"),
+            self.charm.config.get(MYSQL_RELATION_DATABASE_KEY) or f"database-{event_relation_id}",
         )
 
     def _on_leader_elected(self, _) -> None:
@@ -224,6 +224,14 @@ class MySQLRelation(Object):
         except MySQLDeleteUsersForUnitError:
             logger.error("Failed to delete mysql users")
             self.charm.unit.status = BlockedStatus("Failed to remove relation user")
+            return
 
         del self.charm.app_peer_data[MYSQL_RELATION_USER_KEY]
         del self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY]
+
+        if isinstance(
+            self.charm.unit.status, BlockedStatus
+        ) and self.charm.unit.status.message.startswith(
+            "Remove `mysql` relations in order to change"
+        ):
+            self.charm.unit.status = ActiveStatus()
