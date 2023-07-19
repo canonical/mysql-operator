@@ -466,7 +466,7 @@ class MySQLCharmBase(CharmBase):
             secret_id = self.unit_peer_data.get("secret-id")
 
             if not self.unit_secrets and not secret_id:
-                logger.info("Getting a secret when no secrets added in juju")
+                logger.debug("Getting a secret when no secrets added in juju")
                 return None
 
             if not self.unit_secrets:
@@ -474,13 +474,13 @@ class MySQLCharmBase(CharmBase):
                 content = secret.get_content()
                 self.unit_secrets = content
 
-            logger.info(f"Retrieved secret {key} for unit")
+            logger.debug(f"Retrieved secret {key} for unit")
             return self.unit_secrets.get(key)
 
         secret_id = self.app_peer_data.get("secret-id")
 
         if not self.app_secrets and not secret_id:
-            logger.info("Getting a secret when no secrets added in juju")
+            logger.debug("Getting a secret when no secrets added in juju")
             return None
 
         if not self.app_secrets:
@@ -488,7 +488,7 @@ class MySQLCharmBase(CharmBase):
             content = secret.get_content()
             self.app_secrets = content
 
-        logger.info(f"Retrieved secret {key} for app")
+        logger.debug(f"Retrieved secret {key} for app")
         return self.app_secrets.get(key)
 
     def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
@@ -532,7 +532,11 @@ class MySQLCharmBase(CharmBase):
 
         if secret_id:
             secret = self.model.get_secret(id=secret_id)
-            content = secret.get_content()
+
+            if scope == "unit":
+                content = self.unit_secrets if self.unit_secrets else secret.get_content()
+            else:
+                content = self.app_secrets if self.app_secrets else secret.get_content()
 
             if not value:
                 del content[key]
@@ -540,19 +544,23 @@ class MySQLCharmBase(CharmBase):
                 content[key] = value
 
             secret.set_content(content)
-            logger.info(f"Updated secret {secret_id}")
+            logger.debug(f"Updated {scope} secret {secret_id} for {key}")
         else:
             content = {
                 key: value,
             }
-            secret = self.app.add_secret(content)
-            logger.info(f"Added secret {secret_id}")
+
+            if scope == "unit":
+                secret = self.unit.add_secret(content)
+                self.unit_peer_data["secret-id"] = secret.id
+            else:
+                secret = self.app.add_secret(content)
+                self.app_peer_data["secret-id"] = secret.id
+            logger.debug(f"Added {scope} secret {secret_id} for {key}")
 
         if scope == "unit":
-            self.unit_peer_data["secret-id"] = secret.id
             self.unit_secrets = content
         else:
-            self.app_peer_data["secret-id"] = secret.id
             self.app_secrets = content
 
     def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
@@ -2204,6 +2212,7 @@ Swap:     1027600384  1027600384           0
                 password=self.server_config_password,
             )
         except MySQLClientError:
+            logger.exception("Failed to set custom TLS configuration")
             raise MySQLTLSSetupError("Failed to set custom TLS configuration")
 
     def kill_unencrypted_sessions(self) -> None:
