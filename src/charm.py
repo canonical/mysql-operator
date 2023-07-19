@@ -8,6 +8,7 @@ import logging
 import subprocess
 from typing import Optional
 
+import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -57,6 +58,7 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
+from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -68,6 +70,7 @@ from mysql_vm_helpers import (
     instance_hostname,
     is_volume_mounted,
     reboot_system,
+    snap,
     snap_service_operation,
 )
 from relations.db_router import DBRouterRelation
@@ -115,6 +118,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         )
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
+        self.hostname_resolution = MySQLMachineHostnameResolution(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -138,6 +142,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
+                retry=tenacity.retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -368,13 +373,6 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
             # Set active status when primary is known
             self.app.status = ActiveStatus()
-
-            if self._mysql.are_locks_acquired(from_instance=primary_address):
-                logger.debug("Skip cluster rescan while locks are held")
-                return
-
-            # Only rescan cluster when topology is not changing
-            self._mysql.rescan_cluster(remove_instances=True, add_instances=True)
 
     # =======================
     #  Helpers

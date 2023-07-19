@@ -51,3 +51,4 @@ CHARMED_MYSQL_XBSTREAM_LOCATION = "/snap/bin/charmed-mysql.xbstream"
 XTRABACKUP_PLUGIN_DIR = "/snap/charmed-mysql/current/usr/lib/xtrabackup/plugin"
 ROOT_SYSTEM_USER = "root"
 GR_MAX_MEMBERS = 9
+HOSTNAME_DETAILS = "hostname-details"

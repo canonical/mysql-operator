@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
@@ -22,7 +23,6 @@ from charms.mysql.v0.mysql import (
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
-from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
 
@@ -71,6 +71,10 @@ class SnapServiceOperationError(Error):
 
 class MySQLExporterConnectError(Error):
     """Exception raised when there's an error setting up MySQL exporter."""
+
+
+class MySQLFlushHostCacheError(Error):
+    """Exception raised when there's an error flushing the MySQL host cache."""
 
 
 class MySQL(MySQLBase):
@@ -131,19 +135,30 @@ class MySQL(MySQLBase):
         """Install and configure MySQL dependencies.
 
         Raises
-            subprocess.CalledProcessError: if issue updating apt or creating mysqlsh common dir
-            apt.PackageNotFoundError, apt.PackageError: if issue install mysql server
-            snap.SnapNotFOundError, snap.SnapError: if issue installing mysql shell snap
+            subprocess.CalledProcessError: if issue creating mysqlsh common dir
+            snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
+        logger.debug("Retrieving snap cache")
+        cache = snap.SnapCache()
+        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
+        # This charm can override/use an existing snap installation only if the snap was previously
+        # installed by this charm.
+        # Otherwise, the snap could be in use by another charm (e.g. MySQL Router charm).
+        installed_by_mysql_server_file = pathlib.Path(
+            CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
+        )
+        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
+            logger.error(
+                f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
+            )
+            raise Exception(
+                f"Multiple {CHARMED_MYSQL_SNAP_NAME} snap installs not supported on one machine"
+            )
+
         try:
             # install the charmed-mysql snap
-            logger.debug("Retrieving snap cache")
-            cache = snap.SnapCache()
-            charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-
-            if not charmed_mysql.present:
-                logger.debug("Installing charmed-mysql snap")
-                charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            logger.debug("Installing charmed-mysql snap")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
@@ -151,11 +166,9 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
+            installed_by_mysql_server_file.touch(exist_ok=True)
         except subprocess.CalledProcessError as e:
             logger.exception("Failed to execute subprocess command", exc_info=e)
-            raise
-        except (apt.PackageNotFoundError, apt.PackageError) as e:
-            logger.exception("Failed to install apt packages", exc_info=e)
             raise
         except (snap.SnapNotFoundError, snap.SnapError) as e:
             logger.exception("Failed to install snaps", exc_info=e)
@@ -197,7 +210,7 @@ class MySQL(MySQLBase):
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
 
-        content.append(f"report_host = {self.instance_address}")
+        content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
 
         # create the mysqld config directory if it does not exist
@@ -492,6 +505,21 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def flush_host_cache(self) -> None:
+        """Flush the MySQL in-memory host cache."""
+        flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
+
+        try:
+            logger.info("Truncating the MySQL host cache")
+            self._run_mysqlcli_script(
+                flush_host_cache_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+            )
+        except MySQLClientError as e:
+            logger.exception("Failed to truncate the MySQL host cache")
+            raise MySQLFlushHostCacheError(e.message)
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.

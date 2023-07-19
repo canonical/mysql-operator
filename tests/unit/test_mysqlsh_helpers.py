@@ -241,8 +241,9 @@ class TestMySQL(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
+    @patch("socket.getfqdn", return_value="1.2.3.4")
     def test_create_custom_mysqld_config(
-        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+        self, _, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
     ):
         """Test successful execution of create_custom_mysqld_config."""
         self.maxDiff = None
@@ -262,7 +263,7 @@ class TestMySQL(unittest.TestCase):
                 "innodb_buffer_pool_size = 1234",
                 "max_connections = 111",
                 "innodb_buffer_pool_chunk_size = 5678",
-                "report_host = 127.0.0.1",
+                "report_host = 1.2.3.4",
                 "",
             )
         )
@@ -296,7 +297,7 @@ class TestMySQL(unittest.TestCase):
                 "innodb_buffer_pool_size = 20971520",
                 "max_connections = 20",
                 "innodb_buffer_pool_chunk_size = 1048576",
-                "report_host = 127.0.0.1",
+                "report_host = 1.2.3.4",
                 "",
             )
         )
@@ -427,16 +428,14 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLStartMySQLDError):
             self.mysql.start_mysqld()
 
+    @patch("pathlib.Path")
     @patch("subprocess.check_call")
     @patch("os.path.exists", return_value=True)
-    @patch("mysql_vm_helpers.snap")
-    def test_install_snap(self, _snap, _path_exists, _check_call):
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_install_snap(self, _cache, _path_exists, _check_call, _pathlib):
         """Test execution of install_snap()."""
-        _cache = MagicMock()
         _mysql_snap = MagicMock()
-        _snap.SnapCache.return_value = _cache
-
-        _cache[CHARMED_MYSQL_SNAP_NAME] = _mysql_snap
+        _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
 
         _mysql_snap.present = False
         _path_exists.return_value = False
