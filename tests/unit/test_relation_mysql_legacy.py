@@ -25,14 +25,14 @@ class TestMariaDBRelation(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch(
-        "relations.mysql.MySQLRelation._get_or_set_password_in_peer_databag",
+        "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
     )
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_maria_db_relation_created(
         self,
         _create_application_database_and_scoped_user,
-        _get_or_set_password_in_peer_databag,
+        _get_or_set_password_in_peer_secrets,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
     ):
@@ -48,7 +48,7 @@ class TestMariaDBRelation(unittest.TestCase):
         self.maria_db_relation_id = self.harness.add_relation(LEGACY_MYSQL, "other-app")
         self.harness.add_relation_unit(self.maria_db_relation_id, "other-app/0")
 
-        self.assertEqual(_get_or_set_password_in_peer_databag.call_count, 1)
+        self.assertEqual(_get_or_set_password_in_peer_secrets.call_count, 1)
         _create_application_database_and_scoped_user.assert_called_once_with(
             "default_database",
             "mysql",
@@ -81,14 +81,14 @@ class TestMariaDBRelation(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch(
-        "relations.mysql.MySQLRelation._get_or_set_password_in_peer_databag",
+        "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
     )
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_maria_db_relation_departed(
         self,
         _create_application_database_and_scoped_user,
-        _get_or_set_password_in_peer_databag,
+        _get_or_set_password_in_peer_secrets,
         _delete_users_for_unit,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
