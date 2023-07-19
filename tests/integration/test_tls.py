@@ -103,7 +103,9 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     logger.info("Deploy TLS operator")
     async with ops_test.fast_forward():
         tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_APP_NAME, channel="beta", series="jammy", config=tls_config)
+        await ops_test.model.deploy(
+            TLS_APP_NAME, channel="beta", series="jammy", config=tls_config
+        )
         await ops_test.model.wait_for_idle(apps=[TLS_APP_NAME], status="active", timeout=15 * 60)
 
     # Relate with TLS charm
