@@ -52,7 +52,7 @@ class MySQLRelation(Object):
         Returns:
             a string representing the password for the mysql user
         """
-        password_key = f"{username}_password"
+        password_key = f"{username}-password"
         password = self.charm.get_secret("app", password_key)
         if password:
             return password
