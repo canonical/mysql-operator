@@ -506,9 +506,6 @@ class MySQLCharmBase(CharmBase):
         if scope not in ["unit", "app"]:
             raise MySQLSecretError(f"Invalid secret scope: {scope}")
 
-        if scope == "app" and not self.unit.is_leader():
-            raise MySQLSecretError("Can only get app secrets on the leader unit")
-
         if ops.jujuversion.JujuVersion.from_environ().has_secrets:
             return self._get_secret_from_juju(scope, key)
 
