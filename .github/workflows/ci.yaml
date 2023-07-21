@@ -53,7 +53,7 @@ jobs:
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@tox-build
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@tox-build-timeout
 
   collect-integration-tests:
     name: Collect integration test groups
