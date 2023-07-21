@@ -92,7 +92,6 @@ from constants import (
     MONITORING_USERNAME,
     PASSWORD_LENGTH,
     PEER,
-    REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
     SERVER_CONFIG_PASSWORD_KEY,
@@ -322,6 +321,10 @@ class MySQLRescanClusterError(Error):
     """Exception raised when there is an issue rescanning the cluster."""
 
 
+class MySQLSecretError(Error):
+    """Exception raised when there is an issue setting/getting a secret."""
+
+
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
@@ -346,24 +349,24 @@ class MySQLCharmBase(CharmBase):
         """Action used to retrieve the system user's password."""
         username = event.params.get("username") or ROOT_USERNAME
 
-        if username not in REQUIRED_USERNAMES:
+        valid_usernames = {
+            ROOT_USERNAME: ROOT_PASSWORD_KEY,
+            SERVER_CONFIG_USERNAME: SERVER_CONFIG_PASSWORD_KEY,
+            CLUSTER_ADMIN_USERNAME: CLUSTER_ADMIN_PASSWORD_KEY,
+            MONITORING_USERNAME: MONITORING_PASSWORD_KEY,
+            BACKUPS_USERNAME: BACKUPS_PASSWORD_KEY,
+        }
+
+        if username not in valid_usernames:
             event.fail(
-                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+                f"The action can be run only for users used by the charm: {', '.join(valid_usernames.keys())} not {username}"
             )
             return
 
-        if username == ROOT_USERNAME:
-            secret_key = ROOT_PASSWORD_KEY
-        elif username == SERVER_CONFIG_USERNAME:
-            secret_key = SERVER_CONFIG_PASSWORD_KEY
-        elif username == CLUSTER_ADMIN_USERNAME:
-            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == MONITORING_USERNAME:
-            secret_key = MONITORING_PASSWORD_KEY
-        elif username == BACKUPS_USERNAME:
-            secret_key = BACKUPS_PASSWORD_KEY
-        else:
-            raise RuntimeError("Invalid username.")
+        secret_key = valid_usernames.get(username)
+        if not secret_key:
+            event.fail(f"Invalid username: {username}")
+            return
 
         event.set_results({"username": username, "password": self.get_secret("app", secret_key)})
 
@@ -375,24 +378,24 @@ class MySQLCharmBase(CharmBase):
 
         username = event.params.get("username") or ROOT_USERNAME
 
-        if username not in REQUIRED_USERNAMES:
+        valid_usernames = {
+            ROOT_USERNAME: ROOT_PASSWORD_KEY,
+            SERVER_CONFIG_USERNAME: SERVER_CONFIG_PASSWORD_KEY,
+            CLUSTER_ADMIN_USERNAME: CLUSTER_ADMIN_PASSWORD_KEY,
+            MONITORING_USERNAME: MONITORING_PASSWORD_KEY,
+            BACKUPS_USERNAME: BACKUPS_PASSWORD_KEY,
+        }
+
+        if username not in valid_usernames:
             event.fail(
-                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
+                f"The action can be run only for users used by the charm: {', '.join(valid_usernames.keys())} not {username}"
             )
             return
 
-        if username == ROOT_USERNAME:
-            secret_key = ROOT_PASSWORD_KEY
-        elif username == SERVER_CONFIG_USERNAME:
-            secret_key = SERVER_CONFIG_PASSWORD_KEY
-        elif username == CLUSTER_ADMIN_USERNAME:
-            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == MONITORING_USERNAME:
-            secret_key = MONITORING_PASSWORD_KEY
-        elif username == BACKUPS_USERNAME:
-            secret_key = BACKUPS_PASSWORD_KEY
-        else:
-            raise RuntimeError("Invalid username.")
+        secret_key = valid_usernames.get(username)
+        if not secret_key:
+            event.fail(f"Invalid username: {username}")
+            return
 
         new_password = event.params.get("password") or generate_random_password(PASSWORD_LENGTH)
 
@@ -419,14 +422,14 @@ class MySQLCharmBase(CharmBase):
             )
 
     @property
-    def peers(self):
-        """Retrieve the peer relation (`ops.model.Relation`)."""
+    def peers(self) -> ops.model.Relation:
+        """Retrieve the peer relation."""
         return self.model.get_relation(PEER)
 
     @property
     def cluster_initialized(self):
         """Returns True if the cluster is initialized."""
-        return self.app_peer_data.get("units-added-to-cluster", "0") >= "1"
+        return int(self.app_peer_data.get("units-added-to-cluster", "0")) >= 1
 
     @property
     def unit_initialized(self):
@@ -501,7 +504,10 @@ class MySQLCharmBase(CharmBase):
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope not in ["unit", "app"]:
-            raise RuntimeError("Invalid secret scope")
+            raise MySQLSecretError(f"Invalid secret scope: {scope}")
+
+        if scope == "app" and not self.unit.is_leader():
+            raise MySQLSecretError("Can only get app secrets on the leader unit")
 
         if ops.jujuversion.JujuVersion.from_environ().has_secrets:
             return self._get_secret_from_juju(scope, key)
@@ -532,11 +538,7 @@ class MySQLCharmBase(CharmBase):
 
         if secret_id:
             secret = self.model.get_secret(id=secret_id)
-
-            if scope == "unit":
-                content = self.unit_secrets if self.unit_secrets else secret.get_content()
-            else:
-                content = self.app_secrets if self.app_secrets else secret.get_content()
+            content = secret.get_content()
 
             if not value:
                 del content[key]
@@ -566,7 +568,10 @@ class MySQLCharmBase(CharmBase):
     def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
         """Set a secret in the secret storage."""
         if scope not in ["unit", "app"]:
-            raise RuntimeError("Invalid secret scope")
+            raise MySQLSecretError(f"Invalid secret scope: {scope}")
+
+        if scope == "app" and not self.unit.is_leader():
+            raise MySQLSecretError("Can only set app secrets on the leader unit")
 
         if ops.jujuversion.JujuVersion.from_environ().has_secrets:
             return self._set_secret_in_juju(scope, key, value)
