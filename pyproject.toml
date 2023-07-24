@@ -16,6 +16,16 @@ boto3 = "^1.28.7"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
 pyopenssl = "^23.2.0"
 
+[tool.poetry.group.charm-libs.dependencies]
+# data_platform_libs/v0/data_interfaces.py
+ops = ">=2.0.0"
+# grafana_agent/v0/cos_agent.py
+cosl = "*"
+pydantic = "<2"
+# tls_certificates_interface/v1/tls_certificates.py
+cryptography = "*"
+jsonschema = "*"
+
 [tool.poetry.group.format]
 optional = true
 
@@ -49,16 +59,6 @@ juju = "^2.9.44.0"
 mysql-connector-python = "~8.0.33"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
-
-[tool.poetry.group.charm-libs.dependencies]
-# data_platform_libs/v0/data_interfaces.py
-ops = ">=2.0.0"
-# grafana_agent/v0/cos_agent.py
-cosl = "*"
-pydantic = "<2"
-# tls_certificates_interface/v1/tls_certificates.py
-cryptography = "*"
-jsonschema = "*"
 
 
 [tool.coverage.run]
