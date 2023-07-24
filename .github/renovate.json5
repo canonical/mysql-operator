@@ -15,6 +15,7 @@
   "packageRules": [
     {
       "matchManagers": ["poetry"],
+      // Renovate uses "dependencies" instead of "main" for top-level dependency group
       "matchDepTypes": ["dependencies"],
       "rangeStrategy": "bump",
       "commitMessagePrefix": "[charm]",
@@ -34,17 +35,25 @@
       "commitMessagePrefix": "[python ci]",
       "groupName": "Python CI dependencies"
     },
+    // MySQL 8.X does not follow semantic versioning (e.g. 8.0.1 -> 8.0.2 can include a breaking change)
+    // Therefore, use a separate Renovate group so that it has a separate PR
+    {
+      "matchManagers": ["poetry"],
+      "matchPackagePatterns": ["mysql-connector-python"],
+      "groupName": "MySQL Connector/Python"
+    },
     {
       "matchManagers": ["regex"],
       "matchPackageNames": ["juju/juju"],
       "groupName": "Juju agents"
     },
+    // Disable major version updates for Juju agent (they should be handled manually)
     {
       "matchManagers": ["regex"],
       "matchPackageNames": ["juju/juju"],
       "matchUpdateTypes": ["major"],
       "enabled": false
-    }
+    },
   ],
   "regexManagers": [
     {
