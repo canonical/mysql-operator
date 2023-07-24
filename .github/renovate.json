@@ -15,20 +15,23 @@
   "packageRules": [
     {
       "matchManagers": ["poetry"],
-      "matchDepNames": ["main"],
+      "matchDepTypes": ["dependencies"],
       "rangeStrategy": "bump",
+      "commitMessagePrefix": "[charm]",
       "groupName": "charm dependencies"
     },
     {
       "matchManagers": ["poetry"],
-      "matchDepNames": ["charm-libs"],
+      "matchDepTypes": ["charm-libs"],
       "rangeStrategy": "in-range-only",
+      "commitMessagePrefix": "[charm lib]",
       "groupName": "charm lib dependencies"
     },
     {
       "matchManagers": ["poetry"],
-      "matchDepNames": ["format", "lint", "unit", "integration"],
+      "matchDepTypes": ["format", "lint", "unit", "integration"],
       "rangeStrategy": "bump",
+      "commitMessagePrefix": "[python ci]",
       "groupName": "Python CI dependencies"
     },
     {
