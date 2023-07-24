@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":disableRateLimiting",
+    ":noUnscheduledUpdates"
+  ],
+  "schedule": ["after 1am and before 2am every weekday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["after 1am and before 2am every weekday"]
+  },
+  "timezone": "Etc/UTC",
+  "enabledManagers": ["poetry", "github-actions", "regex"],
+  "packageRules": [
+    {
+      "matchManagers": ["poetry"],
+      "matchDepNames": ["main"],
+      "rangeStrategy": "bump",
+      "groupName": "charm dependencies"
+    },
+    {
+      "matchManagers": ["poetry"],
+      "matchDepNames": ["charm-libs"],
+      "rangeStrategy": "in-range-only",
+      "groupName": "charm lib dependencies"
+    },
+    {
+      "matchManagers": ["poetry"],
+      "matchDepNames": ["format", "lint", "unit", "integration"],
+      "rangeStrategy": "bump",
+      "groupName": "Python CI dependencies"
+    },
+    {
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["juju/juju"],
+      "groupName": "Juju agents"
+    },
+    {
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["juju/juju"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": ["\"--agent-version[= ](?<currentValue>.*?)\" +# renovate: pin-major"],
+      "depNameTemplate": "juju/juju",
+      "extractVersionTemplate": "^juju-(?<version>.*)$",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ]
+}
