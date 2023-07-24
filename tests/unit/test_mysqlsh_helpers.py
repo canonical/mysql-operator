@@ -49,19 +49,22 @@ class TestMySQL(unittest.TestCase):
 
     @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    def test_run_mysqlsh_script(self, _check_output, _):
+    @patch("shutil.chown")
+    def test_run_mysqlsh_script(self, _chown, _check_output, _):
         """Test a successful execution of run_mysqlsh_script."""
         _check_output.return_value = b"stdout"
 
         self.mysql._run_mysqlsh_script("script")
 
         _check_output.assert_called_once()
+        _chown.assert_called_once()
 
     @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    def test_run_mysqlsh_script_exception(self, _check_output, _):
+    @patch("shutil.chown")
+    def test_run_mysqlsh_script_exception(self, _, _check_output, __):
         """Test a failed execution of run_mysqlsh_script."""
-        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=1)
 
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlsh_script("script")
@@ -405,7 +408,7 @@ class TestMySQL(unittest.TestCase):
         self.mysql.start_mysqld()
 
         _snap_service_operation.assert_called_once_with(
-            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
         )
         _wait_until_mysql_connection.assert_called_once()
 
@@ -430,9 +433,10 @@ class TestMySQL(unittest.TestCase):
 
     @patch("pathlib.Path")
     @patch("subprocess.check_call")
+    @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _check_call, _pathlib):
+    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
@@ -443,3 +447,4 @@ class TestMySQL(unittest.TestCase):
         self.mysql.install_and_configure_mysql_dependencies()
 
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
+        _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
