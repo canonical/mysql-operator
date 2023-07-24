@@ -55,7 +55,7 @@ urllib3 = "^1.26.16"
 ops = ">=2.0.0"
 # grafana_agent/v0/cos_agent.py
 cosl = "*"
-pydantic = "*"
+pydantic = "<2"
 # tls_certificates_interface/v1/tls_certificates.py
 cryptography = "*"
 jsonschema = "*"
