@@ -59,6 +59,7 @@ juju = "^2.9.44.0"
 mysql-connector-python = "~8.0.33"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
+tenacity = "^8.2.2"
 
 
 [tool.coverage.run]
