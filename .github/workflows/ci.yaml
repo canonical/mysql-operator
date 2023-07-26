@@ -53,7 +53,10 @@ jobs:
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@charmcraft-version-input
+    with:
+      charmcraft-snap-revision: 1349
+      charmcraft-snap-channel: 2.2/stable
 
   collect-integration-tests:
     name: Collect integration test groups
