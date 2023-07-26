@@ -1,0 +1,21 @@
+[tool.poetry]
+# This information is not used
+name = "integration"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pytest = "^7.4.0"
+pytest-operator = "^0.28.0"
+juju = "^2.9.44.0"
+mysql-connector-python = "~8.0.33"
+boto3 = "^1.28.11"
+pyyaml = "^6.0"
+urllib3 = "^1.26.16"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
