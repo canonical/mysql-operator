@@ -1589,6 +1589,25 @@ resolved_reference = "63354c75b27336579dcdd99f75439390a253c728"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
+name = "pytest-operator-groups"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "^3.10"
+files = []
+develop = false
+
+[package.dependencies]
+pytest = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/data-platform-workflows"
+reference = "pytest-plugin-groups"
+resolved_reference = "86887633c5b072cf9ff590bd20a1a8cf45285a77"
+subdirectory = "python/pytest_plugins/pytest_operator_groups"
+
+[[package]]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
@@ -2140,4 +2159,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "469fa1c59d2da4e4aac6de8939915e167b13e4e3f1df64cd295d9d58b2406acc"
+content-hash = "43f376694ce9664f2c6be71500e0d5478536eb8ba7f50b6b75d57a03012e7b6c"
