@@ -54,6 +54,8 @@ jobs:
   build:
     name: Build charms
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@charmcraft-version-input
+    with:
+      charmcraft-snap-revision: 1349
 
   collect-integration-tests:
     name: Collect integration test groups
