@@ -81,6 +81,7 @@ jobs:
             echo Skipping unstable tests
             echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
+      - uses: lhotari/action-upterm@v1
       - name: Collect test groups
         id: collect-groups
         run: tox run -e integration -- tests/integration -m '${{ steps.select-test-stability.outputs.mark_expression }}' --collect-groups
