@@ -61,6 +61,7 @@ tenacity = "^8.2.2"
 boto3 = "^1.28.11"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", rev = "v3", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
 
 
 [tool.coverage.run]
