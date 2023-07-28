@@ -16,18 +16,19 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v4.2.0
 
   unit-test:
-    name: Unit tests
+    name: Unit test charm
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Run tests
         run: tox run -e unit
       - name: Upload Coverage to Codecov
@@ -51,11 +52,15 @@ jobs:
           fail-build: ${{ github.event_name == 'pull_request' }}
 
   build:
-    name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.2.0
+    with:
+      charmcraft-snap-revision: 1349  # version 2.3.0
+    permissions:
+      actions: write  # Needed to manage GitHub Actions cache
 
-  collect-integration-tests:
-    name: Collect integration test groups
+  gh-hosted-collect-integration-tests:
+    name: (GH hosted) Collect integration test groups
     needs:
       - lint
       - unit-test
@@ -63,9 +68,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Select test stability level
         id: select-test-stability
         run: |
@@ -83,32 +89,35 @@ jobs:
     outputs:
       groups: ${{ steps.collect-groups.outputs.groups }}
 
-  integration-test:
+  gh-hosted-integration-test:
     strategy:
       fail-fast: false
       matrix:
-        groups: ${{ fromJSON(needs.collect-integration-tests.outputs.groups) }}
+        groups: ${{ fromJSON(needs.gh-hosted-collect-integration-tests.outputs.groups) }}
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
           - series: jammy
             bases-index: 0
-    name: ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
+    name: (GH hosted) ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
     needs:
       - lint
       - unit-test
       - build
-      - collect-integration-tests
+      - gh-hosted-collect-integration-tests
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Setup operator environment
-        # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.43"  # renovate: latest
+          bootstrap-options: "--agent-version 2.9.43"
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
@@ -125,10 +134,12 @@ jobs:
             echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
       - name: Run integration tests
-        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
+        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group="${{ matrix.groups.group_number }}" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
         env:
-          AWS_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}
-          GCP_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}
-          GCP_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+          SECRETS_FROM_GITHUB: |
+            {
+              "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+            }

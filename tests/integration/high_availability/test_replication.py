@@ -4,16 +4,19 @@
 
 
 import logging
+import time
 from pathlib import Path
 
 import pytest
 import urllib3
 import yaml
 from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
     cluster_name,
     execute_queries_on_unit,
+    fetch_credentials,
     generate_random_string,
     get_primary_unit,
     get_primary_unit_wrapper,
@@ -53,6 +56,50 @@ async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) ->
     http = urllib3.PoolManager()
 
     for unit in application.units:
+        _, output, _ = await ops_test.juju(
+            "ssh", unit.name, "sudo", "snap", "services", "charmed-mysql.mysqld-exporter"
+        )
+        assert output.split("\n")[1].split()[2] == "inactive"
+
+        return_code, _, _ = await ops_test.juju(
+            "ssh", unit.name, "sudo", "snap", "set", "charmed-mysql", "exporter.user=monitoring"
+        )
+        assert return_code == 0
+
+        monitoring_credentials = await fetch_credentials(unit, "monitoring")
+        return_code, _, _ = await ops_test.juju(
+            "ssh",
+            unit.name,
+            "sudo",
+            "snap",
+            "set",
+            "charmed-mysql",
+            f"exporter.password={monitoring_credentials['password']}",
+        )
+        assert return_code == 0
+
+        return_code, _, _ = await ops_test.juju(
+            "ssh", unit.name, "sudo", "snap", "start", "charmed-mysql.mysqld-exporter"
+        )
+        assert return_code == 0
+
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
+                with attempt:
+                    _, output, _ = await ops_test.juju(
+                        "ssh",
+                        unit.name,
+                        "sudo",
+                        "snap",
+                        "services",
+                        "charmed-mysql.mysqld-exporter",
+                    )
+                    assert output.split("\n")[1].split()[2] == "active"
+        except RetryError:
+            raise Exception("Failed to start the mysqld-exporter snap service")
+
+        time.sleep(30)
+
         unit_address = await unit.get_public_address()
         mysql_exporter_url = f"http://{unit_address}:9104/metrics"
 

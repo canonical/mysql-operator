@@ -13,6 +13,7 @@ import tempfile
 from typing import Dict, List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
+    BYTES_1MiB,
     Error,
     MySQLBase,
     MySQLClientError,
@@ -166,15 +167,17 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
+            subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+
             installed_by_mysql_server_file.touch(exist_ok=True)
-        except subprocess.CalledProcessError as e:
-            logger.exception("Failed to execute subprocess command", exc_info=e)
+        except subprocess.CalledProcessError:
+            logger.exception("Failed to execute subprocess command")
             raise
-        except (snap.SnapNotFoundError, snap.SnapError) as e:
-            logger.exception("Failed to install snaps", exc_info=e)
+        except (snap.SnapNotFoundError, snap.SnapError):
+            logger.exception("Failed to install snaps")
             raise
-        except Exception as e:
-            logger.exception("Encountered an unexpected exception", exc_info=e)
+        except Exception:
+            logger.exception("Encountered an unexpected exception")
             raise
 
     def create_custom_mysqld_config(self, profile: str) -> None:
@@ -183,15 +186,18 @@ class MySQL(MySQLBase):
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
+        group_replication_message_cache_size = None
         if profile == "testing":
-            innodb_buffer_pool_size = 20971520
-            innodb_buffer_pool_chunk_size = 1048576
+            innodb_buffer_pool_size = 20 * BYTES_1MiB
+            innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
+            group_replication_message_cache_size = 128 * BYTES_1MiB
             max_connections = 20
         else:
             try:
                 (
                     innodb_buffer_pool_size,
                     innodb_buffer_pool_chunk_size,
+                    group_replication_message_cache_size,
                 ) = self.get_innodb_buffer_pool_parameters()
                 max_connections = self.get_max_connections()
             except MySQLGetAutoTunningParametersError:
@@ -209,6 +215,11 @@ class MySQL(MySQLBase):
 
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+
+        if group_replication_message_cache_size:
+            content.append(
+                f"loose-group_replication_message_cache_size = {group_replication_message_cache_size}"
+            )
 
         content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
@@ -495,7 +506,7 @@ class MySQL(MySQLBase):
         )
 
         try:
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start", True)
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
             self.wait_until_mysql_connection()
         except (
             MySQLServiceNotRunningError,
@@ -539,11 +550,26 @@ class MySQL(MySQLBase):
                 }
             )
             snap_service_operation(
-                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start", True
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start"
             )
         except snap.SnapError:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
-            raise MySQLExporterConnectError
+            raise MySQLExporterConnectError("Error setting up mysqld-exporter")
+
+    def stop_mysql_exporter(self) -> None:
+        """Stop the mysqld exporter."""
+        try:
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "stop"
+            )
+        except snap.SnapError:
+            logger.exception("An exception occurred when stopping mysqld-exporter")
+            raise MySQLExporterConnectError("Error stopping mysqld-exporter")
+
+    def restart_mysql_exporter(self) -> None:
+        """Restart the mysqld exporter."""
+        self._stop_mysql_exporter()
+        self._connect_mysql_exporter()
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
@@ -561,11 +587,13 @@ class MySQL(MySQLBase):
             _file.write(script)
             _file.flush()
 
-            # Specify python as this is not the default in the deb version
-            # of the mysql-shell snap
             command = [CHARMED_MYSQLSH, "--no-wizard", "--python", "-f", _file.name]
 
             try:
+                # need to change permissions since charmed-mysql.mysqlsh runs as
+                # snap_daemon
+                shutil.chown(_file.name, user="snap_daemon", group="root")
+
                 return subprocess.check_output(
                     command, stderr=subprocess.PIPE, timeout=timeout
                 ).decode("utf-8")
@@ -726,7 +754,7 @@ def instance_hostname():
         return None
 
 
-def snap_service_operation(snapname: str, service: str, operation: str, enable=False) -> bool:
+def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
     """Helper function to run an operation on a snap service.
 
     Args:
@@ -752,10 +780,10 @@ def snap_service_operation(snapname: str, service: str, operation: str, enable=F
             selected_snap.restart(services=[service])
             return selected_snap.services[service]["active"]
         elif operation == "start":
-            selected_snap.start(services=[service], enable=enable)
+            selected_snap.start(services=[service], enable=True)
             return selected_snap.services[service]["active"]
         else:
-            selected_snap.stop(services=[service])
+            selected_snap.stop(services=[service], disable=True)
             return not selected_snap.services[service]["active"]
     except snap.SnapError:
         error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"

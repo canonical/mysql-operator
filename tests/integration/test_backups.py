@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import os
 from pathlib import Path
 
 import boto3
@@ -56,16 +55,16 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="module")
-def cloud_credentials() -> dict[str, dict[str, str]]:
-    """Read cloud credentials from environment variables."""
+def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+    """Read cloud credentials."""
     return {
         "aws": {
-            "access-key": os.environ["AWS_ACCESS_KEY"],
-            "secret-key": os.environ["AWS_SECRET_KEY"],
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
         },
         "gcp": {
-            "access-key": os.environ["GCP_ACCESS_KEY"],
-            "secret-key": os.environ["GCP_SECRET_KEY"],
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
         },
     }
 

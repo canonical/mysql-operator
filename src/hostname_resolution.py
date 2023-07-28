@@ -135,7 +135,7 @@ class MySQLMachineHostnameResolution(Object):
         try:
             self.charm._mysql.flush_host_cache()
         except MySQLFlushHostCacheError:
-            self.unit.status = BlockedStatus("Unable to flush MySQL host cache")
+            self.charm.unit.status = BlockedStatus("Unable to flush MySQL host cache")
 
     def _remove_host_from_etc_hosts(self, event: RelationDepartedEvent) -> None:
         departing_unit_name = event.unit.name
@@ -152,4 +152,4 @@ class MySQLMachineHostnameResolution(Object):
         try:
             self.charm._mysql.flush_host_cache()
         except MySQLFlushHostCacheError:
-            self.unit.status = BlockedStatus("Unable to flush MySQL host cache")
+            self.charm.unit.status = BlockedStatus("Unable to flush MySQL host cache")

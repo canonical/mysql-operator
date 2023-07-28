@@ -6,7 +6,7 @@
 
 import logging
 import subprocess
-from typing import Dict, Optional
+from typing import Optional
 
 import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
@@ -14,6 +14,7 @@ from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
+    MySQLCharmBase,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
@@ -28,10 +29,10 @@ from charms.mysql.v0.mysql import (
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
-    ActionEvent,
-    CharmBase,
     InstallEvent,
+    RelationBrokenEvent,
     RelationChangedEvent,
+    RelationCreatedEvent,
     StartEvent,
 )
 from ops.main import main
@@ -52,15 +53,14 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
+    COS_AGENT_RELATION_NAME,
     GR_MAX_MEMBERS,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
     PASSWORD_LENGTH,
     PEER,
-    REQUIRED_USERNAMES,
     ROOT_PASSWORD_KEY,
-    ROOT_USERNAME,
     S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
@@ -70,7 +70,6 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
-    MySQLExporterConnectError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -89,7 +88,7 @@ from utils import generate_random_hash, generate_random_password
 logger = logging.getLogger(__name__)
 
 
-class MySQLOperatorCharm(CharmBase):
+class MySQLOperatorCharm(MySQLCharmBase):
     """Operator framework charm for MySQL."""
 
     def __init__(self, *args):
@@ -105,9 +104,6 @@ class MySQLOperatorCharm(CharmBase):
         )
 
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
-        self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
-        self.framework.observe(self.on.get_password_action, self._on_get_password)
-        self.framework.observe(self.on.set_password_action, self._on_set_password)
 
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
@@ -122,6 +118,12 @@ class MySQLOperatorCharm(CharmBase):
             metrics_rules_dir="./src/alert_rules/prometheus",
             logs_rules_dir="./src/alert_rules/loki",
             log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
+        )
+        self.framework.observe(
+            self.on[COS_AGENT_RELATION_NAME].relation_created, self._on_cos_agent_relation_created
+        )
+        self.framework.observe(
+            self.on[COS_AGENT_RELATION_NAME].relation_broken, self._on_cos_agent_relation_broken
         )
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
@@ -211,9 +213,6 @@ class MySQLOperatorCharm(CharmBase):
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
             return
-        except MySQLExporterConnectError:
-            self.unit.status = BlockedStatus("Failed to connect to MySQL exporter")
-            return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
 
@@ -258,15 +257,13 @@ class MySQLOperatorCharm(CharmBase):
         if not self.unit_peer_data.get("unit-initialized"):
             return
 
-        unit_label = self.unit.name.replace("/", "-")
-
         # No need to remove the instance from the cluster if it is not a member of the cluster
-        if not self._mysql.is_instance_in_cluster(unit_label):
+        if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
-        self._mysql.remove_instance(unit_label)
+        self._mysql.remove_instance(self.unit_label)
 
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
@@ -381,84 +378,27 @@ class MySQLOperatorCharm(CharmBase):
             # Set active status when primary is known
             self.app.status = ActiveStatus()
 
-    # =======================
-    #  Custom Action Handlers
-    # =======================
-    def _get_cluster_status(self, event: ActionEvent) -> None:
-        """Action used to retrieve the cluster status."""
-        status = self._mysql.get_cluster_status()
-        if status:
-            event.set_results(
-                {
-                    "success": True,
-                    "status": status,
-                }
-            )
-        else:
-            event.set_results(
-                {
-                    "success": False,
-                    "message": "Failed to read cluster status.  See logs for more information.",
-                }
-            )
+    def _on_cos_agent_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Handle the cos_agent relation created event.
 
-    def _on_get_password(self, event: ActionEvent) -> None:
-        """Action used to retrieve the system user's password."""
-        username = event.params.get("username") or ROOT_USERNAME
-
-        if username not in REQUIRED_USERNAMES:
-            event.fail(
-                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
-            )
+        Enable the mysqld-exporter snap service.
+        """
+        if not self._is_peer_data_set:
+            logger.debug("Charm not yet set up. Deferring")
+            event.defer()
             return
 
-        if username == ROOT_USERNAME:
-            secret_key = ROOT_PASSWORD_KEY
-        elif username == SERVER_CONFIG_USERNAME:
-            secret_key = SERVER_CONFIG_PASSWORD_KEY
-        elif username == CLUSTER_ADMIN_USERNAME:
-            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == MONITORING_USERNAME:
-            secret_key = MONITORING_PASSWORD_KEY
-        elif username == BACKUPS_USERNAME:
-            secret_key = BACKUPS_PASSWORD_KEY
-        else:
-            raise RuntimeError("Invalid username.")
+        self._mysql.connect_mysql_exporter()
 
-        event.set_results({"username": username, "password": self.get_secret("app", secret_key)})
+    def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Handle the cos_agent relation broken event.
 
-    def _on_set_password(self, event: ActionEvent) -> None:
-        """Action used to update/rotate the system user's password."""
-        if not self.unit.is_leader():
-            event.fail("set-password action can only be run on the leader unit.")
+        Disable the mysqld-exporter snap service.
+        """
+        if not self._is_peer_data_set:
             return
 
-        username = event.params.get("username") or ROOT_USERNAME
-
-        if username not in REQUIRED_USERNAMES:
-            event.fail(
-                f"The action can be run only for users used by the charm: {', '.join(REQUIRED_USERNAMES)} not {username}"
-            )
-            return
-
-        if username == ROOT_USERNAME:
-            secret_key = ROOT_PASSWORD_KEY
-        elif username == SERVER_CONFIG_USERNAME:
-            secret_key = SERVER_CONFIG_PASSWORD_KEY
-        elif username == CLUSTER_ADMIN_USERNAME:
-            secret_key = CLUSTER_ADMIN_PASSWORD_KEY
-        elif username == MONITORING_USERNAME:
-            secret_key = MONITORING_PASSWORD_KEY
-        elif username == BACKUPS_USERNAME:
-            secret_key = BACKUPS_PASSWORD_KEY
-        else:
-            raise RuntimeError("Invalid username.")
-
-        new_password = event.params.get("password") or generate_random_password(PASSWORD_LENGTH)
-
-        self._mysql.update_user_password(username, new_password)
-
-        self.set_secret("app", secret_key, new_password)
+        self._mysql.stop_mysql_exporter()
 
     # =======================
     #  Helpers
@@ -483,42 +423,6 @@ class MySQLOperatorCharm(CharmBase):
         )
 
     @property
-    def peers(self):
-        """Retrieve the peer relation (`ops.model.Relation`)."""
-        return self.model.get_relation(PEER)
-
-    @property
-    def _is_peer_data_set(self):
-        """Returns True if the peer relation data is set."""
-        return (
-            self.app_peer_data.get("cluster-name")
-            and self.get_secret("app", ROOT_PASSWORD_KEY)
-            and self.get_secret("app", SERVER_CONFIG_PASSWORD_KEY)
-            and self.get_secret("app", CLUSTER_ADMIN_PASSWORD_KEY)
-        )
-
-    @property
-    def cluster_initialized(self):
-        """Returns True if the cluster is initialized."""
-        return self.app_peer_data.get("units-added-to-cluster", "0") >= "1"
-
-    @property
-    def app_peer_data(self) -> Dict:
-        """Application peer relation data object."""
-        if self.peers is None:
-            return {}
-
-        return self.peers.data[self.app]
-
-    @property
-    def unit_peer_data(self) -> Dict:
-        """Unit peer relation data object."""
-        if self.peers is None:
-            return {}
-
-        return self.peers.data[self.unit]
-
-    @property
     def _has_blocked_status(self) -> bool:
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
@@ -531,30 +435,6 @@ class MySQLOperatorCharm(CharmBase):
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
         return self.unit_peer_data.get("member-state") == "waiting"
-
-    def get_secret(self, scope: str, key: str) -> Optional[str]:
-        """Get secret from the secret storage."""
-        if scope == "unit":
-            return self.unit_peer_data.get(key, None)
-        elif scope == "app":
-            return self.app_peer_data.get(key, None)
-        else:
-            raise RuntimeError("Unknown secret scope.")
-
-    def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
-        """Set secret in the secret storage."""
-        if scope == "unit":
-            if not value:
-                del self.unit_peer_data[key]
-                return
-            self.unit_peer_data.update({key: value})
-        elif scope == "app":
-            if not value:
-                del self.app_peer_data[key]
-                return
-            self.app_peer_data.update({key: value})
-        else:
-            raise RuntimeError("Unknown secret scope.")
 
     def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
         """Get the hostname of the unit."""
@@ -581,7 +461,6 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
-        self._mysql.connect_mysql_exporter()
         self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
@@ -599,8 +478,7 @@ class MySQLOperatorCharm(CharmBase):
 
         Create a cluster from the current unit and initialise operations database.
         """
-        unit_label = self.unit.name.replace("/", "-")
-        self._mysql.create_cluster(unit_label)
+        self._mysql.create_cluster(self.unit_label)
         self._mysql.initialize_juju_units_operations_table()
 
         self.app_peer_data["units-added-to-cluster"] = "1"
@@ -669,9 +547,8 @@ class MySQLOperatorCharm(CharmBase):
             self._mysql.rescan_cluster(from_instance=primary_address, remove_instances=True)
             # Re-add the member as if it's the first time
 
-            unit_label = self.unit.name.replace("/", "-")
             self._mysql.add_instance_to_cluster(
-                self._get_unit_ip(self.unit), unit_label, from_instance=primary_address
+                self._get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
             )
         except MySQLReconfigureError:
             return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
