@@ -237,7 +237,9 @@ class TestMySQL(unittest.TestCase):
 
         _snap_cache.assert_not_called()
 
-    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch(
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678, None)
+    )
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
@@ -297,6 +299,7 @@ class TestMySQL(unittest.TestCase):
                 "innodb_buffer_pool_size = 20971520",
                 "max_connections = 20",
                 "innodb_buffer_pool_chunk_size = 1048576",
+                "loose-group_replication_message_cache_size = 134217728",
                 "report_host = 1.2.3.4",
                 "",
             )
