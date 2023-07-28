@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":disableRateLimiting",
     ":noUnscheduledUpdates"
   ],
@@ -13,6 +13,7 @@
   "timezone": "Etc/UTC",
   "enabledManagers": ["poetry", "github-actions", "regex"],
   "packageRules": [
+    // Later rules override earlier rules
     {
       "matchManagers": ["poetry"],
       // Renovate uses "dependencies" instead of "main" for top-level dependency group
@@ -39,8 +40,28 @@
     // Therefore, use a separate Renovate group so that it has a separate PR
     {
       "matchManagers": ["poetry"],
-      "matchPackagePatterns": ["mysql-connector-python"],
+      "matchPackageNames": ["mysql-connector-python"],
       "groupName": "MySQL Connector/Python"
+    },
+    // Group data-platform-workflows Python package & workflow updates into the same PR
+    {
+      "matchManagers": ["poetry"],
+      "matchPackageNames": ["canonical/data-platform-workflows"],
+      "versioning": "semver", // todo poetry issue link
+      "groupName": "data-platform-workflows",
+      // Workaround: data-platform-workflows Python packages use git tags instead of pyproject.toml
+      // for versioning. Therefore, Renovate will always think an update is a major version update.
+      "separateMajorMinor": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["canonical/data-platform-workflows"],
+      "groupName": "data-platform-workflows",
+      // Workaround: data-platform-workflows Python packages use git tags instead of pyproject.toml
+      // for versioning. Therefore, Renovate will always think an update is a major version update.
+      // Since we want packages to be updated alongside workflows (actions), we must disable
+      // separate major PRs for workflows as well.
+      "separateMajorMinor": false
     },
     {
       "matchManagers": ["regex"],
