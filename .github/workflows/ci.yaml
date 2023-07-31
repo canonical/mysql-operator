@@ -19,7 +19,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v4.1.4
 
   unit-test:
-    name: Unit tests
+    name: Unit test charm
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -52,91 +52,22 @@ jobs:
           fail-build: ${{ github.event_name == 'pull_request' }}
 
   build:
-    name: Build charms
+    name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.1.4
     with:
       charmcraft-snap-revision: 1349  # version 2.3.0
-
-  collect-integration-tests:
-    name: Collect integration test groups
-    needs:
-      - lint
-      - unit-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Select test stability level
-        id: select-test-stability
-        run: |
-          if [[ "${{ github.event_name }}" == "schedule" ]]
-          then
-            echo Running unstable and stable tests
-            echo "mark_expression=" >> "$GITHUB_OUTPUT"
-          else
-            echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Collect test groups
-        id: collect-groups
-        run: tox run -e integration -- tests/integration -m '${{ steps.select-test-stability.outputs.mark_expression }}' --collect-groups
-    outputs:
-      groups: ${{ steps.collect-groups.outputs.groups }}
+    permissions:
+      actions: write  # Needed to manage GitHub Actions cache
 
   integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        groups: ${{ fromJSON(needs.collect-integration-tests.outputs.groups) }}
-        ubuntu-versions:
-          # Update whenever charmcraft.yaml is changed
-          - series: jammy
-            bases-index: 0
-    name: ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
+    name: Integration test charm
     needs:
       - lint
       - unit-test
       - build
-      - collect-integration-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Setup operator environment
-        # TODO: Replace with custom image on self-hosted runner
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: lxd
-          bootstrap-options: "--agent-version 2.9.43"  # renovate: pin-major
-      - name: Download packed charm(s)
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-      - name: Select test stability level
-        id: select-test-stability
-        run: |
-          if [[ "${{ github.event_name }}" == "schedule" ]]
-          then
-            echo Running unstable and stable tests
-            echo "mark_expression=" >> "$GITHUB_OUTPUT"
-          else
-            echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Run integration tests
-        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group="${{ matrix.groups.group_number }}" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
-        env:
-          AWS_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}
-          GCP_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_ACCESS_KEY }}
-          GCP_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.GCP_SECRET_KEY }}
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@integration-test
+    # TODO: secrets for test_backups.py
+    with:
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      cloud: lxd
+      juju-agent-version: 2.9.44
