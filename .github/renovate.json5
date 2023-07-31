@@ -47,7 +47,8 @@
     {
       "matchManagers": ["poetry"],
       "matchPackageNames": ["canonical/data-platform-workflows"],
-      "versioning": "semver", // todo poetry issue link
+      // Workaround for https://github.com/renovatebot/renovate/discussions/23628
+      "versioning": "semver",
       "groupName": "data-platform-workflows",
       // Workaround: data-platform-workflows Python packages use git tags instead of pyproject.toml
       // for versioning. Therefore, Renovate will always think an update is a major version update.
