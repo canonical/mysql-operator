@@ -42,25 +42,23 @@ async def deploy_and_relate_keystone_with_mysql(
     """
     # Deploy keystone
     # Explicitly setting the series to 'focal' as it defaults to 'xenial'
-    await ops_test.model.deploy(
+    keystone_application = await ops_test.model.deploy(
         "keystone",
-        series="focal",
+        channel="yoga/stable",
+        series="jammy",
         application_name=keystone_application_name,
         num_units=number_of_units,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_application_name],
-        status="blocked",
-        raise_on_blocked=False,
+
+    await ops_test.model.block_until(
+        lambda: {unit.workload_status for unit in keystone_application.units} == {"blocked"},
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
     # Relate keystone to mysql
     await ops_test.model.relate(f"{keystone_application_name}:shared-db", f"{APP_NAME}:shared-db")
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_application_name],
-        status="active",
-        raise_on_blocked=False,  # both applications are blocked initially
+    await ops_test.model.block_until(
+        lambda: {unit.workload_status for unit in keystone_application.units} == {"active"},
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
