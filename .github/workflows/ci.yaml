@@ -62,11 +62,19 @@ jobs:
   integration-test:
     name: Integration test charm
     needs:
+      - lint
       - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@integration-test
-    # TODO: secrets for test_backups.py
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
       juju-agent-version: 2.9.44
+    secrets:
+      integration-test: |
+        {
+          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+        }
