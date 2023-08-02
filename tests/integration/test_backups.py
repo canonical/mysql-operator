@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import ast
 import logging
 import os
 from pathlib import Path
@@ -57,15 +58,16 @@ value_before_backup, value_after_backup = None, None
 
 @pytest.fixture(scope="module")
 def cloud_credentials() -> dict[str, dict[str, str]]:
-    """Read cloud credentials from environment variables."""
+    """Read cloud credentials from environment variable."""
+    secrets = ast.literal_eval(os.environ["INTEGRATION_TEST_SECRETS"])
     return {
         "aws": {
-            "access-key": os.environ["AWS_ACCESS_KEY"],
-            "secret-key": os.environ["AWS_SECRET_KEY"],
+            "access-key": secrets["AWS_ACCESS_KEY"],
+            "secret-key": secrets["AWS_SECRET_KEY"],
         },
         "gcp": {
-            "access-key": os.environ["GCP_ACCESS_KEY"],
-            "secret-key": os.environ["GCP_SECRET_KEY"],
+            "access-key": secrets["GCP_ACCESS_KEY"],
+            "secret-key": secrets["GCP_SECRET_KEY"],
         },
     }
 
