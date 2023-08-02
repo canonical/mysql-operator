@@ -42,21 +42,18 @@ async def deploy_and_relate_keystone_with_mysql(
     """
     # Deploy keystone
     # Explicitly setting the series to 'focal' as it defaults to 'xenial'
+    logger.info("Deploy keystone..")
     await ops_test.model.deploy(
         "keystone",
         series="focal",
         application_name=keystone_application_name,
         num_units=number_of_units,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[keystone_application_name],
-        status="blocked",
-        raise_on_blocked=False,
-        timeout=SLOW_WAIT_TIMEOUT,
-    )
 
     # Relate keystone to mysql
+    logger.info("Relate keystone and mysql")
     await ops_test.model.relate(f"{keystone_application_name}:shared-db", f"{APP_NAME}:shared-db")
+    logger.info("Wait keystone settle after relation")
     await ops_test.model.wait_for_idle(
         apps=[keystone_application_name],
         status="active",
@@ -74,6 +71,7 @@ async def check_successful_keystone_migration(
         ops_test: The ops test framework
         server_config_credentials: The credentials for the server config user
     """
+    logger.info("Checking keystone migration")
     show_tables_sql = [
         "SHOW DATABASES",
     ]
