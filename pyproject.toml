@@ -62,7 +62,7 @@ boto3 = "^1.28.11"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v4.1.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
-pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v4.1.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", branch = "group-plugin-hook-order", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 
 
 [tool.coverage.run]
