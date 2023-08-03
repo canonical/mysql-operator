@@ -165,9 +165,11 @@ class SharedDBRelation(Object):
 
             # Database port is static in legacy charm
             local_app_data["db_port"] = local_unit_data["db_port"] = "3306"
+
             # Wait timeout is a config option in legacy charm
-            # defaulted to 3600 seconds
-            local_app_data["wait_timeout"] = local_unit_data["wait_timeout"] = "3600"
+            # here defaulted to mysql sysvar value:
+            # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_wait_timeout
+            local_app_data["wait_timeout"] = local_unit_data["wait_timeout"] = "28800"
 
             # password already cached
             local_app_data["password"] = local_unit_data["password"] = password

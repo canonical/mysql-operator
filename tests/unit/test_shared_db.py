@@ -79,7 +79,7 @@ class TestSharedDBRelation(unittest.TestCase):
             {
                 "db_host": "1.1.1.1",
                 "db_port": "3306",
-                "wait_timeout": "3600",
+                "wait_timeout": "28800",
                 "password": "super_secure_password",
                 "allowed_units": "other-app/0",
             },
