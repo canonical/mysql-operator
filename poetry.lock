@@ -1551,6 +1551,22 @@ docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
 testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy (>=0.931)", "pytest-trio (>=0.7.0)"]
 
 [[package]]
+name = "pytest-github-secrets"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "^3.10"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/data-platform-workflows"
+reference = "integration-test"
+resolved_reference = "70f9bf8265b6cc5f3feb5cf755016db19cc7ae56"
+subdirectory = "python/pytest_plugins/github_secrets"
+
+[[package]]
 name = "pytest-operator"
 version = "0.28.0"
 description = "Fixtures for Operators"
@@ -2159,4 +2175,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9b4e2f8365e277c78ef91faee3fd2a4c548a3ea3d3fa7868e4c960c52348938e"
+content-hash = "2742b1f785978b78f49fd117e4fd4b3d8b88de2adb9759deaf65d2960e9955c6"
