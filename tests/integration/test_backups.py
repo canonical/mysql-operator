@@ -57,17 +57,16 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="module")
-def cloud_credentials() -> dict[str, dict[str, str]]:
-    """Read cloud credentials from environment variable."""
-    secrets = ast.literal_eval(os.environ["INTEGRATION_TEST_SECRETS"])
+def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+    """Read cloud credentials."""
     return {
         "aws": {
-            "access-key": secrets["AWS_ACCESS_KEY"],
-            "secret-key": secrets["AWS_SECRET_KEY"],
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
         },
         "gcp": {
-            "access-key": secrets["GCP_ACCESS_KEY"],
-            "secret-key": secrets["GCP_SECRET_KEY"],
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
         },
     }
 
