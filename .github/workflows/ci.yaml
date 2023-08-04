@@ -113,7 +113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        groups: ${{ fromJSON(needs.collect-integration-tests.outputs.groups) }}
+        groups: ${{ fromJSON(needs.gh-hosted-collect-integration-tests.outputs.groups) }}
         ubuntu-versions:
           # Update whenever charmcraft.yaml is changed
           - series: jammy
