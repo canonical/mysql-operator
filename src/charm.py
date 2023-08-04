@@ -31,7 +31,9 @@ from ops.charm import (
     ActionEvent,
     CharmBase,
     InstallEvent,
+    RelationBrokenEvent,
     RelationChangedEvent,
+    RelationCreatedEvent,
     StartEvent,
 )
 from ops.main import main
@@ -52,6 +54,7 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
+    COS_AGENT_RELATION_NAME,
     GR_MAX_MEMBERS,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
@@ -70,7 +73,6 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
-    MySQLExporterConnectError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -122,6 +124,12 @@ class MySQLOperatorCharm(CharmBase):
             metrics_rules_dir="./src/alert_rules/prometheus",
             logs_rules_dir="./src/alert_rules/loki",
             log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
+        )
+        self.framework.observe(
+            self.on[COS_AGENT_RELATION_NAME].relation_created, self._on_cos_agent_relation_created
+        )
+        self.framework.observe(
+            self.on[COS_AGENT_RELATION_NAME].relation_broken, self._on_cos_agent_relation_broken
         )
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
@@ -210,9 +218,6 @@ class MySQLOperatorCharm(CharmBase):
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
-            return
-        except MySQLExporterConnectError:
-            self.unit.status = BlockedStatus("Failed to connect to MySQL exporter")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -380,6 +385,28 @@ class MySQLOperatorCharm(CharmBase):
 
             # Set active status when primary is known
             self.app.status = ActiveStatus()
+
+    def _on_cos_agent_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Handle the cos_agent relation created event.
+
+        Enable the mysqld-exporter snap service.
+        """
+        if not self._is_peer_data_set:
+            logger.debug("Charm not yet set up. Deferring")
+            event.defer()
+            return
+
+        self._mysql.connect_mysql_exporter()
+
+    def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Handle the cos_agent relation broken event.
+
+        Disable the mysqld-exporter snap service.
+        """
+        if not self._is_peer_data_set:
+            return
+
+        self._mysql.stop_mysql_exporter()
 
     # =======================
     #  Custom Action Handlers
@@ -581,7 +608,6 @@ class MySQLOperatorCharm(CharmBase):
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
         self._mysql.wait_until_mysql_connection()
-        self._mysql.connect_mysql_exporter()
         self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
