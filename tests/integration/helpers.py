@@ -42,7 +42,7 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    action = await unit.run(command)
+    action = await unit.run(command, block=True)
     return action.results.get("Stdout", None)
 
 
