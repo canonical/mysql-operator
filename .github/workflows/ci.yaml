@@ -80,7 +80,6 @@ jobs:
       cloud: lxd
       juju-agent-version: ${{ matrix.juju-agent }}
       libjuju-version-constraint: ${{ matrix.libjuju }}
-      log-artifact-suffix: -juju${{ matrix.juju-agent }}
     secrets:
       integration-test: |
         {
