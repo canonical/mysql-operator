@@ -1,0 +1,90 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":disableRateLimiting",
+    ":noUnscheduledUpdates"
+  ],
+  "schedule": ["after 1am and before 2am every weekday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["after 1am and before 2am every weekday"]
+  },
+  "timezone": "Etc/UTC",
+  "enabledManagers": ["poetry", "github-actions", "regex"],
+  "packageRules": [
+    // Later rules override earlier rules
+    {
+      "matchManagers": ["poetry"],
+      // Renovate uses "dependencies" instead of "main" for top-level dependency group
+      "matchDepTypes": ["dependencies"],
+      "rangeStrategy": "bump",
+      "commitMessagePrefix": "[charm]",
+      "groupName": "charm dependencies"
+    },
+    {
+      "matchManagers": ["poetry"],
+      "matchDepTypes": ["charm-libs"],
+      "rangeStrategy": "in-range-only",
+      "commitMessagePrefix": "[charm lib]",
+      "groupName": "charm lib dependencies"
+    },
+    {
+      "matchManagers": ["poetry"],
+      "matchDepTypes": ["format", "lint", "unit", "integration"],
+      "rangeStrategy": "bump",
+      "commitMessagePrefix": "[python ci]",
+      "groupName": "Python CI dependencies"
+    },
+    // MySQL 8.X does not follow semantic versioning (e.g. 8.0.1 -> 8.0.2 can include a breaking change)
+    // Therefore, use a separate Renovate group so that it has a separate PR
+    {
+      "matchManagers": ["poetry"],
+      "matchPackageNames": ["mysql-connector-python"],
+      "groupName": "MySQL Connector/Python"
+    },
+    // Group data-platform-workflows Python package & workflow updates into the same PR
+    {
+      "matchManagers": ["poetry"],
+      "matchPackageNames": ["canonical/data-platform-workflows"],
+      // Workaround for https://github.com/renovatebot/renovate/discussions/23628
+      "versioning": "semver",
+      "groupName": "data-platform-workflows",
+      // Workaround: data-platform-workflows Python packages use git tags instead of pyproject.toml
+      // for versioning. Therefore, Renovate will always think an update is a major version update.
+      "separateMajorMinor": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["canonical/data-platform-workflows"],
+      "groupName": "data-platform-workflows",
+      // Workaround: data-platform-workflows Python packages use git tags instead of pyproject.toml
+      // for versioning. Therefore, Renovate will always think an update is a major version update.
+      // Since we want packages to be updated alongside workflows (actions), we must disable
+      // separate major PRs for workflows as well.
+      "separateMajorMinor": false
+    },
+    {
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["juju/juju"],
+      "groupName": "Juju agents"
+    },
+    // Disable major version updates for Juju agent (they should be handled manually)
+    {
+      "matchManagers": ["regex"],
+      "matchPackageNames": ["juju/juju"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
+      "matchStrings": ["\"--agent-version[= ](?<currentValue>.*?)\" +# renovate: pin-major"],
+      "depNameTemplate": "juju/juju",
+      "extractVersionTemplate": "^juju-(?<version>.*)$",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ]
+}

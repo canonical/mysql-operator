@@ -20,12 +20,18 @@ this operator.
   the `main` branch. This also avoids merge commits and creates a linear Git commit history.
 
 ## Developing
+Install `tox` and `poetry`
+```shell
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+pipx install tox
+pipx install poetry
+```
 
-You can create an environment for development with `tox`:
+You can create an environment for development:
 
 ```shell
-tox devenv -e integration
-source venv/bin/activate
+poetry install
 ```
 
 ### Testing
@@ -43,7 +49,7 @@ tox                      # runs 'lint' and 'unit' environments
 Build the charm in this git repository using:
 
 ```shell
-charmcraft pack
+tox run -e build
 ```
 
 ### Deploy

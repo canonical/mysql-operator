@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v4.1.0
 
   unit-test:
     name: Unit tests
@@ -25,9 +25,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Run tests
         run: tox run -e unit
       - name: Upload Coverage to Codecov
@@ -52,7 +53,9 @@ jobs:
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.1.0
+    with:
+      charmcraft-snap-revision: 1349  # version 2.3.0
 
   collect-integration-tests:
     name: Collect integration test groups
@@ -63,9 +66,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install tox
-        # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
-        run: python3 -m pip install tox
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Select test stability level
         id: select-test-stability
         run: |
@@ -103,12 +107,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Setup operator environment
         # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.43"  # renovate: latest
+          bootstrap-options: "--agent-version 2.9.43"  # renovate: pin-major
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
@@ -125,7 +133,7 @@ jobs:
             echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
       - name: Run integration tests
-        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group ${{ matrix.groups.group_number }} -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
+        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group="${{ matrix.groups.group_number }}" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
         env:
           AWS_ACCESS_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_KEY: ${{ matrix.groups.path_to_test_file != 'tests/integration/test_backups.py' || secrets.AWS_SECRET_KEY }}
