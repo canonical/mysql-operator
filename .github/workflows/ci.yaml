@@ -60,7 +60,16 @@ jobs:
       actions: write  # Needed to manage GitHub Actions cache
 
   integration-test:
-    name: Integration test charm
+    strategy:
+      fail-fast: false
+      matrix:
+        juju-agent:
+          - 3.1.5
+          - 2.9.43
+        include:
+          - juju-agent: 2.9.43
+          - libjuju: ^2.9.44.0
+    name: Integration test charm | Juju ${{ matrix.juju-agent }}
     needs:
       - lint
       - unit-test
@@ -69,7 +78,9 @@ jobs:
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
-      juju-agent-version: 2.9.43
+      juju-agent-version: ${{ matrix.juju-agent }}
+      libjuju-version-constraint: ${{ matrix.libjuju }}
+      log-artifact-suffix: -juju${{ matrix.juju-agent }}
     secrets:
       integration-test: |
         {
