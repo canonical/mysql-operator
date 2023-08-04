@@ -42,8 +42,9 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    action = await unit.run(command, block=True)
-    return action.results.get("stdout", None)
+    action = await unit.run(command)
+    result = await action.wait()
+    return result.results.get("stdout", None)
 
 
 def generate_random_string(length: int) -> str:
