@@ -41,7 +41,7 @@ async def deploy_and_relate_keystone_with_mysql(
         number_of_units: The number of keystone units to deploy
     """
     # Deploy keystone
-    # Explicitly setting the series to 'focal' as it defaults to 'xenial'
+    logger.info("Deploy keystone..")
     keystone_application = await ops_test.model.deploy(
         "keystone",
         channel="yoga/stable",
@@ -56,7 +56,9 @@ async def deploy_and_relate_keystone_with_mysql(
     )
 
     # Relate keystone to mysql
+    logger.info("Relate keystone and mysql")
     await ops_test.model.relate(f"{keystone_application_name}:shared-db", f"{APP_NAME}:shared-db")
+    logger.info("Wait keystone settle after relation")
     await ops_test.model.block_until(
         lambda: {unit.workload_status for unit in keystone_application.units} == {"active"},
         timeout=SLOW_WAIT_TIMEOUT,
@@ -72,6 +74,7 @@ async def check_successful_keystone_migration(
         ops_test: The ops test framework
         server_config_credentials: The credentials for the server config user
     """
+    logger.info("Checking keystone migration")
     show_tables_sql = [
         "SHOW DATABASES",
     ]

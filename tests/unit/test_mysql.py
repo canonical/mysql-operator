@@ -902,19 +902,22 @@ class TestMySQLBase(unittest.TestCase):
         """Test the successful execution of get_innodb_buffer_pool_parameters()."""
         _get_total_memory.return_value = 16484458496
 
-        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
-        self.assertEqual(12482248704, pool_size)
-        self.assertEqual(1560281088, chunk_size)
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        self.assertEqual(11408506880, pool_size)
+        self.assertEqual(1426063360, chunk_size)
+        self.assertEqual(None, gr_message_cache)
 
         _get_total_memory.return_value = 3221000000
-        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
-        self.assertEqual(1610612736, pool_size)
-        self.assertEqual(201326592, chunk_size)
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        self.assertEqual(1342177280, pool_size)
+        self.assertEqual(167772160, chunk_size)
+        self.assertEqual(None, gr_message_cache)
 
         _get_total_memory.return_value = 1073741825
-        pool_size, chunk_size = self.mysql.get_innodb_buffer_pool_parameters()
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
         self.assertEqual(536870912, pool_size)
         self.assertIsNone(chunk_size)
+        self.assertEqual(134217728, gr_message_cache)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
     def test_get_innodb_buffer_pool_parameters_exception(self, _get_total_memory):
@@ -1286,7 +1289,7 @@ xbcloud/location get
 
     @patch(
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
-        return_value=(1234, 5678),
+        return_value=(1234, 5678, None),
     )
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore(
@@ -1321,7 +1324,7 @@ xtrabackup/location --prepare
 
     @patch(
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
-        return_value=(1234, 5678),
+        return_value=(1234, 5678, None),
     )
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore_failure(

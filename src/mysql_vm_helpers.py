@@ -13,6 +13,7 @@ import tempfile
 from typing import Dict, List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
+    BYTES_1MiB,
     Error,
     MySQLBase,
     MySQLClientError,
@@ -183,15 +184,18 @@ class MySQL(MySQLBase):
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
+        group_replication_message_cache_size = None
         if profile == "testing":
-            innodb_buffer_pool_size = 20971520
-            innodb_buffer_pool_chunk_size = 1048576
+            innodb_buffer_pool_size = 20 * BYTES_1MiB
+            innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
+            group_replication_message_cache_size = 128 * BYTES_1MiB
             max_connections = 20
         else:
             try:
                 (
                     innodb_buffer_pool_size,
                     innodb_buffer_pool_chunk_size,
+                    group_replication_message_cache_size,
                 ) = self.get_innodb_buffer_pool_parameters()
                 max_connections = self.get_max_connections()
             except MySQLGetAutoTunningParametersError:
@@ -209,6 +213,11 @@ class MySQL(MySQLBase):
 
         if innodb_buffer_pool_chunk_size:
             content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+
+        if group_replication_message_cache_size:
+            content.append(
+                f"loose-group_replication_message_cache_size = {group_replication_message_cache_size}"
+            )
 
         content.append(f"report_host = {socket.getfqdn()}")
         content.append("")
