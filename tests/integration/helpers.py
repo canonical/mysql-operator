@@ -47,9 +47,10 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
     if packaging.version.parse(importlib.metadata.version("juju")).major >= 3:
         action = await unit.run(command)
         result = await action.wait()
+        return result.results.get("stdout", None)
     else:
-        result = await unit.run(command)
-    return result.results.get("stdout", None)
+        action = await unit.run(command)
+        return action.results.get("Stdout", None)
 
 
 def generate_random_string(length: int) -> str:
