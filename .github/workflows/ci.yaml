@@ -65,11 +65,13 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v4.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@release-workaround
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
       juju-agent-version: 2.9.43
+      # TODO: Remove when self-hosted runners support `on: push`. Also, replace `@release-workaround` with latest version
+      _enable-on-push-continue-on-error-workaround-for-release-ci: true
     secrets:
       integration-test: |
         {
