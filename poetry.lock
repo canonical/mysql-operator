@@ -1551,6 +1551,22 @@ docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
 testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy (>=0.931)", "pytest-trio (>=0.7.0)"]
 
 [[package]]
+name = "pytest-github-secrets"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "^3.10"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/data-platform-workflows"
+reference = "v4.2.0"
+resolved_reference = "2e84a21be7b9722849d34c9fcfbe9a203ec4ffe9"
+subdirectory = "python/pytest_plugins/github_secrets"
+
+[[package]]
 name = "pytest-operator"
 version = "0.28.0"
 description = "Fixtures for Operators"
@@ -1584,8 +1600,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v4.1.4"
-resolved_reference = "d56b5b9b7a601f9d468be5dfce00ce42fef08baf"
+reference = "v4.2.0"
+resolved_reference = "2e84a21be7b9722849d34c9fcfbe9a203ec4ffe9"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1603,8 +1619,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v4.1.4"
-resolved_reference = "d56b5b9b7a601f9d468be5dfce00ce42fef08baf"
+reference = "v4.2.0"
+resolved_reference = "2e84a21be7b9722849d34c9fcfbe9a203ec4ffe9"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2159,4 +2175,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9b4e2f8365e277c78ef91faee3fd2a4c548a3ea3d3fa7868e4c960c52348938e"
+content-hash = "134b729559287cde50cf340dc81c8b602f22074b4127f5478a6bad387d8125fd"

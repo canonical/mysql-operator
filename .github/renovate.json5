@@ -80,7 +80,7 @@
   "regexManagers": [
     {
       "fileMatch": ["^\\.github/workflows/[^/]+\\.ya?ml$"],
-      "matchStrings": ["\"--agent-version[= ](?<currentValue>.*?)\" +# renovate: pin-major"],
+      "matchStrings": ["juju-agent-version: (?<currentValue>[0-9.]+)"],
       "depNameTemplate": "juju/juju",
       "extractVersionTemplate": "^juju-(?<version>.*)$",
       "datasourceTemplate": "github-releases",
