@@ -372,7 +372,10 @@ async def test_restore_on_new_cluster(
             action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
         result = await action.wait()
-        assert result.results.get("return-code") == "0"
+        if packaging.version.parse(importlib.metadata.version("juju")).major >= 3:
+            assert result.results.get("return-code") == 0
+        else:
+            assert result.results.get("return-code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
