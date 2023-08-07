@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v4.1.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v4.1.4
 
   unit-test:
     name: Unit tests
@@ -53,7 +53,7 @@ jobs:
 
   build:
     name: Build charms
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.1.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.1.4
     with:
       charmcraft-snap-revision: 1349  # version 2.3.0
 
