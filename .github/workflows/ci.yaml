@@ -59,6 +59,26 @@ jobs:
     permissions:
       actions: write  # Needed to manage GitHub Actions cache
 
+  integration-test:
+    name: Integration test charm
+    needs:
+      - lint
+      - unit-test
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v4.2.0
+    with:
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      cloud: lxd
+      juju-agent-version: 2.9.43
+    secrets:
+      integration-test: |
+        {
+          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+        }
+
   gh-hosted-collect-integration-tests:
     name: (GH hosted) Collect integration test groups
     needs:
