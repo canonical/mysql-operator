@@ -159,7 +159,7 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     # not asserting actions run due false positives on CI
     for unit in ops_test.model.applications[app].units:
         action = await unit.run_action(action_name="set-tls-private-key")
-        action.wait()
+        await action.wait()
 
     # Wait for hooks start reconfiguring app
     # add as a wait since app state does not change
