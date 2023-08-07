@@ -446,7 +446,7 @@ class MySQL(MySQLBase):
         bash: bool = False,
         user: str = None,
         group: str = None,
-        env: Dict = {},
+        env_extra: Dict = None,
     ) -> Tuple[str, str]:
         """Execute commands on the server where mysql is running.
 
@@ -455,12 +455,15 @@ class MySQL(MySQLBase):
             bash: whether to run the commands with bash
             user: the user with which to execute the commands
             group: the group with which to execute the commands
-            env: the environment variables to execute the commands with
+            env_extra: the environment variables to add to the current process’ environment
 
         Returns: tuple of (stdout, stderr)
 
         Raises: MySQLExecError if there was an error executing the commands
         """
+        env = os.environ.copy()
+        if env_extra:
+            env.update(env_extra)
         try:
             if bash:
                 commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
