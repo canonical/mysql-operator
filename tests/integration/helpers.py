@@ -1,6 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import importlib.metadata
 import itertools
 import json
 import logging
@@ -10,6 +10,7 @@ import string
 import subprocess
 from typing import Dict, List, Optional, Set
 
+import packaging.version
 import yaml
 from juju.unit import Unit
 from mysql.connector.errors import (
@@ -42,8 +43,11 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    action = await unit.run(command)
-    result = await action.wait()
+    if packaging.version.parse(importlib.metadata.version("juju")).major >= 3:
+        action = await unit.run(command)
+        result = await action.wait()
+    else:
+        result = await unit.run(command)
     return result.results.get("stdout", None)
 
 
