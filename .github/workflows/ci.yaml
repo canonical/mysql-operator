@@ -64,10 +64,10 @@ jobs:
       fail-fast: false
       matrix:
         juju-agent:
-          - 3.1.5
-          - 2.9.43
+          - 3.1.5  # renovate: juju-agent-pin-major
+          - 2.9.43  # renovate: juju-agent-pin-major
         include:
-          - juju-agent: 2.9.43
+          - juju-agent: 2.9.43  # renovate: juju-agent-pin-major
             libjuju: ^2.9.44.0
     name: Integration test charm | Juju ${{ matrix.juju-agent }}
     needs:
