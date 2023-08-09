@@ -62,8 +62,6 @@ jobs:
   integration-test:
     name: Integration test charm
     needs:
-      - lint
-      - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@integration-test-proxy
     with:
@@ -81,9 +79,6 @@ jobs:
 
   gh-hosted-collect-integration-tests:
     name: (GH hosted) Collect integration test groups
-    needs:
-      - lint
-      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -120,8 +115,6 @@ jobs:
             bases-index: 0
     name: (GH hosted) ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
     needs:
-      - lint
-      - unit-test
       - build
       - gh-hosted-collect-integration-tests
     runs-on: ubuntu-latest
