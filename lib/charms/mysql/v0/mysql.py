@@ -2303,6 +2303,11 @@ Swap:     1027600384  1027600384           0
         raise NotImplementedError
 
     @abstractmethod
+    def restart_mysql_exporter(self) -> None:
+        """Restart the mysqld exporter."""
+        raise NotImplementedError
+
+    @abstractmethod
     def wait_until_mysql_connection(self) -> None:
         """Wait until a connection to MySQL has been obtained.
 
