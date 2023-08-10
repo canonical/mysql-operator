@@ -138,17 +138,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.28.15"
+version = "1.28.23"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.28.15-py3-none-any.whl", hash = "sha256:84b7952858e9319968b0348d9894a91a6bb5f31e81a45c68044d040a12362abe"},
-    {file = "boto3-1.28.15.tar.gz", hash = "sha256:a6e711e0b6960c3a5b789bd30c5a18eea7263f2a59fc07f85efa5e04804e49d2"},
+    {file = "boto3-1.28.23-py3-none-any.whl", hash = "sha256:807d4a4698ba9a76d5901a1663ff1943d13efbc388908f38b60f209c3511f1d6"},
+    {file = "boto3-1.28.23.tar.gz", hash = "sha256:839deb868d1278dd5a3f87208cfc4a8e259c95ca3cbe607cc322d435f02f63b0"},
 ]
 
 [package.dependencies]
-botocore = ">=1.31.15,<1.32.0"
+botocore = ">=1.31.23,<1.32.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.6.0,<0.7.0"
 
@@ -157,13 +157,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.31.15"
+version = "1.31.23"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.31.15-py3-none-any.whl", hash = "sha256:b3a0f787f275711875476cbe12a0123b2e6570b2f505e2fa509dcec3c5410b57"},
-    {file = "botocore-1.31.15.tar.gz", hash = "sha256:b46d1ce4e0cf42d28fdf61ce0c999904645d38b51cb809817a361c0cec16d487"},
+    {file = "botocore-1.31.23-py3-none-any.whl", hash = "sha256:d0a95f74eb6bd99e8f52f16af0a430ba6cd1526744f40ffdd3fcccceeaf961c2"},
+    {file = "botocore-1.31.23.tar.gz", hash = "sha256:f3258feaebce48f138eb2675168c4d33cc3d99e9f45af13cb8de47bdc2b9c573"},
 ]
 
 [package.dependencies]
@@ -1069,13 +1069,13 @@ signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
 name = "ops"
-version = "2.4.1"
+version = "2.5.0"
 description = "The Python library behind great charms"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ops-2.4.1-py3-none-any.whl", hash = "sha256:9cd1a25c6ae30dc9f9afcbe87250f5349ff9a05d5b06632ad8111700c5f0db04"},
-    {file = "ops-2.4.1.tar.gz", hash = "sha256:b5762bea03049ec150c6266833925d0bb36237b26b006ca878e74e24d162f981"},
+    {file = "ops-2.5.0-py3-none-any.whl", hash = "sha256:7d8310c0324c8bcc4f54a93bf71e09b9b7f0842d07c0006e739410472dc7560c"},
+    {file = "ops-2.5.0.tar.gz", hash = "sha256:3ffacae19e385765d8ce38c31f89c06552385fe871403e270ff7a255cc3e1fac"},
 ]
 
 [package.dependencies]
@@ -2175,4 +2175,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "134b729559287cde50cf340dc81c8b602f22074b4127f5478a6bad387d8125fd"
+content-hash = "1aec819c2821b48de7a65e60b02192175857f83e2bd52dfaa26c5286040a3972"

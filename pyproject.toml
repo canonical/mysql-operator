@@ -10,9 +10,9 @@ authors = []
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.4.1"
+ops = "^2.5.0"
 tenacity = "^8.2.2"
-boto3 = "^1.28.7"
+boto3 = "^1.28.23"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
 pyopenssl = "^23.2.0"
 
