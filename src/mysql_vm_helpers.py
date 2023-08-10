@@ -566,6 +566,11 @@ class MySQL(MySQLBase):
             logger.exception("An exception occurred when stopping mysqld-exporter")
             raise MySQLExporterConnectError("Error stopping mysqld-exporter")
 
+    def restart_mysql_exporter(self) -> None:
+        """Restart the mysqld exporter."""
+        self._stop_mysql_exporter()
+        self._connect_mysql_exporter()
+
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
 
