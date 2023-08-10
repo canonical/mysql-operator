@@ -1972,7 +1972,7 @@ Swap:     1027600384  1027600384           0
                 bash=True,
                 user=user,
                 group=group,
-                env={
+                env_extra={
                     "ACCESS_KEY_ID": s3_parameters["access-key"],
                     "SECRET_ACCESS_KEY": s3_parameters["secret-key"],
                 },
@@ -2070,7 +2070,7 @@ Swap:     1027600384  1027600384           0
             stdout, stderr = self._execute_commands(
                 retrieve_backup_command,
                 bash=True,
-                env={
+                env_extra={
                     "ACCESS_KEY_ID": s3_parameters["access-key"],
                     "SECRET_ACCESS_KEY": s3_parameters["secret-key"],
                 },
