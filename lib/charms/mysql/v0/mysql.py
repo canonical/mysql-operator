@@ -110,7 +110,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 38
+LIBPATCH = 39
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -1470,7 +1470,9 @@ class MySQLBase(ABC):
                 f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
                 f"cluster = dba.get_cluster('{self.cluster_name}')",
                 "number_cluster_members = len(cluster.status()['defaultReplicaSet']['topology'])",
-                f"cluster.remove_instance('{self.cluster_admin_user}@{self.instance_address}', {json.dumps(remove_instance_options)}) if number_cluster_members > 1 else cluster.dissolve({json.dumps(dissolve_cluster_options)})",
+                f"cluster.remove_instance('{self.cluster_admin_user}@{self.instance_address}', "
+                f"{json.dumps(remove_instance_options)}) if number_cluster_members > 1 else"
+                f" cluster.dissolve({json.dumps(dissolve_cluster_options)})",
             )
             self._run_mysqlsh_script("\n".join(remove_instance_commands))
         except MySQLClientError as e:
