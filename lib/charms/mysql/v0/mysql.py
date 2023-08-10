@@ -123,14 +123,14 @@ BYTES_1MiB = 1048576  # 1 mebibyte
 class Error(Exception):
     """Base class for exceptions in this module."""
 
-    def __init__(self, message: Optional[str] = None) -> None:
+    def __init__(self, message: str = "") -> None:
         """Initialize the Error class.
 
         Args:
             message: Optional message to pass to the exception.
         """
         super().__init__(message)
-        self.message = message or ""
+        self.message = message
 
     def __repr__(self):
         """String representation of the Error class."""
@@ -338,7 +338,7 @@ class MySQLSetVariableError(Error):
     """Exception raised when there is an issue setting a variable."""
 
 
-class MySQLServerUpgradableError(Error):
+class MySQLServerNotUpgradableError(Error):
     """Exception raised when there is an issue checking for upgradeability."""
 
 
@@ -997,7 +997,11 @@ class MySQLBase(ABC):
             raise MySQLRemoveRouterFromMetadataError(e.message)
 
     def set_dynamic_variable(
-        self, variable: str, value: str, persist: bool = False, instance: Optional[str] = None
+        self,
+        variable: str,
+        value: str,
+        persist: bool = False,
+        instance_address: Optional[str] = None,
     ) -> None:
         """Set a dynamic variable value for the instance.
 
@@ -1005,14 +1009,16 @@ class MySQLBase(ABC):
             variable: The name of the variable to set
             value: The value to set the variable to
             persist: Whether to persist the variable value across restarts
-            instance: instance address to run on, default to current
+            instance_address: instance address to set the variable, default to current
 
         Raises:
             MySQLSetVariableError
         """
-        logger.debug(f"Setting {variable} to {value} on {instance or self.instance_address}")
+        if not instance_address:
+            instance_address = self.instance_address
+        logger.debug(f"Setting {variable} to {value} on {instance_address}")
         set_var_command = [
-            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{instance or self.instance_address}')",
+            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{instance_address}')",
             f"session.run_sql(\"SET {'PERSIST' if persist else 'GLOBAL'} {variable}={value}\")",
         ]
 
@@ -1638,18 +1644,21 @@ class MySQLBase(ABC):
             if value["memberrole"] == "primary":
                 return label
 
-    def set_cluster_primary(self, primary_address: str) -> None:
+    def set_cluster_primary(self, new_primary_address: str) -> None:
         """Set the cluster primary.
 
         Args:
-            primary_address: The address of the cluster's primary
+            new_primary_address: Address of node to set as cluster's primary
+
+        Raises:
+            MySQLSetClusterPrimaryError: If the cluster primary could not be set
         """
-        logger.debug(f"Setting cluster primary to {primary_address}")
+        logger.debug(f"Setting cluster primary to {new_primary_address}")
 
         set_cluster_primary_commands = (
             f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            f"cluster.set_primary_instance('{primary_address}')",
+            f"cluster.set_primary_instance('{new_primary_address}')",
         )
         try:
             self._run_mysqlsh_script("\n".join(set_cluster_primary_commands))
@@ -1683,8 +1692,12 @@ class MySQLBase(ABC):
 
         return set(matches.group(1).split(","))
 
-    def is_server_upgradable(self, instance: Optional[str] = None) -> None:
-        """Wrapper for API check_for_server_upgrade."""
+    def verify_server_upgradable(self, instance: Optional[str] = None) -> None:
+        """Wrapper for API check_for_server_upgrade.
+
+        Raises:
+            MySQLServerUpgradableError: If the server is not upgradable
+        """
         check_command = [
             f"shell.connect_to_primary('{self.server_config_user}"
             f":{self.server_config_password}@{instance or self.instance_address}')",
@@ -1701,9 +1714,9 @@ class MySQLBase(ABC):
             result = json.loads(output)
             if result["errorCount"] == 0:
                 return
-            raise MySQLServerUpgradableError(result.get("summary"))
+            raise MySQLServerNotUpgradableError(result.get("summary"))
         except MySQLClientError:
-            raise MySQLServerUpgradableError("Failed to check for server upgrade")
+            raise MySQLServerNotUpgradableError("Failed to check for server upgrade")
 
     def get_mysql_version(self) -> Optional[str]:
         """Get the MySQL version.

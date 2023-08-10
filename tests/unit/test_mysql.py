@@ -35,7 +35,7 @@ from charms.mysql.v0.mysql import (
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
-    MySQLServerUpgradableError,
+    MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
 )
@@ -1369,10 +1369,17 @@ xtrabackup/location --prepare
             group="test-group",
         )
 
-        _expected_commands = (
-            "find mysql/data/directory -not -path "
-            "mysql/data/directory/#mysql_sst_* -not -path mysql/data/directory -delete"
-        ).split()
+        _expected_commands = [
+            "find",
+            "mysql/data/directory",
+            "-not",
+            "-path",
+            "mysql/data/directory/#mysql_sst_*",
+            "-not",
+            "-path",
+            "mysql/data/directory",
+            "-delete",
+        ]
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
@@ -1606,10 +1613,10 @@ xtrabackup/location --defaults-file=defaults/config/file
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error")
         with self.assertRaises(MySQLSetClusterPrimaryError):
-            self.mysql.set_cluster_primary(primary_address="10.0.0.2")
+            self.mysql.set_cluster_primary(new_primary_address="10.0.0.2")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_server_upgradable(self, _run_mysqlsh_script):
+    def test_verify_server_upgradable(self, _run_mysqlsh_script):
         """Test is_server_upgradable."""
         commands = (
             f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
@@ -1631,7 +1638,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             '"detectedProblems": [] }],'
             '"manualChecks": []}'
         )
-        self.mysql.is_server_upgradable()
+        self.mysql.verify_server_upgradable()
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
         _run_mysqlsh_script.return_value = (
             '{"serverAddress": "10.1.148.145:33060",'
@@ -1648,8 +1655,8 @@ xtrabackup/location --defaults-file=defaults/config/file
             '"detectedProblems": [] }],'
             '"manualChecks": []}'
         )
-        with self.assertRaises(MySQLServerUpgradableError):
-            self.mysql.is_server_upgradable()
+        with self.assertRaises(MySQLServerNotUpgradableError):
+            self.mysql.verify_server_upgradable()
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
     def test_get_primary_label(self, _get_cluster_status):
