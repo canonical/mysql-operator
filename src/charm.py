@@ -340,11 +340,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
+            and not self.upgrade.idle
         ):
-            # avoid changing status while in initialisation
-            return
-        if self.upgrade.cluster_state != "idle":
-            # avoid changing status while in upgrade
+            # avoid changing status while in initialising/upgrading
             return
 
         if self._is_unit_waiting_to_join_cluster():
@@ -518,7 +516,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return False
 
         # Safeguard against starting while upgrading
-        if self.upgrade.cluster_state != "idle":
+        if not self.upgrade.idle:
             event.defer()
             return False
 
