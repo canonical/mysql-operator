@@ -70,6 +70,7 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
+    MySQLInstallError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -148,26 +149,10 @@ class MySQLOperatorCharm(MySQLCharmBase):
             self._reboot_on_detached_storage(event)
             return
 
-        # Initial setup operations like installing dependencies, and creating users and groups.
-        def set_retry_status(_):
-            self.unit.status = MaintenanceStatus(
-                "Failed to install and configure MySQL. Retrying..."
-            )
-
-        try:
-            for attempt in Retrying(
-                wait=wait_exponential(multiplier=10),
-                stop=stop_after_delay(60 * 5),
-                retry=tenacity.retry_if_exception_type(snap.SnapError),
-                after=set_retry_status,
-            ):
-                with attempt:
-                    MySQL.install_and_configure_mysql_dependencies()
-        except RetryError:
+        if self.install_workload():
+            self.unit.status = WaitingStatus("Waiting to start MySQL")
+        else:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
-            return
-
-        self.unit.status = WaitingStatus("Waiting to start MySQL")
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event."""
@@ -457,6 +442,30 @@ class MySQLOperatorCharm(MySQLCharmBase):
         if self.unit_peer_data.get("member-role") == "primary":
             return "Primary"
         return ""
+
+    def install_workload(self) -> bool:
+        """Exponential backoff retry to install and configure MySQL.
+
+        Returns: True if successful, False otherwise.
+        """
+
+        def set_retry_status(_):
+            self.unit.status = MaintenanceStatus(
+                "Failed to install and configure MySQL. Retrying..."
+            )
+
+        try:
+            for attempt in Retrying(
+                wait=wait_exponential(multiplier=10),
+                stop=stop_after_delay(60 * 5),
+                retry=tenacity.retry_if_exception_type(snap.SnapError),
+                after=set_retry_status,
+            ):
+                with attempt:
+                    MySQL.install_and_configure_mysql_dependencies()
+        except (RetryError, MySQLInstallError):
+            return False
+        return True
 
     def _workload_initialise(self) -> None:
         """Workload initialisation commands.

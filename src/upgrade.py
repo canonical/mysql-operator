@@ -19,6 +19,7 @@ from charms.mysql.v0.mysql import (
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
+    MySQLStartMySQLDError,
 )
 from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
@@ -52,6 +53,7 @@ class MySQLVMUpgrade(DataUpgrade):
         """Initialize the class."""
         super().__init__(charm, **kwargs)
         self.charm = charm
+        self.framework.observe(self.charm.on["upgrade"].relation_changed, self._on_upgrade_changed)
 
     @override
     def build_upgrade_stack(self) -> list[int]:
@@ -123,21 +125,25 @@ class MySQLVMUpgrade(DataUpgrade):
         """Handle the upgrade granted event."""
         self.charm._mysql.stop_mysqld()
 
-        self.charm.unit.status = MaintenanceStatus("upgrading snap")
-        try:
-            self.charm._mysql.install_and_configure_mysql_dependencies()
-        except Exception:
-            logger.exception("Failed to install and configure MySQL dependencies")
+        self.charm.unit.status = MaintenanceStatus("upgrading snap...")
+
+        if not self.charm.install_workload():
+            logger.error("Failed to install workload snap")
             self.set_unit_failed()
             return
-
         try:
+            self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
+            self.charm._mysql.start_mysqld()
         except VersionError:
+            logger.exception("Failed to upgrade MySQL dependencies")
+            self.set_unit_failed()
+            return
+        except MySQLStartMySQLDError:
+            logger.exception("Failed to start MySQL after upgrade")
             self.set_unit_failed()
             return
 
-        self.charm._mysql.start_mysqld()
         self.charm.unit.status = MaintenanceStatus("recovering unit after upgrade")
 
         try:
@@ -151,8 +157,6 @@ class MySQLVMUpgrade(DataUpgrade):
                         raise Exception
                     logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
                     self.set_unit_completed()
-                    # call update status asap
-                    self.charm._on_update_status(None)
                     # ensures leader gets it's own relation-changed when it upgrades
                     if self.charm.unit.is_leader():
                         logger.debug("Re-emitting upgrade-changed on leader...")
@@ -163,6 +167,14 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = BlockedStatus(
                 "upgrade failed. Check logs for rollback instruction"
             )
+
+    def _on_upgrade_changed(self, _) -> None:
+        """Handle the upgrade changed event.
+
+        Run update status for every unit when the upgrade is completed.
+        """
+        if not self.upgrade_stack and self.idle:
+            self.charm._on_update_status(None)
 
     @override
     def log_rollback_instructions(self) -> None:
@@ -194,14 +206,6 @@ class MySQLVMUpgrade(DataUpgrade):
                 variable="innodb_fast_shutdown", value="0", instance_address=unit_address
             )
 
-    @override
-    def _upgrade_supported_check(self) -> None:
-        """Check if the upgrade is supported."""
-        # use parent class method and...
-        super()._upgrade_supported_check()
-        # ...own mysql checks
-        self._check_server_upgradeability()
-
     def _check_server_upgradeability(self) -> None:
         """Check if the server can be upgraded.
 
@@ -210,10 +214,22 @@ class MySQLVMUpgrade(DataUpgrade):
         Raises:
             VersionError: If the server is not upgradeable.
         """
+
+        def leader_unit_address() -> str:
+            """Return the leader unit."""
+            leader_unit_ordinal = self.upgrade_stack[0]
+            for unit in self.peer_relation.units:
+                if unit.name == f"{self.app.name}/{leader_unit_ordinal}":
+                    return self.charm.get_unit_ip(unit)
+
         try:
-            instance = self.charm.get_unit_ip(self.charm.unit)
-            self.charm._mysql.verify_server_upgradable(instance=instance)
+            if len(self.upgrade_stack) < self.charm.app.planned_units():
+                # only check in the first unit being upgraded
+                return
+            self.charm._mysql.verify_server_upgradable(instance=leader_unit_address())
             logger.debug("MySQL server is upgradeable")
+        except IndexError:
+            pass
         except MySQLServerNotUpgradableError as e:
             logger.error("MySQL server is not upgradeable")
             raise VersionError(
