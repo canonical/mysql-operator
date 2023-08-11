@@ -35,12 +35,13 @@ class TestCharm(unittest.TestCase):
         self.charm = self.harness.charm
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")
     @patch("socket.getfqdn", return_value="test-hostname")
     @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _):
+    def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _, _____):
         self.charm.on.install.emit()
         _install_and_configure_mysql_dependencies.assert_called_once()
 
