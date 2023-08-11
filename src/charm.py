@@ -257,15 +257,13 @@ class MySQLOperatorCharm(MySQLCharmBase):
         if not self.unit_peer_data.get("unit-initialized"):
             return
 
-        unit_label = self.unit.name.replace("/", "-")
-
         # No need to remove the instance from the cluster if it is not a member of the cluster
-        if not self._mysql.is_instance_in_cluster(unit_label):
+        if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
-        self._mysql.remove_instance(unit_label)
+        self._mysql.remove_instance(self.unit_label)
 
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
@@ -480,8 +478,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         Create a cluster from the current unit and initialise operations database.
         """
-        unit_label = self.unit.name.replace("/", "-")
-        self._mysql.create_cluster(unit_label)
+        self._mysql.create_cluster(self.unit_label)
         self._mysql.initialize_juju_units_operations_table()
 
         self.app_peer_data["units-added-to-cluster"] = "1"
@@ -550,9 +547,8 @@ class MySQLOperatorCharm(MySQLCharmBase):
             self._mysql.rescan_cluster(from_instance=primary_address, remove_instances=True)
             # Re-add the member as if it's the first time
 
-            unit_label = self.unit.name.replace("/", "-")
             self._mysql.add_instance_to_cluster(
-                self._get_unit_ip(self.unit), unit_label, from_instance=primary_address
+                self._get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
             )
         except MySQLReconfigureError:
             return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
