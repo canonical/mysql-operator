@@ -32,6 +32,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+RECOVER_ATTEMPTS = 10
+
+
 class MySQLVMDependenciesModel(BaseModel):
     """MySQL dependencies model."""
 
@@ -147,12 +150,14 @@ class MySQLVMUpgrade(DataUpgrade):
         self.charm.unit.status = MaintenanceStatus("recovering unit after upgrade")
 
         try:
-            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+            for attempt in Retrying(
+                stop=stop_after_attempt(RECOVER_ATTEMPTS), wait=wait_fixed(10)
+            ):
                 with attempt:
                     if not self.charm._mysql.is_instance_in_cluster(self.charm.unit_label):
                         logger.debug(
                             "Instance not yet back in the cluster."
-                            f" Retry {attempt.retry_state.attempt_number}/6"
+                            f" Retry {attempt.retry_state.attempt_number}/{RECOVER_ATTEMPTS}"
                         )
                         raise Exception
                     logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
@@ -184,7 +189,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 (
                     "Upgrade failed, follow the instructions below to rollback:",
                     "    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state",
-                    "    2. Run `juju refresh` to the previously deployed charm revision",
+                    "    2. Run `juju refresh` to the previously deployed charm revision or local charm file",
                 )
             )
         )
@@ -214,26 +219,27 @@ class MySQLVMUpgrade(DataUpgrade):
         Raises:
             VersionError: If the server is not upgradeable.
         """
+        if len(self.upgrade_stack) < self.charm.app.planned_units():
+            # check is done for first upgrading unit only
+            return
 
         def leader_unit_address() -> str:
-            """Return the leader unit."""
+            # Return the leader unit address.
+            # leader is update stack first item
             leader_unit_ordinal = self.upgrade_stack[0]
             for unit in self.peer_relation.units:
                 if unit.name == f"{self.app.name}/{leader_unit_ordinal}":
                     return self.charm.get_unit_ip(unit)
 
         try:
-            if len(self.upgrade_stack) < self.charm.app.planned_units():
-                # only check in the first unit being upgraded
-                return
+            # verifies if the server is upgradeable by connecting to the leader
+            # which is running the pre-upgraded mysql-server version
             self.charm._mysql.verify_server_upgradable(instance=leader_unit_address())
             logger.debug("MySQL server is upgradeable")
-        except IndexError:
-            pass
         except MySQLServerNotUpgradableError as e:
             logger.error("MySQL server is not upgradeable")
             raise VersionError(
                 message="Cannot upgrade MySQL server",
                 cause=e.message,
-                resolution="Check mysql-shell upgrade utility output",
+                resolution="Check mysql-shell upgrade utility output for more details",
             )
