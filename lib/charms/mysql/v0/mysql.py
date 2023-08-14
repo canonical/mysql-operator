@@ -74,7 +74,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import ops
-from ops.charm import ActionEvent, CharmBase
+from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -111,7 +111,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 40
+LIBPATCH = 41
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -371,6 +371,10 @@ class MySQLCharmBase(CharmBase):
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
 
+        # Set in some event handlers in order to avoid passing event down a chain
+        # of methods
+        self.current_event = None
+
     def _on_get_password(self, event: ActionEvent) -> None:
         """Action used to retrieve the system user's password."""
         username = event.params.get("username") or ROOT_USERNAME
@@ -421,10 +425,7 @@ class MySQLCharmBase(CharmBase):
 
         self.set_secret("app", secret_key, new_password)
 
-        if (
-            username == MONITORING_USERNAME
-            and len(self.model.relations.get(COS_AGENT_RELATION_NAME, [])) > 0
-        ):
+        if username == MONITORING_USERNAME and self.has_cos_relation:
             self._mysql.restart_mysql_exporter()
 
     def _get_cluster_status(self, event: ActionEvent) -> None:
@@ -490,6 +491,22 @@ class MySQLCharmBase(CharmBase):
             and self.get_secret("app", MONITORING_PASSWORD_KEY)
             and self.get_secret("app", BACKUPS_PASSWORD_KEY)
         )
+
+    @property
+    def has_cos_relation(self) -> bool:
+        """Returns a bool indicating whether a relation with COS is present."""
+        cos_relations = self.model.relations.get(COS_AGENT_RELATION_NAME, [])
+        active_cos_relations = list(
+            filter(
+                lambda relation: not (
+                    isinstance(self.current_event, RelationBrokenEvent)
+                    and self.current_event.relation.id == relation.id
+                ),
+                cos_relations,
+            )
+        )
+
+        return len(active_cos_relations) > 0
 
     def _get_secret_from_juju(self, scope: str, key: str) -> Optional[str]:
         """Retrieve and return the secret from the juju secret storage."""
