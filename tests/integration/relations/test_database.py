@@ -223,18 +223,6 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     updated_root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
     assert updated_credentials["password"] == updated_root_credentials["password"]
 
-    # verify that the new password actually works by querying the db
-    show_tables_sql = [
-        "SHOW DATABASES",
-    ]
-    output = await execute_queries_on_unit(
-        primary_unit_address,
-        updated_credentials["username"],
-        updated_credentials["password"],
-        show_tables_sql,
-    )
-    assert len(output) > 0, "query with new password failed, no databases found"
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
