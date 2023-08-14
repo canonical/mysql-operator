@@ -1732,7 +1732,7 @@ class MySQLBase(ABC):
         ]
 
         def _strip_output(output: str):
-            # output may need first line stripped when to
+            # output may need first line stripped to
             # remove information header text
             if not output.split("\n")[0].startswith("{"):
                 return "\n".join(output.split("\n")[1:])
