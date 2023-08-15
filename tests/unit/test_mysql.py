@@ -1624,6 +1624,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "except ValueError:\n    print('SAME_VERSION')",
         )
         _run_mysqlsh_script.return_value = (
+            "Some info header to be stripped\n"
             '{"serverAddress": "10.1.148.145:33060",'
             '"serverVersion": "8.0.32-0ubuntu0.22.04.2 - (Ubuntu)",'
             '"targetVersion": "8.0.34",'
