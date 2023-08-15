@@ -16,10 +16,12 @@ from charms.data_platform_libs.v0.upgrade import (
     VersionError,
 )
 from charms.mysql.v0.mysql import (
+    MySQLGetMySQLVersionError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
     MySQLStartMySQLDError,
+    MySQLStopMySQLDError,
 )
 from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
@@ -56,13 +58,16 @@ class MySQLVMUpgrade(DataUpgrade):
         """Initialize the class."""
         super().__init__(charm, **kwargs)
         self.charm = charm
-        self.framework.observe(self.charm.on["upgrade"].relation_changed, self._on_upgrade_changed)
+        self.framework.observe(
+            self.charm.on[self.relation_name].relation_changed, self._on_upgrade_changed
+        )
 
     @override
     def build_upgrade_stack(self) -> list[int]:
         """Build the upgrade stack.
 
-        This/leader/primary will be the last and others ordered by unit number.
+        This/leader/primary will be the last.
+        Others will be ordered by unit number ascending.
         Higher unit number will be upgraded first.
         """
 
@@ -126,15 +131,15 @@ class MySQLVMUpgrade(DataUpgrade):
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:
         """Handle the upgrade granted event."""
-        self.charm._mysql.stop_mysqld()
-
-        self.charm.unit.status = MaintenanceStatus("upgrading snap...")
-
-        if not self.charm.install_workload():
-            logger.error("Failed to install workload snap")
-            self.set_unit_failed()
-            return
         try:
+            self.charm.unit.status = MaintenanceStatus("stopping services..")
+            self.charm._mysql.stop_mysqld()
+
+            self.charm.unit.status = MaintenanceStatus("upgrading snap...")
+            if not self.charm.install_workload():
+                logger.error("Failed to install workload snap")
+                self.set_unit_failed()
+                return
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
             self.charm._mysql.start_mysqld()
@@ -142,10 +147,16 @@ class MySQLVMUpgrade(DataUpgrade):
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
             return
-        except MySQLStartMySQLDError:
-            logger.exception("Failed to start MySQL after upgrade")
+        except (MySQLStopMySQLDError, MySQLStartMySQLDError):
+            logger.exception("Failed to stop/start MySQL server")
             self.set_unit_failed()
             return
+
+        try:
+            self.charm.unit.set_workload_version(self.charm._mysql.get_mysql_version() or "unset")
+        except MySQLGetMySQLVersionError:
+            # don't fail on this, just log it
+            logger.warning("Failed to get MySQL version")
 
         self.charm.unit.status = MaintenanceStatus("recovering unit after upgrade")
 
@@ -219,7 +230,7 @@ class MySQLVMUpgrade(DataUpgrade):
         Raises:
             VersionError: If the server is not upgradeable.
         """
-        if len(self.upgrade_stack) < self.charm.app.planned_units():
+        if len(self.upgrade_stack or []) < self.charm.app.planned_units():
             # check is done for first upgrading unit only
             return
 
@@ -228,8 +239,9 @@ class MySQLVMUpgrade(DataUpgrade):
             # leader is update stack first item
             leader_unit_ordinal = self.upgrade_stack[0]
             for unit in self.peer_relation.units:
-                if unit.name == f"{self.app.name}/{leader_unit_ordinal}":
+                if unit.name == f"{self.charm.app.name}/{leader_unit_ordinal}":
                     return self.charm.get_unit_ip(unit)
+            return ""
 
         try:
             # verifies if the server is upgradeable by connecting to the leader
