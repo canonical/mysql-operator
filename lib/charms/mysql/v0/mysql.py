@@ -70,7 +70,7 @@ import json
 import logging
 import re
 import socket
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import ops
@@ -111,7 +111,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 42
+LIBPATCH = 43
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -347,6 +347,10 @@ class MySQLSecretError(Error):
     """Exception raised when there is an issue setting/getting a secret."""
 
 
+class MySQLGetAvailableMemoryError(Error):
+    """Exception raised when there is an issue getting the available memory."""
+
+
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
@@ -355,7 +359,7 @@ class RouterUser:
     router_id: str
 
 
-class MySQLCharmBase(CharmBase):
+class MySQLCharmBase(CharmBase, ABC):
     """Base class to encapsulate charm related functionality.
 
     Meant as a means to share common charm related code between the MySQL VM and
@@ -374,6 +378,11 @@ class MySQLCharmBase(CharmBase):
         # Set in some event handlers in order to avoid passing event down a chain
         # of methods
         self.current_event = None
+
+    @abstractproperty
+    def _mysql(self) -> "MySQLBase":
+        """Return the MySQL instance."""
+        raise NotImplementedError
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Action used to retrieve the system user's password."""
@@ -446,7 +455,7 @@ class MySQLCharmBase(CharmBase):
             )
 
     @property
-    def peers(self) -> ops.model.Relation:
+    def peers(self) -> Optional[ops.model.Relation]:
         """Retrieve the peer relation."""
         return self.model.get_relation(PEER)
 
@@ -461,7 +470,7 @@ class MySQLCharmBase(CharmBase):
         return self.unit_peer_data.get("unit-initialized") == "True"
 
     @property
-    def app_peer_data(self) -> Dict:
+    def app_peer_data(self) -> ops.RelationDataContent:
         """Application peer relation data object."""
         if self.peers is None:
             return {}
@@ -469,7 +478,7 @@ class MySQLCharmBase(CharmBase):
         return self.peers.data[self.app]
 
     @property
-    def unit_peer_data(self) -> Dict:
+    def unit_peer_data(self) -> ops.RelationDataContent:
         """Unit peer relation data object."""
         if self.peers is None:
             return {}
@@ -539,7 +548,7 @@ class MySQLCharmBase(CharmBase):
         logger.debug(f"Retrieved secret {key} for app")
         return self.app_secrets.get(key)
 
-    def _get_secret_from_databag(self, scope: str, key: Optional[str]) -> Optional[str]:
+    def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
         """Retrieve and return the secret from the peer relation databag."""
         if scope == "unit":
             return self.unit_peer_data.get(key)
@@ -1959,7 +1968,7 @@ class MySQLBase(ABC):
                 password=self.cluster_admin_password,
             )
         except MySQLClientError as e:
-            logger.exception(f"Failed to set instance state to offline_mode {mode}", exc_info=e)
+            logger.exception(f"Failed to set instance state to offline_mode {mode}")
             raise MySQLSetInstanceOfflineModeError(e.message)
 
     def set_instance_option(self, option: str, value: Any) -> None:
@@ -1980,9 +1989,9 @@ class MySQLBase(ABC):
 
         try:
             self._run_mysqlsh_script("\n".join(set_instance_option_commands))
-        except MySQLClientError as e:
-            logger.exception(f"Failed to set option {option} with value {value}", exc_info=e)
-            raise MySQLSetInstanceOptionError(e.message)
+        except MySQLClientError:
+            logger.exception(f"Failed to set option {option} with value {value}")
+            raise MySQLSetInstanceOptionError
 
     def offline_mode_and_hidden_instance_exists(self) -> bool:
         """Indicates whether an instance exists in offline_mode and hidden from router.
@@ -2265,9 +2274,9 @@ class MySQLBase(ABC):
         except MySQLExecError as e:
             logger.exception("Failed to retrieve backup")
             raise MySQLRetrieveBackupWithXBCloudError(e.message)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to retrieve backup")
-            raise MySQLRetrieveBackupWithXBCloudError(e)
+            raise MySQLRetrieveBackupWithXBCloudError
 
     def prepare_backup_for_restore(
         self,

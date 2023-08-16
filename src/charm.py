@@ -8,7 +8,6 @@ import logging
 import subprocess
 from typing import Optional
 
-import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -44,7 +43,13 @@ from ops.model import (
     Unit,
     WaitingStatus,
 )
-from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential,
+)
 
 from constants import (
     BACKUPS_PASSWORD_KEY,
@@ -151,7 +156,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
-                retry=tenacity.retry_if_exception_type(snap.SnapError),
+                retry=retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -456,7 +461,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config(profile=self.config["profile"])
+        self._mysql.write_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
         self._mysql.configure_instance()
@@ -504,6 +509,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         """
         # Safeguard unit starting before leader unit sets peer data
         if not self._is_peer_data_set:
+            logger.debug("Peer data not yet set. Deferring")
             event.defer()
             return False
 
@@ -513,6 +519,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         # Safeguard against storage not attached
         if not is_volume_mounted():
+            logger.debug("Snap volume not mounted. Deferring")
             self._reboot_on_detached_storage(event)
             return False
 
