@@ -116,7 +116,7 @@ class MySQLMachineHostnameResolution(Object):
 
                             fqdn, ip, unit = details["fqdn"], details["ip"], details["unit"]
 
-                            logger.info(
+                            logger.debug(
                                 f"Overwriting {hostname} ({unit=}) with {ip=}, {fqdn=} in /etc/hosts"
                             )
                             updated_hosts_file.write(f"{ip} {fqdn} {hostname} # unit={unit}\n")

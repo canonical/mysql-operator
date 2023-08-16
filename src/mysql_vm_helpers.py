@@ -522,7 +522,7 @@ class MySQL(MySQLBase):
         flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
 
         try:
-            logger.info("Truncating the MySQL host cache")
+            logger.debug("Truncating the MySQL host cache")
             self._run_mysqlcli_script(
                 flush_host_cache_command,
                 user=self.server_config_user,
