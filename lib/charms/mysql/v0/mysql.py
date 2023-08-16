@@ -706,6 +706,58 @@ class MySQLBase(ABC):
         self.backups_user = backups_user
         self.backups_password = backups_password
 
+    def render_myqld_configuration(
+        self,
+        *,
+        profile: str,
+    ) -> str:
+        """Render mysqld ini configuration file.
+
+        Args:
+            profile: profile to use for the configuration (testing, production)
+
+        Returns: mysqld ini file string content
+        """
+        disable_memory_instruments = ""
+        if profile == "testing":
+            innodb_buffer_pool_size = 20 * BYTES_1MiB
+            innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
+            group_replication_message_cache_size = 128 * BYTES_1MiB
+            max_connections = 20
+            disable_memory_instruments = "performance-schema-instrument='memory/%=OFF'"
+        else:
+            available_memory = self.get_available_memory()
+            (
+                innodb_buffer_pool_size,
+                innodb_buffer_pool_chunk_size,
+                group_replication_message_cache_size,
+            ) = self.get_innodb_buffer_pool_parameters(available_memory)
+            max_connections = self.get_max_connections(available_memory)
+            if available_memory < 2 * BYTES_1GiB:
+                # disable memory instruments if we have less than 2GiB of RAM
+                disable_memory_instruments = "performance-schema-instrument = 'memory/%=OFF'"
+
+        content = [
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            f"report_host = {self.instance_address}",
+            f"max_connections = {max_connections}",
+            f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
+        ]
+        if innodb_buffer_pool_chunk_size:
+            content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
+
+        if disable_memory_instruments:
+            content.append(disable_memory_instruments)
+        if group_replication_message_cache_size:
+            content.append(
+                f"loose-group_replication_message_cache_size = {group_replication_message_cache_size}"
+            )
+
+        content.append("\n")
+        return "\n".join(content)
+
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
 
@@ -1949,8 +2001,8 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlsh_script("\n".join(commands))
         except MySQLClientError as e:
-            logger.exception("Failed to query offline mode instances", exc_info=e)
-            raise MySQLOfflineModeAndHiddenInstanceExistsError(e)
+            logger.exception("Failed to query offline mode instances")
+            raise MySQLOfflineModeAndHiddenInstanceExistsError(e.message)
 
         matches = re.search(r"<OFFLINE_MODE_INSTANCES>(.*)</OFFLINE_MODE_INSTANCES>", output)
 
@@ -1959,8 +2011,13 @@ class MySQLBase(ABC):
 
         return matches.group(1) != "0"
 
-    def get_innodb_buffer_pool_parameters(self) -> Tuple[int, Optional[int], Optional[int]]:
+    def get_innodb_buffer_pool_parameters(
+        self, available_memory: int
+    ) -> Tuple[int, Optional[int], Optional[int]]:
         """Get innodb buffer pool parameters for the instance.
+
+        Args:
+            available_memory: The amount of memory available to the instance
 
         Returns:
             a tuple of (innodb_buffer_pool_size, optional(innodb_buffer_pool_chunk_size),
@@ -1976,13 +2033,12 @@ class MySQLBase(ABC):
         try:
             innodb_buffer_pool_chunk_size = None
             group_replication_message_cache = None
-            total_memory = self._get_total_memory()
 
-            pool_size = int(total_memory * 0.75) - group_replication_message_cache_default
+            pool_size = int(available_memory * 0.75) - group_replication_message_cache_default
 
-            if pool_size < 0 or total_memory - pool_size < BYTES_1GB:
+            if pool_size < 0 or available_memory - pool_size < BYTES_1GB:
                 group_replication_message_cache = 128 * BYTES_1MiB
-                pool_size = int(total_memory * 0.5)
+                pool_size = int(available_memory * 0.5)
 
             if pool_size % chunk_size_default != 0:
                 # round pool_size to be a multiple of chunk_size_default
@@ -2004,47 +2060,31 @@ class MySQLBase(ABC):
             logger.exception("Failed to compute innodb buffer pool parameters")
             raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
 
-    def get_max_connections(self) -> int:
-        """Calculate max_connections parameter for the instance."""
+    def get_max_connections(self, available_memory: int) -> int:
+        """Calculate max_connections parameter for the instance.
+
+        Args:
+            available_memory: The available memory for mysql-server.
+        """
         # Reference: based off xtradb-cluster-operator
         # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L61-L70
 
         bytes_per_connection = 12 * BYTES_1MiB
-        total_memory = 0
 
-        try:
-            total_memory = self._get_total_memory()
-        except Exception:
-            logger.exception("Failed to retrieve total memory")
-            raise MySQLGetAutoTunningParametersError("Error retrieving total memory")
-
-        if total_memory < bytes_per_connection:
-            logger.error(f"Not enough memory for running MySQL: {total_memory=}")
+        if available_memory < bytes_per_connection:
+            logger.error(f"Not enough memory for running MySQL: {available_memory=}")
             raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
 
-        return total_memory // bytes_per_connection
+        return available_memory // bytes_per_connection
 
-    def _get_total_memory(self) -> int:
-        """Retrieves the total memory of the server where mysql is running."""
-        try:
-            logger.info("Retrieving the total memory of the server")
+    @abstractmethod
+    def get_available_memory(self) -> int:
+        """Platform dependent method to get the available memory for mysql-server.
 
-            """Below is an example output of `free --bytes`:
-               total        used        free      shared  buff/cache   available
-Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
-Swap:     1027600384  1027600384           0
-            """
-            # need to use sh -c to be able to use pipes
-            get_total_memory_command = "free --bytes | awk '/^Mem:/{print $2; exit}'".split()
-
-            total_memory, _ = self._execute_commands(
-                get_total_memory_command,
-                bash=True,
-            )
-            return int(total_memory)
-        except MySQLExecError:
-            logger.exception("Failed to execute commands to query total memory")
-            raise
+        Raises:
+            MySQLGetAvailableMemoryError: If the available memory cannot be determined.
+        """
+        raise NotImplementedError
 
     def execute_backup_commands(
         self,
@@ -2239,9 +2279,11 @@ Swap:     1027600384  1027600384           0
     ) -> Tuple[str, str]:
         """Prepare the backup in the provided dir for restore."""
         try:
-            innodb_buffer_pool_size, _, _ = self.get_innodb_buffer_pool_parameters()
+            innodb_buffer_pool_size, _, _ = self.get_innodb_buffer_pool_parameters(
+                self.get_available_memory()
+            )
         except MySQLGetAutoTunningParametersError as e:
-            raise MySQLPrepareBackupForRestoreError(e)
+            raise MySQLPrepareBackupForRestoreError(e.message)
 
         prepare_backup_command = f"""
 {xtrabackup_location} --prepare
