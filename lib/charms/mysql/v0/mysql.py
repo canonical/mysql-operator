@@ -733,7 +733,7 @@ class MySQLBase(ABC):
             innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
             group_replication_message_cache_size = 128 * BYTES_1MiB
             max_connections = 20
-            disable_memory_instruments = "performance-schema-instrument='memory/%=OFF'"
+            disable_memory_instruments = "performance-schema-instrument = 'memory/%=OFF'"
         else:
             available_memory = self.get_available_memory()
             (
@@ -2316,9 +2316,9 @@ class MySQLBase(ABC):
         except MySQLExecError as e:
             logger.exception("Failed to prepare backup for restore")
             raise MySQLPrepareBackupForRestoreError(e.message)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to prepare backup for restore")
-            raise MySQLPrepareBackupForRestoreError(e)
+            raise MySQLPrepareBackupForRestoreError
 
     def empty_data_files(
         self,

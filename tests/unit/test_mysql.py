@@ -900,72 +900,46 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_innodb_buffer_pool_parameters(self, _get_total_memory):
+    def test_get_innodb_buffer_pool_parameters(self):
         """Test the successful execution of get_innodb_buffer_pool_parameters()."""
-        _get_total_memory.return_value = 16484458496
+        available_memory = 16484458496
 
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(11408506880, pool_size)
         self.assertEqual(1426063360, chunk_size)
         self.assertEqual(None, gr_message_cache)
 
-        _get_total_memory.return_value = 3221000000
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        available_memory = 3221000000
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(1342177280, pool_size)
         self.assertEqual(167772160, chunk_size)
         self.assertEqual(None, gr_message_cache)
 
-        _get_total_memory.return_value = 1073741825
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        available_memory = 1073741825
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(536870912, pool_size)
         self.assertIsNone(chunk_size)
         self.assertEqual(134217728, gr_message_cache)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_innodb_buffer_pool_parameters_exception(self, _get_total_memory):
+    def test_get_innodb_buffer_pool_parameters_exception(self):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
-        _get_total_memory.side_effect = MySQLExecError
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            self.mysql.get_innodb_buffer_pool_parameters("wrong type")
+
+    def test_get_max_connections(self):
+        self.assertEqual(1310, self.mysql.get_max_connections(16484458496))
 
         with self.assertRaises(MySQLGetAutoTunningParametersError):
-            self.mysql.get_innodb_buffer_pool_parameters()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_get_total_memory(self, _execute_commands):
-        """Test successful execution of _get_total_memory()."""
-        _execute_commands.return_value = "16484458496\n", None
-
-        total_memory = self.mysql._get_total_memory()
-
-        self.assertEqual(16484458496, total_memory)
-
-        _execute_commands.assert_called_once_with(
-            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
-            bash=True,
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_get_total_memory_exception(self, _execute_commands):
-        """Test a failure in execution of _get_total_memory()."""
-        _execute_commands.side_effect = MySQLExecError
-
-        with self.assertRaises(MySQLExecError):
-            self.mysql._get_total_memory()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_max_connections(self, _get_total_memory):
-        _get_total_memory.return_value = 16484458496
-
-        self.assertEqual(1310, self.mysql.get_max_connections())
-
-        _get_total_memory.return_value = 12582910
+            self.mysql.get_max_connections(12582910)
 
         with self.assertRaises(MySQLGetAutoTunningParametersError):
-            self.mysql.get_max_connections()
-
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
-            _get_total_memory.side_effect = MySQLExecError
-            self.mysql.get_max_connections()
+            self.mysql.get_max_connections(125)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_execute_backup_commands(self, _execute_commands):
@@ -1294,10 +1268,12 @@ xbcloud/location get
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
         return_value=(1234, 5678, None),
     )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_available_memory")
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore(
         self,
         _execute_commands,
+        _get_available_memory,
         _get_innodb_buffer_pool_parameters,
     ):
         """Test successful execution of prepare_backup_for_restore()."""
@@ -1319,6 +1295,7 @@ xtrabackup/location --prepare
 """.split()
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
+        _get_available_memory.assert_called_once()
         _execute_commands.assert_called_once_with(
             _expected_prepare_backup_command,
             user="test-user",
@@ -1329,10 +1306,12 @@ xtrabackup/location --prepare
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
         return_value=(1234, 5678, None),
     )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_available_memory")
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore_failure(
         self,
         _execute_commands,
+        _get_available_memory,
         _get_innodb_buffer_pool_parameters,
     ):
         """Test failure of prepare_backup_for_restore()."""
@@ -1688,3 +1667,6 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         with self.assertRaises(NotImplementedError):
             self.mysql.start_mysqld()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.get_available_memory()
