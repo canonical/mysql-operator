@@ -78,6 +78,10 @@ class MySQLFlushHostCacheError(Error):
     """Exception raised when there's an error flushing the MySQL host cache."""
 
 
+class MySQLInstallError(Error):
+    """Exception raised when there's an error installing MySQL."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -170,15 +174,14 @@ class MySQL(MySQLBase):
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
             installed_by_mysql_server_file.touch(exist_ok=True)
-        except subprocess.CalledProcessError:
-            logger.exception("Failed to execute subprocess command")
-            raise
-        except (snap.SnapNotFoundError, snap.SnapError):
+        except snap.SnapError:
             logger.exception("Failed to install snaps")
+            # reraise SnapError exception so the caller can retry
             raise
-        except Exception:
-            logger.exception("Encountered an unexpected exception")
-            raise
+        except (subprocess.CalledProcessError, snap.SnapNotFoundError, Exception):
+            logger.exception("Failed to install and configure MySQL dependencies")
+            # other exceptions are not retried
+            raise MySQLInstallError
 
     @override
     def get_available_memory(self) -> int:

@@ -75,6 +75,7 @@ from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
     MySQLDataPurgeError,
+    MySQLInstallError,
     MySQLReconfigureError,
     MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
@@ -88,6 +89,7 @@ from relations.db_router import DBRouterRelation
 from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
 from relations.shared_db import SharedDBRelation
+from upgrade import MySQLVMUpgrade, get_mysql_dependencies_model
 from utils import generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
@@ -133,6 +135,12 @@ class MySQLOperatorCharm(MySQLCharmBase):
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
         self.hostname_resolution = MySQLMachineHostnameResolution(self)
+        self.upgrade = MySQLVMUpgrade(
+            self,
+            dependency_model=get_mysql_dependencies_model(),
+            relation_name="upgrade",
+            substrate="vm",
+        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -146,26 +154,10 @@ class MySQLOperatorCharm(MySQLCharmBase):
             self._reboot_on_detached_storage(event)
             return
 
-        # Initial setup operations like installing dependencies, and creating users and groups.
-        def set_retry_status(_):
-            self.unit.status = MaintenanceStatus(
-                "Failed to install and configure MySQL. Retrying..."
-            )
-
-        try:
-            for attempt in Retrying(
-                wait=wait_exponential(multiplier=10),
-                stop=stop_after_delay(60 * 5),
-                retry=retry_if_exception_type(snap.SnapError),
-                after=set_retry_status,
-            ):
-                with attempt:
-                    MySQL.install_and_configure_mysql_dependencies()
-        except RetryError:
+        if self.install_workload():
+            self.unit.status = WaitingStatus("Waiting to start MySQL")
+        else:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
-            return
-
-        self.unit.status = WaitingStatus("Waiting to start MySQL")
 
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event."""
@@ -338,8 +330,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
+            and not self.upgrade.idle
         ):
-            # avoid changing status while in initialisation
+            # avoid changing status while in initialising/upgrading
             return
 
         if self._is_unit_waiting_to_join_cluster():
@@ -413,7 +406,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self._get_unit_ip(self.unit),
+            self.get_unit_ip(self.unit),
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
@@ -455,6 +448,30 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return "Primary"
         return ""
 
+    def install_workload(self) -> bool:
+        """Exponential backoff retry to install and configure MySQL.
+
+        Returns: True if successful, False otherwise.
+        """
+
+        def set_retry_status(_):
+            self.unit.status = MaintenanceStatus(
+                "Failed to install and configure MySQL. Retrying..."
+            )
+
+        try:
+            for attempt in Retrying(
+                wait=wait_exponential(multiplier=10),
+                stop=stop_after_delay(60 * 5),
+                retry=retry_if_exception_type(snap.SnapError),
+                after=set_retry_status,
+            ):
+                with attempt:
+                    MySQL.install_and_configure_mysql_dependencies()
+        except (RetryError, MySQLInstallError):
+            return False
+        return True
+
     def _workload_initialise(self) -> None:
         """Workload initialisation commands.
 
@@ -471,7 +488,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
 
-    def _get_unit_ip(self, unit: Unit) -> Optional[str]:
+    def get_unit_ip(self, unit: Unit) -> str:
         """Get the IP address of a specific unit."""
         if unit == self.unit:
             return str(self.model.get_binding(PEER).network.bind_address)
@@ -513,6 +530,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
             event.defer()
             return False
 
+        # Safeguard against starting while upgrading
+        if not self.upgrade.idle:
+            event.defer()
+            return False
+
         # Safeguard against error on install hook
         if self._has_blocked_status:
             return False
@@ -540,7 +562,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             A `StatusBase` to be set by the caller
         """
         try:
-            primary_address = self._get_primary_address_from_peers()
+            primary_address = self._get_primary_from_online_peer()
             if not primary_address:
                 logger.debug("Primary not yet defined on peers. Waiting new primary.")
                 return MaintenanceStatus("Workload reset: waiting new primary")
@@ -555,7 +577,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             # Re-add the member as if it's the first time
 
             self._mysql.add_instance_to_cluster(
-                self._get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
+                self.get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
             )
         except MySQLReconfigureError:
             return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
@@ -605,7 +627,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             if self.peers.data[unit].get("member-state") == "online":
                 try:
                     return self._mysql.get_cluster_primary_address(
-                        connect_instance_address=self._get_unit_ip(unit)
+                        connect_instance_address=self.get_unit_ip(unit)
                     )
                 except MySQLGetClusterPrimaryAddressError:
                     # try next unit
@@ -617,7 +639,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Try to join the unit from the primary unit.
         """
         instance_label = self.unit.name.replace("/", "-")
-        instance_address = self._get_unit_ip(self.unit)
+        instance_address = self.get_unit_ip(self.unit)
 
         if self._mysql.is_instance_in_cluster(instance_label):
             logger.debug("instance already in cluster")
