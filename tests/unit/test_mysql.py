@@ -21,22 +21,27 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterSetError,
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
+    MySQLDeleteUserError,
     MySQLDeleteUsersForRelationError,
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetMemberStateError,
+    MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
+    MySQLSetInstanceOptionError,
     MySQLSetVariableError,
 )
 
@@ -266,21 +271,30 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
-        configure_instance_commands = (
-            'dba.configure_instance(\'serverconfig:serverconfigpassword@127.0.0.1\', {"restart": "true", "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
+        # Test with create_cluster_admin=False
+        configure_instance_commands = [
+            "dba.configure_instance('serverconfig:serverconfigpassword@127.0.0.1', ",
+            '{"restart": "true"})',
+            # , "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
+        ]
+
+        self.mysql.configure_instance(create_cluster_admin=False)
+
+        _run_mysqlsh_script.assert_called_once_with("".join(configure_instance_commands))
+
+        _run_mysqlsh_script.reset_mock()
+
+        # Test with create_cluster_admin=True
+        configure_instance_commands[1] = (
+            '{"restart": "true", '
+            '"clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})'
         )
+        self.mysql.configure_instance(create_cluster_admin=True)
 
-        self.mysql.configure_instance()
+        _run_mysqlsh_script.assert_called_once_with("".join(configure_instance_commands))
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(configure_instance_commands))
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
-    def test_configure_instance_exceptions(
-        self, _wait_until_mysql_connection, _run_mysqlsh_script
-    ):
-        """Test exceptions raise while running configure_instance."""
         # Test an issue with _run_mysqlsh_script
+        _wait_until_mysql_connection.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
@@ -758,6 +772,57 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_set_instance_option(self, _run_mysqlsh_script):
+        """Test execution of set_instance_option()."""
+        expected_commands = "\n".join(
+            (
+                f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@{self.mysql.instance_address}')",
+                f"cluster = dba.get_cluster('{self.mysql.cluster_name}')",
+                f"cluster.set_instance_option('{self.mysql.instance_address}', 'label', 'label-0')",
+            )
+        )
+        self.mysql.set_instance_option("label", "label-0")
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        with self.assertRaises(MySQLSetInstanceOptionError):
+            self.mysql.set_instance_option("label", "label-0")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_get_member_state(self, _run_mysqlcli_script):
+        """Test execution of get_member_state()."""
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+            "ONLINE\tSECONDARY\t<uuid>\t<notuuid>\n"
+            "ONLINE\tPRIMARY\t<uuid>\t<uuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("online", "primary"))
+
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+            "ONLINE\tSECONDARY\t<uuid>\t<uuid>\n"
+            "ONLINE\tPRIMARY\t<uuid>\t<notuuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("online", "secondary"))
+
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\nOFFLINE\t\t\t<uuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("offline", "unknown"))
+
+        _run_mysqlcli_script.return_value = "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+
+        with self.assertRaises(MySQLGetMemberStateError):
+            self.mysql.get_member_state()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_rescan_cluster_failure(self, _run_mysqlsh_script):
         """Test an exception executing rescan_cluster()."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
@@ -773,16 +838,35 @@ class TestMySQLBase(unittest.TestCase):
         self.assertEqual(error.name, "<charms.mysql.v0.mysql.Error>")
         self.assertEqual(error.message, "Error message")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_users_for_relation_failure(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
+        self,
+        _run_mysqlsh_script,
     ):
         """Test failure to delete users for relation."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        _run_mysqlsh_script.side_effect = MySQLClientError
 
         with self.assertRaises(MySQLDeleteUsersForRelationError):
             self.mysql.delete_users_for_relation(40)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_delete_user(self, _run_mysqlsh_script):
+        """Test delete_user() method."""
+        expected_commands = "\n".join(
+            (
+                (
+                    f"shell.connect_to_primary('{self.mysql.server_config_user}:"
+                    f"{self.mysql.server_config_password}@{self.mysql.instance_address}')"
+                ),
+                "session.run_sql(\"DROP USER `testuser`@'%'\")",
+            )
+        )
+        self.mysql.delete_user("testuser")
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLDeleteUserError):
+            self.mysql.delete_user("testuser")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_cluster_members_addresses(self, _run_mysqlsh_script):
@@ -821,6 +905,10 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
         self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLGetMySQLVersionError):
+            self.mysql.get_mysql_version()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_grant_privileges_to_user(self, _run_mysqlsh_script):
@@ -1561,6 +1649,26 @@ xtrabackup/location --defaults-file=defaults/config/file
             self.mysql.get_mysql_router_users_for_unit(
                 relation_id=1, mysql_router_unit_name="mysql-router-k8s/0"
             )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_remove_router_from_cluster_metadata(self, _run_mysqlsh_script):
+        """Test remove_user_from_cluster_metadata."""
+        commands = (
+            (
+                f"shell.connect_to_primary('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@"
+                f"{self.mysql.instance_address}')"
+            ),
+            "cluster = dba.get_cluster()",
+            'cluster.remove_router_metadata("1")',
+        )
+
+        self.mysql.remove_router_from_cluster_metadata(router_id="1")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLRemoveRouterFromMetadataError):
+            self.mysql.remove_router_from_cluster_metadata(router_id="1")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_set_dynamic_variables(self, _run_mysqlsh_script):
