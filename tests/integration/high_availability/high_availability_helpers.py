@@ -69,10 +69,13 @@ def get_application_name(ops_test: OpsTest, application_name_substring: str) -> 
     the first one found will be returned.
     """
     for application in ops_test.model.applications:
-        if application_name_substring in application:
+        if (
+            application_name_substring in application
+            and application != APPLICATION_DEFAULT_APP_NAME
+        ):
             return application
 
-    return None
+    return ""
 
 
 async def ensure_n_online_mysql_members(
@@ -106,7 +109,8 @@ async def ensure_n_online_mysql_members(
                 assert len(online_members) == number_online_members
                 return True
     except RetryError:
-        return False
+        pass
+    return False
 
 
 async def deploy_and_scale_mysql(
