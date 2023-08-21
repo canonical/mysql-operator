@@ -12,7 +12,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     get_legacy_mysql_credentials,
-    instance_ip,
+    get_unit_ip,
     is_connection_possible,
     is_relation_broken,
     is_relation_joined,
@@ -154,7 +154,6 @@ async def test_relation_broken(ops_test: OpsTest):
 async def application_database_credentials(ops_test: OpsTest) -> dict:
     unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
     credentials = await get_legacy_mysql_credentials(unit)
-    host_instance = credentials["host"]
-    host_ip = instance_ip(ops_test.model.info.name, host_instance)
+    host_ip = await get_unit_ip(ops_test, unit.name)
     credentials["host"] = host_ip
     return credentials
