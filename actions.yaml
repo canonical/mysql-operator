@@ -49,3 +49,7 @@ restore:
     backup-id:
       type: string
       description: A backup-id to identify the backup to restore (format = %Y-%m-%dT%H:%M:%SZ)
+
+pre-upgrade-check:
+  description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
+
