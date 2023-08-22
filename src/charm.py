@@ -325,7 +325,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
-            and not self.upgrade.idle
+            and (self.upgrade.peer_relation and not self.upgrade.idle)
         ):
             # avoid changing status while in initialising/upgrading
             return
@@ -443,7 +443,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return "Primary"
         return ""
 
-    def install_workload(self) -> bool:
+    def install_workload(self, upgrading: bool = False) -> bool:
         """Exponential backoff retry to install and configure MySQL.
 
         Returns: True if successful, False otherwise.
@@ -462,7 +462,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 after=set_retry_status,
             ):
                 with attempt:
-                    MySQL.install_and_configure_mysql_dependencies()
+                    MySQL.install_and_configure_mysql_dependencies(ignore_multiple=upgrading)
         except (RetryError, MySQLInstallError):
             return False
         return True

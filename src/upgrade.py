@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-RECOVER_ATTEMPTS = 10
+RECOVER_ATTEMPTS = 30
 
 
 class MySQLVMDependenciesModel(BaseModel):
@@ -61,6 +61,7 @@ class MySQLVMUpgrade(DataUpgrade):
         self.framework.observe(
             self.charm.on[self.relation_name].relation_changed, self._on_upgrade_changed
         )
+        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_checks)
 
     @override
     def build_upgrade_stack(self) -> list[int]:
@@ -128,6 +129,35 @@ class MySQLVMUpgrade(DataUpgrade):
                 resolution="Check the cluster status",
             )
 
+    def _on_upgrade_charm_checks(self, event) -> None:
+        if not self.peer_relation or len(self.app_units) != self.charm.app.planned_units():
+            # defer case relation not ready or not all units joined it
+            event.defer()
+            return
+
+        if self.state:
+            # Do nothing - key set, upgrade supported
+            return
+
+        logger.info("Upgrading from unsupported version")
+        # set ready upgrade state
+        self.peer_relation.data[self.charm.unit].update({"state": "ready"})
+
+        if self.charm.unit.is_leader():
+            # Populate app upgrade databag to allow upgrade procedure
+            logger.debug("Building upgrade stack")
+            upgrade_stack = self.build_upgrade_stack()
+            logger.debug(f"Upgrade stack: {upgrade_stack}")
+            self.upgrade_stack = upgrade_stack
+            logger.debug("Persisting dependencies to upgrade relation data...")
+            self.peer_relation.data[self.charm.app].update(
+                {"dependencies": json.dumps(self.dependency_model.dict())}
+            )
+            # call leader elected handler to populate any missing data
+            self.charm._on_leader_elected(None)
+            # TODO: remove root@%
+            # TODO: create backup user
+
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:
         """Handle the upgrade granted event."""
@@ -136,12 +166,13 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm._mysql.stop_mysqld()
 
             self.charm.unit.status = MaintenanceStatus("upgrading snap...")
-            if not self.charm.install_workload():
+            if not self.charm.install_workload(upgrading=True):
                 logger.error("Failed to install workload snap")
                 self.set_unit_failed()
                 return
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
+            self.charm.unit.status = MaintenanceStatus("starting services...")
             self.charm._mysql.start_mysqld()
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")

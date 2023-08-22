@@ -136,7 +136,7 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies() -> None:
+    def install_and_configure_mysql_dependencies(ignore_multiple: bool = False) -> None:
         """Install and configure MySQL dependencies.
 
         Raises
@@ -152,7 +152,11 @@ class MySQL(MySQLBase):
         installed_by_mysql_server_file = pathlib.Path(
             CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
         )
-        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
+        if (
+            charmed_mysql.present
+            and not installed_by_mysql_server_file.exists()
+            and not ignore_multiple
+        ):
             logger.error(
                 f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
             )
@@ -166,10 +170,18 @@ class MySQL(MySQLBase):
             charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
-            if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
-                logger.debug("Creating mysql shell common directory")
+            common_path = pathlib.Path(CHARMED_MYSQL_COMMON_DIRECTORY)
+            if not common_path.exists():
+                logger.debug("Creating charmed-mysql common directory")
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
+
+            # fix ownership necessary for upgrades from 8/stable@r151
+            if common_path.owner() != MYSQL_SYSTEM_USER:
+                logger.debug("Updating charmed-mysql common directory ownership")
+                os.system(
+                    f"chown -R {MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}"
+                )
 
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
