@@ -155,7 +155,8 @@ class MySQLVMUpgrade(DataUpgrade):
             )
             # call leader elected handler to populate any missing data
             self.charm._on_leader_elected(None)
-            # TODO: remove root@%
+            # remove root@%
+            self.charm._mysql.delete_user("root@%")
             # TODO: create backup user
 
     @override

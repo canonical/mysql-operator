@@ -284,7 +284,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 11
 
 PYDEPS = ["pydantic>=1.10,<2"]
 
@@ -817,7 +817,7 @@ class DataUpgrade(Object, ABC):
         Returns:
             True if all application units in idle state. Otherwise False
         """
-        return self.cluster_state == "idle"
+        return set(self.unit_states) == {"idle"}
 
     @abstractmethod
     def pre_upgrade_check(self) -> None:
@@ -1127,7 +1127,14 @@ class DataUpgrade(Object, ABC):
         # pop mutates the `upgrade_stack` attr
         top_unit_id = self.upgrade_stack.pop()
         top_unit = self.charm.model.get_unit(f"{self.charm.app.name}/{top_unit_id}")
-        top_state = self.peer_relation.data[top_unit].get("state")
+        try:
+            top_state = self.peer_relation.data[top_unit].get("state")
+        except KeyError:
+            # a unit may not have joined the relation when  upgrading from
+            # an older version of the charm without upgrade support
+            # the hook will retrigger when it joins
+            logger.debug(f"{top_unit} not found in peer relation data, exiting...")
+            return
 
         # if top of stack is completed, leader pops it
         if self.charm.unit.is_leader() and top_state == "completed":
