@@ -215,15 +215,15 @@ class MySQL(MySQLBase):
         logger.debug("Copying custom mysqld config")
         try:
             content = self.render_myqld_configuration(profile=profile)
-
-            # create the mysqld config directory if it does not exist
-            pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
-
-            with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
-                config_file.write(content)
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
+
+        # create the mysqld config directory if it does not exist
+        pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
+
+        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
+            config_file.write(content)
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""

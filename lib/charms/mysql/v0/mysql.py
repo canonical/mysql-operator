@@ -70,8 +70,8 @@ import json
 import logging
 import re
 import socket
-from abc import ABC, abstractmethod, abstractproperty
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import ops
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
@@ -379,7 +379,8 @@ class MySQLCharmBase(CharmBase, ABC):
         # of methods
         self.current_event = None
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def _mysql(self) -> "MySQLBase":
         """Return the MySQL instance."""
         raise NotImplementedError
@@ -470,7 +471,7 @@ class MySQLCharmBase(CharmBase, ABC):
         return self.unit_peer_data.get("unit-initialized") == "True"
 
     @property
-    def app_peer_data(self) -> ops.RelationDataContent:
+    def app_peer_data(self) -> Union[ops.RelationDataContent, dict]:
         """Application peer relation data object."""
         if self.peers is None:
             return {}
@@ -478,7 +479,7 @@ class MySQLCharmBase(CharmBase, ABC):
         return self.peers.data[self.app]
 
     @property
-    def unit_peer_data(self) -> ops.RelationDataContent:
+    def unit_peer_data(self) -> Union[ops.RelationDataContent, dict]:
         """Unit peer relation data object."""
         if self.peers is None:
             return {}
@@ -577,7 +578,7 @@ class MySQLCharmBase(CharmBase, ABC):
             scope, fallback_key
         )
 
-    def _set_secret_in_databag(self, scope: str, key: str, value: str) -> None:
+    def _set_secret_in_databag(self, scope: str, key: str, value: Optional[str]) -> None:
         """Set secret in the peer relation databag."""
         if not value:
             if scope == "unit":
@@ -592,7 +593,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         self.app_peer_data[key] = value
 
-    def _set_secret_in_juju(self, scope: str, key: str, value: str) -> None:
+    def _set_secret_in_juju(self, scope: str, key: str, value: Optional[str]) -> None:
         """Set the secret in the juju secret storage."""
         if scope == "unit":
             secret_id = self.unit_peer_data.get(SECRET_ID_KEY)
@@ -663,7 +664,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
 
 class MySQLBase(ABC):
-    """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
+    """Abstract class to encapsulate all operations related to the MySQL workload.
 
     This class handles the configuration of MySQL instances, and also the
     creation and configuration of MySQL InnoDB clusters via Group Replication.
@@ -2026,11 +2027,11 @@ class MySQLBase(ABC):
         """Get innodb buffer pool parameters for the instance.
 
         Args:
-            available_memory: The amount of memory available to the instance
+            available_memory: The amount (bytes) of memory available to the instance
 
         Returns:
             a tuple of (innodb_buffer_pool_size, optional(innodb_buffer_pool_chunk_size),
-            optional(group_replication_message_cache))
+            optional(group_replication_message_cache)) in bytes
         """
         # Reference: based off xtradb-cluster-operator
         # https://github.com/percona/percona-xtradb-cluster-operator/blob/main/pkg/pxc/app/config/autotune.go#L31-L54
