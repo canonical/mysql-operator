@@ -26,6 +26,7 @@ from charms.mysql.v0.mysql import (
     MySQLLockAcquisitionError,
     MySQLRebootFromCompleteOutageError,
     MySQLRescanClusterError,
+    MySQLSetClusterPrimaryError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
@@ -253,6 +254,22 @@ class MySQLOperatorCharm(MySQLCharmBase):
         if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
+        def _get_leader_unit() -> Optional[Unit]:
+            """Get the leader unit."""
+            for unit in self.peers.units:
+                if unit.is_leader():
+                    return unit
+
+        if self._mysql.get_primary_label() == self.unit_label and not self.unit.is_leader():
+            # Preemptively switch primary to unit leader
+            logger.info("Switching primary to unit leader")
+            if leader_unit := _get_leader_unit():
+                try:
+                    self._mysql.set_cluster_primary(
+                        new_primary_address=self.get_unit_ip(leader_unit)
+                    )
+                except MySQLSetClusterPrimaryError:
+                    logger.warning("Failed to switch primary to unit 0")
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
         self._mysql.remove_instance(self.unit_label)
