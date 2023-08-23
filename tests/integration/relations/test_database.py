@@ -72,7 +72,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     )
 
     # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
         )
@@ -244,7 +244,7 @@ async def test_relation_creation(ops_test: OpsTest):
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
         )
@@ -265,14 +265,14 @@ async def test_read_only_endpoints(ops_test: OpsTest):
     )
 
     # increase the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 4)
     await check_read_only_endpoints(
         ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
 
     # decrease the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 2)
 
     # wait for the update of the endpoints
@@ -287,7 +287,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
         assert False
 
     # increase the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 3)
 
     # remove the leader unit
@@ -317,7 +317,7 @@ async def test_relation_broken(ops_test: OpsTest):
         lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True
     )
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True

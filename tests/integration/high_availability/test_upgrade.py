@@ -69,7 +69,7 @@ async def test_upgrade_charms(
     application = ops_test.model.applications[mysql_app_name]
     charm = await ops_test.build_charm(".")
     await application.refresh(path=charm)
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(apps=[mysql_app_name], status="active", timeout=TIMEOUT)
 
     mysql_units = ops_test.model.applications[mysql_app_name].units
