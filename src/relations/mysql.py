@@ -7,6 +7,7 @@ import json
 import logging
 
 from charms.mysql.v0.mysql import (
+    MySQLCheckUserExistenceError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLDeleteUsersForUnitError,
     MySQLGetClusterPrimaryAddressError,
@@ -103,8 +104,14 @@ class MySQLRelation(Object):
                     relation_databag[self.charm.unit][key] = value
 
             # Assign the cluster primary's address as the database host
-            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
-            relation_databag[self.charm.unit]["host"] = primary_address
+            primary_address = self.charm._mysql.get_cluster_primary_address()
+            if not primary_address:
+                self.charm.unit.status = BlockedStatus(
+                    "Failed to retrieve cluster primary address"
+                )
+                return
+
+            relation_databag[self.charm.unit]["host"] = primary_address.split(":")[0]
 
     def _on_config_changed(self, _) -> None:
         """Handle the change of the username/database in config."""
@@ -145,19 +152,30 @@ class MySQLRelation(Object):
             event.defer()
             return
 
-        logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
-
         # wait until the unit is initialized
         if not self.charm.unit_peer_data.get("unit-initialized"):
             event.defer()
             return
 
+        logger.warning("DEPRECATION WARNING - `mysql` is a legacy interface")
+
         username = self._get_or_generate_username(event.relation.id)
         database = self._get_or_generate_database(event.relation.id)
 
+        try:
+            user_exists = self.charm._mysql.does_mysql_user_exist(username, "%")
+        except MySQLCheckUserExistenceError:
+            self.charm.unit.status = BlockedStatus("Failed to check user existence")
+            return
+
         # Only execute if the application user does not exist
         # since it could have been created by another related app
-        if self.charm._mysql.does_mysql_user_exist(username, "%"):
+        if user_exists:
+            mysql_relation_data = self.charm.app_peer_data[MYSQL_RELATION_DATA_KEY]
+
+            updates = json.loads(mysql_relation_data)
+            event.relation.data[self.charm.unit].update(updates)
+
             return
 
         password = self._get_or_set_password_in_peer_secrets(username)
@@ -171,7 +189,7 @@ class MySQLRelation(Object):
                 unit_name="mysql-legacy-relation",
             )
 
-            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+            primary_address = self.charm._mysql.get_cluster_primary_address()
 
         except (
             MySQLCreateApplicationDatabaseAndScopedUserError,
@@ -180,9 +198,13 @@ class MySQLRelation(Object):
             self.charm.unit.status = BlockedStatus("Failed to initialize `mysql` relation")
             return
 
+        if not primary_address:
+            self.charm.unit.status = BlockedStatus("Failed to retrieve cluster primary address")
+            return
+
         updates = {
             "database": database,
-            "host": primary_address,
+            "host": primary_address.split(":")[0],
             "password": password,
             "port": "3306",
             "root_password": self.charm.get_secret("app", ROOT_PASSWORD_KEY),
@@ -195,7 +217,7 @@ class MySQLRelation(Object):
         self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY] = database
 
         # Store the relation data into the peer relation databag
-        self.charm.app_peer_data["mysql_relation_data"] = json.dumps(updates)
+        self.charm.app_peer_data[MYSQL_RELATION_DATA_KEY] = json.dumps(updates)
 
     def _on_mysql_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the `mysql` legacy relation broken event.
@@ -221,6 +243,8 @@ class MySQLRelation(Object):
 
         del self.charm.app_peer_data[MYSQL_RELATION_USER_KEY]
         del self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY]
+
+        del self.charm.app_peer_data[MYSQL_RELATION_DATA_KEY]
 
         if isinstance(
             self.charm.app.status, BlockedStatus

@@ -143,7 +143,7 @@ async def deploy_and_scale_mysql(
 
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.deploy(
             charm,
             application_name=mysql_application_name,
@@ -178,7 +178,7 @@ async def deploy_and_scale_application(ops_test: OpsTest) -> str:
 
         return application_name
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.deploy(
             APPLICATION_DEFAULT_APP_NAME,
             application_name=APPLICATION_DEFAULT_APP_NAME,
