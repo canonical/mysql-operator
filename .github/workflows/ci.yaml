@@ -65,7 +65,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@integration-test-proxy
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v4.2.3
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
