@@ -473,7 +473,7 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: str, unit_name: str, old_ip: str) -> None:
+async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -> None:
     """Wait until network is restored.
 
     Args:
@@ -578,7 +578,7 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
         if items[0] == "default":
             return items[8]
 
-    assert False, "Unable to find the default entry in output of 'ip route'"
+    raise Exception("Unable to find the default entry in output of 'ip route'")
 
 
 async def get_relation_data(
