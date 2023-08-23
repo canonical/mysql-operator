@@ -166,7 +166,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, mysql_charm_series: 
     )
 
     # Reduce the update_status frequency for the duration of the test
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         # Wait until the mysql charm is successfully deployed
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME],
