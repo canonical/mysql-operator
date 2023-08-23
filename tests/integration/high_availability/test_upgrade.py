@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 from shutil import copy
 
 import pytest
@@ -105,6 +106,8 @@ async def test_upgrade_charms(
     )
 
     # backup charm file for rollback test
+    if not isinstance(charm, Path):
+        charm = Path(charm)
     charm.rename(f"/tmp/{charm.name}-backup")
 
     logger.info("Wait for upgrade to complete")
