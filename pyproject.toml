@@ -19,11 +19,11 @@ pyopenssl = "^23.2.0"
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
 ops = ">=2.0.0"
-# data_platform_libs/v0/upgrade.py
-pydantic = "^1.10"
+# data_platform_libs/v0/upgrade.py requires pyndatic ^1.10
+# grafana_agent/v0/cos_agent.py requires pydnatic <2
+pydantic = "^1.10, <2"
 # grafana_agent/v0/cos_agent.py
 cosl = "*"
-pydantic = "<2"
 # tls_certificates_interface/v1/tls_certificates.py
 cryptography = "*"
 jsonschema = "*"
