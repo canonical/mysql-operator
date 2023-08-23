@@ -71,10 +71,11 @@ import logging
 import re
 import socket
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import ops
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
+from ops.model import Unit
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -111,7 +112,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 42
+LIBPATCH = 43
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -475,6 +476,14 @@ class MySQLCharmBase(CharmBase):
             return {}
 
         return self.peers.data[self.unit]
+
+    @property
+    def app_units(self) -> Set[Unit]:
+        """The peer-related units in the application."""
+        if not self.peers:
+            return set()
+
+        return set([self.unit] + list(self.peers.units))
 
     @property
     def unit_label(self):

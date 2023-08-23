@@ -168,9 +168,9 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_update_from_stable(ops_test: OpsTest):
+async def test_upgrade_from_stable(ops_test: OpsTest):
     """Test updating from stable channel."""
     logger.info("Remove mysql")
     await ops_test.model.remove_application(MYSQL_APP_NAME, block_until_done=True)

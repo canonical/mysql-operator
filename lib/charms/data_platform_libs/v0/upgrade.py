@@ -1117,7 +1117,6 @@ class DataUpgrade(Object, ABC):
                 return
 
             logger.debug("Did not find upgrade-stack or completed cluster state, deferring...")
-            event.defer()
             return
 
         # upgrade ongoing, set status for waiting units
@@ -1127,14 +1126,7 @@ class DataUpgrade(Object, ABC):
         # pop mutates the `upgrade_stack` attr
         top_unit_id = self.upgrade_stack.pop()
         top_unit = self.charm.model.get_unit(f"{self.charm.app.name}/{top_unit_id}")
-        try:
-            top_state = self.peer_relation.data[top_unit].get("state")
-        except KeyError:
-            # a unit may not have joined the relation when  upgrading from
-            # an older version of the charm without upgrade support
-            # the hook will retrigger when it joins
-            logger.debug(f"{top_unit} not found in peer relation data, exiting...")
-            return
+        top_state = self.peer_relation.data[top_unit].get("state")
 
         # if top of stack is completed, leader pops it
         if self.charm.unit.is_leader() and top_state == "completed":

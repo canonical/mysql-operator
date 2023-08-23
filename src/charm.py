@@ -325,7 +325,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
-            and (self.upgrade.peer_relation and not self.upgrade.idle)
+            and not self.upgrade.idle
         ):
             # avoid changing status while in initialising/upgrading
             return
