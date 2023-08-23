@@ -26,6 +26,7 @@ from charms.mysql.v0.mysql import (
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetRouterUsersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
@@ -34,7 +35,32 @@ from charms.mysql.v0.mysql import (
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
+    MySQLServerNotUpgradableError,
+    MySQLSetClusterPrimaryError,
+    MySQLSetVariableError,
 )
+
+SHORT_CLUSTER_STATUS = {
+    "defaultreplicaset": {
+        "topology": {
+            "mysql-k8s-0": {
+                "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
+                "memberrole": "secondary",
+                "status": "online",
+            },
+            "mysql-k8s-1": {
+                "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
+                "memberrole": "primary",
+                "status": "online",
+            },
+            "mysql-k8s-2": {
+                "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
+                "memberrole": "",
+                "status": "offline",
+            },
+        }
+    }
+}
 
 
 class TestMySQLBase(unittest.TestCase):
@@ -704,7 +730,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
                 "cluster = dba.get_cluster('test_cluster')",
-                "print(cluster.status())",
+                "print(cluster.status({'extended': False}))",
             )
         )
         _run_mysqlsh_script.assert_called_once_with(expected_commands, timeout=30)
@@ -825,30 +851,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase.get_cluster_status",
-        return_value={
-            "defaultreplicaset": {
-                "topology": {
-                    "mysql-k8s-0": {
-                        "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
-                        "memberrole": "secondary",
-                        "status": "online",
-                    },
-                    "mysql-k8s-1": {
-                        "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
-                        "memberrole": "primary",
-                        "status": "online",
-                    },
-                    "mysql-k8s-2": {
-                        "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
-                        "memberrole": "",
-                        "status": "offline",
-                    },
-                }
-            }
-        },
-    )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status", return_value=SHORT_CLUSTER_STATUS)
     def test_get_cluster_endpoints(self, _):
         """Test get_cluster_endpoints() method."""
         endpoints = self.mysql.get_cluster_endpoints(get_ips=False)
@@ -1366,7 +1369,17 @@ xtrabackup/location --prepare
             group="test-group",
         )
 
-        _expected_commands = "find mysql/data/directory -not -path mysql/data/directory/#mysql_sst_* -not -path mysql/data/directory -delete".split()
+        _expected_commands = [
+            "find",
+            "mysql/data/directory",
+            "-not",
+            "-path",
+            "mysql/data/directory/#mysql_sst_*",
+            "-not",
+            "-path",
+            "mysql/data/directory",
+            "-delete",
+        ]
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
@@ -1544,6 +1557,114 @@ xtrabackup/location --defaults-file=defaults/config/file
         _run_mysqlsh_script.return_value = "<LOCKS>0</LOCKS>"
         assert self.mysql.are_locks_acquired() is False
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_mysql_user_for_unit(self, _run_mysqlsh_script):
+        """Test get_mysql_user_for_unit."""
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "
+            "INFORMATION_SCHEMA.USER_ATTRIBUTES WHERE ATTRIBUTE->'$.created_by_user'='relation-1' AND"
+            " ATTRIBUTE->'$.created_by_juju_unit'='mysql-router-k8s/0'\")",
+            "print(result.fetch_all())",
+        )
+        _run_mysqlsh_script.return_value = (
+            '[["mysql_router1_znpcqeg7zp2v",'
+            ' "mysql-router-k8s-0.mysql-router-k8s-endpoints.novo.svc.cluster.local::system"]]'
+        )
+        self.mysql.get_mysql_router_users_for_unit(
+            relation_id=1, mysql_router_unit_name="mysql-router-k8s/0"
+        )
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLGetRouterUsersError):
+            self.mysql.get_mysql_router_users_for_unit(
+                relation_id=1, mysql_router_unit_name="mysql-router-k8s/0"
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_set_dynamic_variables(self, _run_mysqlsh_script):
+        """Test dynamic_variables."""
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            'session.run_sql("SET GLOBAL variable=value")',
+        )
+        self.mysql.set_dynamic_variable(variable="variable", value="value")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLSetVariableError):
+            self.mysql.set_dynamic_variable(variable="variable", value="value")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_set_cluster_primary(self, _run_mysqlsh_script):
+        """Test set_cluster_primary."""
+        commands = (
+            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.set_primary_instance('test')",
+        )
+        self.mysql.set_cluster_primary("test")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error")
+        with self.assertRaises(MySQLSetClusterPrimaryError):
+            self.mysql.set_cluster_primary(new_primary_address="10.0.0.2")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_verify_server_upgradable(self, _run_mysqlsh_script):
+        """Test is_server_upgradable."""
+        commands = (
+            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
+            "except ValueError:\n    print('SAME_VERSION')",
+        )
+        _run_mysqlsh_script.return_value = (
+            "Some info header to be stripped\n"
+            '{"serverAddress": "10.1.148.145:33060",'
+            '"serverVersion": "8.0.32-0ubuntu0.22.04.2 - (Ubuntu)",'
+            '"targetVersion": "8.0.34",'
+            '"errorCount": 0,'
+            '"warningCount": 0,'
+            '"noticeCount": 0,'
+            '"summary": "No known compatibility errors or issues were found.",'
+            '"checksPerformed": ['
+            '{"id": "checkTableOutput",'
+            '"title": "Issues reported by \'check table x for upgrade\' command",'
+            '"status": "OK",'
+            '"detectedProblems": [] }],'
+            '"manualChecks": []}'
+        )
+        self.mysql.verify_server_upgradable()
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+        _run_mysqlsh_script.return_value = (
+            '{"serverAddress": "10.1.148.145:33060",'
+            '"serverVersion": "8.0.32-0ubuntu0.22.04.2 - (Ubuntu)",'
+            '"targetVersion": "8.0.34",'
+            '"errorCount": 2,'
+            '"warningCount": 0,'
+            '"noticeCount": 0,'
+            '"summary": "No known compatibility errors or issues were found.",'
+            '"checksPerformed": ['
+            '{"id": "checkTableOutput",'
+            '"title": "Issues reported by \'check table x for upgrade\' command",'
+            '"status": "OK",'
+            '"detectedProblems": [] }],'
+            '"manualChecks": []}'
+        )
+        with self.assertRaises(MySQLServerNotUpgradableError):
+            self.mysql.verify_server_upgradable()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
+    def test_get_primary_label(self, _get_cluster_status):
+        """Test get_primary_label."""
+        _get_cluster_status.return_value = SHORT_CLUSTER_STATUS
+
+        self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
 
     def test_abstract_methods(self):
         """Test abstract methods."""
