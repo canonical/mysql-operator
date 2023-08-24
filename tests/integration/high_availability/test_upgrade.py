@@ -5,8 +5,10 @@ import asyncio
 import json
 import logging
 import os
+import zipfile
 from pathlib import Path
 from shutil import copy
+from typing import Union
 
 import pytest
 from integration.helpers import (
@@ -29,9 +31,9 @@ MYSQL_APP_NAME = "mysql"
 TEST_APP_NAME = "mysql-test-app"
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_deploy_latest(ops_test: OpsTest) -> None:
+async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     await asyncio.gather(
         ops_test.model.deploy(
@@ -40,6 +42,7 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
             num_units=3,
             channel="8.0/edge",
             config={"profile": "testing"},
+            series=mysql_charm_series,
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,
@@ -58,7 +61,7 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -83,9 +86,9 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert await primary_unit.is_leader_from_status(), "Primary unit not set to leader"
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_upgrade_charms(
+async def test_upgrade_from_edge(
     ops_test: OpsTest,
     continuous_writes,
 ) -> None:
@@ -94,6 +97,10 @@ async def test_upgrade_charms(
 
     application = ops_test.model.applications[MYSQL_APP_NAME]
     logger.info("Build charm locally")
+
+    if os.environ.get("CI") != "true":
+        # charm as global to be used in rollback test
+        global charm
     charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
@@ -105,11 +112,6 @@ async def test_upgrade_charms(
         timeout=TIMEOUT,
     )
 
-    # backup charm file for rollback test
-    if not isinstance(charm, Path):
-        charm = Path(charm)
-    charm.rename(f"/tmp/{charm.name}-backup")
-
     logger.info("Wait for upgrade to complete")
     await ops_test.model.wait_for_idle(
         apps=[MYSQL_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
@@ -119,7 +121,7 @@ async def test_upgrade_charms(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     logger.info("Get leader unit")
@@ -131,15 +133,20 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     action = await leader_unit.run_action("pre-upgrade-check")
     await action.wait()
 
+    if os.environ.get("CI") == "true":
+        # on CI this will return the cached charm
+        charm = await ops_test.build_charm(".")
+
+    fault_charm = f"/tmp/{charm.name}"
+    copy(charm, fault_charm)
+
     logger.info("Inject dependency fault")
-    await inject_dependency_fault(ops_test, MYSQL_APP_NAME)
+    await inject_dependency_fault(ops_test, MYSQL_APP_NAME, fault_charm)
 
     application = ops_test.model.applications[MYSQL_APP_NAME]
-    logger.info("Re-build faulty charm locally")
-    charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
-    await application.refresh(path=charm)
+    await application.refresh(path=fault_charm)
 
     logger.info("Wait for upgrade to fail on leader")
     await ops_test.model.block_until(
@@ -170,10 +177,13 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
+    # remove fault charm file
+    os.remove(fault_charm)
 
-@pytest.mark.group(1)
+
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_stable(ops_test: OpsTest):
+async def test_upgrade_from_stable(ops_test: OpsTest, mysql_charm_series: str):
     """Test updating from stable channel."""
     logger.info("Remove mysql")
     await ops_test.model.remove_application(MYSQL_APP_NAME, block_until_done=True)
@@ -183,6 +193,7 @@ async def test_upgrade_from_stable(ops_test: OpsTest):
         application_name=MYSQL_APP_NAME,
         num_units=3,
         channel="8.0/stable",
+        series=mysql_charm_series,
         # config={"profile": "testing"}, # config not available in 8.0/stable@r151
     )
     logger.info("Relate test application")
@@ -210,15 +221,11 @@ async def test_upgrade_from_stable(ops_test: OpsTest):
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-async def inject_dependency_fault(ops_test: OpsTest, application_name: str):
+async def inject_dependency_fault(
+    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+) -> None:
     """Inject a dependency fault into the mysql charm."""
     # Open dependency.json and load current charm version
-    if os.path.exists("src/dependency.json-orig"):
-        # restore original file for multiple test runs
-        copy("src/dependency.json-orig", "src/dependency.json")
-    else:
-        # backup original file
-        copy("src/dependency.json", "src/dependency.json-orig")
     with open("src/dependency.json", "r") as dependency_file:
         current_charm_version = json.load(dependency_file)["charm"]["version"]
 
@@ -229,5 +236,7 @@ async def inject_dependency_fault(ops_test: OpsTest, application_name: str):
     loaded_dependency_dict["charm"]["upgrade_supported"] = f">{current_charm_version}"
     loaded_dependency_dict["charm"]["version"] = f"{int(current_charm_version)+1}"
 
-    with open("src/dependency.json", "w") as dependency_file:
-        dependency_file.write(json.dumps(loaded_dependency_dict))
+    # Overwrite dependency.json with incompatible version
+    charm_zip = zipfile.ZipFile(charm_file, mode="w")
+    charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
+    charm_zip.close()

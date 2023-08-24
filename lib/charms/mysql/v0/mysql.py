@@ -71,7 +71,7 @@ import logging
 import re
 import socket
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import ops
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
@@ -478,12 +478,12 @@ class MySQLCharmBase(CharmBase):
         return self.peers.data[self.unit]
 
     @property
-    def app_units(self) -> Set[Unit]:
+    def app_units(self) -> set[Unit]:
         """The peer-related units in the application."""
         if not self.peers:
             return set()
 
-        return set([self.unit] + list(self.peers.units))
+        return {self.unit, *self.peers.units}
 
     @property
     def unit_label(self):

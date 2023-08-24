@@ -462,7 +462,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 after=set_retry_status,
             ):
                 with attempt:
-                    MySQL.install_and_configure_mysql_dependencies(ignore_multiple=upgrading)
+                    MySQL.install_and_configure_mysql_dependencies(upgrade_refresh=upgrading)
         except (RetryError, MySQLInstallError):
             return False
         return True

@@ -136,8 +136,11 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies(ignore_multiple: bool = False) -> None:
+    def install_and_configure_mysql_dependencies(upgrade_refresh: bool = False) -> None:
         """Install and configure MySQL dependencies.
+
+        Args:
+            upgrade_refresh: whether to skip `install_by*`
 
         Raises
             subprocess.CalledProcessError: if issue creating mysqlsh common dir
@@ -155,8 +158,10 @@ class MySQL(MySQLBase):
         if (
             charmed_mysql.present
             and not installed_by_mysql_server_file.exists()
-            and not ignore_multiple
+            and not upgrade_refresh
         ):
+            # TODO: the `installed_by_*` file was introduced on revision 169 of the charm
+            # and should be removed after a few releases
             logger.error(
                 f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
             )
