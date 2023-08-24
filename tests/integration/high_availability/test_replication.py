@@ -159,7 +159,7 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
     logger.info("Destroying leader unit")
     await ops_test.model.destroy_units(primary_unit.name)
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(lambda: len(application.units) == 2)
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name],
@@ -174,7 +174,7 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
     assert primary_unit_name != new_primary_unit.name, "Primary has not changed"
 
     # Add the unit back and wait until it is active
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         logger.info("Scaling back to 3 units")
         await scale_application(ops_test, mysql_application_name, 3)
 
@@ -225,7 +225,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: 
     old_unit_names = [unit.name for unit in ops_test.model.applications[app].units]
 
     # Add a unit and wait until it is active
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, app, 4)
 
     added_unit = [unit for unit in application.units if unit.name not in old_unit_names][0]
@@ -247,7 +247,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: 
 
     # Destroy the recently created unit and wait until the application is active
     await ops_test.model.destroy_units(added_unit.name)
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(lambda: len(ops_test.model.applications[app].units) == 3)
         await ops_test.model.wait_for_idle(
             apps=[app],
@@ -288,7 +288,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
         num_units=1,
         series=mysql_charm_series,
     )
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[ANOTHER_APP_NAME].units) == 1
         )
