@@ -98,9 +98,7 @@ async def test_upgrade_from_edge(
     application = ops_test.model.applications[MYSQL_APP_NAME]
     logger.info("Build charm locally")
 
-    if os.environ.get("CI") != "true":
-        # charm as global to be used in rollback test
-        global charm
+    global charm
     charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
@@ -132,10 +130,6 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     logger.info("Run pre-upgrade-check action")
     action = await leader_unit.run_action("pre-upgrade-check")
     await action.wait()
-
-    if os.environ.get("CI") == "true":
-        # on CI this will return the cached charm
-        charm = await ops_test.build_charm(".")
 
     fault_charm = f"/tmp/{charm.name}"
     copy(charm, fault_charm)
@@ -237,6 +231,5 @@ async def inject_dependency_fault(
     loaded_dependency_dict["charm"]["version"] = f"{int(current_charm_version)+1}"
 
     # Overwrite dependency.json with incompatible version
-    charm_zip = zipfile.ZipFile(charm_file, mode="w")
-    charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
-    charm_zip.close()
+    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
+        charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
