@@ -148,7 +148,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: 
     )
 
     # Reduce the update_status frequency for the duration of the test
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await asyncio.gather(
             ops_test.model.block_until(
                 lambda: mysql_app.status in ("active", "error"), timeout=SLOW_WAIT_TIMEOUT
