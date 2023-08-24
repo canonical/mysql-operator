@@ -155,10 +155,6 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     action = await leader_unit.run_action("pre-upgrade-check")
     await action.wait()
 
-    # restore original charm file
-    logger.info("Restore original charm file")
-    copy(f"/tmp/{charm.name}-backup", charm.absolute())
-
     logger.info("Re-refresh the charm")
     await application.refresh(path=charm)
     logger.info("Wait for upgrade to start")
