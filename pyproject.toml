@@ -14,8 +14,6 @@ ops = "^2.5.0"
 tenacity = "^8.2.2"
 pydantic = "^1.10.7"
 boto3 = "^1.28.23"
-# TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
-pyopenssl = "^23.2.0"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
