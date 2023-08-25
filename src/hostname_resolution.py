@@ -143,14 +143,12 @@ class MySQLMachineHostnameResolution(Object):
         departing_unit_name = event.unit.name
 
         logger.debug(f"Checking if an entry for {departing_unit_name} is in /etc/hosts")
-        has_departed_unit = False
         with open("/etc/hosts", "r") as hosts_file:
             for line in hosts_file:
                 if f"# unit={departing_unit_name}" in line:
-                    has_departed_unit = True
-
-        if not has_departed_unit:
-            return
+                    break
+            else:
+                return
 
         logger.debug(f"Removing entry for {departing_unit_name} from /etc/hosts")
         with io.StringIO() as updated_hosts_file:
