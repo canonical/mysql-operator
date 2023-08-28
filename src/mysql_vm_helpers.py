@@ -50,14 +50,6 @@ from constants import (
 logger = logging.getLogger(__name__)
 
 
-class MySQLReconfigureError(Error):
-    """Exception raised when the MySQL server fails to bootstrap."""
-
-
-class MySQLDataPurgeError(Error):
-    """Exception raised when there's an error purging data dir."""
-
-
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
     """Exception raised when there's an error resetting root password and starting mysqld."""
 
@@ -665,39 +657,6 @@ class MySQL(MySQLBase):
             return expected_content <= set(content)
         except FileNotFoundError:
             return False
-
-    def reset_data_dir(self) -> None:
-        """Reset a data directory to a pristine state."""
-        logger.info("Purge data directory")
-        try:
-            for file_name in os.listdir(MYSQL_DATA_DIR):
-                file_path = os.path.join(MYSQL_DATA_DIR, file_name)
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-        except OSError:
-            logger.error(f"Failed to remove {file_path}")
-            raise MySQLDataPurgeError("Failed to purge data")
-
-    def reconfigure_mysqld(self) -> None:
-        """Reconfigure mysql-server package.
-
-        Reconfiguring mysql-package recreates data structures as if it was newly installed.
-
-        Raises:
-            MySQLReconfigureError: Error occurred when reconfiguring server package.
-        """
-        logger.debug("Retrieving snap cache")
-        cache = snap.SnapCache()
-        charmed_mysql = cache[CHARMED_MYSQL_SNAP_NAME]
-
-        if charmed_mysql.present:
-            logger.debug("Uninstalling charmed-mysql snap")
-            charmed_mysql._remove()
-
-        logger.debug("Installing charmed-mysql snap")
-        charmed_mysql.ensure(snap.SnapState.Latest, channel="8.0/edge")
 
     @staticmethod
     def write_content_to_file(

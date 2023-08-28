@@ -292,12 +292,10 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
-    @patch("charm.MySQLOperatorCharm._workload_reset")
     @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_on_update(
         self,
         _,
-        _workload_reset,
         _snap_service_operation,
         __reboot_from_complete_outage,
         _is_volume_mounted,
@@ -326,7 +324,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
-        _workload_reset.assert_not_called()
         _is_volume_mounted.assert_called_once()
         _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
@@ -350,7 +347,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_not_called()
-        _workload_reset.assert_not_called()
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
@@ -360,14 +356,12 @@ class TestCharm(unittest.TestCase):
 
         __reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
-        _workload_reset.return_value = ActiveStatus()
         _get_member_state.return_value = ("unreachable", "primary")
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
-        _workload_reset.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 
-        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
