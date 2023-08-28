@@ -111,7 +111,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 44
+LIBPATCH = 45
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -522,8 +522,8 @@ class MySQLCharmBase(CharmBase):
                 secret = self.model.get_secret(id=secret_id)
                 content = secret.get_content()
                 self.unit_secrets = content
+                logger.debug(f"Retrieved secret {key} for unit from juju")
 
-            logger.debug(f"Retrieved secret {key} for unit")
             return self.unit_secrets.get(key)
 
         secret_id = self.app_peer_data.get(SECRET_ID_KEY)
@@ -536,8 +536,8 @@ class MySQLCharmBase(CharmBase):
             secret = self.model.get_secret(id=secret_id)
             content = secret.get_content()
             self.app_secrets = content
+            logger.debug(f"Retrieved secert {key} for app from juju")
 
-        logger.debug(f"Retrieved secret {key} for app")
         return self.app_secrets.get(key)
 
     def _get_secret_from_databag(self, scope: str, key: Optional[str]) -> Optional[str]:
@@ -619,7 +619,7 @@ class MySQLCharmBase(CharmBase):
             else:
                 secret = self.app.add_secret(content)
                 self.app_peer_data[SECRET_ID_KEY] = secret.id
-            logger.debug(f"Added {scope} secret {secret_id} for {key}")
+            logger.debug(f"Added {scope} secret {secret.id} for {key}")
 
         if scope == "unit":
             self.unit_secrets = content
