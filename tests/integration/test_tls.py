@@ -51,7 +51,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     )
 
     # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[APP_NAME].units) == 3
         )
@@ -101,7 +101,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
 
     # Deploy TLS Certificates operator.
     logger.info("Deploy TLS operator")
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
         await ops_test.model.deploy(TLS_APP_NAME, channel="beta", config=tls_config)
         await ops_test.model.wait_for_idle(apps=[TLS_APP_NAME], status="active", timeout=15 * 60)

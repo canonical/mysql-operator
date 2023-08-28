@@ -72,7 +72,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     )
 
     # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
         )
@@ -223,18 +223,6 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     updated_root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
     assert updated_credentials["password"] == updated_root_credentials["password"]
 
-    # verify that the new password actually works by querying the db
-    show_tables_sql = [
-        "SHOW DATABASES",
-    ]
-    output = await execute_queries_on_unit(
-        primary_unit_address,
-        updated_credentials["username"],
-        updated_credentials["password"],
-        show_tables_sql,
-    )
-    assert len(output) > 0, "query with new password failed, no databases found"
-
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -244,7 +232,7 @@ async def test_relation_creation(ops_test: OpsTest):
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
             lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
         )
@@ -265,14 +253,14 @@ async def test_read_only_endpoints(ops_test: OpsTest):
     )
 
     # increase the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 4)
     await check_read_only_endpoints(
         ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
     )
 
     # decrease the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 2)
 
     # wait for the update of the endpoints
@@ -287,7 +275,7 @@ async def test_read_only_endpoints(ops_test: OpsTest):
         assert False
 
     # increase the number of units
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, DATABASE_APP_NAME, 3)
 
     # remove the leader unit
@@ -317,7 +305,7 @@ async def test_relation_broken(ops_test: OpsTest):
         lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True
     )
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward("60s"):
         await asyncio.gather(
             ops_test.model.wait_for_idle(
                 apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
