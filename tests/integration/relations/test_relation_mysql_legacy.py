@@ -12,7 +12,6 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import (
     get_legacy_mysql_credentials,
-    instance_ip,
     is_connection_possible,
     is_relation_broken,
     is_relation_joined,
@@ -43,6 +42,10 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
+    logger.info(
+        f"Deploying {DATABASE_APP_NAME} charm with 3 units, and {APPLICATION_APP_NAME} with 2 units"
+    )
+
     await asyncio.gather(
         ops_test.model.deploy(
             db_charm,
@@ -58,6 +61,8 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             channel="latest/edge",
         ),
     )
+
+    logger.info("Awaiting until both applications are correctly deployed")
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward("60s"):
@@ -103,6 +108,8 @@ async def test_relation_creation(ops_test: OpsTest):
         {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
     )
 
+    logger.info(f"Relating {DATABASE_APP_NAME}:{ENDPOINT} with {APPLICATION_APP_NAME}:{ENDPOINT}")
+
     await ops_test.model.relate(
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
@@ -113,7 +120,13 @@ async def test_relation_creation(ops_test: OpsTest):
             timeout=TIMEOUT,
         )
 
-        await ops_test.model.wait_for_idle(apps=APPS, status="active")
+        logger.info("Waiting until both applications are active")
+
+        await ops_test.model.block_until(
+            lambda: ops_test.model.applications[DATABASE_APP_NAME].status == "active"
+            and ops_test.model.applications[APPLICATION_APP_NAME].status == "active",
+            timeout=TIMEOUT,
+        )
 
 
 @pytest.mark.group(1)
@@ -123,15 +136,27 @@ async def test_relation_broken(ops_test: OpsTest):
     # store database credentials for test access later
     credentials = await application_database_credentials(ops_test)
 
+    logger.info(
+        "Asserting that a connection to the database is still possible with application credentials"
+    )
+
     assert is_connection_possible(credentials) is True
 
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
         f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
     )
 
+    logger.info(
+        f"Removing relation {DATABASE_APP_NAME}:{ENDPOINT} with {APPLICATION_APP_NAME}:{ENDPOINT}"
+    )
+
     await ops_test.model.block_until(
         lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True,
         timeout=TIMEOUT,
+    )
+
+    logger.info(
+        f"Waiting till {DATABASE_APP_NAME} is active and {APPLICATION_APP_NAME} is waiting"
     )
 
     async with ops_test.fast_forward("60s"):
@@ -148,13 +173,13 @@ async def test_relation_broken(ops_test: OpsTest):
             ),
         )
 
+    logger.info(
+        "Asserting that a connection to the database is not possible with application credentials"
+    )
+
     assert is_connection_possible(credentials) is False
 
 
 async def application_database_credentials(ops_test: OpsTest) -> dict:
     unit = ops_test.model.applications[APPLICATION_APP_NAME].units[0]
-    credentials = await get_legacy_mysql_credentials(unit)
-    host_instance = credentials["host"]
-    host_ip = instance_ip(ops_test.model.info.name, host_instance)
-    credentials["host"] = host_ip
-    return credentials
+    return await get_legacy_mysql_credentials(unit)

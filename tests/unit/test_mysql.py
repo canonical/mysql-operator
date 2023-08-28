@@ -88,14 +88,6 @@ class TestMySQLBase(unittest.TestCase):
         """Test successful configuration of MySQL users."""
         _run_mysqlcli_script.return_value = b""
 
-        _expected_create_root_user_commands = "; ".join(
-            (
-                "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
-                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
-                "FLUSH PRIVILEGES",
-            )
-        )
-
         _expected_configure_user_commands = "; ".join(
             (
                 "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
@@ -109,24 +101,15 @@ class TestMySQLBase(unittest.TestCase):
                 "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
                 "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM 'root'@'localhost'",
                 "FLUSH PRIVILEGES",
             )
         )
 
         self.mysql.configure_mysql_users()
 
-        self.assertEqual(_run_mysqlcli_script.call_count, 2)
-
-        self.assertEqual(
-            sorted(_run_mysqlcli_script.mock_calls),
-            sorted(
-                [
-                    call(_expected_create_root_user_commands, password="password"),
-                    call(_expected_configure_user_commands, password="password"),
-                ]
-            ),
+        _run_mysqlcli_script.assert_called_once_with(
+            _expected_configure_user_commands, password="password"
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -1046,7 +1029,7 @@ class TestMySQLBase(unittest.TestCase):
                         bash=True,
                         user="test_user",
                         group="test_group",
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
@@ -1198,7 +1181,7 @@ xbcloud/location get
                     call(
                         _expected_retrieve_backup_commands,
                         bash=True,
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },

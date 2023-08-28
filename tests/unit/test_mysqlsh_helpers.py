@@ -3,6 +3,7 @@
 
 """Unit tests for MySQL class."""
 
+import os
 import subprocess
 import unittest
 from unittest.mock import MagicMock, call, patch
@@ -178,20 +179,6 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
 
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_reconfigure_mysqld(self, _snap_cache):
-        """Test a successful execution of method reconfigure_mysqld."""
-        _charmed_mysql_mock = MagicMock()
-        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
-        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
-
-        self.mysql.reconfigure_mysqld()
-
-        _snap_cache.assert_called_once()
-
-        _charmed_mysql_mock._remove.assert_called_once()
-        _charmed_mysql_mock.ensure.assert_called_once()
-
-    @patch("mysql_vm_helpers.snap.SnapCache")
     def test_snap_service_operation(self, _snap_cache):
         """Test a successful execution of function snap_service_operation."""
         _charmed_mysql_mock = MagicMock()
@@ -346,16 +333,15 @@ class TestMySQL(unittest.TestCase):
             bash=True,
             user="test_user",
             group="test_group",
-            env={"envA": "valueA"},
+            env_extra={"envA": "valueA"},
         )
-
+        env = os.environ
+        env.update({"envA": "valueA"})
         _run.assert_called_once_with(
             ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
-            env={
-                "envA": "valueA",
-            },
+            env=env,
             capture_output=True,
             check=True,
             encoding="utf-8",
@@ -372,7 +358,7 @@ class TestMySQL(unittest.TestCase):
                 bash=True,
                 user="test_user",
                 group="test_group",
-                env={"envA": "valueA"},
+                env_extra={"envA": "valueA"},
             )
 
     @patch("os.path.exists", return_value=True)
