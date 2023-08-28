@@ -1029,7 +1029,7 @@ class TestMySQLBase(unittest.TestCase):
                         bash=True,
                         user="test_user",
                         group="test_group",
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
@@ -1181,7 +1181,7 @@ xbcloud/location get
                     call(
                         _expected_retrieve_backup_commands,
                         bash=True,
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },

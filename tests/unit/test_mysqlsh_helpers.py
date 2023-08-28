@@ -3,6 +3,7 @@
 
 """Unit tests for MySQL class."""
 
+import os
 import subprocess
 import unittest
 from unittest.mock import MagicMock, call, patch
@@ -346,16 +347,15 @@ class TestMySQL(unittest.TestCase):
             bash=True,
             user="test_user",
             group="test_group",
-            env={"envA": "valueA"},
+            env_extra={"envA": "valueA"},
         )
-
+        env = os.environ
+        env.update({"envA": "valueA"})
         _run.assert_called_once_with(
             ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
-            env={
-                "envA": "valueA",
-            },
+            env=env,
             capture_output=True,
             check=True,
             encoding="utf-8",
@@ -372,7 +372,7 @@ class TestMySQL(unittest.TestCase):
                 bash=True,
                 user="test_user",
                 group="test_group",
-                env={"envA": "valueA"},
+                env_extra={"envA": "valueA"},
             )
 
     @patch("os.path.exists", return_value=True)
