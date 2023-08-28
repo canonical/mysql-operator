@@ -184,6 +184,7 @@ async def test_upgrade_from_stable(ops_test: OpsTest, mysql_charm_series: str):
         num_units=3,
         channel="8.0/stable",
         series=mysql_charm_series,
+        constraints={"mem": "2G"},
         # config={"profile": "testing"}, # config not available in 8.0/stable@r151
     )
     logger.info("Relate test application")
