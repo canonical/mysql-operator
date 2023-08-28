@@ -136,7 +136,7 @@ class MySQL(MySQLBase):
         )
 
     @staticmethod
-    def install_and_configure_mysql_dependencies(upgrade_refresh: bool = False) -> None:
+    def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
 
         Args:
@@ -155,13 +155,7 @@ class MySQL(MySQLBase):
         installed_by_mysql_server_file = pathlib.Path(
             CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
         )
-        if (
-            charmed_mysql.present
-            and not installed_by_mysql_server_file.exists()
-            and not upgrade_refresh
-        ):
-            # TODO: the `installed_by_*` file was introduced on revision 169 of the charm
-            # and should be removed after a few releases
+        if charmed_mysql.present and not installed_by_mysql_server_file.exists():
             logger.error(
                 f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
             )

@@ -443,7 +443,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return "Primary"
         return ""
 
-    def install_workload(self, upgrading: bool = False) -> bool:
+    def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
 
         Returns: True if successful, False otherwise.
@@ -462,7 +462,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 after=set_retry_status,
             ):
                 with attempt:
-                    MySQL.install_and_configure_mysql_dependencies(upgrade_refresh=upgrading)
+                    MySQL.install_and_configure_mysql_dependencies()
         except (RetryError, MySQLInstallError):
             return False
         return True

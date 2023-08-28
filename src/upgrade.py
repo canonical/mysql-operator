@@ -6,6 +6,7 @@
 import bisect
 import json
 import logging
+import pathlib
 from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.upgrade import (
@@ -28,6 +29,8 @@ from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
+
+from constants import CHARMED_MYSQL_COMMON_DIRECTORY
 
 if TYPE_CHECKING:
     from charm import MySQLOperatorCharm
@@ -171,9 +174,10 @@ class MySQLVMUpgrade(DataUpgrade):
         try:
             self.charm.unit.status = MaintenanceStatus("stopping services..")
             self.charm._mysql.stop_mysqld()
+            self._ensure_for_installed_by_file()
 
             self.charm.unit.status = MaintenanceStatus("upgrading snap...")
-            if not self.charm.install_workload(upgrading=True):
+            if not self.charm.install_workload():
                 logger.error("Failed to install workload snap")
                 self.set_unit_failed()
                 return
@@ -310,6 +314,15 @@ class MySQLVMUpgrade(DataUpgrade):
         self.peer_relation.data[self.charm.app].update(
             {"dependencies": json.dumps(self.dependency_model.dict())}
         )
+
+    @staticmethod
+    def _ensure_for_installed_by_file() -> None:
+        """Ensure snap mark file to allow refresh."""
+        installed_by_mysql_server_file = pathlib.Path(
+            CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
+        )
+        if not installed_by_mysql_server_file.exists():
+            installed_by_mysql_server_file.touch()
 
     def _post_upgrade(self) -> None:
         """Post upgrade adjustments from charm without upgrade support.
