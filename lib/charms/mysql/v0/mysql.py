@@ -532,8 +532,8 @@ class MySQLCharmBase(CharmBase, ABC):
                 secret = self.model.get_secret(id=secret_id)
                 content = secret.get_content()
                 self.unit_secrets = content
+                logger.debug(f"Retrieved secret {key} for unit from juju")
 
-            logger.debug(f"Retrieved secret {key} for unit")
             return self.unit_secrets.get(key)
 
         secret_id = self.app_peer_data.get(SECRET_ID_KEY)
@@ -546,8 +546,8 @@ class MySQLCharmBase(CharmBase, ABC):
             secret = self.model.get_secret(id=secret_id)
             content = secret.get_content()
             self.app_secrets = content
+            logger.debug(f"Retrieved secert {key} for app from juju")
 
-        logger.debug(f"Retrieved secret {key} for app")
         return self.app_secrets.get(key)
 
     def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
@@ -629,7 +629,7 @@ class MySQLCharmBase(CharmBase, ABC):
             else:
                 secret = self.app.add_secret(content)
                 self.app_peer_data[SECRET_ID_KEY] = secret.id
-            logger.debug(f"Added {scope} secret {secret_id} for {key}")
+            logger.debug(f"Added {scope} secret {secret.id} for {key}")
 
         if scope == "unit":
             self.unit_secrets = content
