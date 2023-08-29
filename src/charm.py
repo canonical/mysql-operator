@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import socket
 import subprocess
 from typing import Optional
 
@@ -400,7 +401,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.get_unit_ip(self.unit),
+            self.unit_fqdn,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
@@ -423,6 +424,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def s3_integrator_relation_exists(self) -> bool:
         """Returns whether a relation with the s3 integrator exists."""
         return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    @property
+    def unit_fqdn(self) -> str:
+        """Returns the unit's FQDN."""
+        return socket.getfqdn()
 
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""

@@ -130,7 +130,7 @@ class TestUpgrade(unittest.TestCase):
     @patch("upgrade.RECOVER_ATTEMPTS", 1)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.33")
     @patch("charm.MySQLOperatorCharm.install_workload", return_value=True)
-    @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_fqdn", return_value="10.0.1.1")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("upgrade.MySQLVMUpgrade._check_server_upgradeability")
@@ -141,7 +141,7 @@ class TestUpgrade(unittest.TestCase):
         mock_check_server_upgradeability,
         mock_start_mysqld,
         mock_stop_mysqld,
-        mock_get_unit_ip,
+        mock_unit_fqdn,
         mock_install_workload,
         mock_get_mysql_version,
     ):
@@ -191,14 +191,13 @@ class TestUpgrade(unittest.TestCase):
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "failed"
         )
 
-    @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_fqdn")
     @patch("mysql_vm_helpers.MySQL.verify_server_upgradable")
-    def test_check_server_upgradeability(self, mock_is_server_upgradeable, mock_get_unit_ip):
+    def test_check_server_upgradeability(self, mock_is_server_upgradeable, mock_unit_fqdn):
         """Test the server upgradeability check."""
         self.charm.upgrade.upgrade_stack = [0, 1]
         self.charm.upgrade._check_server_upgradeability()
         mock_is_server_upgradeable.assert_called_once()
-        mock_get_unit_ip.assert_called_once()
 
         mock_is_server_upgradeable.side_effect = MySQLServerNotUpgradableError
         with self.assertRaises(VersionError):
