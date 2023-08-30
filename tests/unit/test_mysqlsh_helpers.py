@@ -179,20 +179,6 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
 
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_reconfigure_mysqld(self, _snap_cache):
-        """Test a successful execution of method reconfigure_mysqld."""
-        _charmed_mysql_mock = MagicMock()
-        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
-        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
-
-        self.mysql.reconfigure_mysqld()
-
-        _snap_cache.assert_called_once()
-
-        _charmed_mysql_mock._remove.assert_called_once()
-        _charmed_mysql_mock.ensure.assert_called_once()
-
-    @patch("mysql_vm_helpers.snap.SnapCache")
     def test_snap_service_operation(self, _snap_cache):
         """Test a successful execution of function snap_service_operation."""
         _charmed_mysql_mock = MagicMock()

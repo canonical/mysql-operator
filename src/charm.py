@@ -25,7 +25,6 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
     MySQLRebootFromCompleteOutageError,
-    MySQLRescanClusterError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
@@ -40,7 +39,6 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
-    StatusBase,
     Unit,
     WaitingStatus,
 )
@@ -69,10 +67,7 @@ from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
-    MySQLDataPurgeError,
     MySQLInstallError,
-    MySQLReconfigureError,
-    MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
     instance_hostname,
     is_volume_mounted,
@@ -303,8 +298,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 ):
                     # mysqld access not possible and daemon restart fails
                     # force reset necessary
-                    self.unit.status = MaintenanceStatus("Workload reset")
-                    self.unit.status = self._workload_reset()
+                    self.unit.status = BlockedStatus("Unable to recover from an unreachable state")
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
 
@@ -551,51 +545,6 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return False
 
         return True
-
-    def _workload_reset(self) -> StatusBase:
-        """Reset an errored workload.
-
-        Purge all files and re-initialise the workload.
-
-        Returns:
-            A `StatusBase` to be set by the caller
-        """
-        try:
-            primary_address = self._get_primary_address_from_peers()
-            if not primary_address:
-                logger.debug("Primary not yet defined on peers. Waiting new primary.")
-                return MaintenanceStatus("Workload reset: waiting new primary")
-
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-            self._mysql.reset_data_dir()
-            self._mysql.reconfigure_mysqld()
-            self._workload_initialise()
-
-            # On a full reset, member must firstly be removed from cluster metadata
-            self._mysql.rescan_cluster(from_instance=primary_address, remove_instances=True)
-            # Re-add the member as if it's the first time
-
-            self._mysql.add_instance_to_cluster(
-                self.get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
-            )
-        except MySQLReconfigureError:
-            return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
-        except MySQLConfigureMySQLUsersError:
-            return MaintenanceStatus("Failed to re-initialize MySQL users")
-        except MySQLConfigureInstanceError:
-            return MaintenanceStatus("Failed to re-configure instance for InnoDB")
-        except MySQLDataPurgeError:
-            return MaintenanceStatus("Failed to purge data dir")
-        except MySQLResetRootPasswordAndStartMySQLDError:
-            return MaintenanceStatus("Failed to reset root password")
-        except MySQLCreateCustomMySQLDConfigError:
-            return MaintenanceStatus("Failed to create custom mysqld config")
-        except MySQLRescanClusterError:
-            return MaintenanceStatus("Failed to rescan cluster and remove obsolete instances")
-        except SnapServiceOperationError as e:
-            return MaintenanceStatus(e.message)
-
-        return ActiveStatus(self.active_status_message)
 
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.
