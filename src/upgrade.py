@@ -207,6 +207,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 stop=stop_after_attempt(RECOVER_ATTEMPTS), wait=wait_fixed(10)
             ):
                 with attempt:
+                    self.charm._mysql.hold_if_recovering()
                     if not self.charm._mysql.is_instance_in_cluster(self.charm.unit_label):
                         logger.debug(
                             "Instance not yet back in the cluster."

@@ -175,13 +175,6 @@ class MySQL(MySQLBase):
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
 
-            # fix ownership necessary for upgrades from 8/stable@r151
-            if common_path.owner() != MYSQL_SYSTEM_USER:
-                logger.debug("Updating charmed-mysql common directory ownership")
-                os.system(
-                    f"chown -R {MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}"
-                )
-
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
             installed_by_mysql_server_file.touch(exist_ok=True)

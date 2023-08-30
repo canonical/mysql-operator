@@ -319,15 +319,21 @@ class MySQLOperatorCharm(MySQLCharmBase):
             or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
+            logger.debug("skip status update when not initialized")
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
-            and not self.upgrade.idle
         ):
-            # avoid changing status while in initialising/upgrading
+            # avoid changing status while in initialising
+            logger.debug("skip status update while initialising")
+            return
+
+        if not self.upgrade.idle:
+            # avoid changing status while in upgrade
+            logger.debug("skip status update while upgrading")
             return
 
         if self._is_unit_waiting_to_join_cluster():
