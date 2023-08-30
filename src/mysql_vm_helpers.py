@@ -131,9 +131,6 @@ class MySQL(MySQLBase):
     def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
 
-        Args:
-            upgrade_refresh: whether to skip `install_by*`
-
         Raises
             subprocess.CalledProcessError: if issue creating mysqlsh common dir
             snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
