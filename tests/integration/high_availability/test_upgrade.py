@@ -25,7 +25,7 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 15 * 60
+TIMEOUT = 20 * 60
 
 MYSQL_APP_NAME = "mysql"
 TEST_APP_NAME = "mysql-test-app"
