@@ -43,7 +43,6 @@ from constants import (
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
-    ROOT_SYSTEM_USER,
     XTRABACKUP_PLUGIN_DIR,
 )
 
@@ -255,7 +254,7 @@ class MySQL(MySQLBase):
                         [
                             "sudo",
                             "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                            f"{MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER}",
                             _sql_file.name,
                         ]
                     )
@@ -272,7 +271,7 @@ class MySQL(MySQLBase):
                         [
                             "sudo",
                             "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                            f"{MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER}",
                             _custom_config_file.name,
                         ]
                     )
@@ -319,8 +318,8 @@ class MySQL(MySQLBase):
             MYSQLD_SOCK_FILE,
             CHARMED_MYSQL_COMMON_DIRECTORY,
             MYSQLD_DEFAULTS_CONFIG_FILE,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def delete_temp_backup_directory(
@@ -329,8 +328,8 @@ class MySQL(MySQLBase):
         """Delete the temp backup directory."""
         super().delete_temp_backup_directory(
             from_directory,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def retrieve_backup_with_xbcloud(
@@ -345,8 +344,8 @@ class MySQL(MySQLBase):
             CHARMED_MYSQL_COMMON_DIRECTORY,
             CHARMED_MYSQL_XBCLOUD_LOCATION,
             CHARMED_MYSQL_XBSTREAM_LOCATION,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
@@ -355,16 +354,16 @@ class MySQL(MySQLBase):
             backup_location,
             CHARMED_MYSQL_XTRABACKUP_LOCATION,
             XTRABACKUP_PLUGIN_DIR,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def empty_data_files(self) -> None:
         """Empty the mysql data directory in preparation of the restore."""
         super().empty_data_files(
             MYSQL_DATA_DIR,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def restore_backup(
@@ -380,8 +379,8 @@ class MySQL(MySQLBase):
             command = f"chmod 770 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
-                user=ROOT_SYSTEM_USER,
-                group=ROOT_SYSTEM_USER,
+                user=MYSQL_SYSTEM_USER,
+                group=MYSQL_SYSTEM_USER,
                 capture_output=True,
                 text=True,
             )
@@ -395,8 +394,8 @@ class MySQL(MySQLBase):
             MYSQLD_DEFAULTS_CONFIG_FILE,
             MYSQL_DATA_DIR,
             XTRABACKUP_PLUGIN_DIR,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
         try:
@@ -404,19 +403,19 @@ class MySQL(MySQLBase):
             command = f"chmod 750 {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
-                user=ROOT_SYSTEM_USER,
-                group=ROOT_SYSTEM_USER,
+                user=MYSQL_SYSTEM_USER,
+                group=MYSQL_SYSTEM_USER,
                 capture_output=True,
                 text=True,
             )
 
             # Change ownership to the snap_daemon user since the restore files
             # are owned by root
-            command = f"chown -R {MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER} {MYSQL_DATA_DIR}".split()
+            command = f"chown -R {MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER} {MYSQL_DATA_DIR}".split()
             subprocess.run(
                 command,
-                user=ROOT_SYSTEM_USER,
-                group=ROOT_SYSTEM_USER,
+                user=MYSQL_SYSTEM_USER,
+                group=MYSQL_SYSTEM_USER,
                 capture_output=True,
                 text=True,
             )
@@ -432,8 +431,8 @@ class MySQL(MySQLBase):
         """Delete the temp restore directory from the mysql data directory."""
         super().delete_temp_restore_directory(
             CHARMED_MYSQL_COMMON_DIRECTORY,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            user=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
     def _execute_commands(
