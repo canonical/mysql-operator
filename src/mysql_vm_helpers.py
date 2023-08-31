@@ -517,6 +517,9 @@ class MySQL(MySQLBase):
 
     def flush_host_cache(self) -> None:
         """Flush the MySQL in-memory host cache."""
+        if not self.is_mysqld_running():
+            logger.warning("mysqld is not running, skipping flush host cache")
+            return
         flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
 
         try:
