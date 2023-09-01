@@ -145,8 +145,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
     def test_on_start(
         self,
+        _get_pid_of_port_3306,
         _create_custom_mysqld_config,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
@@ -179,8 +181,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
     def test_on_start_exceptions(
         self,
+        _get_pid_of_port_3306,
         _create_custom_mysqld_config,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
@@ -191,6 +195,8 @@ class TestCharm(unittest.TestCase):
         _check_call,
         _stop_mysqld,
     ):
+        patch("tenacity.BaseRetrying.wait", side_effect=lambda *args, **kwargs: 0)
+
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -210,6 +216,14 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         _configure_instance.reset_mock()
+
+        # test mysqld not restarting after configure instance
+        _get_pid_of_port_3306.side_effect = ["1234", "1234"]
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _get_pid_of_port_3306.reset_mock()
 
         # test an exception initializing the mysql.juju_units_operations table
         _initialize_juju_units_operations_table.side_effect = (
