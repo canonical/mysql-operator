@@ -111,7 +111,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 45
+LIBPATCH = 46
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -2408,6 +2408,29 @@ Swap:     1027600384  1027600384           0
             logger.exception("Failed to kill external sessions")
             raise MySQLKillSessionError
 
+    def check_mysqlsh_connection(self) -> bool:
+        """Checks if it is possible to connect to the server with mysqlsh."""
+        connect_commands = (
+            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            'session.run_sql("SELECT 1")',
+        )
+
+        try:
+            self._run_mysqlsh_script("\n".join(connect_commands))
+            return True
+        except MySQLClientError:
+            return False
+
+    def get_pid_of_port_3306(self) -> Optional[str]:
+        """Retrieves the PID of the process that is bound to port 3306."""
+        get_pid_command = ["fuser", "3306/tcp"]
+
+        try:
+            stdout, _ = self._execute_commands(get_pid_command)
+            return stdout
+        except MySQLExecError:
+            return None
+
     @abstractmethod
     def is_mysqld_running(self) -> bool:
         """Returns whether mysqld is running."""
@@ -2434,7 +2457,7 @@ Swap:     1027600384  1027600384           0
         raise NotImplementedError
 
     @abstractmethod
-    def wait_until_mysql_connection(self) -> None:
+    def wait_until_mysql_connection(self, check_port: bool = True) -> None:
         """Wait until a connection to MySQL has been obtained.
 
         Implemented in subclasses, test for socket file existence.

@@ -291,19 +291,25 @@ class MySQL(MySQLBase):
                     raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
 
                 try:
-                    self.wait_until_mysql_connection()
+                    # Do not try to connect over port as we may not have configured user/passwords
+                    self.wait_until_mysql_connection(check_port=False)
                 except MySQLServiceNotRunningError:
                     raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
     @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
-    def wait_until_mysql_connection(self) -> None:
+    def wait_until_mysql_connection(self, check_port: bool = True) -> None:
         """Wait until a connection to MySQL has been obtained.
 
         Retry every 5 seconds for 120 seconds if there is an issue obtaining a connection.
         """
         logger.debug("Waiting for MySQL connection")
+
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
+
+        if check_port and not self.check_mysqlsh_connection():
+            raise MySQLServiceNotRunningError("Connection with mysqlsh not possible")
+
         logger.debug("MySQL connection possible")
 
     def execute_backup_commands(
