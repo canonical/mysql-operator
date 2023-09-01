@@ -512,7 +512,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
 
-        for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20)):
+        for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20), reraise=True):
             with attempt:
                 new_mysqld_pid = self._mysql.get_pid_of_port_3306()
                 if not new_mysqld_pid:
