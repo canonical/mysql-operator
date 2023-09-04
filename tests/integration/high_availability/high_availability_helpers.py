@@ -69,7 +69,7 @@ def get_application_name(ops_test: OpsTest, application_name_substring: str) -> 
     the first one found will be returned.
     """
     for application in ops_test.model.applications:
-        if application_name_substring == application:
+        if application_name_substring in application:
             return application
 
     return ""
