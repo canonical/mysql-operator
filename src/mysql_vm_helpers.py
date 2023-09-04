@@ -168,9 +168,7 @@ class MySQL(MySQLBase):
             # TODO: remove once snap post-refresh fixes the permission
             if common_path.owner() != MYSQL_SYSTEM_USER:
                 logger.debug("Updating charmed-mysql common directory ownership")
-                os.system(
-                    f"chown -R {MYSQL_SYSTEM_USER}:{MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}"
-                )
+                os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
