@@ -156,6 +156,9 @@ class MySQL(MySQLBase):
             # install the charmed-mysql snap
             logger.debug("Installing charmed-mysql snap")
             charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            if not charmed_mysql.held:
+                # hold the snap in charm determined revision
+                charmed_mysql.hold()
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
             common_path = pathlib.Path(CHARMED_MYSQL_COMMON_DIRECTORY)

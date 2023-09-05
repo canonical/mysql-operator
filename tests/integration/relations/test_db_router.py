@@ -133,6 +133,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: 
         series="focal",
         application_name=KEYSTONE_APP_NAME,
         num_units=2,
+        channel="yoga/stable",
     )
 
     # Deploy mysqlrouter and relate it to keystone
@@ -203,6 +204,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest, mysql_charm_series: 
             series="focal",
             application_name=ANOTHER_KEYSTONE_APP_NAME,
             num_units=2,
+            channel="yoga/stable",
         )
 
         # Deploy mysqlrouter and relate it to keystone
