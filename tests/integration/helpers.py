@@ -388,6 +388,7 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     for relation in output[unit.name]["relation-info"]:
         if relation["endpoint"] == "database-peers":
             return relation["application-data"]["cluster-name"]
+    logger.error(f"Failed to retrieve cluster name from unit {unit.name}")
     raise ValueError("Failed to retrieve cluster name")
 
 
@@ -642,6 +643,16 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
             raise ValueError("Relation data are not valid JSON.")
 
     return read_only_endpoints
+
+
+async def get_leader_unit(ops_test: OpsTest, app_name: str) -> Optional[Unit]:
+    leader_unit = None
+    for unit in ops_test.model.applications[app_name].units:
+        if await unit.is_leader_from_status():
+            leader_unit = unit
+            break
+
+    return leader_unit
 
 
 def get_read_only_endpoint_ips(relation_data: list) -> List[str]:

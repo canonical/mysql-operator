@@ -132,6 +132,11 @@ class MySQLProvider(Object):
         # get unit name that joined
         event_unit_label = event.unit.name.replace("/", "-")
 
+        # defer if upgrading
+        if not self.charm.upgrade.idle:
+            logger.debug("Defer relation join while upgrading")
+            return
+
         # defer if the added unit is not in the cluster
         if not self.charm._mysql.is_instance_in_cluster(event_unit_label):
             event.defer()

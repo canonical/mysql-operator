@@ -1736,6 +1736,14 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
 
+    @patch("charms.mysql.v0.mysql.RECOVERY_CHECK_TIME", 0.1)
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_member_state")
+    def test_hold_if_recovering(self, mock_get_member_state):
+        """Test hold_if_recovering."""
+        mock_get_member_state.return_value = ("online", "primary")
+        self.mysql.hold_if_recovering()
+        self.assertEqual(mock_get_member_state.call_count, 1)
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):

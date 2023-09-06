@@ -161,10 +161,17 @@ class MySQL(MySQLBase):
                 charmed_mysql.hold()
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
-            if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
-                logger.debug("Creating mysql shell common directory")
+            common_path = pathlib.Path(CHARMED_MYSQL_COMMON_DIRECTORY)
+            if not common_path.exists():
+                logger.debug("Creating charmed-mysql common directory")
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
+
+            # fix ownership necessary for upgrades from 8/stable@r151
+            # TODO: remove once snap post-refresh fixes the permission
+            if common_path.owner() != MYSQL_SYSTEM_USER:
+                logger.debug("Updating charmed-mysql common directory ownership")
+                os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
@@ -511,6 +518,9 @@ class MySQL(MySQLBase):
 
     def flush_host_cache(self) -> None:
         """Flush the MySQL in-memory host cache."""
+        if not self.is_mysqld_running():
+            logger.warning("mysqld is not running, skipping flush host cache")
+            return
         flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
 
         try:
