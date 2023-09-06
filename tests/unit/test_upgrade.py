@@ -127,6 +127,8 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label.assert_called_once()
         assert mock_set_dynamic_variable.call_count == 2
 
+    @patch("mysql_vm_helpers.MySQL.hold_if_recovering")
+    @patch("pathlib.Path.exists", return_value=True)
     @patch("upgrade.RECOVER_ATTEMPTS", 1)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.33")
     @patch("charm.MySQLOperatorCharm.install_workload", return_value=True)
@@ -144,8 +146,10 @@ class TestUpgrade(unittest.TestCase):
         mock_get_unit_ip,
         mock_install_workload,
         mock_get_mysql_version,
+        mock_path_exists,
+        mock_hold_if_recovering,
     ):
-        """Test the pebble ready."""
+        """Test upgrade-granted hook."""
         self.charm.on.config_changed.emit()
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}

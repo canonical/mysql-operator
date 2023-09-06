@@ -72,7 +72,7 @@ def get_application_name(ops_test: OpsTest, application_name_substring: str) -> 
         if application_name_substring in application:
             return application
 
-    return None
+    return ""
 
 
 async def ensure_n_online_mysql_members(
@@ -106,7 +106,8 @@ async def ensure_n_online_mysql_members(
                 assert len(online_members) == number_online_members
                 return True
     except RetryError:
-        return False
+        pass
+    return False
 
 
 async def deploy_and_scale_mysql(
