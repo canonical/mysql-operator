@@ -13,6 +13,7 @@ from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
+    Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
     MySQLConfigureInstanceError,
@@ -47,8 +48,10 @@ from tenacity import (
     RetryError,
     Retrying,
     retry_if_exception_type,
+    stop_after_attempt,
     stop_after_delay,
     wait_exponential,
+    wait_fixed,
 )
 
 from constants import (
@@ -90,6 +93,10 @@ from upgrade import MySQLVMUpgrade, get_mysql_dependencies_model
 from utils import generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
+
+
+class MySQLDNotRestartedError(Error):
+    """Exception raised when MySQLD is not restarted after configuring instance."""
 
 
 class MySQLOperatorCharm(MySQLCharmBase):
@@ -212,6 +219,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
+            return
+        except MySQLDNotRestartedError:
+            self.unit.status = BlockedStatus("Failed to restart mysqld after configuring instance")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -510,8 +520,21 @@ class MySQLOperatorCharm(MySQLCharmBase):
         self._mysql.write_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
+
+        current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
+
+        for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20), reraise=True):
+            with attempt:
+                new_mysqld_pid = self._mysql.get_pid_of_port_3306()
+                if not new_mysqld_pid:
+                    raise MySQLDNotRestartedError("mysqld process not yet up after restart")
+
+                if current_mysqld_pid == new_mysqld_pid:
+                    raise MySQLDNotRestartedError("mysqld not yet shutdown")
+
         self._mysql.wait_until_mysql_connection()
+
         self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
