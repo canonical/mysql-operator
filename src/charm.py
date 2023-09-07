@@ -5,10 +5,10 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import socket
 import subprocess
 from typing import Optional
 
-import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
@@ -47,6 +47,7 @@ from ops.model import (
 from tenacity import (
     RetryError,
     Retrying,
+    retry_if_exception_type,
     stop_after_attempt,
     stop_after_delay,
     wait_exponential,
@@ -351,15 +352,21 @@ class MySQLOperatorCharm(MySQLCharmBase):
             or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
+            logger.debug("skip status update when not initialized")
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
-            and not self.upgrade.idle
         ):
-            # avoid changing status while in initialising/upgrading
+            # avoid changing status while in initialising
+            logger.debug("skip status update while initialising")
+            return
+
+        if not self.upgrade.idle:
+            # avoid changing status while in upgrade
+            logger.debug("skip status update while upgrading")
             return
 
         if self._is_unit_waiting_to_join_cluster():
@@ -433,7 +440,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.get_unit_ip(self.unit),
+            self.unit_fqdn,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
@@ -456,6 +463,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def s3_integrator_relation_exists(self) -> bool:
         """Returns whether a relation with the s3 integrator exists."""
         return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    @property
+    def unit_fqdn(self) -> str:
+        """Returns the unit's FQDN."""
+        return socket.getfqdn()
 
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
@@ -490,7 +502,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
-                retry=tenacity.retry_if_exception_type(snap.SnapError),
+                retry=retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -505,7 +517,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config(profile=self.config["profile"])
+        self._mysql.write_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
@@ -566,6 +578,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         """
         # Safeguard unit starting before leader unit sets peer data
         if not self._is_peer_data_set:
+            logger.debug("Peer data not yet set. Deferring")
             event.defer()
             return False
 
@@ -580,6 +593,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         # Safeguard against storage not attached
         if not is_volume_mounted():
+            logger.debug("Snap volume not mounted. Deferring")
             self._reboot_on_detached_storage(event)
             return False
 

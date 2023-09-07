@@ -7,18 +7,17 @@ import logging
 import os
 import pathlib
 import shutil
-import socket
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
 from charms.mysql.v0.mysql import (
-    BYTES_1MiB,
     Error,
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetAvailableMemoryError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
@@ -26,6 +25,7 @@ from charms.mysql.v0.mysql import (
 )
 from charms.operator_libs_linux.v1 import snap
 from tenacity import retry, stop_after_delay, wait_fixed
+from typing_extensions import override
 
 from constants import (
     CHARMED_MYSQL,
@@ -161,10 +161,17 @@ class MySQL(MySQLBase):
                 charmed_mysql.hold()
 
             # ensure creation of mysql shell common directory by running 'mysqlsh --help'
-            if not os.path.exists(CHARMED_MYSQL_COMMON_DIRECTORY):
-                logger.debug("Creating mysql shell common directory")
+            common_path = pathlib.Path(CHARMED_MYSQL_COMMON_DIRECTORY)
+            if not common_path.exists():
+                logger.debug("Creating charmed-mysql common directory")
                 mysqlsh_help_command = ["charmed-mysql.mysqlsh", "--help"]
                 subprocess.check_call(mysqlsh_help_command, stderr=subprocess.PIPE)
+
+            # fix ownership necessary for upgrades from 8/stable@r151
+            # TODO: remove once snap post-refresh fixes the permission
+            if common_path.owner() != MYSQL_SYSTEM_USER:
+                logger.debug("Updating charmed-mysql common directory ownership")
+                os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
@@ -178,56 +185,47 @@ class MySQL(MySQLBase):
             # other exceptions are not retried
             raise MySQLInstallError
 
-    def create_custom_mysqld_config(self, profile: str) -> None:
+    @override
+    def get_available_memory(self) -> int:
+        """Retrieves the total memory of the server where mysql is running."""
+        try:
+            logger.info("Retrieving the total memory of the server")
+
+            """Below is an example output of `free --bytes`:
+                           total        used        free      shared  buff/cache   available
+            Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
+            Swap:     1027600384  1027600384           0
+            """
+            # need to use sh -c to be able to use pipes
+            get_total_memory_command = "free --bytes | awk '/^Mem:/{print $2; exit}'".split()
+
+            total_memory, _ = self._execute_commands(
+                get_total_memory_command,
+                bash=True,
+            )
+            return int(total_memory)
+        except MySQLExecError:
+            logger.exception("Failed to execute commands to query total memory")
+            raise MySQLGetAvailableMemoryError
+
+    def write_mysqld_config(self, profile: str) -> None:
         """Create custom mysql config file.
 
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        group_replication_message_cache_size = None
-        if profile == "testing":
-            innodb_buffer_pool_size = 20 * BYTES_1MiB
-            innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
-            group_replication_message_cache_size = 128 * BYTES_1MiB
-            max_connections = 20
-        else:
-            try:
-                (
-                    innodb_buffer_pool_size,
-                    innodb_buffer_pool_chunk_size,
-                    group_replication_message_cache_size,
-                ) = self.get_innodb_buffer_pool_parameters()
-                max_connections = self.get_max_connections()
-            except MySQLGetAutoTunningParametersError:
-                raise MySQLCreateCustomMySQLDConfigError(
-                    "Failed to compute mysql parameters automatically"
-                )
-
-        content = [
-            "[mysqld]",
-            "bind-address = 0.0.0.0",
-            "mysqlx-bind-address = 0.0.0.0",
-            f"innodb_buffer_pool_size = {innodb_buffer_pool_size}",
-            f"max_connections = {max_connections}",
-        ]
-
-        if innodb_buffer_pool_chunk_size:
-            content.append(f"innodb_buffer_pool_chunk_size = {innodb_buffer_pool_chunk_size}")
-
-        if group_replication_message_cache_size:
-            content.append(
-                f"loose-group_replication_message_cache_size = {group_replication_message_cache_size}"
-            )
-
-        content.append(f"report_host = {socket.getfqdn()}")
-        content.append("")
+        logger.debug("Copying custom mysqld config")
+        try:
+            content = self.render_myqld_configuration(profile=profile)
+        except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
+            logger.exception("Failed to get available memory or auto tuning parameters")
+            raise MySQLCreateCustomMySQLDConfigError
 
         # create the mysqld config directory if it does not exist
-        logger.debug("Copying custom mysqld config")
         pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
 
         with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
-            config_file.write("\n".join(content))
+            config_file.write(content)
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
@@ -526,6 +524,9 @@ class MySQL(MySQLBase):
 
     def flush_host_cache(self) -> None:
         """Flush the MySQL in-memory host cache."""
+        if not self.is_mysqld_running():
+            logger.warning("mysqld is not running, skipping flush host cache")
+            return
         flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
 
         try:

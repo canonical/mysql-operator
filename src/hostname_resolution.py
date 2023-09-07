@@ -7,8 +7,9 @@ import io
 import json
 import logging
 import socket
+import typing
 
-from ops.charm import CharmBase, RelationDepartedEvent
+from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, Unit
 
@@ -18,13 +19,16 @@ from mysql_vm_helpers import MySQLFlushHostCacheError
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
 
 class MySQLMachineHostnameResolution(Object):
     """Encapsulation of the the machine hostname resolution."""
 
     on = IPAddressChangeCharmEvents()
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "hostname-resolution")
 
         self.charm = charm

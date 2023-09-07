@@ -144,12 +144,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
+    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     def test_on_start(
         self,
+        _write_mysqld_config,
         _get_pid_of_port_3306,
-        _create_custom_mysqld_config,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
@@ -180,12 +180,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
+    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     def test_on_start_exceptions(
         self,
+        _write_mysqld_config,
         _get_pid_of_port_3306,
-        _create_custom_mysqld_config,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
@@ -250,7 +250,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         # test an exception creating a custom mysqld config
-        _create_custom_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
+        _write_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
