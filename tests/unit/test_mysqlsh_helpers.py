@@ -12,6 +12,7 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetAvailableMemoryError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
@@ -233,9 +234,8 @@ class TestMySQL(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
-    @patch("socket.getfqdn", return_value="1.2.3.4")
-    def test_create_custom_mysqld_config(
-        self, _, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+    def test_write_mysqld_config(
+        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
     ):
         """Test successful execution of create_custom_mysqld_config."""
         self.maxDiff = None
@@ -245,18 +245,18 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.create_custom_mysqld_config(profile="production")
+        self.mysql.write_mysqld_config(profile="production")
 
         config = "\n".join(
             (
                 "[mysqld]",
                 "bind-address = 0.0.0.0",
                 "mysqlx-bind-address = 0.0.0.0",
-                "innodb_buffer_pool_size = 1234",
+                "report_host = 127.0.0.1",
                 "max_connections = 111",
+                "innodb_buffer_pool_size = 1234",
                 "innodb_buffer_pool_chunk_size = 5678",
-                "report_host = 1.2.3.4",
-                "",
+                "\n",
             )
         )
 
@@ -279,19 +279,20 @@ class TestMySQL(unittest.TestCase):
 
         # Test `testing` profile
         _open_mock.reset_mock()
-        self.mysql.create_custom_mysqld_config(profile="testing")
+        self.mysql.write_mysqld_config(profile="testing")
 
         config = "\n".join(
             (
                 "[mysqld]",
                 "bind-address = 0.0.0.0",
                 "mysqlx-bind-address = 0.0.0.0",
-                "innodb_buffer_pool_size = 20971520",
+                "report_host = 127.0.0.1",
                 "max_connections = 20",
+                "innodb_buffer_pool_size = 20971520",
                 "innodb_buffer_pool_chunk_size = 1048576",
+                "performance-schema-instrument = 'memory/%=OFF'",
                 "loose-group_replication_message_cache_size = 134217728",
-                "report_host = 1.2.3.4",
-                "",
+                "\n",
             )
         )
 
@@ -323,7 +324,7 @@ class TestMySQL(unittest.TestCase):
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.create_custom_mysqld_config(profile="production")
+            self.mysql.write_mysqld_config(profile="production")
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):
@@ -442,3 +443,21 @@ class TestMySQL(unittest.TestCase):
 
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
         _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+
+    @patch("mysql_vm_helpers.MySQL._execute_commands")
+    def test_get_available_memory(self, _execute_commands):
+        """Test successful execution of get_available_memory()."""
+        _execute_commands.return_value = "16484458496\n", None
+
+        total_memory = self.mysql.get_available_memory()
+
+        self.assertEqual(16484458496, total_memory)
+
+        _execute_commands.assert_called_once_with(
+            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
+            bash=True,
+        )
+        _execute_commands.reset_mock()
+        _execute_commands.side_effect = MySQLExecError
+        with self.assertRaises(MySQLGetAvailableMemoryError):
+            self.mysql.get_available_memory()
