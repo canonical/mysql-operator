@@ -7,8 +7,9 @@ import io
 import json
 import logging
 import socket
+import typing
 
-from ops.charm import CharmBase, RelationDepartedEvent
+from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, Unit
 
@@ -18,13 +19,16 @@ from mysql_vm_helpers import MySQLFlushHostCacheError
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
 
 class MySQLMachineHostnameResolution(Object):
     """Encapsulation of the the machine hostname resolution."""
 
     on = IPAddressChangeCharmEvents()
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "hostname-resolution")
 
         self.charm = charm
@@ -97,9 +101,11 @@ class MySQLMachineHostnameResolution(Object):
         host_details = self._get_host_details()
         if not host_details:
             logger.debug("No hostnames in the peer databag. Skipping update of /etc/hosts")
+            return
 
         if not self._does_etc_hosts_need_update(host_details):
             logger.debug("No hostnames in /etc/hosts changed. Skipping update to /etc/hosts")
+            return
 
         hosts_in_file = []
 
@@ -116,7 +122,7 @@ class MySQLMachineHostnameResolution(Object):
 
                             fqdn, ip, unit = details["fqdn"], details["ip"], details["unit"]
 
-                            logger.info(
+                            logger.debug(
                                 f"Overwriting {hostname} ({unit=}) with {ip=}, {fqdn=} in /etc/hosts"
                             )
                             updated_hosts_file.write(f"{ip} {fqdn} {hostname} # unit={unit}\n")
@@ -126,7 +132,7 @@ class MySQLMachineHostnameResolution(Object):
                 if hostname not in hosts_in_file:
                     fqdn, ip, unit = details["fqdn"], details["ip"], details["unit"]
 
-                    logger.info(f"Adding {hostname} ({unit=} with {ip=}, {fqdn=} in /etc/hosts")
+                    logger.debug(f"Adding {hostname} ({unit=} with {ip=}, {fqdn=} in /etc/hosts")
                     updated_hosts_file.write(f"{ip} {fqdn} {hostname} # unit={unit}\n")
 
             with open("/etc/hosts", "w") as hosts_file:
@@ -140,6 +146,15 @@ class MySQLMachineHostnameResolution(Object):
     def _remove_host_from_etc_hosts(self, event: RelationDepartedEvent) -> None:
         departing_unit_name = event.unit.name
 
+        logger.debug(f"Checking if an entry for {departing_unit_name} is in /etc/hosts")
+        with open("/etc/hosts", "r") as hosts_file:
+            for line in hosts_file:
+                if f"# unit={departing_unit_name}" in line:
+                    break
+            else:
+                return
+
+        logger.debug(f"Removing entry for {departing_unit_name} from /etc/hosts")
         with io.StringIO() as updated_hosts_file:
             with open("/etc/hosts", "r") as hosts_file:
                 for line in hosts_file:

@@ -21,22 +21,27 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterSetError,
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
+    MySQLDeleteUserError,
     MySQLDeleteUsersForRelationError,
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetMemberStateError,
+    MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
     MySQLInitializeJujuOperationsTableError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
+    MySQLSetInstanceOptionError,
     MySQLSetVariableError,
 )
 
@@ -88,14 +93,6 @@ class TestMySQLBase(unittest.TestCase):
         """Test successful configuration of MySQL users."""
         _run_mysqlcli_script.return_value = b""
 
-        _expected_create_root_user_commands = "; ".join(
-            (
-                "CREATE USER 'root'@'%' IDENTIFIED BY 'password'",
-                "GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION",
-                "FLUSH PRIVILEGES",
-            )
-        )
-
         _expected_configure_user_commands = "; ".join(
             (
                 "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
@@ -109,24 +106,15 @@ class TestMySQLBase(unittest.TestCase):
                 "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
                 "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
                 "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@'%'",
-                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM root@localhost",
+                "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM 'root'@'localhost'",
                 "FLUSH PRIVILEGES",
             )
         )
 
         self.mysql.configure_mysql_users()
 
-        self.assertEqual(_run_mysqlcli_script.call_count, 2)
-
-        self.assertEqual(
-            sorted(_run_mysqlcli_script.mock_calls),
-            sorted(
-                [
-                    call(_expected_create_root_user_commands, password="password"),
-                    call(_expected_configure_user_commands, password="password"),
-                ]
-            ),
+        _run_mysqlcli_script.assert_called_once_with(
+            _expected_configure_user_commands, password="password"
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -266,21 +254,30 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
     def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
-        configure_instance_commands = (
-            'dba.configure_instance(\'serverconfig:serverconfigpassword@127.0.0.1\', {"restart": "true", "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
+        # Test with create_cluster_admin=False
+        configure_instance_commands = [
+            "dba.configure_instance('serverconfig:serverconfigpassword@127.0.0.1', ",
+            '{"restart": "true"})',
+            # , "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
+        ]
+
+        self.mysql.configure_instance(create_cluster_admin=False)
+
+        _run_mysqlsh_script.assert_called_once_with("".join(configure_instance_commands))
+
+        _run_mysqlsh_script.reset_mock()
+
+        # Test with create_cluster_admin=True
+        configure_instance_commands[1] = (
+            '{"restart": "true", '
+            '"clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})'
         )
+        self.mysql.configure_instance(create_cluster_admin=True)
 
-        self.mysql.configure_instance()
+        _run_mysqlsh_script.assert_called_once_with("".join(configure_instance_commands))
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(configure_instance_commands))
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
-    def test_configure_instance_exceptions(
-        self, _wait_until_mysql_connection, _run_mysqlsh_script
-    ):
-        """Test exceptions raise while running configure_instance."""
         # Test an issue with _run_mysqlsh_script
+        _wait_until_mysql_connection.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
@@ -758,6 +755,57 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_set_instance_option(self, _run_mysqlsh_script):
+        """Test execution of set_instance_option()."""
+        expected_commands = "\n".join(
+            (
+                f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@{self.mysql.instance_address}')",
+                f"cluster = dba.get_cluster('{self.mysql.cluster_name}')",
+                f"cluster.set_instance_option('{self.mysql.instance_address}', 'label', 'label-0')",
+            )
+        )
+        self.mysql.set_instance_option("label", "label-0")
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        with self.assertRaises(MySQLSetInstanceOptionError):
+            self.mysql.set_instance_option("label", "label-0")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_get_member_state(self, _run_mysqlcli_script):
+        """Test execution of get_member_state()."""
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+            "ONLINE\tSECONDARY\t<uuid>\t<notuuid>\n"
+            "ONLINE\tPRIMARY\t<uuid>\t<uuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("online", "primary"))
+
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+            "ONLINE\tSECONDARY\t<uuid>\t<uuid>\n"
+            "ONLINE\tPRIMARY\t<uuid>\t<notuuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("online", "secondary"))
+
+        _run_mysqlcli_script.return_value = (
+            "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\nOFFLINE\t\t\t<uuid>\n"
+        )
+
+        state = self.mysql.get_member_state()
+        self.assertEqual(state, ("offline", "unknown"))
+
+        _run_mysqlcli_script.return_value = "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
+
+        with self.assertRaises(MySQLGetMemberStateError):
+            self.mysql.get_member_state()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_rescan_cluster_failure(self, _run_mysqlsh_script):
         """Test an exception executing rescan_cluster()."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
@@ -773,16 +821,35 @@ class TestMySQLBase(unittest.TestCase):
         self.assertEqual(error.name, "<charms.mysql.v0.mysql.Error>")
         self.assertEqual(error.message, "Error message")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_users_for_relation_failure(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
+        self,
+        _run_mysqlsh_script,
     ):
         """Test failure to delete users for relation."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        _run_mysqlsh_script.side_effect = MySQLClientError
 
         with self.assertRaises(MySQLDeleteUsersForRelationError):
             self.mysql.delete_users_for_relation(40)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_delete_user(self, _run_mysqlsh_script):
+        """Test delete_user() method."""
+        expected_commands = "\n".join(
+            (
+                (
+                    f"shell.connect_to_primary('{self.mysql.server_config_user}:"
+                    f"{self.mysql.server_config_password}@{self.mysql.instance_address}')"
+                ),
+                "session.run_sql(\"DROP USER `testuser`@'%'\")",
+            )
+        )
+        self.mysql.delete_user("testuser")
+        _run_mysqlsh_script.assert_called_once_with(expected_commands)
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLDeleteUserError):
+            self.mysql.delete_user("testuser")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_cluster_members_addresses(self, _run_mysqlsh_script):
@@ -821,6 +888,10 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_called_once_with(expected_commands)
 
         self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLGetMySQLVersionError):
+            self.mysql.get_mysql_version()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_grant_privileges_to_user(self, _run_mysqlsh_script):
@@ -900,72 +971,46 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_innodb_buffer_pool_parameters(self, _get_total_memory):
+    def test_get_innodb_buffer_pool_parameters(self):
         """Test the successful execution of get_innodb_buffer_pool_parameters()."""
-        _get_total_memory.return_value = 16484458496
+        available_memory = 16484458496
 
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(11408506880, pool_size)
         self.assertEqual(1426063360, chunk_size)
         self.assertEqual(None, gr_message_cache)
 
-        _get_total_memory.return_value = 3221000000
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        available_memory = 3221000000
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(1342177280, pool_size)
         self.assertEqual(167772160, chunk_size)
         self.assertEqual(None, gr_message_cache)
 
-        _get_total_memory.return_value = 1073741825
-        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters()
+        available_memory = 1073741825
+        pool_size, chunk_size, gr_message_cache = self.mysql.get_innodb_buffer_pool_parameters(
+            available_memory
+        )
         self.assertEqual(536870912, pool_size)
         self.assertIsNone(chunk_size)
         self.assertEqual(134217728, gr_message_cache)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_innodb_buffer_pool_parameters_exception(self, _get_total_memory):
+    def test_get_innodb_buffer_pool_parameters_exception(self):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
-        _get_total_memory.side_effect = MySQLExecError
+        with self.assertRaises(MySQLGetAutoTunningParametersError):
+            self.mysql.get_innodb_buffer_pool_parameters("wrong type")
+
+    def test_get_max_connections(self):
+        self.assertEqual(1310, self.mysql.get_max_connections(16484458496))
 
         with self.assertRaises(MySQLGetAutoTunningParametersError):
-            self.mysql.get_innodb_buffer_pool_parameters()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_get_total_memory(self, _execute_commands):
-        """Test successful execution of _get_total_memory()."""
-        _execute_commands.return_value = "16484458496\n", None
-
-        total_memory = self.mysql._get_total_memory()
-
-        self.assertEqual(16484458496, total_memory)
-
-        _execute_commands.assert_called_once_with(
-            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
-            bash=True,
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_get_total_memory_exception(self, _execute_commands):
-        """Test a failure in execution of _get_total_memory()."""
-        _execute_commands.side_effect = MySQLExecError
-
-        with self.assertRaises(MySQLExecError):
-            self.mysql._get_total_memory()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_total_memory")
-    def test_get_max_connections(self, _get_total_memory):
-        _get_total_memory.return_value = 16484458496
-
-        self.assertEqual(1310, self.mysql.get_max_connections())
-
-        _get_total_memory.return_value = 12582910
+            self.mysql.get_max_connections(12582910)
 
         with self.assertRaises(MySQLGetAutoTunningParametersError):
-            self.mysql.get_max_connections()
-
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
-            _get_total_memory.side_effect = MySQLExecError
-            self.mysql.get_max_connections()
+            self.mysql.get_max_connections(125)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_execute_backup_commands(self, _execute_commands):
@@ -1046,7 +1091,7 @@ class TestMySQLBase(unittest.TestCase):
                         bash=True,
                         user="test_user",
                         group="test_group",
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
@@ -1198,7 +1243,7 @@ xbcloud/location get
                     call(
                         _expected_retrieve_backup_commands,
                         bash=True,
-                        env={
+                        env_extra={
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
@@ -1294,10 +1339,12 @@ xbcloud/location get
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
         return_value=(1234, 5678, None),
     )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_available_memory")
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore(
         self,
         _execute_commands,
+        _get_available_memory,
         _get_innodb_buffer_pool_parameters,
     ):
         """Test successful execution of prepare_backup_for_restore()."""
@@ -1319,6 +1366,7 @@ xtrabackup/location --prepare
 """.split()
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
+        _get_available_memory.assert_called_once()
         _execute_commands.assert_called_once_with(
             _expected_prepare_backup_command,
             user="test-user",
@@ -1329,10 +1377,12 @@ xtrabackup/location --prepare
         "charms.mysql.v0.mysql.MySQLBase.get_innodb_buffer_pool_parameters",
         return_value=(1234, 5678, None),
     )
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_available_memory")
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
     def test_prepare_backup_for_restore_failure(
         self,
         _execute_commands,
+        _get_available_memory,
         _get_innodb_buffer_pool_parameters,
     ):
         """Test failure of prepare_backup_for_restore()."""
@@ -1584,6 +1634,26 @@ xtrabackup/location --defaults-file=defaults/config/file
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_remove_router_from_cluster_metadata(self, _run_mysqlsh_script):
+        """Test remove_user_from_cluster_metadata."""
+        commands = (
+            (
+                f"shell.connect_to_primary('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@"
+                f"{self.mysql.instance_address}')"
+            ),
+            "cluster = dba.get_cluster()",
+            'cluster.remove_router_metadata("1")',
+        )
+
+        self.mysql.remove_router_from_cluster_metadata(router_id="1")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLRemoveRouterFromMetadataError):
+            self.mysql.remove_router_from_cluster_metadata(router_id="1")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_set_dynamic_variables(self, _run_mysqlsh_script):
         """Test dynamic_variables."""
         commands = (
@@ -1666,6 +1736,14 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
 
+    @patch("charms.mysql.v0.mysql.RECOVERY_CHECK_TIME", 0.1)
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_member_state")
+    def test_hold_if_recovering(self, mock_get_member_state):
+        """Test hold_if_recovering."""
+        mock_get_member_state.return_value = ("online", "primary")
+        self.mysql.hold_if_recovering()
+        self.assertEqual(mock_get_member_state.call_count, 1)
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):
@@ -1688,3 +1766,6 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         with self.assertRaises(NotImplementedError):
             self.mysql.start_mysqld()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.get_available_memory()

@@ -144,10 +144,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
+    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     def test_on_start(
         self,
-        _create_custom_mysqld_config,
+        _write_mysqld_config,
+        _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
@@ -178,10 +180,12 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.create_custom_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
+    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     def test_on_start_exceptions(
         self,
-        _create_custom_mysqld_config,
+        _write_mysqld_config,
+        _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,
         _create_cluster,
         _initialize_juju_units_operations_table,
@@ -191,6 +195,8 @@ class TestCharm(unittest.TestCase):
         _check_call,
         _stop_mysqld,
     ):
+        patch("tenacity.BaseRetrying.wait", side_effect=lambda *args, **kwargs: 0)
+
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -210,6 +216,14 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         _configure_instance.reset_mock()
+
+        # test mysqld not restarting after configure instance
+        _get_pid_of_port_3306.side_effect = ["1234", "1234"]
+
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _get_pid_of_port_3306.reset_mock()
 
         # test an exception initializing the mysql.juju_units_operations table
         _initialize_juju_units_operations_table.side_effect = (
@@ -236,7 +250,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         # test an exception creating a custom mysqld config
-        _create_custom_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
+        _write_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
@@ -292,12 +306,10 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
-    @patch("charm.MySQLOperatorCharm._workload_reset")
     @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_on_update(
         self,
         _,
-        _workload_reset,
         _snap_service_operation,
         __reboot_from_complete_outage,
         _is_volume_mounted,
@@ -326,7 +338,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
-        _workload_reset.assert_not_called()
         _is_volume_mounted.assert_called_once()
         _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
@@ -350,7 +361,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_not_called()
-        _workload_reset.assert_not_called()
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
@@ -360,14 +370,12 @@ class TestCharm(unittest.TestCase):
 
         __reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
-        _workload_reset.return_value = ActiveStatus()
         _get_member_state.return_value = ("unreachable", "primary")
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
         __reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
-        _workload_reset.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 
-        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))

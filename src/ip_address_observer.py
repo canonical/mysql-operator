@@ -62,7 +62,7 @@ class IPAddressObserver(Object):
         if "JUJU_CONTEXT_ID" in new_env:
             new_env.pop("JUJU_CONTEXT_ID")
 
-        pid = subprocess.Popen(
+        process = subprocess.Popen(
             [
                 "/usr/bin/python3",
                 "src/ip_address_observer.py",
@@ -75,8 +75,8 @@ class IPAddressObserver(Object):
             env=new_env,
         )
 
-        self.charm.unit_peer_data.update({"observer-pid": f"{pid}"})
-        logging.info(f"Started IP address observer process with PID {pid}")
+        self.charm.unit_peer_data.update({"observer-pid": f"{process.pid}"})
+        logging.info(f"Started IP address observer process with PID {process.pid}")
 
     def stop_observer(self):
         """Stop running the observer if it is indeed running."""

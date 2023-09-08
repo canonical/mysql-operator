@@ -5,14 +5,15 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import socket
 import subprocess
 from typing import Optional
 
-import tenacity
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
+    Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
     MySQLConfigureInstanceError,
@@ -25,7 +26,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
     MySQLRebootFromCompleteOutageError,
-    MySQLRescanClusterError,
+    MySQLSetClusterPrimaryError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from ops.charm import (
@@ -40,11 +41,18 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
-    StatusBase,
     Unit,
     WaitingStatus,
 )
-from tenacity import RetryError, Retrying, stop_after_delay, wait_exponential
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_exponential,
+    wait_fixed,
+)
 
 from constants import (
     BACKUPS_PASSWORD_KEY,
@@ -69,10 +77,7 @@ from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
-    MySQLDataPurgeError,
     MySQLInstallError,
-    MySQLReconfigureError,
-    MySQLResetRootPasswordAndStartMySQLDError,
     SnapServiceOperationError,
     instance_hostname,
     is_volume_mounted,
@@ -90,6 +95,10 @@ from utils import generate_random_hash, generate_random_password
 logger = logging.getLogger(__name__)
 
 
+class MySQLDNotRestartedError(Error):
+    """Exception raised when MySQLD is not restarted after configuring instance."""
+
+
 class MySQLOperatorCharm(MySQLCharmBase):
     """Operator framework charm for MySQL."""
 
@@ -98,6 +107,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(self.on.leader_settings_changed, self._on_leader_settings_changed)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -170,6 +180,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 self.set_secret(
                     "app", required_password, generate_random_password(PASSWORD_LENGTH)
                 )
+        self.unit_peer_data.update({"leader": "true"})
+
+    def _on_leader_settings_changed(self, _) -> None:
+        """Handle the leader settings changed event."""
+        self.unit_peer_data.update({"leader": "false"})
 
     def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
@@ -204,6 +219,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return
         except MySQLCreateCustomMySQLDConfigError:
             self.unit.status = BlockedStatus("Failed to create custom mysqld config")
+            return
+        except MySQLDNotRestartedError:
+            self.unit.status = BlockedStatus("Failed to restart mysqld after configuring instance")
             return
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
@@ -253,6 +271,22 @@ class MySQLOperatorCharm(MySQLCharmBase):
         if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
+        def _get_leader_unit() -> Optional[Unit]:
+            """Get the leader unit."""
+            for unit in self.peers.units:
+                if self.peers.data[unit]["leader"] == "true":
+                    return unit
+
+        if self._mysql.get_primary_label() == self.unit_label and not self.unit.is_leader():
+            # Preemptively switch primary to unit leader
+            logger.info("Switching primary to the first unit")
+            if leader_unit := _get_leader_unit():
+                try:
+                    self._mysql.set_cluster_primary(
+                        new_primary_address=self.get_unit_ip(leader_unit)
+                    )
+                except MySQLSetClusterPrimaryError:
+                    logger.warning("Failed to switch primary to unit 0")
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
         self._mysql.remove_instance(self.unit_label)
@@ -303,8 +337,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 ):
                     # mysqld access not possible and daemon restart fails
                     # force reset necessary
-                    self.unit.status = MaintenanceStatus("Workload reset")
-                    self.unit.status = self._workload_reset()
+                    self.unit.status = BlockedStatus("Unable to recover from an unreachable state")
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
 
@@ -319,15 +352,21 @@ class MySQLOperatorCharm(MySQLCharmBase):
             or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
+            logger.debug("skip status update when not initialized")
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
             and not self.unit_peer_data.get("unit-configured")
             and not self.unit_peer_data.get("unit-initialized")
             and not self.unit.is_leader()
-            and not self.upgrade.idle
         ):
-            # avoid changing status while in initialising/upgrading
+            # avoid changing status while in initialising
+            logger.debug("skip status update while initialising")
+            return
+
+        if not self.upgrade.idle:
+            # avoid changing status while in upgrade
+            logger.debug("skip status update while upgrading")
             return
 
         if self._is_unit_waiting_to_join_cluster():
@@ -401,7 +440,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.get_unit_ip(self.unit),
+            self.unit_fqdn,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
@@ -424,6 +463,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
     def s3_integrator_relation_exists(self) -> bool:
         """Returns whether a relation with the s3 integrator exists."""
         return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
+
+    @property
+    def unit_fqdn(self) -> str:
+        """Returns the unit's FQDN."""
+        return socket.getfqdn()
 
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
@@ -458,7 +502,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             for attempt in Retrying(
                 wait=wait_exponential(multiplier=10),
                 stop=stop_after_delay(60 * 5),
-                retry=tenacity.retry_if_exception_type(snap.SnapError),
+                retry=retry_if_exception_type(snap.SnapError),
                 after=set_retry_status,
             ):
                 with attempt:
@@ -473,11 +517,24 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.create_custom_mysqld_config(profile=self.config["profile"])
+        self._mysql.write_mysqld_config(profile=self.config["profile"])
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
+
+        current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
+
+        for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20), reraise=True):
+            with attempt:
+                new_mysqld_pid = self._mysql.get_pid_of_port_3306()
+                if not new_mysqld_pid:
+                    raise MySQLDNotRestartedError("mysqld process not yet up after restart")
+
+                if current_mysqld_pid == new_mysqld_pid:
+                    raise MySQLDNotRestartedError("mysqld not yet shutdown")
+
         self._mysql.wait_until_mysql_connection()
+
         self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
@@ -521,6 +578,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         """
         # Safeguard unit starting before leader unit sets peer data
         if not self._is_peer_data_set:
+            logger.debug("Peer data not yet set. Deferring")
             event.defer()
             return False
 
@@ -535,6 +593,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         # Safeguard against storage not attached
         if not is_volume_mounted():
+            logger.debug("Snap volume not mounted. Deferring")
             self._reboot_on_detached_storage(event)
             return False
 
@@ -545,51 +604,6 @@ class MySQLOperatorCharm(MySQLCharmBase):
             return False
 
         return True
-
-    def _workload_reset(self) -> StatusBase:
-        """Reset an errored workload.
-
-        Purge all files and re-initialise the workload.
-
-        Returns:
-            A `StatusBase` to be set by the caller
-        """
-        try:
-            primary_address = self._get_primary_address_from_peers()
-            if not primary_address:
-                logger.debug("Primary not yet defined on peers. Waiting new primary.")
-                return MaintenanceStatus("Workload reset: waiting new primary")
-
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-            self._mysql.reset_data_dir()
-            self._mysql.reconfigure_mysqld()
-            self._workload_initialise()
-
-            # On a full reset, member must firstly be removed from cluster metadata
-            self._mysql.rescan_cluster(from_instance=primary_address, remove_instances=True)
-            # Re-add the member as if it's the first time
-
-            self._mysql.add_instance_to_cluster(
-                self.get_unit_ip(self.unit), self.unit_label, from_instance=primary_address
-            )
-        except MySQLReconfigureError:
-            return MaintenanceStatus("Failed to re-initialize MySQL data-dir")
-        except MySQLConfigureMySQLUsersError:
-            return MaintenanceStatus("Failed to re-initialize MySQL users")
-        except MySQLConfigureInstanceError:
-            return MaintenanceStatus("Failed to re-configure instance for InnoDB")
-        except MySQLDataPurgeError:
-            return MaintenanceStatus("Failed to purge data dir")
-        except MySQLResetRootPasswordAndStartMySQLDError:
-            return MaintenanceStatus("Failed to reset root password")
-        except MySQLCreateCustomMySQLDConfigError:
-            return MaintenanceStatus("Failed to create custom mysqld config")
-        except MySQLRescanClusterError:
-            return MaintenanceStatus("Failed to rescan cluster and remove obsolete instances")
-        except SnapServiceOperationError as e:
-            return MaintenanceStatus(e.message)
-
-        return ActiveStatus(self.active_status_message)
 
     def _reboot_on_detached_storage(self, event) -> None:
         """Reboot on detached storage.

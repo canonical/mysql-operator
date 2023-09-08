@@ -3,6 +3,7 @@
 
 """Unit tests for MySQL class."""
 
+import os
 import subprocess
 import unittest
 from unittest.mock import MagicMock, call, patch
@@ -11,6 +12,7 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetAvailableMemoryError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
@@ -178,20 +180,6 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(1, _wait_until_mysql_connection.call_count)
 
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_reconfigure_mysqld(self, _snap_cache):
-        """Test a successful execution of method reconfigure_mysqld."""
-        _charmed_mysql_mock = MagicMock()
-        _cache = {CHARMED_MYSQL_SNAP_NAME: _charmed_mysql_mock}
-        _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
-
-        self.mysql.reconfigure_mysqld()
-
-        _snap_cache.assert_called_once()
-
-        _charmed_mysql_mock._remove.assert_called_once()
-        _charmed_mysql_mock.ensure.assert_called_once()
-
-    @patch("mysql_vm_helpers.snap.SnapCache")
     def test_snap_service_operation(self, _snap_cache):
         """Test a successful execution of function snap_service_operation."""
         _charmed_mysql_mock = MagicMock()
@@ -246,9 +234,8 @@ class TestMySQL(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
     @patch("builtins.open")
-    @patch("socket.getfqdn", return_value="1.2.3.4")
-    def test_create_custom_mysqld_config(
-        self, _, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+    def test_write_mysqld_config(
+        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
     ):
         """Test successful execution of create_custom_mysqld_config."""
         self.maxDiff = None
@@ -258,18 +245,18 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.create_custom_mysqld_config(profile="production")
+        self.mysql.write_mysqld_config(profile="production")
 
         config = "\n".join(
             (
                 "[mysqld]",
                 "bind-address = 0.0.0.0",
                 "mysqlx-bind-address = 0.0.0.0",
-                "innodb_buffer_pool_size = 1234",
+                "report_host = 127.0.0.1",
                 "max_connections = 111",
+                "innodb_buffer_pool_size = 1234",
                 "innodb_buffer_pool_chunk_size = 5678",
-                "report_host = 1.2.3.4",
-                "",
+                "\n",
             )
         )
 
@@ -292,19 +279,20 @@ class TestMySQL(unittest.TestCase):
 
         # Test `testing` profile
         _open_mock.reset_mock()
-        self.mysql.create_custom_mysqld_config(profile="testing")
+        self.mysql.write_mysqld_config(profile="testing")
 
         config = "\n".join(
             (
                 "[mysqld]",
                 "bind-address = 0.0.0.0",
                 "mysqlx-bind-address = 0.0.0.0",
-                "innodb_buffer_pool_size = 20971520",
+                "report_host = 127.0.0.1",
                 "max_connections = 20",
+                "innodb_buffer_pool_size = 20971520",
                 "innodb_buffer_pool_chunk_size = 1048576",
+                "performance-schema-instrument = 'memory/%=OFF'",
                 "loose-group_replication_message_cache_size = 134217728",
-                "report_host = 1.2.3.4",
-                "",
+                "\n",
             )
         )
 
@@ -336,7 +324,7 @@ class TestMySQL(unittest.TestCase):
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.create_custom_mysqld_config(profile="production")
+            self.mysql.write_mysqld_config(profile="production")
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):
@@ -346,16 +334,15 @@ class TestMySQL(unittest.TestCase):
             bash=True,
             user="test_user",
             group="test_group",
-            env={"envA": "valueA"},
+            env_extra={"envA": "valueA"},
         )
-
+        env = os.environ
+        env.update({"envA": "valueA"})
         _run.assert_called_once_with(
             ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
-            env={
-                "envA": "valueA",
-            },
+            env=env,
             capture_output=True,
             check=True,
             encoding="utf-8",
@@ -372,7 +359,7 @@ class TestMySQL(unittest.TestCase):
                 bash=True,
                 user="test_user",
                 group="test_group",
-                env={"envA": "valueA"},
+                env_extra={"envA": "valueA"},
             )
 
     @patch("os.path.exists", return_value=True)
@@ -434,20 +421,43 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLStartMySQLDError):
             self.mysql.start_mysqld()
 
+    @patch("os.system")
     @patch("pathlib.Path")
     @patch("subprocess.check_call")
     @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib):
+    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib, _system):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
 
+        common_path_mock = MagicMock()
+
         _mysql_snap.present = False
         _path_exists.return_value = False
+        _pathlib.return_value = common_path_mock
+        common_path_mock.exists.return_value = False
 
         self.mysql.install_and_configure_mysql_dependencies()
 
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
         _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+
+    @patch("mysql_vm_helpers.MySQL._execute_commands")
+    def test_get_available_memory(self, _execute_commands):
+        """Test successful execution of get_available_memory()."""
+        _execute_commands.return_value = "16484458496\n", None
+
+        total_memory = self.mysql.get_available_memory()
+
+        self.assertEqual(16484458496, total_memory)
+
+        _execute_commands.assert_called_once_with(
+            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
+            bash=True,
+        )
+        _execute_commands.reset_mock()
+        _execute_commands.side_effect = MySQLExecError
+        with self.assertRaises(MySQLGetAvailableMemoryError):
+            self.mysql.get_available_memory()

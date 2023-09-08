@@ -347,22 +347,6 @@ def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
         return False
 
 
-def instance_ip(model: str, instance: str) -> str:
-    """Translate juju instance name to IP.
-
-    Args:
-        model: The name of the model
-        instance: The name of the instance
-    Returns:
-        The (str) IP address of the instance
-    """
-    output = subprocess.check_output(f"juju machines --model {model}".split())
-
-    for line in output.decode("utf8").splitlines():
-        if instance in line:
-            return line.split()[2]
-
-
 async def app_name(ops_test: OpsTest) -> str:
     """Returns the name of the application running MySQL.
 
@@ -404,6 +388,7 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     for relation in output[unit.name]["relation-info"]:
         if relation["endpoint"] == "database-peers":
             return relation["application-data"]["cluster-name"]
+    logger.error(f"Failed to retrieve cluster name from unit {unit.name}")
     raise ValueError("Failed to retrieve cluster name")
 
 
@@ -489,15 +474,15 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-def wait_network_restore(model_name: str, hostname: str, old_ip: str) -> None:
+async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -> None:
     """Wait until network is restored.
 
     Args:
-        model_name: The name of the model
-        hostname: The name of the instance
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit
         old_ip: old registered IP address
     """
-    if instance_ip(model_name, hostname) == old_ip:
+    if await get_unit_ip(ops_test, unit_name) == old_ip:
         raise Exception
 
 
@@ -583,7 +568,18 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
     Returns:
         The (str) ip of the unit
     """
-    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
+    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "route")
+
+    assert return_code == 0
+
+    # Example output line of ip route:
+    # default via 10.0.143.1 dev eth0 proto dhcp src 10.0.143.225 metric 100
+    for line in stdout.split("\n"):
+        items = line.split()
+        if items[0] == "default":
+            return items[8]
+
+    raise Exception("Unable to find the default entry in output of 'ip route'")
 
 
 async def get_relation_data(
@@ -647,6 +643,16 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
             raise ValueError("Relation data are not valid JSON.")
 
     return read_only_endpoints
+
+
+async def get_leader_unit(ops_test: OpsTest, app_name: str) -> Optional[Unit]:
+    leader_unit = None
+    for unit in ops_test.model.applications[app_name].units:
+        if await unit.is_leader_from_status():
+            leader_unit = unit
+            break
+
+    return leader_unit
 
 
 def get_read_only_endpoint_ips(relation_data: list) -> List[str]:

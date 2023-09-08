@@ -5,6 +5,7 @@
 
 import json
 import logging
+import socket
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
@@ -111,7 +112,9 @@ class MySQLRelation(Object):
                 )
                 return
 
-            relation_databag[self.charm.unit]["host"] = primary_address.split(":")[0]
+            primary_address_ip = socket.gethostbyname(primary_address.split(":")[0])
+
+            relation_databag[self.charm.unit]["host"] = primary_address_ip
 
     def _on_config_changed(self, _) -> None:
         """Handle the change of the username/database in config."""
@@ -202,9 +205,11 @@ class MySQLRelation(Object):
             self.charm.unit.status = BlockedStatus("Failed to retrieve cluster primary address")
             return
 
+        primary_address_ip = socket.gethostbyname(primary_address.split(":")[0])
+
         updates = {
             "database": database,
-            "host": primary_address.split(":")[0],
+            "host": primary_address_ip,
             "password": password,
             "port": "3306",
             "root_password": self.charm.get_secret("app", ROOT_PASSWORD_KEY),
