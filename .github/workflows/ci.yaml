@@ -53,7 +53,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v4.2.3
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@lxd-snapd-upgrades
     with:
       charmcraft-snap-revision: 1349  # version 2.3.0
     permissions:
