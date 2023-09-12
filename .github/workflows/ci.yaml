@@ -57,7 +57,6 @@ jobs:
     with:
       charmcraft-snap-revision: 1349  # version 2.3.0
       lxd-snap-revision: 25505
-      lxd-snap-channel: latest/stable
     permissions:
       actions: write  # Needed to manage GitHub Actions cache
 
