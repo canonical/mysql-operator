@@ -21,6 +21,7 @@ typing_extensions = "^4.7.1"
 # data_platform_libs/v0/data_interfaces.py
 ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
+poetry-core = "1.7.0"
 # grafana_agent/v0/cos_agent.py requires pydantic <2
 pydantic = "^1.10, <2"
 # grafana_agent/v0/cos_agent.py
