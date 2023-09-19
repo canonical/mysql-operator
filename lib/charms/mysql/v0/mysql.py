@@ -764,7 +764,7 @@ class MySQLBase(ABC):
             innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
             group_replication_message_cache_size = 128 * BYTES_1MiB
             max_connections = 20
-            performance_schema_instrument = "memory/%=OFF"
+            performance_schema_instrument = "'memory/%=OFF'"
         else:
             available_memory = self.get_available_memory()
             (
@@ -775,9 +775,9 @@ class MySQLBase(ABC):
             max_connections = self.get_max_connections(available_memory)
             if available_memory < 2 * BYTES_1GiB:
                 # disable memory instruments if we have less than 2GiB of RAM
-                performance_schema_instrument = "memory/%=OFF"
+                performance_schema_instrument = "'memory/%=OFF'"
 
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(interpolation=None)
 
         config["mysqld"] = {
             "bind-address": "0.0.0.0",
@@ -798,7 +798,7 @@ class MySQLBase(ABC):
                 "innodb_buffer_pool_chunk_size"
             ] = f"{ innodb_buffer_pool_chunk_size }"
         if performance_schema_instrument:
-            config["mysqld"]["performance_schema_instrument"] = performance_schema_instrument
+            config["mysqld"]["performance-schema-instrument"] = performance_schema_instrument
         if group_replication_message_cache_size:
             config["mysqld"][
                 "loose-group_replication_message_cache_size"
