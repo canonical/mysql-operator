@@ -790,7 +790,7 @@ class MySQLBase(ABC):
             "general_log": "ON",
             "general_log_file": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/general.log",
             "slow_query_log": "ON",
-            "slow_query_log_file": f"{CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/slowquery.log",
+            "slow_query_log_file": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/slowquery.log",
         }
 
         if innodb_buffer_pool_chunk_size:

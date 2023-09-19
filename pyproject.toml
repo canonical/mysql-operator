@@ -16,6 +16,7 @@ boto3 = "^1.28.23"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
 pyopenssl = "^23.2.0"
 typing_extensions = "^4.7.1"
+jinja2 = "3.1.2"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -54,7 +55,6 @@ shellcheck-py = "^0.9.0.5"
 
 [tool.poetry.group.unit.dependencies]
 pytest = "^7.4.0"
-jinja2 = "3.1.2"
 coverage = {extras = ["toml"], version = "^7.2.7"}
 
 [tool.poetry.group.integration.dependencies]

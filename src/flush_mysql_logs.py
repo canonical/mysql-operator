@@ -38,6 +38,7 @@ class MySQLLogs(Object):
         """Flush the specified (via LOGS_TYPE env var) mysql logs."""
         logs_type = os.environ.get("LOGS_TYPE")
         if logs_type not in ["error", "general", "slowquery"]:
+            logger.debug(f"Invalid flush of logs type: { logs_type }")
             return
 
         self.charm._mysql.flush_mysql_logs(logs_type)

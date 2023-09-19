@@ -247,11 +247,11 @@ class MySQL(MySQLBase):
             unit_name=self.charm.unit.name,
         )
 
-        with open("/etc/logrotate.d/flush_mysql_logs", "w+") as file:
+        with open("/etc/logrotate.d/flush_mysql_logs", "w") as file:
             file.write(rendered)
 
         cron = "* * * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
-        with open("/etc/cron.d/flush_mysql_logs", "w+") as file:
+        with open("/etc/cron.d/flush_mysql_logs", "w") as file:
             file.write(cron)
 
     def reset_root_password_and_start_mysqld(self) -> None:
