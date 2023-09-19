@@ -801,7 +801,7 @@ class MySQLBase(ABC):
             config["mysqld"]["performance_schema_instrument"] = performance_schema_instrument
         if group_replication_message_cache_size:
             config["mysqld"][
-                "group_replication_message_cache_size"
+                "loose-group_replication_message_cache_size"
             ] = f"{ group_replication_message_cache_size }"
 
         string_io = io.StringIO()
