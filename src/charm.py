@@ -73,6 +73,7 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
+from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
@@ -101,6 +102,10 @@ class MySQLDNotRestartedError(Error):
 
 class MySQLOperatorCharm(MySQLCharmBase):
     """Operator framework charm for MySQL."""
+
+    # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
+    # (which runs juju-run/juju-exec to dispatch a custom event from cron)
+    on = FlushMySQLLogsCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -146,6 +151,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             relation_name="upgrade",
             substrate="vm",
         )
+
+        self.mysql_logs = MySQLLogs(self)
+        self.framework.observe(self.on.flush_mysql_logs, self.mysql_logs._flush_mysql_logs)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -452,6 +460,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             self.get_secret("app", MONITORING_PASSWORD_KEY),
             BACKUPS_USERNAME,
             self.get_secret("app", BACKUPS_PASSWORD_KEY),
+            self,
         )
 
     @property
@@ -518,6 +527,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Raised errors must be treated on handlers.
         """
         self._mysql.write_mysqld_config(profile=self.config["profile"])
+        self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
