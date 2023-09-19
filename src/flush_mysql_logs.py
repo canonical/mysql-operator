@@ -3,6 +3,7 @@
 
 """Custom event for flushing mysql logs to be called from a logrotate script."""
 
+import logging
 import os
 import typing
 
@@ -11,6 +12,8 @@ from ops.framework import EventBase, EventSource, Object
 
 if typing.TYPE_CHECKING:
     from charm import MySQLOperatorCharm
+
+logger = logging.getLogger(__name__)
 
 
 class FlushMySQLLogsEvent(EventBase):
