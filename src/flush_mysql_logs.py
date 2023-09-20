@@ -37,6 +37,8 @@ class MySQLLogs(Object):
 
         self.charm = charm
 
+        self.framework.observe(self.charm.on.flush_mysql_logs, self._flush_mysql_logs)
+
     def _flush_mysql_logs(self, _) -> None:
         """Flush the specified (via LOGS_TYPE env var) mysql logs."""
         logs_type = os.environ.get("LOGS_TYPE")

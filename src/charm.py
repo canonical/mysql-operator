@@ -153,7 +153,6 @@ class MySQLOperatorCharm(MySQLCharmBase):
         )
 
         self.mysql_logs = MySQLLogs(self)
-        self.framework.observe(self.on.flush_mysql_logs, self.mysql_logs._flush_mysql_logs)
 
     # =======================
     #  Charm Lifecycle Hooks
