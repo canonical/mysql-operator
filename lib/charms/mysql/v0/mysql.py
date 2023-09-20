@@ -783,8 +783,8 @@ class MySQLBase(ABC):
             "bind-address": "0.0.0.0",
             "mysqlx-bind-address": "0.0.0.0",
             "report_host": self.instance_address,
-            "max_connections": f"{ max_connections }",
-            "innodb_buffer_pool_size": f"{ innodb_buffer_pool_size }",
+            "max_connections": str(max_connections),
+            "innodb_buffer_pool_size": str(innodb_buffer_pool_size),
             "log_error_services": "log_filter_internal;log_sink_internal",
             "log_error": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/error.log",
             "general_log": "ON",
@@ -794,21 +794,17 @@ class MySQLBase(ABC):
         }
 
         if innodb_buffer_pool_chunk_size:
-            config["mysqld"][
-                "innodb_buffer_pool_chunk_size"
-            ] = f"{ innodb_buffer_pool_chunk_size }"
+            config["mysqld"]["innodb_buffer_pool_chunk_size"] = str(innodb_buffer_pool_chunk_size)
         if performance_schema_instrument:
             config["mysqld"]["performance-schema-instrument"] = performance_schema_instrument
         if group_replication_message_cache_size:
-            config["mysqld"][
-                "loose-group_replication_message_cache_size"
-            ] = f"{ group_replication_message_cache_size }"
+            config["mysqld"]["loose-group_replication_message_cache_size"] = str(
+                group_replication_message_cache_size
+            )
 
-        string_io = io.StringIO()
-        config.write(string_io)
-        output = string_io.getvalue()
-        string_io.close()
-        return output
+        with io.StringIO() as string_io:
+            config.write(string_io)
+            return string_io.getvalue()
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
