@@ -40,8 +40,10 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: ops_test.model.applications[APP_NAME].status == "active",
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME],
+            status="active",
+            raise_on_blocked=True,
             timeout=TIMEOUT,
         )
 
