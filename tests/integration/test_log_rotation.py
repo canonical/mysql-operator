@@ -77,36 +77,36 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
 
-    assert len(ls_la_output) == 3
+    assert len(ls_la_output) == 3, f"❌ files other than log files exist {ls_la_output}"
     directories = [line.split()[-1] for line in ls_la_output]
-    assert sorted(directories) == sorted(log_files)
+    assert sorted(directories) == sorted(log_files), f"❌ file other than logs files exist: {ls_la_output}"
 
     logger.info("Executing logrotate")
     return_code, stdout, _ = await ops_test.juju(
         "ssh", unit.name, "sudo", "logrotate", "-f", "/etc/logrotate.d/flush_mysql_logs"
     )
-    assert return_code == 0
+    assert return_code == 0, f"❌ logrotate exited with code {return_code} and stdout {stdout}"
 
     logger.info("Ensuring log files and archive directories exist")
     ls_la_output = await ls_la_in_unit(
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
 
-    assert len(ls_la_output) == 6
+    assert len(ls_la_output) == 6, f"❌ unexpected files/directories in log directory: {ls_la_output}"
     directories = [line.split()[-1] for line in ls_la_output]
-    assert sorted(directories) == sorted(log_files + archive_directories)
+    assert sorted(directories) == sorted(log_files + archive_directories), f"❌ unexpected files/directories in log directory: {ls_la_output}"
 
     logger.info("Ensuring log files were rotated")
     for log in log_types:
         file_contents = await read_contents_from_file_in_unit(
             ops_test, unit, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{log}.log"
         )
-        assert f"test {log} content" not in file_contents
+        assert f"test {log} content" not in file_contents, f"❌ log file {log}.log not rotated"
 
         ls_la_output = await ls_la_in_unit(
             ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/"
         )
-        assert len(ls_la_output) == 1
+        assert len(ls_la_output) == 1, f"❌ more than 1 file in archive directory: {ls_la_output}"
 
         filename = ls_la_output[0].split()[-1]
         file_contents = await read_contents_from_file_in_unit(
@@ -114,4 +114,4 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
             unit,
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/{filename}",
         )
-        assert f"test {log} content" in file_contents
+        assert f"test {log} content" in file_contents, f"❌ log file {log}.log not rotated"
