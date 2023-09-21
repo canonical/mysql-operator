@@ -110,6 +110,8 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
 
         filename = ls_la_output[0].split()[-1]
         file_contents = await read_contents_from_file_in_unit(
-            ops_test, unit, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/{filename}"
+            ops_test,
+            unit,
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/{filename}",
         )
         assert f"test {log} content" in file_contents

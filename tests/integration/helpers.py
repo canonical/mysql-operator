@@ -907,7 +907,9 @@ async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, pa
         return False
 
 
-async def write_content_to_file_in_unit(ops_test: OpsTest, unit: Unit, path: str, content: str) -> None:
+async def write_content_to_file_in_unit(
+    ops_test: OpsTest, unit: Unit, path: str, content: str
+) -> None:
     """Write content to the file in the provided unit.
 
     Args:
@@ -940,7 +942,9 @@ async def read_contents_from_file_in_unit(ops_test: OpsTest, unit: Unit, path: s
     return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "cp", path, "/tmp/file")
     assert return_code == 0
 
-    return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "chown", "ubuntu:ubuntu", "/tmp/file")
+    return_code, _, _ = await ops_test.juju(
+        "ssh", unit.name, "sudo", "chown", "ubuntu:ubuntu", "/tmp/file"
+    )
     assert return_code == 0
 
     with tempfile.NamedTemporaryFile(mode="r+") as temp_file:
@@ -975,4 +979,6 @@ async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> li
 
     ls_output = output.split("\r\n")[1:]
 
-    return [line for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]]
+    return [
+        line for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
+    ]
