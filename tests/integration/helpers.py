@@ -927,6 +927,11 @@ async def write_content_to_file_in_unit(
     return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "mv", "/tmp/file", path)
     assert return_code == 0
 
+    return_code, _, _ = await ops_test.juju(
+        "ssh", unit.name, "sudo", "chown", "snap_daemon:root", path
+    )
+    assert return_code == 0
+
 
 async def read_contents_from_file_in_unit(ops_test: OpsTest, unit: Unit, path: str) -> str:
     """Read contents from file in the provided unit.
@@ -982,3 +987,31 @@ async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> li
     return [
         line for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
     ]
+
+
+async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -> None:
+    """Gracefully stop server.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    # send TERM signal to mysql daemon, which trigger shutdown process
+    await ops_test.juju(
+        "ssh",
+        unit_name,
+        "sudo",
+        "pkill",
+        "-15",
+        "-f",
+        "logrotate -f /etc/logrotate.d/flush_mysql_logs",
+    )
+
+    # hold execution until process is stopped
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
+            with attempt:
+                if await get_process_pid(ops_test, unit_name, "logrotate"):
+                    raise Exception
+    except RetryError:
+        raise Exception("Failed to stop the flush_mysql_logs logrotate process.")

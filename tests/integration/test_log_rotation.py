@@ -15,6 +15,7 @@ from .helpers import (
     delete_file_or_directory_in_unit,
     ls_la_in_unit,
     read_contents_from_file_in_unit,
+    stop_running_flush_mysql_cronjobs,
     write_content_to_file_in_unit,
 )
 
@@ -40,10 +41,8 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
     # Reduce the update_status frequency until the cluster is deployed
     async with ops_test.fast_forward("60s"):
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
+        await ops_test.model.block_until(
+            lambda: ops_test.model.applications[APP_NAME].status == "active",
             timeout=TIMEOUT,
         )
 
@@ -62,12 +61,20 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
     logger.info("Removing the cron file and archive directories")
     await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")
 
+    await stop_running_flush_mysql_cronjobs(ops_test, unit.name)
+
     for archive_directory in archive_directories:
         await delete_file_or_directory_in_unit(
             ops_test,
             unit.name,
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{archive_directory}/",
         )
+
+    logger.info("Listing log files before overwriting their content")
+    ls_la_output = await ls_la_in_unit(
+        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
+    )
+    logger.info(f"ls_la_output = {ls_la_output}")
 
     logger.info("Writing some data to the text log files")
     for log in log_types:
