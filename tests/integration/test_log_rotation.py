@@ -44,6 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         await ops_test.model.block_until(
             lambda: ops_test.model.applications[APP_NAME].status == "active",
             timeout=TIMEOUT,
+            wait_period=5,
         )
 
     logger.info("Listing log files before running log rotation test")
