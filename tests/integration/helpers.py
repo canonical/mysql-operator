@@ -990,7 +990,7 @@ async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> li
 
 
 async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -> None:
-    """Gracefully stop server.
+    """Stop running any logrotate jobs that may have been triggered by cron.
 
     Args:
         ops_test: The ops test object passed into every test case

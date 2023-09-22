@@ -46,6 +46,13 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             timeout=TIMEOUT,
         )
 
+    logger.info("Listing log files before running log rotation test")
+    unit = ops_test.model.applications[APP_NAME].units[0]
+    ls_la_output = await ls_la_in_unit(
+        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
+    )
+    logger.info(f"{ls_la_output=}")
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -61,6 +68,7 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
     logger.info("Removing the cron file and archive directories")
     await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")
 
+    logger.info("Stopping any running logrotate jobs")
     await stop_running_flush_mysql_cronjobs(ops_test, unit.name)
 
     for archive_directory in archive_directories:

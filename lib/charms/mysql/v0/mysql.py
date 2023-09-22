@@ -786,11 +786,11 @@ class MySQLBase(ABC):
             "max_connections": str(max_connections),
             "innodb_buffer_pool_size": str(innodb_buffer_pool_size),
             "log_error_services": "log_filter_internal;log_sink_internal",
-            "log_error": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/error.log",
+            "log_error": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log",
             "general_log": "ON",
-            "general_log_file": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/general.log",
+            "general_log_file": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/general.log",
             "slow_query_log": "ON",
-            "slow_query_log_file": f"{ CHARMED_MYSQL_COMMON_DIRECTORY }/var/log/mysql/slowquery.log",
+            "slow_query_log_file": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/slowquery.log",
         }
 
         if innodb_buffer_pool_chunk_size:
