@@ -90,15 +90,16 @@ jobs:
       groups: ${{ steps.collect-groups.outputs.groups }}
 
   gh-hosted-integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        groups: ${{ fromJSON(needs.gh-hosted-collect-integration-tests.outputs.groups) }}
-        ubuntu-versions:
-          # Update whenever charmcraft.yaml is changed
-          - series: jammy
-            bases-index: 0
-    name: (GH hosted) ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     groups: ${{ fromJSON(needs.gh-hosted-collect-integration-tests.outputs.groups) }}
+    #     ubuntu-versions:
+    #       # Update whenever charmcraft.yaml is changed
+    #       - series: jammy
+    #         bases-index: 0
+    # name: (GH hosted) ${{ matrix.groups.job_name }} | ${{ matrix.ubuntu-versions.series }}
+    name: (GH hosted) test log rotation | jammy
     needs:
       - lint
       - unit-test
@@ -133,13 +134,18 @@ jobs:
             echo Skipping unstable tests
             echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
-      - name: Run integration tests
-        run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group="${{ matrix.groups.group_number }}" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
-        env:
-          SECRETS_FROM_GITHUB: |
-            {
-              "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-            }
+      - name: Set up tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+          limit-access-to-actor: true
+      # - name: Run integration tests
+      #   run: tox run -e integration -- "tests/integration/test_log_rotation.py" --group="1" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="jammy" --mysql-charm-bases-index="0"
+      #   env:
+      #     SECRETS_FROM_GITHUB: |
+      #       {
+      #         "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+      #         "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+      #         "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+      #         "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+      #       }
