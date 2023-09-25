@@ -45,18 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         await ops_test.model.block_until(
             lambda: ops_test.model.applications[APP_NAME].status == "active",
             timeout=TIMEOUT,
-            wait_period=5,
         )
-
-    time.sleep(30)
-
-    logger.info("Listing log files before running log rotation test")
-    unit = ops_test.model.applications[APP_NAME].units[0]
-    ls_la_output = await ls_la_in_unit(
-        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
-    )
-    logger.info(f"{ls_la_output=}")
-    assert len(ls_la_output) == 3, "Expecting to fail here"
 
 
 @pytest.mark.group(1)
@@ -82,12 +71,6 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
             unit.name,
             f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{archive_directory}/",
         )
-
-    logger.info("Listing log files before overwriting their content")
-    ls_la_output = await ls_la_in_unit(
-        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
-    )
-    logger.info(f"ls_la_output = {ls_la_output}")
 
     logger.info("Writing some data to the text log files")
     for log in log_types:

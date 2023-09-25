@@ -136,9 +136,3 @@ jobs:
           fi
       - name: Run integration tests
         run: tox run -e integration -- "tests/integration/test_log_rotation.py" --group="1" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="jammy" --mysql-charm-bases-index="0"
-      - name: Set up tmate session
-        if: failure()
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
-          limit-access-to-actor: true
