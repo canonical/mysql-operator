@@ -984,6 +984,8 @@ async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> li
 
     ls_output = output.split("\r\n")[1:]
 
+    logger.info(f"{directory=}, {ls_output=}")
+
     return [
         line for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
     ]

@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import time
 from pathlib import Path
 
 import pytest
@@ -46,6 +47,8 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             timeout=TIMEOUT,
             wait_period=5,
         )
+
+    time.sleep(30)
 
     logger.info("Listing log files before running log rotation test")
     unit = ops_test.model.applications[APP_NAME].units[0]
