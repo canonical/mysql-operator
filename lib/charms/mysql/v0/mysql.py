@@ -693,6 +693,17 @@ class MySQLMemberState(str, enum.Enum):
     UNKNOWN = "unknown"
 
 
+class MySQLTextLogs(str, enum.Enum):
+    """MySQL Text logs."""
+
+    # TODO: python 3.11 has new enum.StrEnum
+    #       that can remove str inheritance
+
+    ERROR = "ERROR LOGS"
+    GENERAL = "GENERAL LOGS"
+    SLOW = "SLOW LOGS"
+
+
 class MySQLBase(ABC):
     """Abstract class to encapsulate all operations related to the MySQL workload.
 
@@ -2535,23 +2546,17 @@ class MySQLBase(ABC):
         except MySQLExecError:
             return None
 
-    def flush_mysql_logs(self, logs_type: str) -> None:
+    def flush_mysql_logs(self, logs_type: MySQLTextLogs) -> None:
         """Flushes the specified logs_type logs."""
-        flush_logs_statement = {
-            "error": "ERROR LOGS",
-            "general": "GENERAL LOGS",
-            "slowquery": "SLOW LOGS",
-        }[logs_type]
-
         flush_logs_commands = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
-            f'session.run_sql("FLUSH { flush_logs_statement }")',
+            f'session.run_sql("FLUSH {logs_type.value}")',
         )
 
         try:
             self._run_mysqlsh_script("\n".join(flush_logs_commands))
         except MySQLClientError:
-            logger.exception(f"Failed to flush { logs_type } logs.")
+            logger.exception(f"Failed to flush {logs_type} logs.")
 
     @abstractmethod
     def is_mysqld_running(self) -> bool:

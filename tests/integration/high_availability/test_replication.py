@@ -13,6 +13,7 @@ import yaml
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
+from constants import CHARMED_MYSQL_COMMON_DIRECTORY
 from ..helpers import (
     cluster_name,
     execute_queries_on_unit,
@@ -23,6 +24,11 @@ from ..helpers import (
     get_server_config_credentials,
     retrieve_database_variable_value,
     scale_application,
+    delete_file_or_directory_in_unit,
+    ls_la_in_unit,
+    read_contents_from_file_in_unit,
+    stop_running_flush_mysql_cronjobs,
+    write_content_to_file_in_unit,
 )
 from .high_availability_helpers import (
     clean_up_database_and_table,
@@ -356,3 +362,84 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
         result.append(output[0])
 
     assert result[0] != result[1], "Writes from one cluster are replicated to another cluster."
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
+    """Test the log rotation of text files."""
+    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    unit = ops_test.model.applications[app].units[0]
+
+    log_types = ["error", "general", "slowquery"]
+    log_files = ["error.log", "general.log", "slowquery.log"]
+    archive_directories = ["archive_error", "archive_general", "archive_slowquery"]
+
+    logger.info("Removing the cron file")
+    await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")
+
+    logger.info("Stopping any running logrotate jobs")
+    await stop_running_flush_mysql_cronjobs(ops_test, unit.name)
+
+    logger.info("Removing existing archive directories")
+    for archive_directory in archive_directories:
+        await delete_file_or_directory_in_unit(
+            ops_test,
+            unit.name,
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{archive_directory}/",
+        )
+
+    logger.info("Writing some data to the text log files")
+    for log in log_types:
+        log_path = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{log}.log"
+        await write_content_to_file_in_unit(ops_test, unit, log_path, f"test {log} content\n")
+
+    logger.info("Ensuring only log files exist")
+    ls_la_output = await ls_la_in_unit(
+        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
+    )
+
+    assert len(ls_la_output) == 3, f"❌ files other than log files exist {ls_la_output}"
+    directories = [line.split()[-1] for line in ls_la_output]
+    assert sorted(directories) == sorted(
+        log_files
+    ), f"❌ file other than logs files exist: {ls_la_output}"
+
+    logger.info("Executing logrotate")
+    return_code, stdout, _ = await ops_test.juju(
+        "ssh", unit.name, "sudo", "logrotate", "-f", "/etc/logrotate.d/flush_mysql_logs"
+    )
+    assert return_code == 0, f"❌ logrotate exited with code {return_code} and stdout {stdout}"
+
+    logger.info("Ensuring log files and archive directories exist")
+    ls_la_output = await ls_la_in_unit(
+        ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
+    )
+
+    assert (
+        len(ls_la_output) == 6
+    ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
+    directories = [line.split()[-1] for line in ls_la_output]
+    assert sorted(directories) == sorted(
+        log_files + archive_directories
+    ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
+
+    logger.info("Ensuring log files were rotated")
+    for log in log_types:
+        file_contents = await read_contents_from_file_in_unit(
+            ops_test, unit, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{log}.log"
+        )
+        assert f"test {log} content" not in file_contents, f"❌ log file {log}.log not rotated"
+
+        ls_la_output = await ls_la_in_unit(
+            ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/"
+        )
+        assert len(ls_la_output) == 1, f"❌ more than 1 file in archive directory: {ls_la_output}"
+
+        filename = ls_la_output[0].split()[-1]
+        file_contents = await read_contents_from_file_in_unit(
+            ops_test,
+            unit,
+            f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/archive_{log}/{filename}",
+        )
+        assert f"test {log} content" in file_contents, f"❌ log file {log}.log not rotated"

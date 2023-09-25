@@ -7,6 +7,7 @@ import logging
 import os
 import typing
 
+from charms.mysql.v0.mysql import MySQLTextLogs
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 
@@ -42,8 +43,11 @@ class MySQLLogs(Object):
     def _flush_mysql_logs(self, _) -> None:
         """Flush the specified (via LOGS_TYPE env var) mysql logs."""
         logs_type = os.environ.get("LOGS_TYPE")
-        if logs_type not in ["error", "general", "slowquery"]:
-            logger.debug(f"Invalid flush of logs type: { logs_type }")
+
+        try:
+            text_logs = MySQLTextLogs[logs_type]
+        except KeyError:
+            logger.debug(f"Invalid flush of logs type: {logs_type}")
             return
 
-        self.charm._mysql.flush_mysql_logs(logs_type)
+        self.charm._mysql.flush_mysql_logs(text_logs)
