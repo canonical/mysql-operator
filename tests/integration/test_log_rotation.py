@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from pathlib import Path
 
 import pytest
@@ -59,12 +58,13 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
     log_files = ["error.log", "general.log", "slowquery.log"]
     archive_directories = ["archive_error", "archive_general", "archive_slowquery"]
 
-    logger.info("Removing the cron file and archive directories")
+    logger.info("Removing the cron file")
     await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")
 
     logger.info("Stopping any running logrotate jobs")
     await stop_running_flush_mysql_cronjobs(ops_test, unit.name)
 
+    logger.info("Removing existing archive directories")
     for archive_directory in archive_directories:
         await delete_file_or_directory_in_unit(
             ops_test,
