@@ -982,12 +982,12 @@ async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> li
     return_code, output, _ = await ops_test.juju("ssh", unit_name, "sudo", "ls", "-la", directory)
     assert return_code == 0
 
-    ls_output = output.split("\r\n")[1:]
+    ls_output = output.split("\n")[1:]
 
     logger.info(f"{directory=}, {output=}, {ls_output=}")
 
     return [
-        line for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
+        line.strip("\r") for line in ls_output if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
     ]
 
 
