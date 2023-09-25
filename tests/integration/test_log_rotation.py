@@ -53,6 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
     logger.info(f"{ls_la_output=}")
+    assert len(ls_la_output) == 3, "Expecting to fail here"
 
 
 @pytest.mark.group(1)
