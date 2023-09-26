@@ -91,7 +91,6 @@ from tenacity import (
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
-    CHARMED_MYSQL_COMMON_DIRECTORY,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     COS_AGENT_RELATION_NAME,
@@ -761,11 +760,13 @@ class MySQLBase(ABC):
         self,
         *,
         profile: str,
+        snap_common: str = "",
     ) -> str:
         """Render mysqld ini configuration file.
 
         Args:
             profile: profile to use for the configuration (testing, production)
+            snap_common: snap common directory (for log files locations in vm)
 
         Returns: mysqld ini file string content
         """
@@ -797,11 +798,11 @@ class MySQLBase(ABC):
             "max_connections": str(max_connections),
             "innodb_buffer_pool_size": str(innodb_buffer_pool_size),
             "log_error_services": "log_filter_internal;log_sink_internal",
-            "log_error": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log",
+            "log_error": f"{snap_common}/var/log/mysql/error.log",
             "general_log": "ON",
-            "general_log_file": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/general.log",
+            "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log": "ON",
-            "slow_query_log_file": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/slowquery.log",
+            "slow_query_log_file": f"{snap_common}/var/log/mysql/slowquery.log",
         }
 
         if innodb_buffer_pool_chunk_size:

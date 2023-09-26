@@ -222,7 +222,9 @@ class MySQL(MySQLBase):
         """
         logger.debug("Creating custom mysqld config")
         try:
-            content = self.render_myqld_configuration(profile=profile)
+            content = self.render_myqld_configuration(
+                profile=profile, snap_common=CHARMED_MYSQL_COMMON_DIRECTORY
+            )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
