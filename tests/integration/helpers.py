@@ -904,7 +904,7 @@ async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, pa
 
     try:
         return_code, _, _ = await ops_test.juju(
-            "ssh", unit_name, "sudo", "find", path, "-maxdepth", "0", "-delete"
+            "ssh", unit_name, "sudo", "find", path, "-maxdepth", "1", "-delete"
         )
 
         return return_code == 0
