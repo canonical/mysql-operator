@@ -88,13 +88,15 @@ class TestCharm(unittest.TestCase):
             "cluster-admin-password",
             "monitoring-password",
             "backups-password",
+            "cluster-name",
+            "cluster-set-domain-name",
         ]
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
         )
 
     @patch_network_get(private_address="1.1.1.1")
-    def test_on_config_changed_sets_config_cluster_name_in_peer_databag(self):
+    def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
             self.peer_relation_id, self.harness.charm.app
@@ -102,8 +104,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(peer_relation_databag, {})
 
         # trigger the leader_elected and config_changed events
-        self.harness.set_leader(True)
         self.harness.update_config({"cluster-name": "test-cluster"})
+        self.harness.set_leader(True)
 
         # ensure that the peer relation has 'cluster_name' set to the config value
         peer_relation_databag = self.harness.get_relation_data(

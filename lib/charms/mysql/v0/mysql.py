@@ -114,15 +114,17 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 48
+LIBPATCH = 50
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
 
 BYTES_1GiB = 1073741824  # 1 gibibyte
 BYTES_1GB = 1000000000  # 1 gigabyte
+BYTES_1MB = 1000000  # 1 megabyte
 BYTES_1MiB = 1048576  # 1 mebibyte
 RECOVERY_CHECK_TIME = 10  # seconds
+GET_MEMBER_STATE_TIME = 10  # seconds
 
 
 class Error(Exception):
@@ -558,7 +560,7 @@ class MySQLCharmBase(CharmBase, ABC):
             secret = self.model.get_secret(id=secret_id)
             content = secret.get_content()
             self.app_secrets = content
-            logger.debug(f"Retrieved secert {key} for app from juju")
+            logger.debug(f"Retrieved secret {key} for app from juju")
 
         return self.app_secrets.get(key)
 
@@ -747,11 +749,13 @@ class MySQLBase(ABC):
         self,
         *,
         profile: str,
+        memory_limit: Optional[int] = None,
     ) -> str:
         """Render mysqld ini configuration file.
 
         Args:
             profile: profile to use for the configuration (testing, production)
+            memory_limit: memory limit to use for the configuration in bytes
 
         Returns: mysqld ini file string content
         """
@@ -764,6 +768,10 @@ class MySQLBase(ABC):
             disable_memory_instruments = "performance-schema-instrument = 'memory/%=OFF'"
         else:
             available_memory = self.get_available_memory()
+            if memory_limit:
+                # when memory limit is set, we need to use the minimum
+                # between the available memory and the limit
+                available_memory = min(available_memory, memory_limit)
             (
                 innodb_buffer_pool_size,
                 innodb_buffer_pool_chunk_size,
@@ -1747,6 +1755,15 @@ class MySQLBase(ABC):
             if value["memberrole"] == "primary":
                 return label
 
+    def is_unit_primary(self, unit_label: str) -> bool:
+        """Test if a given unit is the cluster primary.
+
+        Args:
+            unit_label: The label of the unit to test
+        """
+        primary_label = self.get_primary_label()
+        return primary_label == unit_label
+
     def set_cluster_primary(self, new_primary_address: str) -> None:
         """Set the cluster primary.
 
@@ -1907,7 +1924,7 @@ class MySQLBase(ABC):
             )
             raise MySQLCheckUserExistenceError(e.message)
 
-    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(10))
+    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(GET_MEMBER_STATE_TIME))
     def get_member_state(self) -> Tuple[str, str]:
         """Get member status in cluster.
 

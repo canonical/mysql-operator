@@ -258,7 +258,6 @@ class TestMySQLBase(unittest.TestCase):
         configure_instance_commands = [
             "dba.configure_instance('serverconfig:serverconfigpassword@127.0.0.1', ",
             '{"restart": "true"})',
-            # , "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
         ]
 
         self.mysql.configure_instance(create_cluster_admin=False)
@@ -783,7 +782,6 @@ class TestMySQLBase(unittest.TestCase):
 
         state = self.mysql.get_member_state()
         self.assertEqual(state, ("online", "primary"))
-
         _run_mysqlcli_script.return_value = (
             "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
             "ONLINE\tSECONDARY\t<uuid>\t<uuid>\n"
