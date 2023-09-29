@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
+import jinja2
 from charms.mysql.v0.mysql import (
     Error,
     MySQLBase,
@@ -24,6 +25,7 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v1 import snap
+from ops.charm import CharmBase
 from tenacity import retry, stop_after_delay, wait_fixed
 from typing_extensions import override
 
@@ -95,6 +97,7 @@ class MySQL(MySQLBase):
         monitoring_password: str,
         backups_user: str,
         backups_password: str,
+        charm: CharmBase,
     ):
         """Initialize the MySQL class.
 
@@ -111,6 +114,7 @@ class MySQL(MySQLBase):
             monitoring_password: password for the monitoring user
             backups_user: user name used to create backups
             backups_password: password for the backups user
+            charm: The charm object
         """
         super().__init__(
             instance_address=instance_address,
@@ -126,6 +130,8 @@ class MySQL(MySQLBase):
             backups_user=backups_user,
             backups_password=backups_password,
         )
+
+        self.charm = charm
 
     @staticmethod
     def install_and_configure_mysql_dependencies() -> None:
@@ -214,9 +220,11 @@ class MySQL(MySQLBase):
         Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        logger.debug("Copying custom mysqld config")
+        logger.debug("Creating custom mysqld config")
         try:
-            content = self.render_myqld_configuration(profile=profile)
+            content = self.render_myqld_configuration(
+                profile=profile, snap_common=CHARMED_MYSQL_COMMON_DIRECTORY
+            )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
@@ -226,6 +234,27 @@ class MySQL(MySQLBase):
 
         with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
             config_file.write(content)
+
+    def setup_logrotate_and_cron(self) -> None:
+        """Create and write the logrotate config file."""
+        logger.debug("Creating logrotate config file")
+
+        with open("templates/logrotate.j2", "r") as file:
+            template = jinja2.Template(file.read())
+
+        rendered = template.render(
+            system_user=MYSQL_SYSTEM_USER,
+            snap_common_directory=CHARMED_MYSQL_COMMON_DIRECTORY,
+            charm_directory=self.charm.charm_dir,
+            unit_name=self.charm.unit.name,
+        )
+
+        with open("/etc/logrotate.d/flush_mysql_logs", "w") as file:
+            file.write(rendered)
+
+        cron = "* * * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
+        with open("/etc/cron.d/flush_mysql_logs", "w") as file:
+            file.write(cron)
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
