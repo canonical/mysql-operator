@@ -329,10 +329,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
             primary = self._get_primary_from_online_peer()
-            if (
-                primary
-                and self._mysql.get_cluster_node_count(from_instance=primary) == GR_MAX_MEMBERS
-            ):
+            if primary:
                 # Reset variables to allow unit join the cluster
                 self.unit_peer_data["member-state"] = "waiting"
                 del self.unit_peer_data["unit-initialized"]

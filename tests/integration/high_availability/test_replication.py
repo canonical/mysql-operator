@@ -372,8 +372,9 @@ async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
     app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
     unit = ops_test.model.applications[app].units[0]
 
-    log_types = ["error", "general", "slowquery"]
-    log_files = ["error.log", "general.log", "slowquery.log"]
+    # Exclude slowquery log files as slowquery logs are not enabled by default
+    log_types = ["error", "general"]
+    log_files = ["error.log", "general.log"]
     archive_directories = ["archive_error", "archive_general", "archive_slowquery"]
 
     logger.info("Removing the cron file")
@@ -400,7 +401,7 @@ async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
 
-    assert len(ls_la_output) == 3, f"❌ files other than log files exist {ls_la_output}"
+    assert len(ls_la_output) == len(log_files), f"❌ files other than log files exist {ls_la_output}"
     directories = [line.split()[-1] for line in ls_la_output]
     assert sorted(directories) == sorted(
         log_files
@@ -418,7 +419,7 @@ async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
     )
 
     assert (
-        len(ls_la_output) == 6
+        len(ls_la_output) == len(log_files + archive_directories)
     ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
     directories = [line.split()[-1] for line in ls_la_output]
     assert sorted(directories) == sorted(
@@ -426,7 +427,8 @@ async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
     ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
 
     logger.info("Ensuring log files were rotated")
-    for log in log_types:
+    # Exclude checking slowquery log rotation as slowquery logs are disabled by default
+    for log in set(log_types):
         file_contents = await read_contents_from_file_in_unit(
             ops_test, unit, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{log}.log"
         )
