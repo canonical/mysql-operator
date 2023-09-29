@@ -1734,6 +1734,14 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
+    def test_is_unit_primary(self, _get_cluster_status):
+        """Test is_unit_primary."""
+        _get_cluster_status.return_value = SHORT_CLUSTER_STATUS
+
+        self.assertTrue(self.mysql.is_unit_primary("mysql-k8s-1"))
+        self.assertFalse(self.mysql.is_unit_primary("mysql-k8s-2"))
+
     @patch("charms.mysql.v0.mysql.RECOVERY_CHECK_TIME", 0.1)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_member_state")
     def test_hold_if_recovering(self, mock_get_member_state):
