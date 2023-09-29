@@ -9,11 +9,13 @@ import socket
 import subprocess
 from typing import Optional
 
+import ops
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
+    BYTES_1MB,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
@@ -57,10 +59,11 @@ from tenacity import (
     wait_fixed,
 )
 
-from config import STATIC_CONFIGS, CharmConfig, MySQLConfig
+from config import CharmConfig, MySQLConfig
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
+    CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -70,6 +73,7 @@ from constants import (
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
+    MYSQLD_CUSTOM_CONFIG_FILE,
     PASSWORD_LENGTH,
     PEER,
     ROOT_PASSWORD_KEY,
@@ -127,7 +131,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
-        self.mysql_config = MySQLConfig()
+        self.mysql_config = MySQLConfig(MYSQLD_CUSTOM_CONFIG_FILE)
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
         self.database_relation = MySQLProvider(self)
@@ -223,39 +227,43 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # empty config means not initialized, skipping
             return
 
-        # always update config file
-        self._mysql.write_mysqld_config(
-            profile=self.config.profile, memory_limit=self.config.profile_limit_memory
+        # render the new config
+        memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
+        new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
+            profile=self.config.profile,
+            snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
+            memory_limit=memory_limit_bytes,
         )
 
-        # retrieve the new config
-        new_config = self.mysql_config.custom_config or dict()
+        changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        changed_config = compare_dictionaries(previous_config, new_config)
-
-        if changed_config & STATIC_CONFIGS:
+        if self.mysql_config.keys_requires_restart(changed_config):
             # there are static configurations in changed keys
             logger.info("Configuration change requires restart")
 
-            # if self._mysql.is_unit_primary(self.unit_label):
-            #    restart_data = self.model.get_relation("restart").data
-            #    restart_states = {
-            #        restart_data[unit].get("state", "unset") for unit in self.peers.units
-            #    }
-            #    if restart_states != {"release"}:
-            #        # other units restarting, Defer
-            #        logger.debug("Primary is waiting for other units to restart")
-            #        event.defer()
-            #        return
+            if self._mysql.is_unit_primary(self.unit_label):
+                restart_states = {
+                    self.restart_peers.data[unit].get("state", "unset")
+                    for unit in self.peers.units
+                }
+                if restart_states != {"release"}:
+                    # Wait other units restart first to minimize primary switchover
+                    logger.debug("Primary is waiting for other units to restart")
+                    event.defer()
+                    return
 
+            # persist config to file
+            self._mysql.write_content_to_file(
+                path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
+            )
             self.on[f"{self.restart.name}"].acquire_lock.emit()
             return
 
-        if dynamic_config := changed_config - STATIC_CONFIGS:
+        if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
             # if only dynamic config changed, apply it
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
-                self._mysql.set_dynamic_variable(config, new_config[config])
+                self._mysql.set_dynamic_variable(config, new_config_dict[config])
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -424,6 +432,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.debug("skip status update while upgrading")
             return
 
+        # unset restart control flag
+        del self.restart_peers.data[self.unit]["state"]
+
         if self._is_unit_waiting_to_join_cluster():
             self._join_unit_to_cluster()
             return
@@ -524,6 +535,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def unit_fqdn(self) -> str:
         """Returns the unit's FQDN."""
         return socket.getfqdn()
+
+    @property
+    def restart_peers(self) -> Optional[ops.model.Relation]:
+        """Retrieve the peer relation."""
+        return self.model.get_relation("restart")
 
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""

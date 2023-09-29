@@ -12,41 +12,40 @@ from typing import Optional
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
 from pydantic import validator
 
-from constants import MYSQLD_CUSTOM_CONFIG_FILE
-
 logger = logging.getLogger(__name__)
-
-# Static config requires workload restart
-STATIC_CONFIGS = {
-    "innodb_buffer_pool_size",
-    "innodb_buffer_pool_chunk_size",
-    "group_replication_message_cache_size",
-}
-
-
-class StrippedConfigParser(configparser.RawConfigParser):
-    """ConfigParser that strips quotes from values.
-
-    Necessary because MySQL config files use quotes around some values.
-    """
-
-    def get(self, section, option):
-        """Return the value of the named option in the named section."""
-        return super().get(section, option).strip('"')
 
 
 class MySQLConfig:
     """Configuration."""
 
+    # Static config requires workload restart
+    static_config = {
+        "innodb_buffer_pool_size",
+        "innodb_buffer_pool_chunk_size",
+        "group_replication_message_cache_size",
+    }
+
+    def __init__(self, config_file_path: str):
+        """Initialize config."""
+        self.config_file_path = config_file_path
+
+    def keys_requires_restart(self, keys: set) -> bool:
+        """Check if keys require restart."""
+        return bool(keys & self.static_config)
+
+    def filter_static_keys(self, keys: set) -> set:
+        """Filter static keys."""
+        return keys - self.static_config
+
     @property
     def custom_config(self) -> Optional[dict]:
         """Return current custom config dict."""
-        if not os.path.exists(MYSQLD_CUSTOM_CONFIG_FILE):
+        if not os.path.exists(self.config_file_path):
             return None
 
-        cp = StrippedConfigParser()
+        cp = configparser.ConfigParser(interpolation=None)
 
-        with open(MYSQLD_CUSTOM_CONFIG_FILE, "r") as config_file:
+        with open(self.config_file_path, "r") as config_file:
             cp.read_file(config_file)
 
         return dict(cp["mysqld"])

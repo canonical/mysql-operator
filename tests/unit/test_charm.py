@@ -37,6 +37,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.db_router_relation_id = self.harness.add_relation("db-router", "app")
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
+        self.harness.add_relation("restart", "restart")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")

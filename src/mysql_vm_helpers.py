@@ -223,7 +223,7 @@ class MySQL(MySQLBase):
             # Convert from config value in MB to bytes
             memory_limit = memory_limit * BYTES_1MB
         try:
-            content = self.render_myqld_configuration(
+            content_str, _ = self.render_mysqld_configuration(
                 profile=profile,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
@@ -237,7 +237,7 @@ class MySQL(MySQLBase):
 
         self.write_content_to_file(
             path=MYSQLD_CUSTOM_CONFIG_FILE,
-            content=content,
+            content=content_str,
         )
 
     def setup_logrotate_and_cron(self) -> None:

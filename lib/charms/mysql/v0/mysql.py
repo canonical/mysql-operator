@@ -758,13 +758,13 @@ class MySQLBase(ABC):
         self.backups_user = backups_user
         self.backups_password = backups_password
 
-    def render_myqld_configuration(
+    def render_mysqld_configuration(
         self,
         *,
         profile: str,
         memory_limit: Optional[int] = None,
         snap_common: str = "",
-    ) -> str:
+    ) -> tuple[str, dict]:
         """Render mysqld ini configuration file.
 
         Args:
@@ -772,7 +772,7 @@ class MySQLBase(ABC):
             memory_limit: memory limit to use for the configuration in bytes
             snap_common: snap common directory (for log files locations in vm)
 
-        Returns: mysqld ini file string content
+        Returns: a tuple with mysqld ini file string content and a the config dict
         """
         performance_schema_instrument = ""
         if profile == "testing":
@@ -825,7 +825,7 @@ class MySQLBase(ABC):
 
         with io.StringIO() as string_io:
             config.write(string_io)
-            return string_io.getvalue()
+            return string_io.getvalue(), dict(config["mysqld"])
 
     def configure_mysql_users(self):
         """Configure the MySQL users for the instance.
