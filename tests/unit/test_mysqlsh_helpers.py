@@ -48,6 +48,7 @@ class TestMySQL(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
+            None,
         )
 
     @patch("tempfile.NamedTemporaryFile")
@@ -266,6 +267,11 @@ class TestMySQL(unittest.TestCase):
                 "report_host = 127.0.0.1",
                 "max_connections = 111",
                 "innodb_buffer_pool_size = 1234",
+                "log_error_services = log_filter_internal;log_sink_internal",
+                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+                "general_log = ON",
+                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
                 "innodb_buffer_pool_chunk_size = 5678",
                 "\n",
             )
@@ -301,6 +307,11 @@ class TestMySQL(unittest.TestCase):
                 "report_host = 127.0.0.1",
                 "max_connections = 20",
                 "innodb_buffer_pool_size = 20971520",
+                "log_error_services = log_filter_internal;log_sink_internal",
+                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+                "general_log = ON",
+                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
                 "innodb_buffer_pool_chunk_size = 1048576",
                 "performance-schema-instrument = 'memory/%=OFF'",
                 "loose-group_replication_message_cache_size = 134217728",

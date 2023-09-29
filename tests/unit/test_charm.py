@@ -148,8 +148,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
     def test_on_start(
         self,
+        _setup_logrotate_and_cron,
         _write_mysqld_config,
         _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,
@@ -184,8 +186,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
     def test_on_start_exceptions(
         self,
+        _setup_logrotate_and_cron,
         _write_mysqld_config,
         _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,

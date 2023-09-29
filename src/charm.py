@@ -77,6 +77,7 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
+from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
 from mysql_vm_helpers import (
     MySQL,
@@ -107,6 +108,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     """Operator framework charm for MySQL."""
 
     config_type = CharmConfig
+    # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
+    # (which runs juju-run/juju-exec to dispatch a custom event from cron)
+    on = FlushMySQLLogsCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -154,6 +158,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             substrate="vm",
         )
         self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
+
+        self.mysql_logs = MySQLLogs(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -374,10 +380,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
             primary = self._get_primary_from_online_peer()
-            if (
-                primary
-                and self._mysql.get_cluster_node_count(from_instance=primary) == GR_MAX_MEMBERS
-            ):
+            if primary:
                 # Reset variables to allow unit join the cluster
                 self.unit_peer_data["member-state"] = "waiting"
                 del self.unit_peer_data["unit-initialized"]
@@ -504,6 +507,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.get_secret("app", MONITORING_PASSWORD_KEY),
             BACKUPS_USERNAME,
             self.get_secret("app", BACKUPS_PASSWORD_KEY),
+            self,
         )
 
     @property
@@ -572,6 +576,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.write_mysqld_config(
             profile=self.config.profile, memory_limit=self.config.profile_limit_memory
         )
+        self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
