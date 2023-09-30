@@ -29,9 +29,8 @@ async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None
             application_name=MYSQL_APP_NAME,
             num_units=3,
             channel="8.0/stable",
-            constraints="mem=2G",
             series=mysql_charm_series,
-            # config={"profile": "testing"}, # config not available in 8.0/stable@r151
+            config={"profile": "testing"},
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,
