@@ -23,6 +23,7 @@ class MySQLConfig:
         "innodb_buffer_pool_size",
         "innodb_buffer_pool_chunk_size",
         "group_replication_message_cache_size",
+        "log_error",
     }
 
     def __init__(self, config_file_path: str):
