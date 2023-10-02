@@ -1661,6 +1661,13 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.mysql.set_dynamic_variable(variable="variable", value="value")
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            'session.run_sql("SET GLOBAL variable=`/a/path/value`")',
+        )
+        self.mysql.set_dynamic_variable(variable="variable", value="/a/path/value")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError
 

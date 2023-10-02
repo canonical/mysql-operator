@@ -1149,6 +1149,11 @@ class MySQLBase(ABC):
         """
         if not instance_address:
             instance_address = self.instance_address
+
+        # escape variable values when needed
+        if not re.match(r"^[0-9,a-z,A-Z$_]+$", value):
+            value = f"`{value}`"
+
         logger.debug(f"Setting {variable} to {value} on {instance_address}")
         set_var_command = [
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{instance_address}')",
