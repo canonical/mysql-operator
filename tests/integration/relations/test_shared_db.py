@@ -222,14 +222,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest, mysql_charm_series: 
         )
 
         # Scale down the primary unit of mysql
-        primary_unit = await get_primary_unit(
-            ops_test,
-            random_unit,
-            APP_NAME,
-            CLUSTER_NAME,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-        )
+        primary_unit = await get_primary_unit(ops_test, random_unit, APP_NAME)
         primary_unit_name = primary_unit.name
 
         await ops_test.model.destroy_units(primary_unit_name)
