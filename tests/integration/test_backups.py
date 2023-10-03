@@ -7,9 +7,9 @@ from pathlib import Path
 
 import boto3
 import pytest
+from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 
-from ops import JujuVersion
 from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,

@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import patch
 
+import pytest
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
@@ -69,6 +70,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
+    @pytest.mark.usefixtures("only_without_juju_secrets")
     def test_on_leader_elected_sets_mysql_passwords_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -281,6 +283,7 @@ class TestCharm(unittest.TestCase):
         )
         assert self.charm.get_secret("unit", "password") == "test-password"
 
+    @pytest.mark.usefixtures("only_without_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._on_leader_elected")
     def test_set_secret(self, _):
