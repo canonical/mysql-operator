@@ -105,10 +105,10 @@ jobs:
           - series: jammy
             bases-index: 0
         # juju-snap-channel:  ["2.9/stable", "3.1/stable"]
-        juju-snap-channel:  ["3.1/stable"]
+        juju-snap-channel:  ["3.1/candidate"]
         include:
-          - juju-snap-channel: "3.1/stable"
-            agent-version: "3.1.5"
+          - juju-snap-channel: "3.1/candidate"
+            agent-version: "3.1.6"
             libjuju-version:  "3.2.0.1"
           # - juju-snap-channel: "2.9/stable"
           #   agent-version: "2.9.44.0"
