@@ -20,7 +20,14 @@ from mysql.connector.errors import (
     ProgrammingError,
 )
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 from constants import SERVER_CONFIG_USERNAME
 
@@ -30,6 +37,10 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 16 * 60
 TIMEOUT_BIG = 25 * 60
+
+
+class NoResponseError(Exception):
+    """Exception class to pass to 'retry'."""
 
 
 async def run_command_on_unit(unit, command: str) -> Optional[str]:
@@ -114,7 +125,9 @@ async def scale_application(
         )
 
 
-@retry(stop=stop_after_attempt(30), wait=wait_fixed(5), reraise=True)
+@retry(
+    stop=stop_after_attempt(30), wait=wait_fixed(5), retry=retry_if_exception_type(NoResponseError)
+)
 async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
@@ -146,7 +159,7 @@ async def get_primary_unit(
     raw_output = await run_command_on_unit(unit, " ".join(commands))
 
     if not raw_output:
-        raise ValueError("Command return nothing")
+        raise NoResponseError("Command return nothing")
 
     matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
     if not matches:
