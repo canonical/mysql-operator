@@ -218,9 +218,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
 
         if not self.upgrade.idle:
-            # defer config-changed event until upgrade is complete
-            logger.debug("Deferring config-changed event until upgrade is complete")
-            event.defer()
+            # skip when upgrade is in progress
+            # the upgrade already restart the daemon
             return
 
         if not self._mysql.is_mysqld_running:
