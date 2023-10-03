@@ -151,7 +151,6 @@ test stderr"""
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
@@ -209,7 +208,6 @@ Juju Version: test-juju-version
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))

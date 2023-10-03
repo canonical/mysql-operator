@@ -18,6 +18,7 @@ from mysql.connector.errors import (
     OperationalError,
     ProgrammingError,
 )
+from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
@@ -42,8 +43,15 @@ async def run_command_on_unit(unit, command: str) -> Optional[str]:
         command execution output or none if
         the command produces no output.
     """
-    action = await unit.run(command)
-    return action.results.get("Stdout", None)
+    juju_version = JujuVersion.from_environ()
+
+    # Syntax changed across Juju major versions
+    if juju_version.has_secrets:
+        action = await unit.run(command, block=True)
+        return action.results.get("stdout", None)
+    else:
+        action = await unit.run(command)
+        return action.results.get("Stdout", None)
 
 
 def generate_random_string(length: int) -> str:

@@ -9,6 +9,7 @@ import boto3
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from ops import JujuVersion
 from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
@@ -246,7 +247,12 @@ async def test_restore_on_same_cluster(
             action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
         result = await action.wait()
-        assert result.results.get("Code") == "0"
+
+        # Syntax changed across Juju major versions
+        if JujuVersion.from_environ().has_secrets:
+            assert result.results.get("return-code") == 0
+        else:
+            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
@@ -367,7 +373,11 @@ async def test_restore_on_new_cluster(
             action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
         result = await action.wait()
-        assert result.results.get("Code") == "0"
+
+        if JujuVersion.from_environ().has_secrets:
+            assert result.results.get("return-code") == 0
+        else:
+            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
