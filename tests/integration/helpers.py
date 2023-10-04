@@ -137,8 +137,9 @@ async def get_primary_unit(
     primary_unit = None
     for k, v in result.results["status"]["defaultreplicaset"]["topology"].items():
         if v["memberrole"] == "primary":
-            unit_name = k.replace("-", "/")
+            unit_name = f"{app_name}/{k.split('-')[-1]}"
             primary_unit = [unit for unit in units if unit.name == unit_name][0]
+            break
 
     if not primary_unit:
         raise ValueError("Unable to find primary unit")
