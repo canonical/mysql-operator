@@ -5,6 +5,11 @@ import asyncio
 import logging
 
 import pytest
+from integration.helpers import (
+    get_leader_unit,
+    get_primary_unit_wrapper,
+    retrieve_database_variable_value,
+)
 from integration.high_availability.high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
@@ -21,7 +26,7 @@ TEST_APP_NAME = "mysql-test-app"
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_deploy_stable(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     await asyncio.gather(
         ops_test.model.deploy(
@@ -29,9 +34,8 @@ async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None
             application_name=MYSQL_APP_NAME,
             num_units=3,
             channel="8.0/stable",
-            constraints="mem=2G",
             series=mysql_charm_series,
-            # config={"profile": "testing"}, # config not available in 8.0/stable@r151
+            config={"profile": "testing"},
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,
@@ -48,6 +52,31 @@ async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None
         timeout=TIMEOUT,
     )
     assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
+    """Test that the pre-upgrade-check action runs successfully."""
+    mysql_units = ops_test.model.applications[MYSQL_APP_NAME].units
+
+    logger.info("Get leader unit")
+    leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
+
+    assert leader_unit is not None, "No leader unit found"
+    logger.info("Run pre-upgrade-check action")
+    action = await leader_unit.run_action("pre-upgrade-check")
+    await action.wait()
+
+    logger.info("Assert slow shutdown is enabled")
+    for unit in mysql_units:
+        value = await retrieve_database_variable_value(ops_test, unit, "innodb_fast_shutdown")
+        assert value == 0, f"innodb_fast_shutdown not 0 at {unit.name}"
+
+    primary_unit = await get_primary_unit_wrapper(ops_test, MYSQL_APP_NAME)
+
+    logger.info("Assert primary is set to leader")
+    assert await primary_unit.is_leader_from_status(), "Primary unit not set to leader"
 
 
 @pytest.mark.group(1)
