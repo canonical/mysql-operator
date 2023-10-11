@@ -222,7 +222,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # the upgrade already restart the daemon
             return
 
-        if not self._mysql.is_mysqld_running:
+        if not self._mysql.is_mysqld_running():
             # defer config-changed event until MySQL is running
             logger.debug("Deferring config-changed event until MySQL is running")
             event.defer()
@@ -246,17 +246,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if self.mysql_config.keys_requires_restart(changed_config):
             # there are static configurations in changed keys
             logger.info("Configuration change requires restart")
-
-            if self._mysql.is_unit_primary(self.unit_label):
-                restart_states = {
-                    self.restart_peers.data[unit].get("state", "unset")
-                    for unit in self.peers.units
-                }
-                if restart_states != {"release"}:
-                    # Wait other units restart first to minimize primary switchover
-                    logger.debug("Primary is waiting for other units to restart")
-                    event.defer()
-                    return
 
             # persist config to file
             self._mysql.write_content_to_file(
@@ -773,8 +762,18 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.unit.status = WaitingStatus("waiting to join the cluster")
             logger.debug("Waiting to joing the cluster, failed to acquire lock.")
 
-    def _restart(self, _: EventBase) -> None:
+    def _restart(self, event: EventBase) -> None:
         """Restart the MySQL service."""
+        if self._mysql.is_unit_primary(self.unit_label):
+            restart_states = {
+                self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
+            }
+            if restart_states != {"release"}:
+                # Wait other units restart first to minimize primary switchover
+                logger.debug("Primary is waiting for other units to restart")
+                event.defer()
+                return
+
         self.unit.status = MaintenanceStatus("restarting MySQL")
         self._mysql.restart_mysqld()
         self.unit.status = ActiveStatus(self.active_status_message)
