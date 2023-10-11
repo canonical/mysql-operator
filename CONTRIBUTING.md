@@ -44,6 +44,13 @@ tox run -e integration   # integration tests
 tox                      # runs 'lint' and 'unit' environments
 ```
 
+Tests by default are using Juju 2.9. In case tests are to be run against Juju 3, the following
+environment variable should be defined with a valid `juju` Python library version:
+
+```
+export LIBJUJU_VERSION_SPECIFIER=3.2.0.1
+```
+
 ## Build charm
 
 Build the charm in this git repository using:
