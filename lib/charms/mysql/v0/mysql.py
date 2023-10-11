@@ -2574,7 +2574,9 @@ class MySQLBase(ABC):
         """Flushes the specified logs_type logs."""
         flush_logs_commands = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            'session.run_sql("SET sql_log_bin = 0")',
             f'session.run_sql("FLUSH {logs_type.value}")',
+            'session.run_sql("SET sql_log_bin = 1")',
         )
 
         try:
