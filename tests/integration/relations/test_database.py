@@ -113,14 +113,7 @@ async def test_password_rotation(ops_test: OpsTest):
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        DATABASE_APP_NAME,
-        CLUSTER_NAME,
-        old_credentials["username"],
-        old_credentials["password"],
-    )
+    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
     primary_unit_address = await primary_unit.get_public_address()
     logger.debug(
         "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
@@ -158,14 +151,7 @@ async def test_password_rotation_silent(ops_test: OpsTest):
     old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        DATABASE_APP_NAME,
-        CLUSTER_NAME,
-        old_credentials["username"],
-        old_credentials["password"],
-    )
+    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
     primary_unit_address = await primary_unit.get_public_address()
     logger.debug(
         "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
@@ -196,20 +182,12 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
     random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
 
     root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
-    server_config_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
 
     old_credentials = await fetch_credentials(random_unit)
     assert old_credentials["password"] == root_credentials["password"]
 
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(
-        ops_test,
-        random_unit,
-        DATABASE_APP_NAME,
-        CLUSTER_NAME,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-    )
+    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
     primary_unit_address = await primary_unit.get_public_address()
     logger.debug(
         "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
