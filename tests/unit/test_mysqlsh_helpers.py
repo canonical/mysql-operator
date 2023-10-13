@@ -6,7 +6,7 @@
 import os
 import subprocess
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, call, mock_open, patch
 
 from charms.mysql.v0.mysql import (
     MySQLClientError,
@@ -21,6 +21,7 @@ from constants import (
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     MYSQLD_CONFIG_DIRECTORY,
+    MYSQLD_CUSTOM_CONFIG_FILE,
 )
 from mysql_vm_helpers import (
     MySQL,
@@ -47,6 +48,7 @@ class TestMySQL(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
+            None,
         )
 
     @patch("tempfile.NamedTemporaryFile")
@@ -228,6 +230,9 @@ class TestMySQL(unittest.TestCase):
 
         _snap_cache.assert_not_called()
 
+    @patch("shutil.chown")
+    @patch("os.chmod")
+    @patch("mysql_vm_helpers.MySQL.get_available_memory", return_value=16475447296)
     @patch(
         "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678, None)
     )
@@ -235,7 +240,14 @@ class TestMySQL(unittest.TestCase):
     @patch("pathlib.Path")
     @patch("builtins.open")
     def test_write_mysqld_config(
-        self, _open, _path, _get_innodb_buffer_pool_parameters, _get_max_connections
+        self,
+        _open,
+        _path,
+        _get_innodb_buffer_pool_parameters,
+        _get_max_connections,
+        _get_available_memory,
+        _chmod,
+        _chown,
     ):
         """Test successful execution of create_custom_mysqld_config."""
         self.maxDiff = None
@@ -245,7 +257,7 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.write_mysqld_config(profile="production")
+        self.mysql.write_mysqld_config(profile="production", memory_limit=None)
 
         config = "\n".join(
             (
@@ -255,6 +267,11 @@ class TestMySQL(unittest.TestCase):
                 "report_host = 127.0.0.1",
                 "max_connections = 111",
                 "innodb_buffer_pool_size = 1234",
+                "log_error_services = log_filter_internal;log_sink_internal",
+                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+                "general_log = ON",
+                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
                 "innodb_buffer_pool_chunk_size = 5678",
                 "\n",
             )
@@ -263,13 +280,14 @@ class TestMySQL(unittest.TestCase):
         _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
-        _open.assert_called_once_with(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w")
+        _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
+        _get_available_memory.assert_called_once()
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted(
                 [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
+                    call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
                     call().__enter__(),
                     call().write(config),
                     call().__exit__(None, None, None),
@@ -279,7 +297,7 @@ class TestMySQL(unittest.TestCase):
 
         # Test `testing` profile
         _open_mock.reset_mock()
-        self.mysql.write_mysqld_config(profile="testing")
+        self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
 
         config = "\n".join(
             (
@@ -289,6 +307,11 @@ class TestMySQL(unittest.TestCase):
                 "report_host = 127.0.0.1",
                 "max_connections = 20",
                 "innodb_buffer_pool_size = 20971520",
+                "log_error_services = log_filter_internal;log_sink_internal",
+                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+                "general_log = ON",
+                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
                 "innodb_buffer_pool_chunk_size = 1048576",
                 "performance-schema-instrument = 'memory/%=OFF'",
                 "loose-group_replication_message_cache_size = 134217728",
@@ -300,7 +323,7 @@ class TestMySQL(unittest.TestCase):
             sorted(_open_mock.mock_calls),
             sorted(
                 [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w"),
+                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
                     call().__enter__(),
                     call().write(config),
                     call().__exit__(None, None, None),
@@ -324,7 +347,7 @@ class TestMySQL(unittest.TestCase):
         _open.side_effect = _open_mock
 
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.write_mysqld_config(profile="production")
+            self.mysql.write_mysqld_config(profile="production", memory_limit=None)
 
     @patch("subprocess.run")
     def test_execute_commands(self, _run):
@@ -444,20 +467,20 @@ class TestMySQL(unittest.TestCase):
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
         _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
-    @patch("mysql_vm_helpers.MySQL._execute_commands")
-    def test_get_available_memory(self, _execute_commands):
-        """Test successful execution of get_available_memory()."""
-        _execute_commands.return_value = "16484458496\n", None
-
-        total_memory = self.mysql.get_available_memory()
-
-        self.assertEqual(16484458496, total_memory)
-
-        _execute_commands.assert_called_once_with(
-            "free --bytes | awk '/^Mem:/{print $2; exit}'".split(),
-            bash=True,
+    def test_get_available_memory(self):
+        meminfo = (
+            "MemTotal:       16089488 kB"
+            "MemFree:          799284 kB"
+            "MemAvailable:    3926924 kB"
+            "Buffers:          187232 kB"
+            "Cached:          4445936 kB"
+            "SwapCached:       156012 kB"
+            "Active:         11890336 kB"
         )
-        _execute_commands.reset_mock()
-        _execute_commands.side_effect = MySQLExecError
-        with self.assertRaises(MySQLGetAvailableMemoryError):
-            self.mysql.get_available_memory()
+
+        with patch("builtins.open", mock_open(read_data=meminfo)):
+            self.assertEqual(self.mysql.get_available_memory(), 16475635712)
+
+        with patch("builtins.open", mock_open(read_data="")):
+            with self.assertRaises(MySQLGetAvailableMemoryError):
+                self.mysql.get_available_memory()

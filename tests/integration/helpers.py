@@ -4,10 +4,10 @@
 import itertools
 import json
 import logging
-import re
 import secrets
 import string
 import subprocess
+import tempfile
 from typing import Dict, List, Optional, Set
 
 import yaml
@@ -118,10 +118,7 @@ async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
     app_name: str,
-    cluster_name: str,
-    server_config_username: str,
-    server_config_password: str,
-) -> str:
+) -> Unit:
     """Helper to retrieve the primary unit.
 
     Args:
@@ -129,45 +126,24 @@ async def get_primary_unit(
         unit: A unit on which to run dba.get_cluster().status() on
         app_name: The name of the test application
         cluster_name: The name of the test cluster
-        server_config_username: The server config username
-        server_config_password: The server config password
 
     Returns:
         A juju unit that is a MySQL primary
     """
-    commands = [
-        "charmed-mysql.mysqlsh",
-        "--python",
-        f"{server_config_username}:{server_config_password}@127.0.0.1",
-        "-e",
-        f"\"print('<CLUSTER_STATUS>' + dba.get_cluster('{cluster_name}').status().__repr__() + '</CLUSTER_STATUS>')\"",
-    ]
-    raw_output = await run_command_on_unit(unit, " ".join(commands))
+    units = ops_test.model.applications[app_name].units
+    action = await unit.run_action("get-cluster-status")
+    result = await action.wait()
 
-    if not raw_output:
-        raise ValueError("Command return nothing")
+    primary_unit = None
+    for k, v in result.results["status"]["defaultreplicaset"]["topology"].items():
+        if v["memberrole"] == "primary":
+            unit_name = f"{app_name}/{k.split('-')[-1]}"
+            primary_unit = [unit for unit in units if unit.name == unit_name][0]
+            break
 
-    matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
-    if not matches:
-        raise ValueError("Cluster status not found")
-
-    # strip and remove escape characters `\`
-    string_output = matches.group(1).strip().replace("\\", "")
-
-    cluster_status = json.loads(string_output)
-
-    primary_label = [
-        label
-        for label, member in cluster_status["defaultReplicaSet"]["topology"].items()
-        if member["mode"] == "R/W"
-    ][0]
-    primary_name = "/".join(primary_label.rsplit("-", 1))
-
-    for unit in ops_test.model.applications[app_name].units:
-        if unit.name == primary_name:
-            return unit
-
-    return None
+    if not primary_unit:
+        raise ValueError("Unable to find primary unit")
+    return primary_unit
 
 
 async def get_server_config_credentials(unit: Unit) -> Dict:
@@ -536,25 +512,15 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
         The primary Unit object
     """
     logger.info("Retrieving primary unit")
+    units = ops_test.model.applications[app_name].units
     if unit_excluded:
         # if defined, exclude unit from available unit to run command on
         # useful when the workload is stopped on unit
-        unit = (
-            {
-                unit
-                for unit in ops_test.model.applications[app_name].units
-                if unit.name != unit_excluded.name
-            }
-        ).pop()
+        unit = ({unit for unit in units if unit.name != unit_excluded.name}).pop()
     else:
-        unit = ops_test.model.applications[app_name].units[0]
-    cluster = cluster_name(unit, ops_test.model.info.name)
+        unit = units[0]
 
-    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
-
-    primary_unit = await get_primary_unit(
-        ops_test, unit, app_name, cluster, SERVER_CONFIG_USERNAME, server_config_password
-    )
+    primary_unit = await get_primary_unit(ops_test, unit, app_name)
 
     return primary_unit
 
@@ -885,3 +851,139 @@ async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
     get_cluster_status_action = await unit.run_action("get-cluster-status")
     cluster_status_results = await get_cluster_status_action.wait()
     return cluster_status_results.results
+
+
+async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, path: str) -> bool:
+    """Delete a file in the provided unit.
+
+    Args:
+        ops_test: The ops test framework
+        unit_name: The name unit on which to delete the file from
+        path: The path of file or directory to delete
+
+    Returns:
+        boolean indicating success
+    """
+    if path.strip() in ["/", "."]:
+        return
+
+    try:
+        return_code, _, _ = await ops_test.juju(
+            "ssh", unit_name, "sudo", "find", path, "-maxdepth", "1", "-delete"
+        )
+
+        return return_code == 0
+    except Exception:
+        return False
+
+
+async def write_content_to_file_in_unit(
+    ops_test: OpsTest, unit: Unit, path: str, content: str
+) -> None:
+    """Write content to the file in the provided unit.
+
+    Args:
+        ops_test: The ops test framework
+        unit: THe unit in which to write to file in
+        path: The path at which to write the content to
+        content: The content to write to the file.
+    """
+    with tempfile.NamedTemporaryFile(mode="w") as temp_file:
+        temp_file.write(content)
+        temp_file.flush()
+
+        await unit.scp_to(temp_file.name, "/tmp/file")
+
+    return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "mv", "/tmp/file", path)
+    assert return_code == 0
+
+    return_code, _, _ = await ops_test.juju(
+        "ssh", unit.name, "sudo", "chown", "snap_daemon:root", path
+    )
+    assert return_code == 0
+
+
+async def read_contents_from_file_in_unit(ops_test: OpsTest, unit: Unit, path: str) -> str:
+    """Read contents from file in the provided unit.
+
+    Args:
+        ops_test: The ops test framework
+        unit: The unit in which to read file from
+        path: The path from which to read content from
+
+    Returns:
+        the contents of the file
+    """
+    return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "cp", path, "/tmp/file")
+    assert return_code == 0
+
+    return_code, _, _ = await ops_test.juju(
+        "ssh", unit.name, "sudo", "chown", "ubuntu:ubuntu", "/tmp/file"
+    )
+    assert return_code == 0
+
+    with tempfile.NamedTemporaryFile(mode="r+") as temp_file:
+        await unit.scp_from("/tmp/file", temp_file.name)
+
+        temp_file.seek(0)
+
+        contents = ""
+        for line in temp_file:
+            contents += line
+            contents += "\n"
+
+    return_code, _, _ = await ops_test.juju("ssh", unit.name, "sudo", "rm", "/tmp/file")
+    assert return_code == 0
+
+    return contents
+
+
+async def ls_la_in_unit(ops_test: OpsTest, unit_name: str, directory: str) -> list[str]:
+    """Returns the output of ls -la in unit.
+
+    Args:
+        ops_test: The ops test framework
+        unit_name: The name of unit in which to run ls -la
+        path: The path from which to run ls -la
+
+    Returns:
+        a list of files returned by ls -la
+    """
+    return_code, output, _ = await ops_test.juju("ssh", unit_name, "sudo", "ls", "-la", directory)
+    assert return_code == 0
+
+    ls_output = output.split("\n")[1:]
+
+    return [
+        line.strip("\r")
+        for line in ls_output
+        if len(line.strip()) > 0 and line.split()[-1] not in [".", ".."]
+    ]
+
+
+async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -> None:
+    """Stop running any logrotate jobs that may have been triggered by cron.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to be tested
+    """
+    # send TERM signal to mysql daemon, which trigger shutdown process
+    await ops_test.juju(
+        "ssh",
+        unit_name,
+        "sudo",
+        "pkill",
+        "-15",
+        "-f",
+        "logrotate -f /etc/logrotate.d/flush_mysql_logs",
+    )
+
+    # hold execution until process is stopped
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
+            with attempt:
+                if await get_process_pid(ops_test, unit_name, "logrotate"):
+                    raise Exception
+    except RetryError:
+        raise Exception("Failed to stop the flush_mysql_logs logrotate process.")

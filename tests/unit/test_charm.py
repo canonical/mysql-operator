@@ -37,6 +37,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.db_router_relation_id = self.harness.add_relation("db-router", "app")
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
+        self.harness.add_relation("restart", "restart")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")
@@ -88,13 +89,15 @@ class TestCharm(unittest.TestCase):
             "cluster-admin-password",
             "monitoring-password",
             "backups-password",
+            "cluster-name",
+            "cluster-set-domain-name",
         ]
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
         )
 
     @patch_network_get(private_address="1.1.1.1")
-    def test_on_config_changed_sets_config_cluster_name_in_peer_databag(self):
+    def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
             self.peer_relation_id, self.harness.charm.app
@@ -102,8 +105,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(peer_relation_databag, {})
 
         # trigger the leader_elected and config_changed events
-        self.harness.set_leader(True)
         self.harness.update_config({"cluster-name": "test-cluster"})
+        self.harness.set_leader(True)
 
         # ensure that the peer relation has 'cluster_name' set to the config value
         peer_relation_databag = self.harness.get_relation_data(
@@ -146,8 +149,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
     def test_on_start(
         self,
+        _setup_logrotate_and_cron,
         _write_mysqld_config,
         _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,
@@ -182,8 +187,10 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
     @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
     def test_on_start_exceptions(
         self,
+        _setup_logrotate_and_cron,
         _write_mysqld_config,
         _get_pid_of_port_3306,
         _reset_root_password_and_start_mysqld,
