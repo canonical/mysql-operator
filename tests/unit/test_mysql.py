@@ -1694,9 +1694,13 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_verify_server_upgradable(self, _run_mysqlsh_script):
         """Test is_server_upgradable."""
         commands = (
-            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
             "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
-            "except ValueError:\n    print('SAME_VERSION')",
+            "except ValueError:",
+            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] == shell.version.split()[1]:",
+            "        print('SAME_VERSION')",
+            "    else:",
+            "        raise",
         )
         _run_mysqlsh_script.return_value = (
             "Some info header to be stripped\n"
