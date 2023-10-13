@@ -258,7 +258,6 @@ class TestMySQLBase(unittest.TestCase):
         configure_instance_commands = [
             "dba.configure_instance('serverconfig:serverconfigpassword@127.0.0.1', ",
             '{"restart": "true"})',
-            # , "clusterAdmin": "clusteradmin", "clusterAdminPassword": "clusteradminpassword"})',
         ]
 
         self.mysql.configure_instance(create_cluster_admin=False)
@@ -783,7 +782,6 @@ class TestMySQLBase(unittest.TestCase):
 
         state = self.mysql.get_member_state()
         self.assertEqual(state, ("online", "primary"))
-
         _run_mysqlcli_script.return_value = (
             "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
             "ONLINE\tSECONDARY\t<uuid>\t<uuid>\n"
@@ -1663,6 +1661,13 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.mysql.set_dynamic_variable(variable="variable", value="value")
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
+        commands = (
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            'session.run_sql("SET GLOBAL variable=`/a/path/value`")',
+        )
+        self.mysql.set_dynamic_variable(variable="variable", value="/a/path/value")
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError
 
@@ -1735,6 +1740,14 @@ xtrabackup/location --defaults-file=defaults/config/file
         _get_cluster_status.return_value = SHORT_CLUSTER_STATUS
 
         self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
+    def test_is_unit_primary(self, _get_cluster_status):
+        """Test is_unit_primary."""
+        _get_cluster_status.return_value = SHORT_CLUSTER_STATUS
+
+        self.assertTrue(self.mysql.is_unit_primary("mysql-k8s-1"))
+        self.assertFalse(self.mysql.is_unit_primary("mysql-k8s-2"))
 
     @patch("charms.mysql.v0.mysql.RECOVERY_CHECK_TIME", 0.1)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_member_state")

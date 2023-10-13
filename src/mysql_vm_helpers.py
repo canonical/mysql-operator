@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 import jinja2
 from charms.mysql.v0.mysql import (
+    BYTES_1MB,
     Error,
     MySQLBase,
     MySQLClientError,
@@ -43,6 +44,7 @@ from constants import (
     MYSQL_DATA_DIR,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
+    MYSQLD_CUSTOM_CONFIG_FILE,
     MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
     ROOT_SYSTEM_USER,
@@ -195,35 +197,36 @@ class MySQL(MySQLBase):
     def get_available_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
         try:
-            logger.info("Retrieving the total memory of the server")
+            logger.debug("Querying system total memory")
+            with open("/proc/meminfo") as meminfo:
+                for line in meminfo:
+                    if "MemTotal" in line:
+                        return int(line.split()[1]) * 1024
 
-            """Below is an example output of `free --bytes`:
-                           total        used        free      shared  buff/cache   available
-            Mem:     16484458496 11890454528   265670656  2906722304  4328333312  1321193472
-            Swap:     1027600384  1027600384           0
-            """
-            # need to use sh -c to be able to use pipes
-            get_total_memory_command = "free --bytes | awk '/^Mem:/{print $2; exit}'".split()
-
-            total_memory, _ = self._execute_commands(
-                get_total_memory_command,
-                bash=True,
-            )
-            return int(total_memory)
-        except MySQLExecError:
-            logger.exception("Failed to execute commands to query total memory")
+            raise MySQLGetAvailableMemoryError
+        except OSError:
+            logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(self, profile: str) -> None:
+    def write_mysqld_config(self, profile: str, memory_limit: Optional[int]) -> None:
         """Create custom mysql config file.
 
-        Raises MySQLCreateCustomMySQLDConfigError if there is an error creating the
+        Args:
+            profile: profile to use for the mysql config
+            memory_limit: memory limit to use for the mysql config in MB
+
+        Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        logger.debug("Creating custom mysqld config")
+        logger.debug("Writing mysql configuration file")
+        if memory_limit:
+            # Convert from config value in MB to bytes
+            memory_limit = memory_limit * BYTES_1MB
         try:
-            content = self.render_myqld_configuration(
-                profile=profile, snap_common=CHARMED_MYSQL_COMMON_DIRECTORY
+            content_str, _ = self.render_mysqld_configuration(
+                profile=profile,
+                snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
+                memory_limit=memory_limit,
             )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
@@ -232,8 +235,10 @@ class MySQL(MySQLBase):
         # create the mysqld config directory if it does not exist
         pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
 
-        with open(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w") as config_file:
-            config_file.write(content)
+        self.write_content_to_file(
+            path=MYSQLD_CUSTOM_CONFIG_FILE,
+            content=content_str,
+        )
 
     def setup_logrotate_and_cron(self) -> None:
         """Create and write the logrotate config file."""
@@ -550,6 +555,11 @@ class MySQL(MySQLBase):
                 logger.exception("Failed to start mysqld")
 
             raise MySQLStartMySQLDError(e.message)
+
+    def restart_mysqld(self) -> None:
+        """Restarts the mysqld process."""
+        self.stop_mysqld()
+        self.start_mysqld()
 
     def flush_host_cache(self) -> None:
         """Flush the MySQL in-memory host cache."""
