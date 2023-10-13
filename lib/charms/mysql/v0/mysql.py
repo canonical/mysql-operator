@@ -116,7 +116,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 50
+LIBPATCH = 51
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -2554,7 +2554,6 @@ class MySQLBase(ABC):
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             'session.run_sql("SET sql_log_bin = 0")',
             f'session.run_sql("FLUSH {logs_type.value}")',
-            'session.run_sql("SET sql_log_bin = 1")',
         )
 
         try:
