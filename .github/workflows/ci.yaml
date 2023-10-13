@@ -69,7 +69,7 @@ jobs:
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
-      juju-agent-version: 2.9.43
+      juju-agent-version: 2.9.45
     secrets:
       integration-test: |
         {
