@@ -151,7 +151,6 @@ test stderr"""
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
@@ -164,21 +163,18 @@ test stderr"""
         _backup,
         _pre_backup,
         _upload_content_to_s3,
-        _from_environ,
         _can_unit_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
     ):
         """Test _on_create_backup()."""
-        _from_environ.return_value.__str__.return_value = "test-juju-version"
-
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
 
         expected_metadata = f"""Date Backup Requested: 2023-03-07%13:43:15Z
 Model Name: {self.charm.model.name}
 Application Name: {self.charm.model.app.name}
 Unit Name: {self.charm.unit.name}
-Juju Version: test-juju-version
+Juju Version: 0.0.0
 """
         expected_backup_path = "/path/2023-03-07%13:43:15Z"
         expected_s3_params = {"path": "/path"}
@@ -189,7 +185,6 @@ Juju Version: test-juju-version
 
         _retrieve_s3_parameters.assert_called_once()
         _can_unit_perform_backup.assert_called_once()
-        _from_environ.assert_called()
         _upload_content_to_s3.assert_called_once_with(
             expected_metadata, f"{expected_backup_path}.metadata", expected_s3_params
         )
@@ -209,7 +204,6 @@ Juju Version: test-juju-version
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
     )
-    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=MagicMock())
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
     @patch("charms.mysql.v0.backups.MySQLBackups._backup", return_value=(True, None))
@@ -222,14 +216,11 @@ Juju Version: test-juju-version
         _backup,
         _pre_backup,
         _upload_content_to_s3,
-        _from_environ,
         _can_unit_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
     ):
         """Test failure of _on_create_backup()."""
-        _from_environ.return_value.__str__.return_value = "test-juju-version"
-
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
 
         # test failure with _post_backup

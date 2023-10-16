@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import patch
 
+import pytest
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
@@ -69,6 +70,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
+    @pytest.mark.usefixtures("only_without_juju_secrets")
     def test_on_leader_elected_sets_mysql_passwords_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -95,6 +97,33 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             sorted(peer_relation_databag.keys()), sorted(expected_peer_relation_databag_keys)
         )
+
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    def test_on_leader_elected_sets_mysql_passwords_secret(self):
+        # ensure that the peer relation databag is empty
+        peer_relation_databag = self.harness.get_relation_data(
+            self.peer_relation_id, self.harness.charm.app
+        )
+        self.assertEqual(peer_relation_databag, {})
+
+        # trigger the leader_elected event
+        self.harness.set_leader(True)
+
+        # ensure passwords set in the peer relation databag
+        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.harness.charm.app)[
+            "secret-id"
+        ]
+
+        expected_peer_relation_databag_keys = [
+            "root-password",
+            "server-config-password",
+            "cluster-admin-password",
+            "monitoring-password",
+            "backups-password",
+        ]
+
+        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
+        self.assertEqual(sorted(secret_data.keys()), sorted(expected_peer_relation_databag_keys))
 
     @patch_network_get(private_address="1.1.1.1")
     def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):
@@ -281,9 +310,10 @@ class TestCharm(unittest.TestCase):
         )
         assert self.charm.get_secret("unit", "password") == "test-password"
 
+    @pytest.mark.usefixtures("only_without_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._on_leader_elected")
-    def test_set_secret(self, _):
+    def test_set_secret_databag(self, _):
         self.harness.set_leader()
 
         # Test application scope.
@@ -304,6 +334,42 @@ class TestCharm(unittest.TestCase):
         assert (
             self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)["password"]
             == "test-password"
+        )
+
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_leader_elected")
+    def test_set_secret(self, _):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.app.name
+        )
+        self.charm.set_secret("app", "password", "test-password")
+        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.charm.app.name)[
+            "secret-id"
+        ]
+        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
+        assert secret_data["password"] == "test-password"
+
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.app.name
+        )
+
+        # Test unit scope.
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.unit.name
+        )
+        self.charm.set_secret("unit", "password", "test-password")
+        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)[
+            "secret-id"
+        ]
+        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
+        assert secret_data["password"] == "test-password"
+
+        assert "password" not in self.harness.get_relation_data(
+            self.peer_relation_id, self.charm.unit.name
         )
 
     @patch_network_get(private_address="1.1.1.1")
