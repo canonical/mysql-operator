@@ -29,3 +29,18 @@ def generate_random_hash() -> str:
     """
     random_characters = generate_random_password(20)
     return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
+
+
+def compare_dictionaries(dict1: dict, dict2: dict) -> set:
+    """Compare two dictionaries and return a set of keys that are different."""
+    different_keys = set()
+
+    # exiting keys with different values
+    for key in dict1.keys():
+        if key in dict2 and dict1[key] != dict2[key]:
+            different_keys.add(key)
+
+    # non existent keys
+    different_keys = different_keys | dict2.keys() ^ dict1.keys()
+
+    return different_keys

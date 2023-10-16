@@ -9,10 +9,13 @@ import socket
 import subprocess
 from typing import Optional
 
+import ops
+from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
+    BYTES_1MB,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
@@ -29,6 +32,8 @@ from charms.mysql.v0.mysql import (
     MySQLSetClusterPrimaryError,
 )
 from charms.mysql.v0.tls import MySQLTLS
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
+from ops import EventBase
 from ops.charm import (
     InstallEvent,
     RelationBrokenEvent,
@@ -54,9 +59,11 @@ from tenacity import (
     wait_fixed,
 )
 
+from config import CharmConfig, MySQLConfig
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
+    CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -66,6 +73,7 @@ from constants import (
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
+    MYSQLD_CUSTOM_CONFIG_FILE,
     PASSWORD_LENGTH,
     PEER,
     ROOT_PASSWORD_KEY,
@@ -91,7 +99,7 @@ from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
 from relations.shared_db import SharedDBRelation
 from upgrade import MySQLVMUpgrade, get_mysql_dependencies_model
-from utils import generate_random_hash, generate_random_password
+from utils import compare_dictionaries, generate_random_hash, generate_random_password
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +108,10 @@ class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
 
 
-class MySQLOperatorCharm(MySQLCharmBase):
+class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     """Operator framework charm for MySQL."""
 
+    config_type = CharmConfig
     # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
     # (which runs juju-run/juju-exec to dispatch a custom event from cron)
     on = FlushMySQLLogsCharmEvents()
@@ -122,6 +131,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
 
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
+        self.mysql_config = MySQLConfig(MYSQLD_CUSTOM_CONFIG_FILE)
         self.shared_db_relation = SharedDBRelation(self)
         self.db_router_relation = DBRouterRelation(self)
         self.database_relation = MySQLProvider(self)
@@ -151,6 +161,7 @@ class MySQLOperatorCharm(MySQLCharmBase):
             relation_name="upgrade",
             substrate="vm",
         )
+        self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
 
         self.mysql_logs = MySQLLogs(self)
 
@@ -189,22 +200,65 @@ class MySQLOperatorCharm(MySQLCharmBase):
                 )
         self.unit_peer_data.update({"leader": "true"})
 
+        # Create and set cluster and cluster-set names in the peer relation databag
+        common_hash = generate_random_hash()
+        self.app_peer_data.setdefault(
+            "cluster-name", self.config.cluster_name or f"cluster-{common_hash}"
+        )
+        self.app_peer_data.setdefault("cluster-set-domain-name", f"cluster-set-{common_hash}")
+
     def _on_leader_settings_changed(self, _) -> None:
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, _) -> None:
+    def _on_config_changed(self, event: EventBase) -> None:
         """Handle the config changed event."""
-        # Only execute on leader unit
-        if not self.unit.is_leader():
+        if not self._is_peer_data_set:
+            # skip when not initialized
             return
 
-        # Create and set cluster and cluster-set names in the peer relation databag
-        common_hash = generate_random_hash()
-        self.app_peer_data.setdefault(
-            "cluster-name", self.config.get("cluster-name", f"cluster-{common_hash}")
+        if not self.upgrade.idle:
+            # skip when upgrade is in progress
+            # the upgrade already restart the daemon
+            return
+
+        if not self._mysql.is_mysqld_running():
+            # defer config-changed event until MySQL is running
+            logger.debug("Deferring config-changed event until MySQL is running")
+            event.defer()
+            return
+
+        previous_config = self.mysql_config.custom_config
+        if not previous_config:
+            # empty config means not initialized, skipping
+            return
+
+        # render the new config
+        memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
+        new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
+            profile=self.config.profile,
+            snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
+            memory_limit=memory_limit_bytes,
         )
-        self.app_peer_data.setdefault("cluster-set-domain-name", f"cluster-set-{common_hash}")
+
+        changed_config = compare_dictionaries(previous_config, new_config_dict)
+
+        if self.mysql_config.keys_requires_restart(changed_config):
+            # there are static configurations in changed keys
+            logger.info("Configuration change requires restart")
+
+            # persist config to file
+            self._mysql.write_content_to_file(
+                path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
+            )
+            self.on[f"{self.restart.name}"].acquire_lock.emit()
+            return
+
+        if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
+            # if only dynamic config changed, apply it
+            logger.info("Configuration does not requires restart")
+            for config in dynamic_config:
+                self._mysql.set_dynamic_variable(config, new_config_dict[config])
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -368,6 +422,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
             logger.debug("skip status update while upgrading")
             return
 
+        # unset restart control flag
+        del self.restart_peers.data[self.unit]["state"]
+
         if self._is_unit_waiting_to_join_cluster():
             self._join_unit_to_cluster()
             return
@@ -469,6 +526,11 @@ class MySQLOperatorCharm(MySQLCharmBase):
         """Returns the unit's FQDN."""
         return socket.getfqdn()
 
+    @property
+    def restart_peers(self) -> Optional[ops.model.Relation]:
+        """Retrieve the peer relation."""
+        return self.model.get_relation("restart")
+
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
         return self.unit_peer_data.get("member-state") == "waiting"
@@ -517,7 +579,9 @@ class MySQLOperatorCharm(MySQLCharmBase):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.write_mysqld_config(profile=self.config["profile"])
+        self._mysql.write_mysqld_config(
+            profile=self.config.profile, memory_limit=self.config.profile_limit_memory
+        )
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
@@ -697,6 +761,22 @@ class MySQLOperatorCharm(MySQLCharmBase):
         except MySQLLockAcquisitionError:
             self.unit.status = WaitingStatus("waiting to join the cluster")
             logger.debug("Waiting to joing the cluster, failed to acquire lock.")
+
+    def _restart(self, event: EventBase) -> None:
+        """Restart the MySQL service."""
+        if self._mysql.is_unit_primary(self.unit_label):
+            restart_states = {
+                self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
+            }
+            if restart_states != {"release"}:
+                # Wait other units restart first to minimize primary switchover
+                logger.debug("Primary is waiting for other units to restart")
+                event.defer()
+                return
+
+        self.unit.status = MaintenanceStatus("restarting MySQL")
+        self._mysql.restart_mysqld()
+        self.unit.status = ActiveStatus(self.active_status_message)
 
 
 if __name__ == "__main__":

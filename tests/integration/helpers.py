@@ -4,7 +4,6 @@
 import itertools
 import json
 import logging
-import re
 import secrets
 import string
 import subprocess
@@ -119,10 +118,7 @@ async def get_primary_unit(
     ops_test: OpsTest,
     unit: Unit,
     app_name: str,
-    cluster_name: str,
-    server_config_username: str,
-    server_config_password: str,
-) -> str:
+) -> Unit:
     """Helper to retrieve the primary unit.
 
     Args:
@@ -130,45 +126,24 @@ async def get_primary_unit(
         unit: A unit on which to run dba.get_cluster().status() on
         app_name: The name of the test application
         cluster_name: The name of the test cluster
-        server_config_username: The server config username
-        server_config_password: The server config password
 
     Returns:
         A juju unit that is a MySQL primary
     """
-    commands = [
-        "charmed-mysql.mysqlsh",
-        "--python",
-        f"{server_config_username}:{server_config_password}@127.0.0.1",
-        "-e",
-        f"\"print('<CLUSTER_STATUS>' + dba.get_cluster('{cluster_name}').status().__repr__() + '</CLUSTER_STATUS>')\"",
-    ]
-    raw_output = await run_command_on_unit(unit, " ".join(commands))
+    units = ops_test.model.applications[app_name].units
+    action = await unit.run_action("get-cluster-status")
+    result = await action.wait()
 
-    if not raw_output:
-        raise ValueError("Command return nothing")
+    primary_unit = None
+    for k, v in result.results["status"]["defaultreplicaset"]["topology"].items():
+        if v["memberrole"] == "primary":
+            unit_name = f"{app_name}/{k.split('-')[-1]}"
+            primary_unit = [unit for unit in units if unit.name == unit_name][0]
+            break
 
-    matches = re.search("<CLUSTER_STATUS>(.+)</CLUSTER_STATUS>", raw_output)
-    if not matches:
-        raise ValueError("Cluster status not found")
-
-    # strip and remove escape characters `\`
-    string_output = matches.group(1).strip().replace("\\", "")
-
-    cluster_status = json.loads(string_output)
-
-    primary_label = [
-        label
-        for label, member in cluster_status["defaultReplicaSet"]["topology"].items()
-        if member["mode"] == "R/W"
-    ][0]
-    primary_name = "/".join(primary_label.rsplit("-", 1))
-
-    for unit in ops_test.model.applications[app_name].units:
-        if unit.name == primary_name:
-            return unit
-
-    return None
+    if not primary_unit:
+        raise ValueError("Unable to find primary unit")
+    return primary_unit
 
 
 async def get_server_config_credentials(unit: Unit) -> Dict:
@@ -537,25 +512,15 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
         The primary Unit object
     """
     logger.info("Retrieving primary unit")
+    units = ops_test.model.applications[app_name].units
     if unit_excluded:
         # if defined, exclude unit from available unit to run command on
         # useful when the workload is stopped on unit
-        unit = (
-            {
-                unit
-                for unit in ops_test.model.applications[app_name].units
-                if unit.name != unit_excluded.name
-            }
-        ).pop()
+        unit = ({unit for unit in units if unit.name != unit_excluded.name}).pop()
     else:
-        unit = ops_test.model.applications[app_name].units[0]
-    cluster = cluster_name(unit, ops_test.model.info.name)
+        unit = units[0]
 
-    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
-
-    primary_unit = await get_primary_unit(
-        ops_test, unit, app_name, cluster, SERVER_CONFIG_USERNAME, server_config_password
-    )
+    primary_unit = await get_primary_unit(ops_test, unit, app_name)
 
     return primary_unit
 

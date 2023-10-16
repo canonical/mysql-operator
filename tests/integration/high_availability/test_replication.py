@@ -16,7 +16,6 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from constants import CHARMED_MYSQL_COMMON_DIRECTORY
 
 from ..helpers import (
-    cluster_name,
     delete_file_or_directory_in_unit,
     execute_queries_on_unit,
     fetch_credentials,
@@ -310,16 +309,8 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
     connection_data = dict()
     for application in apps:
         random_unit = ops_test.model.applications[application].units[0]
-        cluster = cluster_name(random_unit, ops_test.model.info.name)
         server_config_credentials = await get_server_config_credentials(random_unit)
-        primary_unit = await get_primary_unit(
-            ops_test,
-            random_unit,
-            application,
-            cluster,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-        )
+        primary_unit = await get_primary_unit(ops_test, random_unit, application)
 
         primary_unit_address = await primary_unit.get_public_address()
 
