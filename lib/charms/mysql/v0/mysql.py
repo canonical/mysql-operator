@@ -116,7 +116,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 51
+LIBPATCH = 52
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -1848,12 +1848,15 @@ class MySQLBase(ABC):
             MySQLServerUpgradableError: If the server is not upgradable
         """
         check_command = [
-            f"shell.connect_to_primary('{self.server_config_user}"
+            f"shell.connect('{self.server_config_user}"
             f":{self.server_config_password}@{instance or self.instance_address}')",
             "try:",
             "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",  # ValueError is raised for same version check
-            "    print('SAME_VERSION')",
+            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] == shell.version.split()[1]:",
+            "        print('SAME_VERSION')",
+            "    else:",
+            "        raise",
         ]
 
         def _strip_output(output: str):

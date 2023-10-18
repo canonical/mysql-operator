@@ -203,6 +203,27 @@ class MySQLVMUpgrade(DataUpgrade):
         self.charm.unit.status = MaintenanceStatus("recovering unit after upgrade")
 
         try:
+            if self.charm.app.planned_units() > 1:
+                self._recover_multi_unit_cluster()
+            else:
+                self._recover_single_unit_cluster()
+
+            logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
+            self.set_unit_completed()
+            # ensures leader gets it's own relation-changed when it upgrades
+            if self.charm.unit.is_leader():
+                logger.debug("Re-emitting upgrade-changed on leader...")
+                self.on_upgrade_changed(event)
+        except Exception:
+            logger.debug("Upgraded unit is not healthy")
+            self.set_unit_failed()
+            self.charm.unit.status = BlockedStatus(
+                "upgrade failed. Check logs for rollback instruction"
+            )
+
+    def _recover_multi_unit_cluster(self) -> None:
+        logger.debug("Recovering unit")
+        try:
             for attempt in Retrying(
                 stop=stop_after_attempt(RECOVER_ATTEMPTS), wait=wait_fixed(10)
             ):
@@ -214,18 +235,13 @@ class MySQLVMUpgrade(DataUpgrade):
                             f" Retry {attempt.retry_state.attempt_number}/{RECOVER_ATTEMPTS}"
                         )
                         raise Exception
-                    logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
-                    self.set_unit_completed()
-                    # ensures leader gets it's own relation-changed when it upgrades
-                    if self.charm.unit.is_leader():
-                        logger.debug("Re-emitting upgrade-changed on leader...")
-                        self.on_upgrade_changed(event)
         except RetryError:
-            logger.debug("Upgraded unit is not healthy")
-            self.set_unit_failed()
-            self.charm.unit.status = BlockedStatus(
-                "upgrade failed. Check logs for rollback instruction"
-            )
+            raise
+
+    def _recover_single_unit_cluster(self) -> None:
+        """Recover single unit cluster."""
+        logger.debug("Recovering single unit cluster")
+        self.charm._mysql.reboot_from_complete_outage()
 
     def _on_upgrade_changed(self, _) -> None:
         """Handle the upgrade changed event.
@@ -273,7 +289,11 @@ class MySQLVMUpgrade(DataUpgrade):
         Raises:
             VersionError: If the server is not upgradeable.
         """
-        if len(self.upgrade_stack or []) < self.charm.app.planned_units():
+        planned_units = self.charm.app.planned_units()
+        if planned_units == 1:
+            # single unit upgrade, no need for check
+            return
+        if len(self.upgrade_stack or []) < planned_units:
             # check is done for first upgrading unit only
             return
 

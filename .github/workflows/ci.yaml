@@ -179,6 +179,13 @@ jobs:
             echo Skipping unstable tests
             echo "mark_expression=not unstable" >> "$GITHUB_OUTPUT"
           fi
+      - name: Free space in runner
+        run: |
+          # free space in the runner
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: Run integration tests
         run: tox run -e integration -- "${{ matrix.groups.path_to_test_file }}" --group="${{ matrix.groups.group_number }}" -m '${{ steps.select-test-stability.outputs.mark_expression }}' --mysql-charm-series="${{ matrix.ubuntu-versions.series }}" --mysql-charm-bases-index="${{ matrix.ubuntu-versions.bases-index }}"
         env:
