@@ -6,7 +6,8 @@ on:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   push:
-    - main
+    branches:
+      - main
 
 jobs:
   sync-docs:
