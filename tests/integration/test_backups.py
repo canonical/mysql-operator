@@ -3,6 +3,8 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
+import socket
 from pathlib import Path
 
 import boto3
@@ -25,6 +27,8 @@ from .high_availability.high_availability_helpers import (
 
 logger = logging.getLogger(__name__)
 
+host_ip = socket.gethostbyname(socket.gethostname())
+
 CLOUD_CONFIGS = {
     "aws": {
         "endpoint": "https://s3.amazonaws.com",
@@ -38,9 +42,15 @@ CLOUD_CONFIGS = {
         "path": "mysql",
         "region": "",
     },
+    "ceph": {
+        "endpoint": f"http://{host_ip}",
+        "bucket": os.environ["S3_BUCKET"],
+        "path": "mysql-k8s",
+        "region": os.environ["S3_REGION"],
+    },
 }
 S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"
+S3_INTEGRATOR_CHANNEL = "latest/stable"
 TIMEOUT = 10 * 60
 CLUSTER_ADMIN_USER = "clusteradmin"
 CLUSTER_ADMIN_PASSWORD = "clusteradminpassword"
@@ -66,6 +76,10 @@ def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
         "gcp": {
             "access-key": github_secrets["GCP_ACCESS_KEY"],
             "secret-key": github_secrets["GCP_SECRET_KEY"],
+        },
+        "ceph": {
+            "access-key": os.environ["S3_ACCESS_KEY"],
+            "secret-key": os.environ["S3_SECRET_KEY"],
         },
     }
 
