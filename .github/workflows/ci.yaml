@@ -148,11 +148,11 @@ jobs:
         run: |
           pipx install tox
           pipx install poetry
-      - name: Free disk space
+      - name: Free up disk space
         run: |
           echo "Free disk space before cleanup"
           df -T
-          # free space in the runner
+          # From https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost

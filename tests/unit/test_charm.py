@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
 import unittest
 from unittest.mock import patch
 
@@ -13,6 +14,7 @@ from charms.mysql.v0.mysql import (
 )
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
+from parameterized import parameterized
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
@@ -39,6 +41,10 @@ class TestCharm(unittest.TestCase):
         self.db_router_relation_id = self.harness.add_relation("db-router", "app")
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.harness.add_relation("restart", "restart")
+
+    @pytest.fixture
+    def use_caplog(self, caplog):
+        self._caplog = caplog
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")
@@ -110,9 +116,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
 
         # ensure passwords set in the peer relation databag
-        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.harness.charm.app)[
-            "secret-id"
-        ]
+        secret_data = self.harness.model.get_secret(label="mysql.app").get_content()
 
         expected_peer_relation_databag_keys = [
             "root-password",
@@ -122,7 +126,6 @@ class TestCharm(unittest.TestCase):
             "backups-password",
         ]
 
-        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
         self.assertEqual(sorted(secret_data.keys()), sorted(expected_peer_relation_databag_keys))
 
     @patch_network_get(private_address="1.1.1.1")
@@ -347,10 +350,7 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.charm.app.name
         )
         self.charm.set_secret("app", "password", "test-password")
-        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.charm.app.name)[
-            "secret-id"
-        ]
-        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
+        secret_data = self.harness.model.get_secret(label="mysql.app").get_content()
         assert secret_data["password"] == "test-password"
 
         assert "password" not in self.harness.get_relation_data(
@@ -362,10 +362,7 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.charm.unit.name
         )
         self.charm.set_secret("unit", "password", "test-password")
-        secret_id = self.harness.get_relation_data(self.peer_relation_id, self.charm.unit.name)[
-            "secret-id"
-        ]
-        secret_data = self.harness.model.get_secret(id=secret_id).get_content()
+        secret_data = self.harness.model.get_secret(label="mysql.app").get_content()
         assert secret_data["password"] == "test-password"
 
         assert "password" not in self.harness.get_relation_data(
@@ -452,3 +449,136 @@ class TestCharm(unittest.TestCase):
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+    @parameterized.expand([("app"), ("unit")])
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    def test_set_reset_new_secret(self, scope):
+        """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
+        # Getting current password
+        self.harness.set_leader()
+        self.harness.charm.set_secret(scope, "new-secret", "bla")
+        assert self.harness.charm.get_secret(scope, "new-secret") == "bla"
+
+        # Reset new secret
+        self.harness.charm.set_secret(scope, "new-secret", "blablabla")
+        assert self.harness.charm.get_secret(scope, "new-secret") == "blablabla"
+
+        # Set another new secret
+        self.harness.charm.set_secret(scope, "new-secret2", "blablabla")
+        assert self.harness.charm.get_secret(scope, "new-secret2") == "blablabla"
+
+    @parameterized.expand([("app"), ("unit")])
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    def test_invalid_secret(self, scope):
+        with self.assertRaises(TypeError):
+            self.harness.charm.set_secret("unit", "somekey", 1)
+
+        self.harness.charm.set_secret("unit", "somekey", "")
+        assert self.harness.charm.get_secret(scope, "somekey") is None
+
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    def test_migartion(self):
+        """Check if we're moving on to use secrets when live upgrade to Secrets usage."""
+        # Getting current password
+        self.harness.set_leader()
+        entity = getattr(self.charm, "app")
+        self.harness.update_relation_data(self.peer_relation_id, entity.name, {"my-secret": "bla"})
+        assert self.harness.charm.get_secret("app", "my-secret") == "bla"
+
+        # Reset new secret
+        self.harness.charm.set_secret("app", "my-secret", "blablabla")
+        assert self.harness.charm.model.get_secret(label="mysql.app")
+        assert self.harness.charm.get_secret("app", "my-secret") == "blablabla"
+
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    def test_migartion_unit(self):
+        """Check if we're moving on to use secrets when live upgrade to Secrets usage."""
+        # Getting current password
+        entity = getattr(self.charm, "unit")
+        self.harness.update_relation_data(self.peer_relation_id, entity.name, {"my-secret": "bla"})
+        assert self.harness.charm.get_secret("unit", "my-secret") == "bla"
+
+        # Reset new secret
+        self.harness.charm.set_secret("unit", "my-secret", "blablabla")
+        assert self.harness.charm.model.get_secret(label="mysql.unit")
+        assert self.harness.charm.get_secret("unit", "my-secret") == "blablabla"
+
+    @pytest.mark.usefixtures("only_without_juju_secrets")
+    @pytest.mark.usefixtures("use_caplog")
+    def test_delete_password(self):
+        """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
+        self.harness.set_leader()
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.app.name, {"replication": "somepw"}
+        )
+        self.harness.charm.set_secret("app", "replication", "")
+        assert self.harness.charm.get_secret("app", "replication") is None
+
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.unit.name, {"somekey": "somevalue"}
+        )
+        self.harness.charm.set_secret("unit", "somekey", "")
+        assert self.harness.charm.get_secret("unit", "somekey") is None
+
+        with self._caplog.at_level(logging.ERROR):
+            self.harness.charm.set_secret("app", "replication", "")
+            assert (
+                "Non-existing secret app:replication was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("unit", "somekey", "")
+            assert (
+                "Non-existing secret unit:somekey was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("app", "non-existing-secret", "")
+            assert (
+                "Non-existing secret app:non-existing-secret was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("unit", "non-existing-secret", "")
+            assert (
+                "Non-existing secret unit:non-existing-secret was attempted to be removed."
+                in self._caplog.text
+            )
+
+    @pytest.mark.usefixtures("only_with_juju_secrets")
+    @pytest.mark.usefixtures("use_caplog")
+    def test_delete_existing_password_secrets(self):
+        """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
+        self.harness.set_leader()
+        self.harness.charm.set_secret("app", "replication", "somepw")
+        self.harness.charm.set_secret("app", "replication", "")
+        assert self.harness.charm.get_secret("app", "replication") is None
+
+        self.harness.charm.set_secret("unit", "somekey", "somesecret")
+        self.harness.charm.set_secret("unit", "somekey", "")
+        assert self.harness.charm.get_secret("unit", "somekey") is None
+
+        with self._caplog.at_level(logging.ERROR):
+            self.harness.charm.set_secret("app", "replication", "")
+            assert (
+                "Non-existing secret app:replication was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("unit", "somekey", "")
+            assert (
+                "Non-existing secret unit:somekey was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("app", "non-existing-secret", "")
+            assert (
+                "Non-existing secret app:non-existing-secret was attempted to be removed."
+                in self._caplog.text
+            )
+
+            self.harness.charm.set_secret("unit", "non-existing-secret", "")
+            assert (
+                "Non-existing secret unit:non-existing-secret was attempted to be removed."
+                in self._caplog.text
+            )

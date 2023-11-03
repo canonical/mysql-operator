@@ -25,6 +25,7 @@ from ..helpers import (
     fetch_credentials,
     get_primary_unit,
     get_relation_data,
+    get_secret_data,
     is_relation_broken,
     is_relation_joined,
     remove_leader_unit,
@@ -294,6 +295,50 @@ async def test_read_only_endpoints(ops_test: OpsTest):
                 )
     except RetryError:
         assert False
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_without_juju_secrets")
+async def test_password_preserved_in_relation(ops_test: OpsTest):
+    """Check if an empty relation is caching password."""
+    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    old_password = relation_data[0]["application-data"]["password"]
+
+    async with ops_test.fast_forward("60s"):
+        await scale_application(ops_test, DATABASE_APP_NAME, 0)
+
+    async with ops_test.fast_forward("60s"):
+        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+
+    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    new_password = relation_data[0]["application-data"]["password"]
+
+    assert new_password == old_password
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+@pytest.mark.usefixtures("only_with_juju_secrets")
+async def test_password_preserved_in_relation_secrets(ops_test: OpsTest):
+    """Check if an empty relation is caching password."""
+    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    secret_uri = relation_data[0]["application-data"]["secret-user"]
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    old_password = secret_data["password"]
+
+    async with ops_test.fast_forward("60s"):
+        await scale_application(ops_test, DATABASE_APP_NAME, 0)
+
+    async with ops_test.fast_forward("60s"):
+        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+
+    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    secret_uri = relation_data[0]["application-data"]["secret-user"]
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    new_password = secret_data["password"]
+
+    assert new_password == old_password
 
 
 @pytest.mark.group(1)
