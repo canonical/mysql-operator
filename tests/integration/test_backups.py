@@ -45,7 +45,7 @@ CLOUD_CONFIGS = {
     "ceph": {
         "endpoint": f"http://{host_ip}",
         "bucket": os.environ["S3_BUCKET"],
-        "path": "mysql-k8s",
+        "path": "mysql",
         "region": os.environ["S3_REGION"],
     },
 }
