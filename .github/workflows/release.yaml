@@ -14,8 +14,6 @@ jobs:
     secrets: inherit
     permissions:
       actions: write  # Needed to manage GitHub Actions cache
-      contents: write  # Needed to login to Discourse
-      pull-requests: write # Need to create PR
 
   release-libraries:
     name: Release libraries
