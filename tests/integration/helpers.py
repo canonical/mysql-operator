@@ -995,14 +995,3 @@ async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -
                     raise Exception
     except RetryError:
         raise Exception("Failed to stop the flush_mysql_logs logrotate process.")
-
-
-async def get_secret_data(ops_test: OpsTest, secret_uri: str) -> Dict[str, str]:
-    """Retrieving secret data."""
-    secret_id = secret_uri.split("/")[-1]
-
-    command = f"show-secret {secret_uri} --reveal --format=json"
-    _, stdout, _ = await ops_test.juju(*command.split())
-    data = json.loads(stdout)
-
-    return data[secret_id]["content"]["Data"]

@@ -25,7 +25,6 @@ from ..helpers import (
     fetch_credentials,
     get_primary_unit,
     get_relation_data,
-    get_secret_data,
     is_relation_broken,
     is_relation_joined,
     remove_leader_unit,
