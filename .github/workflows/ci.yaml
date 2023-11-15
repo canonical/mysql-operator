@@ -75,8 +75,8 @@ jobs:
           - 3.1.6
     name: Integration test charm
     needs:
-      - lint
-      - unit-test
+#      - lint
+#      - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v6.1.0
     with:
