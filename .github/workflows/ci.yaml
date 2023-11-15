@@ -70,10 +70,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        juju-agent-version:
-          - 2.9.45
-          - 3.1.6
-    name: Integration test charm
+        juju:
+          - agent: 2.9.45
+            libjuju: ^2
+          - agent: 3.1.6
+    name: Integration test charm | ${{ matrix.juju.agent }}
     needs:
 #      - lint
 #      - unit-test
@@ -82,7 +83,8 @@ jobs:
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: lxd
-      juju-agent-version: ${{ matrix.juju-agent-version }}
+      juju-agent-version: ${{ matrix.juju.agent }}
+      libjuju-version-constraint: ${{ matrix.juju.libjuju }}
     secrets:
       integration-test: |
         {
