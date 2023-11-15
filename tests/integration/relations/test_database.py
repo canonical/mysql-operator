@@ -6,7 +6,6 @@ import asyncio
 import logging
 from pathlib import Path
 
-from .. import markers
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
@@ -20,6 +19,7 @@ from constants import (
 )
 from utils import generate_random_password
 
+from .. import markers
 from ..helpers import (
     check_read_only_endpoints,
     execute_queries_on_unit,
