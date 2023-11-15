@@ -1,16 +1,13 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import subprocess
+import importlib.metadata
 
 import ops
 import pytest
 
-juju_version = ops.JujuVersion(
-    subprocess.run(
-        ["juju", "version"], capture_output=True, check=True, encoding="utf-8"
-    ).stdout.split("-")[0]
-)
-
-only_with_juju_secrets = pytest.mark.skipif(not juju_version.has_secrets)
-only_without_juju_secrets = pytest.mark.skipif(juju_version.has_secrets)
+# libjuju version != juju agent version, but the major version should be identical—which is good
+# enough to check for secrets
+_libjuju_version = ops.JujuVersion(importlib.metadata.version("juju"))
+only_with_juju_secrets = pytest.mark.skipif(not _libjuju_version.has_secrets)
+only_without_juju_secrets = pytest.mark.skipif(_libjuju_version.has_secrets)
