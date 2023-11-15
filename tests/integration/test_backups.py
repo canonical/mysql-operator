@@ -261,6 +261,7 @@ async def test_restore_on_same_cluster(
         result = await action.wait()
 
         # Syntax changed across Juju major versions
+        logger.warning(f"{juju_.has_secrets=}")
         if juju_.has_secrets:
             assert result.results.get("return-code") == 0
         else:
