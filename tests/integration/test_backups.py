@@ -11,6 +11,7 @@ import pytest
 from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 
+from . import juju_
 from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
@@ -260,7 +261,7 @@ async def test_restore_on_same_cluster(
         result = await action.wait()
 
         # Syntax changed across Juju major versions
-        if JujuVersion.from_environ().has_secrets:
+        if juju_.has_secrets:
             assert result.results.get("return-code") == 0
         else:
             assert result.results.get("Code") == "0"
