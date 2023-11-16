@@ -46,7 +46,7 @@ value_before_backup, value_after_backup = None, None
 def cloud_configs():
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
-    path = f"mysql-{uuid.uuid4()}"
+    path = f"mysql/{uuid.uuid4()}"
 
     return {
         "aws": {
