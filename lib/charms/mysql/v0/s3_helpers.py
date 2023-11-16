@@ -132,7 +132,7 @@ def list_backups_in_s3_path(s3_parameters: Dict) -> List[Tuple[str, str]]:
             for content in page.get("Contents", []):
                 key = content["Key"]
 
-                filename = re.sub(r"^{0}".format(re.escape(s3_path_directory)), "", key)
+                filename = re.sub(rf"^{re.escape(s3_path_directory)}", "", key)
 
                 if ".metadata" in filename:
                     try:
