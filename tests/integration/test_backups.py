@@ -387,7 +387,7 @@ async def test_restore_on_new_cluster(
         )
         result = await action.wait()
 
-        if JujuVersion.from_environ().has_secrets:
+        if juju_.has_secrets:
             assert result.results.get("return-code") == 0
         else:
             assert result.results.get("Code") == "0"
