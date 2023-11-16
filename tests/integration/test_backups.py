@@ -8,7 +8,6 @@ from pathlib import Path
 
 import boto3
 import pytest
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 
 from . import juju_
