@@ -43,14 +43,11 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="session")
-def path():
+def cloud_configs():
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
-    return f"mysql-{uuid.uuid4()}"
+    path = f"mysql-{uuid.uuid4()}"
 
-
-@pytest.fixture(scope="session")
-def cloud_configs(path):
     return {
         "aws": {
             "endpoint": "https://s3.amazonaws.com",
@@ -109,7 +106,7 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
 
 
 @pytest.mark.group(1)
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str, path) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
@@ -127,9 +124,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str, path
 
     logger.info("Deploying s3 integrator")
 
-    await ops_test.model.deploy(
-        S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL, config={"path": path}
-    )
+    await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
     await ops_test.model.relate(mysql_application_name, S3_INTEGRATOR)
 
     await ops_test.model.wait_for_idle(
