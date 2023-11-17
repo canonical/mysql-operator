@@ -23,6 +23,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
+from . import juju_
 
 from .connector import MysqlConnector
 
@@ -408,7 +409,7 @@ async def is_unit_in_cluster(
     Returns:
         A boolean
     """
-    results = await action_unit.run_action(action_name="get-cluster-status")
+    results = await juju_.run_action(action_unit, action_name="get-cluster-status")
     logger.error(results)
     assert False, results
     raise Exception(f"{results=}")
