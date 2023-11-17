@@ -396,7 +396,9 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
 
 
 @retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> bool:
+async def is_unit_in_cluster(
+    ops_test: OpsTest, unit_name: str, action_unit: juju.unit.Unit
+) -> bool:
     """Check is unit is online in the cluster.
 
     Args:
@@ -406,6 +408,11 @@ async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name
     Returns:
         A boolean
     """
+    results = await action_unit.run_action(action_name="get-cluster-status")
+    logger.error(results)
+    assert False, results
+    raise Exception(f"{results=}")
+
     _, raw_status, _ = await ops_test.juju(
         "run-action", action_unit_name, "get-cluster-status", "--format=yaml", "--wait"
     )
