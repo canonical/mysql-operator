@@ -254,16 +254,9 @@ async def test_restore_on_same_cluster(
         # restore the backup
         logger.info(f"Restoring backup with id {backups_by_cloud[cloud_name]}")
 
-        action = await mysql_unit.run_action(
-            action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
+        await juju_.run_action(
+            mysql_unit, action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
-        result = await action.wait()
-
-        # Syntax changed across Juju major versions
-        if juju_.has_secrets:
-            assert result.results.get("return-code") == 0
-        else:
-            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
@@ -380,15 +373,9 @@ async def test_restore_on_new_cluster(
         # restore the backup
         logger.info(f"Restoring backup with id {backups_by_cloud[cloud_name]}")
 
-        action = await primary_mysql.run_action(
-            action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
+        await juju_.run_action(
+            primary_mysql, action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
-        result = await action.wait()
-
-        if juju_.has_secrets:
-            assert result.results.get("return-code") == 0
-        else:
-            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(

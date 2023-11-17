@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from typing import Dict, List, Optional, Set
 
+import juju.unit
 import yaml
 from juju.unit import Unit
 from mysql.connector.errors import (
@@ -18,7 +19,6 @@ from mysql.connector.errors import (
     OperationalError,
     ProgrammingError,
 )
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
@@ -31,28 +31,6 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 16 * 60
 TIMEOUT_BIG = 25 * 60
-
-
-async def run_command_on_unit(unit, command: str) -> Optional[str]:
-    """Run a command in one Juju unit.
-
-    Args:
-        unit: the Juju unit instance.
-        command: the command to run.
-
-    Returns:
-        command execution output or none if
-        the command produces no output.
-    """
-    juju_version = JujuVersion.from_environ()
-
-    # Syntax changed across Juju major versions
-    if juju_version.has_secrets:
-        action = await unit.run(command, block=True)
-        return action.results.get("stdout", None)
-    else:
-        action = await unit.run(command)
-        return action.results.get("Stdout", None)
 
 
 def generate_random_string(length: int) -> str:
