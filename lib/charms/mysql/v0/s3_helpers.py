@@ -15,7 +15,6 @@
 """S3 helper functions for the MySQL charms."""
 
 import logging
-import re
 import tempfile
 import time
 from typing import Dict, List, Tuple
@@ -132,7 +131,7 @@ def list_backups_in_s3_path(s3_parameters: Dict) -> List[Tuple[str, str]]:
             for content in page.get("Contents", []):
                 key = content["Key"]
 
-                filename = re.sub(rf"^{re.escape(s3_path_directory)}", "", key)
+                filename = key.removeprefix(s3_path_directory)
 
                 if ".metadata" in filename:
                     try:
