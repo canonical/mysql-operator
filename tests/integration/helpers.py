@@ -23,8 +23,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
-from . import juju_
 
+from . import juju_
 from .connector import MysqlConnector
 
 logger = logging.getLogger(__name__)
