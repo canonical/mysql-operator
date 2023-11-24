@@ -22,7 +22,7 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.charm = self.harness.charm
 
-    @pytest.mark.usefixtures("only_without_juju_secrets")
+    @pytest.mark.usefixtures("without_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
@@ -78,7 +78,6 @@ class TestMariaDBRelation(unittest.TestCase):
             },
         )
 
-    @pytest.mark.usefixtures("only_with_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
