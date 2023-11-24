@@ -389,6 +389,8 @@ async def is_unit_in_cluster(
     """
     results = await juju_.run_action(action_unit, action_name="get-cluster-status")
     logger.error(results)
+    logger.error("foo")
+    logger.error(f"{type(results)=} {results[list(results.keys())[0]]['results']}")
     assert False, results
     raise Exception(f"{results=}")
 
