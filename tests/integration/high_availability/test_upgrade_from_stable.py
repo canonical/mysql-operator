@@ -16,6 +16,8 @@ from integration.high_availability.high_availability_helpers import (
 )
 from pytest_operator.plugin import OpsTest
 
+from tests.integration import juju_
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20 * 60
@@ -65,8 +67,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
     assert leader_unit is not None, "No leader unit found"
     logger.info("Run pre-upgrade-check action")
-    action = await leader_unit.run_action("pre-upgrade-check")
-    await action.wait()
+    await juju_.run_action(leader_unit, "pre-upgrade-check")
 
     logger.info("Assert slow shutdown is enabled")
     for unit in mysql_units:

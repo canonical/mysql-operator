@@ -167,10 +167,11 @@ async def test_backup(
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
-            "sync-s3-credentials", **cloud_credentials[cloud_name]
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
+            "sync-s3-credentials",
+            **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name, S3_INTEGRATOR],
@@ -181,24 +182,21 @@ async def test_backup(
         # list backups
         logger.info("Listing existing backup ids")
 
-        action = await zeroth_unit.run_action(action_name="list-backups")
-        result = await action.wait()
-        output = result.results["backups"]
+        results = await juju_.run_action(zeroth_unit, "list-backups")
+        output = results["backups"]
         backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
         # create backup
         logger.info("Creating backup")
 
-        action = await non_primary_units[0].run_action(action_name="create-backup")
-        result = await action.wait()
-        backup_id = result.results["backup-id"]
+        results = await juju_.run_action(non_primary_units[0], "create-backup")
+        backup_id = results["backup-id"]
 
         # list backups again and ensure new backup id exists
         logger.info("Listing backup ids post backup")
 
-        action = await zeroth_unit.run_action(action_name="list-backups")
-        result = await action.wait()
-        output = result.results["backups"]
+        results = await juju_.run_action(zeroth_unit, "list-backups")
+        output = results["backups"]
         new_backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
         assert sorted(new_backup_ids) == sorted(backup_ids + [backup_id])
@@ -239,11 +237,11 @@ async def test_restore_on_same_cluster(
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
             "sync-s3-credentials",
             **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name, S3_INTEGRATOR],
@@ -358,11 +356,11 @@ async def test_restore_on_new_cluster(
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
             "sync-s3-credentials",
             **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[new_mysql_application_name, S3_INTEGRATOR],

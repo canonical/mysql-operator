@@ -118,11 +118,10 @@ async def get_primary_unit(
         A juju unit that is a MySQL primary
     """
     units = ops_test.model.applications[app_name].units
-    action = await unit.run_action("get-cluster-status")
-    result = await action.wait()
+    results = await juju_.run_action(unit, "get-cluster-status")
 
     primary_unit = None
-    for k, v in result.results["status"]["defaultreplicaset"]["topology"].items():
+    for k, v in results["status"]["defaultreplicaset"]["topology"].items():
         if v["memberrole"] == "primary":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
             primary_unit = [unit for unit in units if unit.name == unit_name][0]
@@ -142,10 +141,7 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the server config username and password
     """
-    action = await unit.run_action(action_name="get-password", username=SERVER_CONFIG_USERNAME)
-    result = await action.wait()
-
-    return result.results
+    return await juju_.run_action(unit, "get-password", username=SERVER_CONFIG_USERNAME)
 
 
 async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
@@ -158,13 +154,8 @@ async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
         A dictionary with the server config username and password
     """
     if username is None:
-        action = await unit.run_action(action_name="get-password")
-    else:
-        action = await unit.run_action(action_name="get-password", username=username)
-
-    result = await action.wait()
-
-    return result.results
+        return await juju_.run_action(unit, "get-password")
+    return await juju_.run_action(unit, "get-password", username=username)
 
 
 async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> Dict:
@@ -177,16 +168,11 @@ async def rotate_credentials(unit: Unit, username: str = None, password: str = N
         A dictionary with the action result
     """
     if username is None:
-        action = await unit.run_action(action_name="set-password")
+        return await juju_.run_action(unit, "set-password")
     elif password is None:
-        action = await unit.run_action(action_name="set-password", username=username)
+        return await juju_.run_action(unit, "set-password", username=username)
     else:
-        action = await unit.run_action(
-            action_name="set-password", username=username, password=password
-        )
-    result = await action.wait()
-
-    return result.results
+        return await juju_.run_action(unit, "set-password", username=username, password=password)
 
 
 async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
@@ -198,10 +184,7 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the credentials
     """
-    action = await unit.run_action("get-legacy-mysql-credentials")
-    result = await action.wait()
-
-    return result.results
+    return await juju_.run_action(unit, "get-legacy-mysql-credentials")
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
@@ -214,10 +197,8 @@ async def get_system_user_password(unit: Unit, user: str) -> Dict:
     Returns:
         A dictionary with the credentials
     """
-    action = await unit.run_action("get-password", username=user)
-    result = await action.wait()
-
-    return result.results.get("password")
+    results = await juju_.run_action(unit, "get-password", username=user)
+    return results.get("password")
 
 
 async def execute_queries_on_unit(
@@ -827,9 +808,7 @@ async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
     Returns:
         A dictionary representing the cluster status
     """
-    get_cluster_status_action = await unit.run_action("get-cluster-status")
-    cluster_status_results = await get_cluster_status_action.wait()
-    return cluster_status_results.results
+    return await juju_.run_action(unit, "get-cluster-status")
 
 
 async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, path: str) -> bool:
