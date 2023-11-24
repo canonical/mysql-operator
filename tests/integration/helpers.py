@@ -375,34 +375,17 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
 
 
 @retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-async def is_unit_in_cluster(
-    ops_test: OpsTest, unit_name: str, action_unit: juju.unit.Unit
-) -> bool:
+async def is_unit_in_cluster(unit_name: str, action_unit: juju.unit.Unit) -> bool:
     """Check is unit is online in the cluster.
 
     Args:
-        ops_test: The ops test object passed into every test case
         unit_name: The name of the unit to be tested
-        action_unit_name: a different unit to run get status action
+        action_unit: a different unit to run get status action
     Returns:
         A boolean
     """
     results = await juju_.run_action(action_unit, action_name="get-cluster-status")
-    logger.error(results)
-    logger.error("foo")
-    logger.error(f"{type(results)=} {results[list(results.keys())[0]]['results']}")
-    assert False, results
-    raise Exception(f"{results=}")
-
-    _, raw_status, _ = await ops_test.juju(
-        "run-action", action_unit_name, "get-cluster-status", "--format=yaml", "--wait"
-    )
-
-    status = yaml.safe_load(raw_status.strip())
-
-    cluster_topology = status[list(status.keys())[0]]["results"]["status"]["defaultreplicaset"][
-        "topology"
-    ]
+    cluster_topology = results["status"]["defaultreplicaset"]["topology"]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
