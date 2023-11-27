@@ -11,19 +11,20 @@ from shutil import copy
 from typing import Union
 
 import pytest
-from integration.helpers import (
+from pytest_operator.plugin import OpsTest
+
+from tests.integration import juju_
+
+from ..helpers import (
     get_leader_unit,
     get_primary_unit_wrapper,
     get_relation_data,
     retrieve_database_variable_value,
 )
-from integration.high_availability.high_availability_helpers import (
+from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
 )
-from pytest_operator.plugin import OpsTest
-
-from tests.integration import juju_
 
 logger = logging.getLogger(__name__)
 
