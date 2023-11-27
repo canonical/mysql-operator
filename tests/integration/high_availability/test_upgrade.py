@@ -13,8 +13,7 @@ from typing import Union
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration import juju_
-
+from .. import juju_
 from ..helpers import (
     get_leader_unit,
     get_primary_unit_wrapper,
