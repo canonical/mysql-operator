@@ -25,6 +25,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install pipx
+        run: |
+          sudo apt-get install python3-pip python3-venv -y
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
       - name: Install tox & poetry
         run: |
           pipx install tox
