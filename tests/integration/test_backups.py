@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import uuid
 from pathlib import Path
 
 import boto3
@@ -25,20 +26,6 @@ from .high_availability.high_availability_helpers import (
 
 logger = logging.getLogger(__name__)
 
-CLOUD_CONFIGS = {
-    "aws": {
-        "endpoint": "https://s3.amazonaws.com",
-        "bucket": "data-charms-testing",
-        "path": "mysql",
-        "region": "us-east-1",
-    },
-    "gcp": {
-        "endpoint": "https://storage.googleapis.com",
-        "bucket": "data-charms-testing",
-        "path": "mysql",
-        "region": "",
-    },
-}
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
@@ -55,7 +42,29 @@ backups_by_cloud = {}
 value_before_backup, value_after_backup = None, None
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
+def cloud_configs():
+    # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
+    # versions on a PR, multiple PRs)
+    path = f"mysql/{uuid.uuid4()}"
+
+    return {
+        "aws": {
+            "endpoint": "https://s3.amazonaws.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "us-east-1",
+        },
+        "gcp": {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "",
+        },
+    }
+
+
+@pytest.fixture(scope="session")
 def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
     return {
@@ -70,13 +79,13 @@ def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
     }
 
 
-@pytest.fixture(scope="module", autouse=True)
-def clean_backups_from_buckets(cloud_credentials) -> None:
+@pytest.fixture(scope="session", autouse=True)
+def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
     """Teardown to clean up created backups from clouds."""
     yield
 
     logger.info("Cleaning backups from cloud buckets")
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         backup = backups_by_cloud.get(cloud_name)
 
         if not backup:
@@ -128,7 +137,9 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credentials) -> None:
+async def test_backup(
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
+) -> None:
     """Test to create a backup and list backups."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
@@ -151,7 +162,7 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credenti
         TABLE_NAME,
     )
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
 
@@ -206,7 +217,7 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credenti
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_same_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup to the same mysql cluster."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
@@ -221,7 +232,7 @@ async def test_restore_on_same_cluster(
 
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         assert backups_by_cloud[cloud_name]
 
         # set the s3 config and credentials
@@ -308,7 +319,7 @@ async def test_restore_on_same_cluster(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_new_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
@@ -347,7 +358,7 @@ async def test_restore_on_new_cluster(
     server_config_credentials = await get_server_config_credentials(primary_mysql)
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         assert backups_by_cloud[cloud_name]
 
         # set the s3 config and credentials
