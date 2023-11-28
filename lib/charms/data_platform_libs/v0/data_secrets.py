@@ -9,7 +9,7 @@ from ops.charm import CharmBase
 from ops.model import SecretNotFoundError
 
 # The unique Charmhub library identifier, never change it
-LIBID = "ea38eb76a89148659453a3b992387b17"
+LIBID = "d77fb3d01aba41ed88e837d0beab6be5"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -18,16 +18,17 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 1
 
+
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
-Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
+Scopes = Literal["app", "unit"]
 
 
-class MySQLSecretsError(Exception):
-    """MySQL secrets related error."""
+class DataSecretsError(Exception):
+    """A secret that we want to create already exists."""
 
 
-class SecretAlreadyExistsError(MySQLSecretsError):
+class SecretAlreadyExistsError(DataSecretsError):
     """A secret that we want to create already exists."""
 
 
@@ -40,6 +41,9 @@ def generate_secret_label(charm: CharmBase, scope: Scopes) -> str:
     """
     members = [charm.app.name, scope]
     return f"{'.'.join(members)}"
+
+
+# Secret cache
 
 
 class CachedSecret:
@@ -99,11 +103,8 @@ class CachedSecret:
     def set_content(self, content: Dict[str, str]) -> None:
         """Setting cached secret content."""
         if self.meta:
-            if content:
-                self.meta.set_content(content)
-                self._secret_content = content
-            else:
-                self.meta.remove_all_revisions()
+            self.meta.set_content(content)
+            self._secret_content = content
 
     def get_info(self) -> Optional[SecretInfo]:
         """Wrapper function for get the corresponding call on the Secret object if any."""
@@ -137,3 +138,6 @@ class SecretCache:
         secret.add_secret(content, scope)
         self._secrets[label] = secret
         return self._secrets[label]
+
+
+# END: Secret cache

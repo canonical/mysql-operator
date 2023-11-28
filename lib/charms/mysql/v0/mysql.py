@@ -78,7 +78,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import ops
-from charms.mysql.v0.mysql_secrets import (
+from charms.data_platform_libs.v0.data_secrets import (
     APP_SCOPE,
     UNIT_SCOPE,
     Scopes,
@@ -553,17 +553,29 @@ class MySQLCharmBase(CharmBase, ABC):
             return {}
         return self.peers.data[self._scope_obj(scope)]
 
+    def _safe_get_secret(self, scope: Scopes, label: str) -> SecretCache:
+        """Safety measure, for upgrades between versions based on secret URI usage to others with labels usage.
+        If the secret can't be retrieved by label, we search for the uri -- and if found, we "stick" the
+        label on the secret for further usage.
+        """
+        secret_uri = self._peer_data(scope).get(SECRET_ID_KEY, None)
+        secret = self.secrets.get(label, secret_uri)
+
+        # Since now we switched to labels, the databag reference can be removed
+        if secret_uri and secret and scope == APP_SCOPE and self.unit.is_leader():
+            self._peer_data(scope).pop(SECRET_ID_KEY, None)
+        return secret
+
     def _get_secret_from_juju(self, scope: Scopes, key: str) -> Optional[str]:
         """Retrieve and return the secret from the juju secret storage."""
         label = generate_secret_label(self, scope)
-        secret = self.secrets.get(label)
+        secret = self._safe_get_secret(label)
 
         if not secret:
             logger.debug("Getting a secret when secret is not added in juju")
             return
 
         value = secret.get_content().get(key)
-        logger.debug(f"Retrieved secret {key} for unit from juju")
         return value
 
     def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
@@ -574,7 +586,7 @@ class MySQLCharmBase(CharmBase, ABC):
         return self.app_peer_data.get(key)
 
     def get_secret(
-        self, scope: str, key: str, fallback_key: Optional[str] = None
+        self, scope: Scopes, key: str, fallback_key: Optional[str] = None
     ) -> Optional[str]:
         """Get secret from the secret storage.
 
@@ -583,7 +595,7 @@ class MySQLCharmBase(CharmBase, ABC):
         account for cases where secrets are stored in peer databag but the charm
         is then refreshed to a newer revision.
         """
-        if scope not in ["unit", "app"]:
+        if scope not in ["app", "unit"]:
             raise MySQLSecretError(f"Invalid secret scope: {scope}")
 
         if ops.jujuversion.JujuVersion.from_environ().has_secrets:
@@ -614,7 +626,7 @@ class MySQLCharmBase(CharmBase, ABC):
         self._peer_data(scope).pop(key, None)
 
         label = generate_secret_label(self, scope)
-        secret = self.secrets.get(label)
+        secret = self._safe_get_secret(label)
         if not secret and value:
             self.secrets.add(label, {key: value}, scope)
             return
@@ -630,13 +642,18 @@ class MySQLCharmBase(CharmBase, ABC):
         else:
             content.update({key: value})
 
-        secret.set_content(content)
+        # Temporary solution: this should come from the shared lib
+        # Improved after https://warthogs.atlassian.net/browse/DPE-3056 is resolved
+        if content:
+            secret.set_content(content)
+        else:
+            secret.meta.remove_all_revisions()
 
     def set_secret(
-        self, scope: str, key: str, value: Optional[str], fallback_key: Optional[str] = None
+        self, scope: Scopes, key: str, value: Optional[str], fallback_key: Optional[str] = None
     ) -> None:
         """Set a secret in the secret storage."""
-        if scope not in ["unit", "app"]:
+        if scope not in ["app", "unit"]:
             raise MySQLSecretError(f"Invalid secret scope: {scope}")
 
         if scope == "app" and not self.unit.is_leader():
