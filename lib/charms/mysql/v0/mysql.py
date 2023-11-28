@@ -107,6 +107,7 @@ from constants import (
     PEER,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
+    SECRET_ID_KEY,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
@@ -554,9 +555,11 @@ class MySQLCharmBase(CharmBase, ABC):
         return self.peers.data[self._scope_obj(scope)]
 
     def _safe_get_secret(self, scope: Scopes, label: str) -> SecretCache:
-        """Safety measure, for upgrades between versions based on secret URI usage to others with labels usage.
-        If the secret can't be retrieved by label, we search for the uri -- and if found, we "stick" the
-        label on the secret for further usage.
+        """Safety measure, for upgrades between versions.
+
+        Based on secret URI usage to others with labels usage.
+        If the secret can't be retrieved by label, we search for the uri -- and
+        if found, we "stick" the label on the secret for further usage.
         """
         secret_uri = self._peer_data(scope).get(SECRET_ID_KEY, None)
         secret = self.secrets.get(label, secret_uri)
@@ -569,7 +572,7 @@ class MySQLCharmBase(CharmBase, ABC):
     def _get_secret_from_juju(self, scope: Scopes, key: str) -> Optional[str]:
         """Retrieve and return the secret from the juju secret storage."""
         label = generate_secret_label(self, scope)
-        secret = self._safe_get_secret(label)
+        secret = self._safe_get_secret(scope, label)
 
         if not secret:
             logger.debug("Getting a secret when secret is not added in juju")
@@ -626,7 +629,7 @@ class MySQLCharmBase(CharmBase, ABC):
         self._peer_data(scope).pop(key, None)
 
         label = generate_secret_label(self, scope)
-        secret = self._safe_get_secret(label)
+        secret = self._safe_get_secret(scope, label)
         if not secret and value:
             self.secrets.add(label, {key: value}, scope)
             return
