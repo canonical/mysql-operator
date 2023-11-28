@@ -16,11 +16,11 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v6.3.2
+    uses: canonical/data-platform-workflows/.github/workflows/lint_self_hosted.yaml@self-hosted-lint
 
   unit-test:
     name: Unit test charm
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, jammy, small]
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -36,7 +36,7 @@ jobs:
 
   lib-check:
     name: Check libraries
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, jammy, small]
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -53,7 +53,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v6.3.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache_self_hosted.yaml@self-hosted-build
     with:
       charmcraft-snap-revision: 1349  # version 2.3.0
     permissions:
