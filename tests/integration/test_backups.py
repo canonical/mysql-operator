@@ -3,13 +3,14 @@
 # See LICENSE file for licensing details.
 
 import logging
+import uuid
 from pathlib import Path
 
 import boto3
 import pytest
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 
+from . import juju_
 from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
@@ -25,20 +26,6 @@ from .high_availability.high_availability_helpers import (
 
 logger = logging.getLogger(__name__)
 
-CLOUD_CONFIGS = {
-    "aws": {
-        "endpoint": "https://s3.amazonaws.com",
-        "bucket": "data-charms-testing",
-        "path": "mysql",
-        "region": "us-east-1",
-    },
-    "gcp": {
-        "endpoint": "https://storage.googleapis.com",
-        "bucket": "data-charms-testing",
-        "path": "mysql",
-        "region": "",
-    },
-}
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/edge"
 TIMEOUT = 10 * 60
@@ -55,7 +42,29 @@ backups_by_cloud = {}
 value_before_backup, value_after_backup = None, None
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
+def cloud_configs():
+    # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
+    # versions on a PR, multiple PRs)
+    path = f"mysql/{uuid.uuid4()}"
+
+    return {
+        "aws": {
+            "endpoint": "https://s3.amazonaws.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "us-east-1",
+        },
+        "gcp": {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": path,
+            "region": "",
+        },
+    }
+
+
+@pytest.fixture(scope="session")
 def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
     return {
@@ -70,13 +79,13 @@ def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
     }
 
 
-@pytest.fixture(scope="module", autouse=True)
-def clean_backups_from_buckets(cloud_credentials) -> None:
+@pytest.fixture(scope="session", autouse=True)
+def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
     """Teardown to clean up created backups from clouds."""
     yield
 
     logger.info("Cleaning backups from cloud buckets")
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         backup = backups_by_cloud.get(cloud_name)
 
         if not backup:
@@ -128,7 +137,9 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credentials) -> None:
+async def test_backup(
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
+) -> None:
     """Test to create a backup and list backups."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
 
@@ -151,15 +162,16 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credenti
         TABLE_NAME,
     )
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
-            "sync-s3-credentials", **cloud_credentials[cloud_name]
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
+            "sync-s3-credentials",
+            **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name, S3_INTEGRATOR],
@@ -170,24 +182,21 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credenti
         # list backups
         logger.info("Listing existing backup ids")
 
-        action = await zeroth_unit.run_action(action_name="list-backups")
-        result = await action.wait()
-        output = result.results["backups"]
+        results = await juju_.run_action(zeroth_unit, "list-backups")
+        output = results["backups"]
         backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
         # create backup
         logger.info("Creating backup")
 
-        action = await non_primary_units[0].run_action(action_name="create-backup")
-        result = await action.wait()
-        backup_id = result.results["backup-id"]
+        results = await juju_.run_action(non_primary_units[0], "create-backup")
+        backup_id = results["backup-id"]
 
         # list backups again and ensure new backup id exists
         logger.info("Listing backup ids post backup")
 
-        action = await zeroth_unit.run_action(action_name="list-backups")
-        result = await action.wait()
-        output = result.results["backups"]
+        results = await juju_.run_action(zeroth_unit, "list-backups")
+        output = results["backups"]
         new_backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
         assert sorted(new_backup_ids) == sorted(backup_ids + [backup_id])
@@ -206,7 +215,7 @@ async def test_backup(ops_test: OpsTest, mysql_charm_series: str, cloud_credenti
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_same_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup to the same mysql cluster."""
     mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
@@ -221,18 +230,18 @@ async def test_restore_on_same_cluster(
 
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         assert backups_by_cloud[cloud_name]
 
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
             "sync-s3-credentials",
             **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[mysql_application_name, S3_INTEGRATOR],
@@ -243,16 +252,9 @@ async def test_restore_on_same_cluster(
         # restore the backup
         logger.info(f"Restoring backup with id {backups_by_cloud[cloud_name]}")
 
-        action = await mysql_unit.run_action(
-            action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
+        await juju_.run_action(
+            mysql_unit, action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
-        result = await action.wait()
-
-        # Syntax changed across Juju major versions
-        if JujuVersion.from_environ().has_secrets:
-            assert result.results.get("return-code") == 0
-        else:
-            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
@@ -308,7 +310,7 @@ async def test_restore_on_same_cluster(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_new_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_credentials
+    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
@@ -347,18 +349,18 @@ async def test_restore_on_new_cluster(
     server_config_credentials = await get_server_config_credentials(primary_mysql)
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
 
-    for cloud_name, config in CLOUD_CONFIGS.items():
+    for cloud_name, config in cloud_configs.items():
         assert backups_by_cloud[cloud_name]
 
         # set the s3 config and credentials
         logger.info(f"Syncing credentials for {cloud_name}")
 
         await ops_test.model.applications[S3_INTEGRATOR].set_config(config)
-        action = await ops_test.model.units[f"{S3_INTEGRATOR}/0"].run_action(
+        await juju_.run_action(
+            ops_test.model.units[f"{S3_INTEGRATOR}/0"],
             "sync-s3-credentials",
             **cloud_credentials[cloud_name],
         )
-        await action.wait()
 
         await ops_test.model.wait_for_idle(
             apps=[new_mysql_application_name, S3_INTEGRATOR],
@@ -369,15 +371,9 @@ async def test_restore_on_new_cluster(
         # restore the backup
         logger.info(f"Restoring backup with id {backups_by_cloud[cloud_name]}")
 
-        action = await primary_mysql.run_action(
-            action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
+        await juju_.run_action(
+            primary_mysql, action_name="restore", **{"backup-id": backups_by_cloud[cloud_name]}
         )
-        result = await action.wait()
-
-        if JujuVersion.from_environ().has_secrets:
-            assert result.results.get("return-code") == 0
-        else:
-            assert result.results.get("Code") == "0"
 
         # ensure the correct inserted values exist
         logger.info(
