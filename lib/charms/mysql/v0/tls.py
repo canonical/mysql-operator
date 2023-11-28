@@ -22,11 +22,11 @@ It requires the TLS certificates library and the MySQL library.
 
 import base64
 import logging
-import ops
 import re
 import socket
 from typing import List, Optional, Tuple
 
+import ops
 from charms.mysql.v0.mysql import MySQLKillSessionError, MySQLTLSSetupError
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
