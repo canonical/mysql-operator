@@ -75,7 +75,7 @@ jobs:
     name: Integration test charm | ${{ matrix.juju.agent }}
     needs:
       - lint
-      - unit-test
+#      - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm_self_hosted.yaml@v6.3.2
     with:
