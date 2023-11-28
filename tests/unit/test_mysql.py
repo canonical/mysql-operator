@@ -780,6 +780,9 @@ class TestMySQLBase(unittest.TestCase):
             "ONLINE\tPRIMARY\t<uuid>\t<uuid>\n"
         )
 
+        # disable tenacity retry
+        self.mysql.get_member_state.retry.retry = tenacity.retry_if_not_result(lambda _: True)
+
         state = self.mysql.get_member_state()
         self.assertEqual(state, ("online", "primary"))
         _run_mysqlcli_script.return_value = (

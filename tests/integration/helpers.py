@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from typing import Dict, List, Optional, Set
 
+import juju.unit
 import yaml
 from juju.unit import Unit
 from mysql.connector.errors import (
@@ -18,40 +19,18 @@ from mysql.connector.errors import (
     OperationalError,
     ProgrammingError,
 )
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
+from . import juju_
 from .connector import MysqlConnector
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 16 * 60
 TIMEOUT_BIG = 25 * 60
-
-
-async def run_command_on_unit(unit, command: str) -> Optional[str]:
-    """Run a command in one Juju unit.
-
-    Args:
-        unit: the Juju unit instance.
-        command: the command to run.
-
-    Returns:
-        command execution output or none if
-        the command produces no output.
-    """
-    juju_version = JujuVersion.from_environ()
-
-    # Syntax changed across Juju major versions
-    if juju_version.has_secrets:
-        action = await unit.run(command, block=True)
-        return action.results.get("stdout", None)
-    else:
-        action = await unit.run(command)
-        return action.results.get("Stdout", None)
 
 
 def generate_random_string(length: int) -> str:
@@ -139,11 +118,10 @@ async def get_primary_unit(
         A juju unit that is a MySQL primary
     """
     units = ops_test.model.applications[app_name].units
-    action = await unit.run_action("get-cluster-status")
-    result = await action.wait()
+    results = await juju_.run_action(unit, "get-cluster-status")
 
     primary_unit = None
-    for k, v in result.results["status"]["defaultreplicaset"]["topology"].items():
+    for k, v in results["status"]["defaultreplicaset"]["topology"].items():
         if v["memberrole"] == "primary":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
             primary_unit = [unit for unit in units if unit.name == unit_name][0]
@@ -163,10 +141,7 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the server config username and password
     """
-    action = await unit.run_action(action_name="get-password", username=SERVER_CONFIG_USERNAME)
-    result = await action.wait()
-
-    return result.results
+    return await juju_.run_action(unit, "get-password", username=SERVER_CONFIG_USERNAME)
 
 
 async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
@@ -179,13 +154,8 @@ async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
         A dictionary with the server config username and password
     """
     if username is None:
-        action = await unit.run_action(action_name="get-password")
-    else:
-        action = await unit.run_action(action_name="get-password", username=username)
-
-    result = await action.wait()
-
-    return result.results
+        return await juju_.run_action(unit, "get-password")
+    return await juju_.run_action(unit, "get-password", username=username)
 
 
 async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> Dict:
@@ -198,16 +168,11 @@ async def rotate_credentials(unit: Unit, username: str = None, password: str = N
         A dictionary with the action result
     """
     if username is None:
-        action = await unit.run_action(action_name="set-password")
+        return await juju_.run_action(unit, "set-password")
     elif password is None:
-        action = await unit.run_action(action_name="set-password", username=username)
+        return await juju_.run_action(unit, "set-password", username=username)
     else:
-        action = await unit.run_action(
-            action_name="set-password", username=username, password=password
-        )
-    result = await action.wait()
-
-    return result.results
+        return await juju_.run_action(unit, "set-password", username=username, password=password)
 
 
 async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
@@ -219,10 +184,7 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the credentials
     """
-    action = await unit.run_action("get-legacy-mysql-credentials")
-    result = await action.wait()
-
-    return result.results
+    return await juju_.run_action(unit, "get-legacy-mysql-credentials")
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
@@ -235,10 +197,8 @@ async def get_system_user_password(unit: Unit, user: str) -> Dict:
     Returns:
         A dictionary with the credentials
     """
-    action = await unit.run_action("get-password", username=user)
-    result = await action.wait()
-
-    return result.results.get("password")
+    results = await juju_.run_action(unit, "get-password", username=user)
+    return results.get("password")
 
 
 async def execute_queries_on_unit(
@@ -396,25 +356,17 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
 
 
 @retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-async def is_unit_in_cluster(ops_test: OpsTest, unit_name: str, action_unit_name: str) -> bool:
+async def is_unit_in_cluster(unit_name: str, action_unit: juju.unit.Unit) -> bool:
     """Check is unit is online in the cluster.
 
     Args:
-        ops_test: The ops test object passed into every test case
         unit_name: The name of the unit to be tested
-        action_unit_name: a different unit to run get status action
+        action_unit: a different unit to run get status action
     Returns:
         A boolean
     """
-    _, raw_status, _ = await ops_test.juju(
-        "run-action", action_unit_name, "get-cluster-status", "--format=yaml", "--wait"
-    )
-
-    status = yaml.safe_load(raw_status.strip())
-
-    cluster_topology = status[list(status.keys())[0]]["results"]["status"]["defaultreplicaset"][
-        "topology"
-    ]
+    results = await juju_.run_action(action_unit, action_name="get-cluster-status")
+    cluster_topology = results["status"]["defaultreplicaset"]["topology"]
 
     for k, v in cluster_topology.items():
         if k.replace("-", "/") == unit_name and v.get("status") == "online":
@@ -856,9 +808,7 @@ async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
     Returns:
         A dictionary representing the cluster status
     """
-    get_cluster_status_action = await unit.run_action("get-cluster-status")
-    cluster_status_results = await get_cluster_status_action.wait()
-    return cluster_status_results.results
+    return await juju_.run_action(unit, "get-cluster-status")
 
 
 async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, path: str) -> bool:

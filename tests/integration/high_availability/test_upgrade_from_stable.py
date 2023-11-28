@@ -5,16 +5,18 @@ import asyncio
 import logging
 
 import pytest
-from integration.helpers import (
+from pytest_operator.plugin import OpsTest
+
+from .. import juju_
+from ..helpers import (
     get_leader_unit,
     get_primary_unit_wrapper,
     retrieve_database_variable_value,
 )
-from integration.high_availability.high_availability_helpers import (
+from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
 )
-from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +67,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
     assert leader_unit is not None, "No leader unit found"
     logger.info("Run pre-upgrade-check action")
-    action = await leader_unit.run_action("pre-upgrade-check")
-    await action.wait()
+    await juju_.run_action(leader_unit, "pre-upgrade-check")
 
     logger.info("Assert slow shutdown is enabled")
     for unit in mysql_units:
