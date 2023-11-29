@@ -1,20 +1,21 @@
 # How to deploy and manage units
+> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
 
 ## Basic Usage
 
 To deploy a single unit of MySQL using its default configuration
 ```shell
-juju deploy mysql --channel 8.0
+juju deploy mysql
 ```
 
 It is customary to use MySQL with replication. Hence usually more than one unit (preferably an odd number to prohibit a "split-brain" scenario) is deployed. To deploy MySQL with multiple replicas, specify the number of desired units with the `-n` option.
 ```shell
-juju deploy mysql --channel 8.0 -n <number_of_replicas>
+juju deploy mysql -n <number_of_cluster_members>
 ```
 
 To retrieve primary replica one can use the action `get-primary` on any of the units running MySQL:
 ```shell
-juju run-action mysql/leader get-primary --wait
+juju run mysql/leader get-primary
 ```
 
 Similarly, the primary replica is displayed as a status message in `juju status`, however one should note that this hook gets called on regular time intervals and the primary may be outdated if the status hook has not been called recently.
@@ -37,4 +38,4 @@ To scaling-down the cluster, use `juju remove-unit`:
 juju remove-unit mysql/<unit_id_to_remove>
 ```
 
-Warning: do NOT remove all units, it will destroy your data!
+> **:warning: Warning**: be careful with removing all units! It can destroy your data ([Juju storage provider](https://juju.is/docs/juju/storage-provider) dependent)!
