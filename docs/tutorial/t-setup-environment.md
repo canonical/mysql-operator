@@ -4,13 +4,7 @@ This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/
 
 ## Minimum requirements
 
-Before we start, make sure your machine meets the following requirements:
-- Ubuntu 20.04 (Focal) or later.
-- 8GB of RAM.
-- 2 CPU threads.
-- At least 20GB of available storage.
-- Access to the internet for downloading the required snaps and charms.
-
+Before we start, make sure your machine meets [the following requirements](/t/11742).
 
 ## Multipass environment
 [Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses "[cloud-init](https://cloud-init.io/)" standard to install and configure all the necessary parts automatically.
@@ -46,7 +40,7 @@ juju add-model tutorial
 You can now view the model you created above by entering the command `juju status` into the command line. You should see the following:
 ```
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial overlord    localhost/localhost  2.9.42   unsupported  23:20:53+01:00
+tutorial overlord    localhost/localhost  3.1.6    unsupported  23:20:53+01:00
 
 Model "admin/tutorial" is empty.
 ```

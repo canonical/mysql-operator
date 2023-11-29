@@ -1,12 +1,13 @@
 # Get a Charmed MySQL up and running
+> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
 
 This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0). Please refer to this page for more information and the overview of the content.
 
 ## Deploy Charmed MySQL
 
-To deploy Charmed MySQL, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/mysql?channel=8.0) and deploy it to your model:
+To deploy Charmed MySQL, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/mysql) and deploy it to your model:
 ```shell
-juju deploy mysql --channel 8.0
+juju deploy mysql
 ```
 
 Juju will now fetch Charmed MySQL and begin deploying it to the LXD cloud. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. You can track the progress by running:
@@ -16,17 +17,17 @@ juju status --watch 1s
 
 This command is useful for checking the status of Charmed MySQL and gathering information about the machines hosting Charmed MySQL. Some of the helpful information it displays include IP addresses, ports, state, etc. The command updates the status of Charmed MySQL every second and as the application starts you can watch the status and messages of Charmed MySQL change. Wait until the application is ready - when it is ready, `juju status` will show:
 ```shell
-Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.42   unsupported  22:52:47+01:00
+Model      Controller  Cloud/Region         Version  SLA          Timestamp
+tutorial   overlord    localhost/localhost  3.1.6    unsupported  00:52:59+02:00
 
 App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
-mysql  8.0.32-0ubun...  active      1  mysql  8.0/stable  147  no
+mysql  8.0.32-0ubun...  active      1  mysql  8.0/stable  151  no       Primary
 
-Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Primary
+Unit      Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*  active    idle   1        10.234.188.135  3306,33060/tcp  Primary
 
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.234.188.135  juju-ff9064-0  jammy       Running
+Machine  State    Address         Inst id        Base          AZ  Message
+1        started  10.234.188.135  juju-ff9064-0  ubuntu@22.04      Running
 ```
 To exit the screen with `juju status --watch 1s`, enter `Ctrl+c`.
 If you want to further inspect juju logs, can watch for logs with `juju debug-log`.
@@ -37,34 +38,25 @@ More info on logging at [juju logs](https://juju.is/docs/olm/juju-logs).
 
 The first action most users take after installing MySQL is accessing MySQL. The easiest way to do this is via the [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html) `mysql`. Connecting to the database requires that you know the values for `host`, `username` and `password`. To retrieve the necessary fields please run Charmed MySQL action `get-password`:
 ```shell
-juju run-action mysql/leader get-password --wait
+juju run mysql/leader get-password
 ```
 Running the command should output:
-```yaml
-unit-mysql-0:
-  UnitId: mysql/0
-  id: "4"
-  results:
-    password: <password>
-    username: root
-  status: completed
-  timing:
-    completed: 2023-01-29 21:58:53 +0000 UTC
-    enqueued: 2023-01-29 21:58:52 +0000 UTC
-    started: 2023-01-29 21:58:53 +0000 UTC
-
+```shell
+...
+password: yWJjs2HccOmqFMshyRcwWnjF
+username: root
 ```
 
 *Note: to request a password for a different user, use an option `username`:*
 ```shell
-juju run-action mysql/leader get-password username=myuser --wait
+juju run mysql/leader get-password username=myuser
 ```
 
 The host’s IP address can be found with `juju status` (the unit hosting the MySQL application):
 ```shell
 ...
 Unit      Workload  Agent  Machine  Public address  Ports  Message
-mysql/0*  active    idle   0        10.234.188.135         Primary
+mysql/0*  active    idle   1        10.234.188.135  3306,33060/tcp  Primary
 ...
 ```
 

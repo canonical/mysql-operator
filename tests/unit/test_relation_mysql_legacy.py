@@ -118,11 +118,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _does_mysql_user_exist.assert_called_once_with("mysql", "%")
 
         maria_db_relation = self.charm.model.get_relation(LEGACY_MYSQL)
-        peer_relation = self.charm.model.get_relation(PEER)
-        secret_id = self.harness.get_relation_data(peer_relation.id, self.harness.charm.app.name)[
-            "secret-id"
-        ]
-        root_pw = self.harness.model.get_secret(id=secret_id).get_content()["root-password"]
+        root_pw = self.harness.model.get_secret(label="mysql.app").get_content()["root-password"]
 
         # confirm that the relation databag is populated
         self.assertEqual(
