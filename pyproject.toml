@@ -27,7 +27,7 @@ poetry-core = "*"
 # grafana_agent/v0/cos_agent.py requires pydantic <2
 pydantic = "^1.10, <2"
 # grafana_agent/v0/cos_agent.py
-cosl = "*"
+cosl = ">=0.0.7"
 # tls_certificates_interface/v1/tls_certificates.py
 cryptography = "*"
 jsonschema = "*"
@@ -58,6 +58,7 @@ shellcheck-py = "^0.9.0.5"
 pytest = "^7.4.0"
 pytest-mock = "^3.11.1"
 coverage = {extras = ["toml"], version = "^7.2.7"}
+parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
 pytest = "^7.4.0"
