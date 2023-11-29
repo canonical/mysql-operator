@@ -20,7 +20,7 @@ jobs:
 
   unit-test:
     name: Unit test charm
-    runs-on: [self-hosted, linux, X64, jammy, small]
+    runs-on: [self-hosted, linux, X64, jammy, edge]
     timeout-minutes: 5
     steps:
       - name: Checkout
