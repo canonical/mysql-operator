@@ -31,11 +31,13 @@ juju status --relations
 # > mysql:database      mysql-test-app:database  mysql_client  regular
 ```
 
+Find all details about default and extra DB user roles in “[Charm Users explanations](/t/10789)”.
+
 **Note:** In order to integrate with this charm, every table created by the integrated application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
 
 ## Legacy relations
 
-**Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided.
+**Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided. Check the legacy interface implementation limitations in the "[Legacy charm](/t/10788)" document.
 
 This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://juju.is/docs/olm/cross-model-integration).
 
