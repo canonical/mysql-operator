@@ -11,6 +11,7 @@ from pytest_operator.plugin import OpsTest
 
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 
+from . import juju_
 from .helpers import (
     app_name,
     get_system_user_password,
@@ -158,8 +159,7 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     # set key using auto-generated key for each unit
     # not asserting actions run due false positives on CI
     for unit in ops_test.model.applications[app].units:
-        action = await unit.run_action(action_name="set-tls-private-key")
-        action.wait()
+        await juju_.run_action(unit, "set-tls-private-key")
 
     # Wait for hooks start reconfiguring app
     # add as a wait since app state does not change

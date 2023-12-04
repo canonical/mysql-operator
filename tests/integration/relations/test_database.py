@@ -19,6 +19,7 @@ from constants import (
 )
 from utils import generate_random_password
 
+from .. import markers
 from ..helpers import (
     check_read_only_endpoints,
     execute_queries_on_unit,
@@ -204,7 +205,7 @@ async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_without_juju_secrets")
+@markers.only_without_juju_secrets
 async def test_relation_creation_databag(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(
@@ -224,7 +225,7 @@ async def test_relation_creation_databag(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.usefixtures("only_with_juju_secrets")
+@markers.only_with_juju_secrets
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     await ops_test.model.relate(

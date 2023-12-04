@@ -1,7 +1,10 @@
+# Configure S3 for AWS
+> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` and `juju integrate` with `juju relate` for Juju 2.9.
+
 Charmed MySQL backup can be stored on any S3 compatible storage. The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm for **[AWS S3](https://aws.amazon.com/s3/)** (click [here](/t/charmed-mysql-how-to-configure-s3-for-radosgw/10318) to backup on Ceph via RadosGW):
 ```shell
 juju deploy s3-integrator
-juju run-action s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here> --wait
+juju run s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here>
 juju config s3-integrator \
     endpoint="https://s3.amazonaws.com" \
     bucket="mysql-test-bucket-1" \
@@ -11,16 +14,16 @@ juju config s3-integrator \
 
 To pass these configurations to Charmed MySQL, relate the two applications:
 ```shell
-juju relate s3-integrator mysql
+juju integrate s3-integrator mysql
 ```
 
 You can create/list/restore backups now:
 
 ```shell
-juju run-action mysql/leader list-backups --wait
-juju run-action mysql/leader create-backup --wait
-juju run-action mysql/leader list-backups --wait
-juju run-action mysql/leader restore backup-id=<backup-id-here> --wait
+juju run mysql/leader list-backups
+juju run mysql/leader create-backup
+juju run mysql/leader list-backups
+juju run mysql/leader restore backup-id=<backup-id-here>
 ```
 
 You can also update your S3 configuration options after relating, using:

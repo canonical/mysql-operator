@@ -22,7 +22,7 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.charm = self.harness.charm
 
-    @pytest.mark.usefixtures("only_without_juju_secrets")
+    @pytest.mark.usefixtures("without_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
@@ -78,7 +78,6 @@ class TestMariaDBRelation(unittest.TestCase):
             },
         )
 
-    @pytest.mark.usefixtures("only_with_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
@@ -119,11 +118,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _does_mysql_user_exist.assert_called_once_with("mysql", "%")
 
         maria_db_relation = self.charm.model.get_relation(LEGACY_MYSQL)
-        peer_relation = self.charm.model.get_relation(PEER)
-        secret_id = self.harness.get_relation_data(peer_relation.id, self.harness.charm.app.name)[
-            "secret-id"
-        ]
-        root_pw = self.harness.model.get_secret(id=secret_id).get_content()["root-password"]
+        root_pw = self.harness.model.get_secret(label="mysql.app").get_content()["root-password"]
 
         # confirm that the relation databag is populated
         self.assertEqual(
