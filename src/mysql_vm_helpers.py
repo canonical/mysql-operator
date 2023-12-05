@@ -257,7 +257,10 @@ class MySQL(MySQLBase):
         with open("/etc/logrotate.d/flush_mysql_logs", "w") as file:
             file.write(rendered)
 
-        cron = "* 1-23 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n1-59 0 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
+        cron = (
+            "* 1-23 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
+            "1-59 0 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
+        )
         with open("/etc/cron.d/flush_mysql_logs", "w") as file:
             file.write(cron)
 
