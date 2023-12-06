@@ -61,6 +61,7 @@ jobs:
 
   setup-microceph:
     name: Setup microceph
+    runs-on: ubuntu-latest
     steps:
       - name: Setup microceph
         uses: canonical/microceph-action@v0.1
