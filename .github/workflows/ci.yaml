@@ -59,6 +59,17 @@ jobs:
     permissions:
       actions: write  # Needed to manage GitHub Actions cache
 
+  setup-microceph:
+    name: Setup microceph
+    uses: canonical/microceph-action@v0.4
+    with:
+      channel: 'latest/edge'
+      devname: '/dev/sdi'
+      accesskey: 'accesskey'
+      secretkey: 'secretkey'
+      bucket: 'testbucket'
+      osdsize: '500M'
+
   integration-test:
     strategy:
       fail-fast: false
@@ -67,33 +78,23 @@ jobs:
           - agent: 2.9.45
             libjuju: ^2
           - agent: 3.1.6
-    steps:
-      - name: Setup microceph
-        # setup microceph before tests
-        uses: canonical/microceph-action@v0.4
-        with:
-          channel: 'latest/edge'
-          devname: '/dev/sdi'
-          accesskey: 'accesskey'
-          secretkey: 'secretkey'
-          bucket: 'testbucket'
-          osdsize: '1G'
-      - name: Integration test charm | ${{ matrix.juju.agent }}
-        needs:
-          - lint
-          - unit-test
-          - build
-        uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v6.1.1
-        with:
-          artifact-name: ${{ needs.build.outputs.artifact-name }}
-          cloud: lxd
-          juju-agent-version: ${{ matrix.juju.agent }}
-          libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-        secrets:
-          integration-test: |
-            {
-              "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-              "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-              "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-              "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-            }
+    name: Integration test charm | ${{ matrix.juju.agent }}
+    needs:
+      - lint
+      - unit-test
+      - build
+      - setup-microceph
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v6.1.1
+    with:
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      cloud: lxd
+      juju-agent-version: ${{ matrix.juju.agent }}
+      libjuju-version-constraint: ${{ matrix.juju.libjuju }}
+    secrets:
+      integration-test: |
+        {
+          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
+          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
+          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
+          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
+        }
