@@ -61,14 +61,16 @@ jobs:
 
   setup-microceph:
     name: Setup microceph
-    uses: canonical/microceph-action@v0.4
-    with:
-      channel: 'latest/edge'
-      devname: '/dev/sdi'
-      accesskey: 'accesskey'
-      secretkey: 'secretkey'
-      bucket: 'testbucket'
-      osdsize: '500M'
+    steps:
+      - name: Setup microceph
+        uses: canonical/microceph-action@v0.1
+        with:
+          channel: 'latest/edge'
+          devname: '/dev/sdi'
+          accesskey: 'accesskey'
+          secretkey: 'secretkey'
+          bucket: 'testbucket'
+          osdsize: '500M'
 
   integration-test:
     strategy:
