@@ -137,8 +137,10 @@ class TestUpgrade(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("upgrade.MySQLVMUpgrade._check_server_upgradeability")
     @patch("mysql_vm_helpers.MySQL.is_instance_in_cluster", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron", return_value=True)
     def test_upgrade_granted(
         self,
+        mock_setup_logrotate_and_cron,
         mock_is_instance_in_cluster,
         mock_check_server_upgradeability,
         mock_start_mysqld,
@@ -165,6 +167,7 @@ class TestUpgrade(unittest.TestCase):
         mock_stop_mysqld.assert_called_once()
         mock_install_workload.assert_called_once()
         mock_get_mysql_version.assert_called_once()
+        mock_setup_logrotate_and_cron.assert_called_once()
 
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
