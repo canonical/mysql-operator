@@ -54,7 +54,6 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     await high_availability_test_setup(ops_test, mysql_charm_series)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_kill_db_process(
     ops_test: OpsTest, continuous_writes, mysql_charm_series: str
