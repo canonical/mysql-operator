@@ -1674,8 +1674,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v7.0.0"
-resolved_reference = "450cba38a436b97f90441ef1586411f749ef1d4e"
+reference = "group-collect-error"
+resolved_reference = "47ee4eac83ab0c14ef8b3bfccc2a09cd2698c9b9"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2215,4 +2215,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "baa043740548d6a99c22ce04624050f000d273d46052d1dabed56b217973c012"
+content-hash = "ce41bd339b80c9d64f52f3e881edf9e29585dc6136122a0a5cf11cbf76cb35de"
