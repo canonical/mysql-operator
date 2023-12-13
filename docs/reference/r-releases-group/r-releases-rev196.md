@@ -30,7 +30,7 @@ Dear community, this is to inform you that new Canonical Charmed MySQL is publis
 
 ## Bugfixes included:
 
-Canonica Data issues are now public on both [Jira](https://warthogs.atlassian.net/jira/software/c/projects/DPE/issues/) and [GitHub](https://github.com/canonical/mysql-operator/issues) platforms.<br/>[GitHub Releases](https://github.com/canonical/mysql-operator/releases) provide a detailed list of bugfixes/PRs/Git commits for each revision.<br/>Highlights for the current revision:
+Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.net/jira/software/c/projects/DPE/issues/) and [GitHub](https://github.com/canonical/mysql-operator/issues) platforms.<br/>[GitHub Releases](https://github.com/canonical/mysql-operator/releases) provide a detailed list of bugfixes/PRs/Git commits for each revision.<br/>Highlights for the current revision:
 
 * [#209](https://github.com/canonical/mysql-operator/pull/209) Use special user for backups + miscellaneous backups fixes
 * [#216](https://github.com/canonical/mysql-operator/pull/216) Fix/join units refactor by 
