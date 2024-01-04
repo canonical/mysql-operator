@@ -566,6 +566,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return "Primary"
         return ""
 
+    @property
+    def unit_address(self) -> str:
+        """Returns the unit's address."""
+        return self.get_unit_ip(self.unit)
+
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
 
