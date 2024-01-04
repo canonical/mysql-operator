@@ -1,6 +1,6 @@
 # Charmed MySQL revision 203
 > :warning: The revision is currently available in `8.0/candidate` only (**WIP**).
-<!-- <sub>Monday, December 4, 2023</sub> -->
+<!-- <sub>January 3, 2024</sub> -->
 
 Dear community, this is to inform you that new Canonical Charmed MySQL is published in `8.0/stable` [charmhub](https://charmhub.io/mysql?channel=8.0/stable) channel for IAAS/VM.
 

@@ -1,5 +1,5 @@
 # Charmed MySQL revision 196
-<sub>Friday, September 29, 2023</sub>
+<sub>September 29, 2023</sub>
 
 Dear community, this is to inform you that new Canonical Charmed MySQL is published in `8.0/stable` [charmhub](https://charmhub.io/mysql?channel=8.0/stable) channel for IAAS/VM.
 
