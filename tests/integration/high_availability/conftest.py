@@ -6,10 +6,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .. import juju_
-from .high_availability_helpers import (
-    APPLICATION_DEFAULT_APP_NAME,
-    get_application_name,
-)
+from .high_availability_helpers import APPLICATION_DEFAULT_APP_NAME, get_application_name
 
 
 @pytest.fixture()

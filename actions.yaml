@@ -3,6 +3,12 @@
 
 get-cluster-status:
   description: Get cluster status information
+  params:
+    cluster-set:
+      type: boolean
+      default: False
+      description: Wether to fetch the cluster or cluster-set status.
+        Possible values are False (default) or True.
 
 get-password:
   description: Fetch the system user's password, which is used by charm.
@@ -53,3 +59,27 @@ restore:
 pre-upgrade-check:
   description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
 
+promote-standby-cluster:
+  description: |
+    Promotes the standby cluster of choice to a leader. Used for safe switchover or failover.
+    Must be ran against the charm unit leader of the standby cluster.
+  params:
+    cluster-set-name:
+      type: string
+      description: |
+        The name of the cluster-set. Mandatory option, used as a foolproof method.
+    force:
+      type: boolean
+      default: False
+      description: |
+        If the switchover must be forced, the previous primary will be invalidated, which is the case
+        for failover, where the previous primary is presumed unavailable.
+        Case the previous primary is reachable, force must be set to False, which will conduct a safe
+        switchover.
+
+recreate-cluster:
+  description: |
+    Recreates a cluster on one or more standalone instances that were previously part of a standby cluster.
+    When a standby cluster is removed from an async replication relation, the cluster will be dissolved and
+    each unit will be kept in blocked status. Recreating the cluster allows rejoin the an async replication
+    relation, or usage as a standalone cluster.
