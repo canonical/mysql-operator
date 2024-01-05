@@ -560,13 +560,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return self.unit_peer_data["instance-hostname"].split(":")[0]
 
     @property
-    def active_status_message(self) -> str:
-        """Active status message."""
-        if self.unit_peer_data.get("member-role") == "primary":
-            return "Primary"
-        return ""
-
-    @property
     def unit_address(self) -> str:
         """Returns the unit's address."""
         return self.get_unit_ip(self.unit)
