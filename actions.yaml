@@ -7,7 +7,7 @@ get-cluster-status:
     cluster-set:
       type: boolean
       default: False
-      description: Wether to fetch the cluster or cluster-set status.
+      description: Whether to fetch the cluster or cluster-set status.
         Possible values are False (default) or True.
 
 get-password:
@@ -61,21 +61,19 @@ pre-upgrade-check:
 
 promote-standby-cluster:
   description: |
-    Promotes the standby cluster of choice to a leader. Used for safe switchover or failover.
-    Must be ran against the charm unit leader of the standby cluster.
+    Promotes this cluster to become the leader in the cluster-set. Used for safe switchover or failover.
+    Must be ran against the charm leader unit of a standby cluster.
   params:
     cluster-set-name:
       type: string
       description: |
-        The name of the cluster-set. Mandatory option, used as a foolproof method.
+        The name of the cluster-set. Mandatory option, used for confirmation.
     force:
       type: boolean
       default: False
       description: |
-        If the switchover must be forced, the previous primary will be invalidated, which is the case
-        for failover, where the previous primary is presumed unavailable.
-        Case the previous primary is reachable, force must be set to False, which will conduct a safe
-        switchover.
+        Use force when previous primary is unreachable (failover). Will invalidate previous
+        primary.
 
 recreate-cluster:
   description: |

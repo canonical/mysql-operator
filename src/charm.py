@@ -791,11 +791,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 self.unit.status = WaitingStatus("waiting to join the cluster")
                 logger.debug("Waiting to joing the cluster, failed to acquire lock.")
                 return
-            # Update 'units-added-to-cluster' counter in the peer relation databag
-            self.unit_peer_data["unit-initialized"] = "True"
-            self.unit_peer_data["member-state"] = "online"
-            self.unit.status = ActiveStatus(self.active_status_message)
-            logger.debug(f"Instance {instance_label} is cluster member")
+        # Update 'units-added-to-cluster' counter in the peer relation databag
+        self.unit_peer_data["unit-initialized"] = "True"
+        self.unit_peer_data["member-state"] = "online"
+        self.unit.status = ActiveStatus(self.active_status_message)
+        logger.debug(f"Instance {instance_label} is cluster member")
 
     def _restart(self, event: EventBase) -> None:
         """Restart the MySQL service."""

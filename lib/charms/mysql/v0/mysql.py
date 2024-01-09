@@ -522,7 +522,10 @@ class MySQLCharmBase(CharmBase, ABC):
 
     @property
     def cluster_fully_initialized(self) -> bool:
-        """Returns True if the cluster is fully initialized."""
+        """Returns True if the cluster is fully initialized.
+
+        Fully initialized means that all unit that can be joined are joined.
+        """
         if self.app.planned_units() <= GR_MAX_MEMBERS:
             return self.app.planned_units() == self._mysql.get_cluster_node_count()
         return self._mysql.get_cluster_node_count() == GR_MAX_MEMBERS
