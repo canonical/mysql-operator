@@ -1600,8 +1600,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v9.0.0"
-resolved_reference = "9ce101524a561c140a76e847aa86f87d3e0418f5"
+reference = "v9.0.2"
+resolved_reference = "1f7cb3eac6fc12c926330a22bd5715f9d0fbac5e"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -1655,8 +1655,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v9.0.0"
-resolved_reference = "9ce101524a561c140a76e847aa86f87d3e0418f5"
+reference = "v9.0.2"
+resolved_reference = "1f7cb3eac6fc12c926330a22bd5715f9d0fbac5e"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1674,8 +1674,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v9.0.0"
-resolved_reference = "9ce101524a561c140a76e847aa86f87d3e0418f5"
+reference = "v9.0.2"
+resolved_reference = "1f7cb3eac6fc12c926330a22bd5715f9d0fbac5e"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2215,4 +2215,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ceb3941e4b0bc2734b060546972946c89cbb559e706d48244d21f7cd7c207da6"
+content-hash = "e1067077432b837c6011fc590be3e64af9ce5d737aabe69508137b241bbb2c98"
