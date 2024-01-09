@@ -344,17 +344,24 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self._mysql.get_primary_label() == self.unit_label and not self.unit.is_leader():
             # Preemptively switch primary to unit leader
-            logger.info("Switching primary to the first unit")
+            logger.info("Switching primary to the leader unit")
             if leader_unit := _get_leader_unit():
                 try:
                     self._mysql.set_cluster_primary(
                         new_primary_address=self.get_unit_ip(leader_unit)
                     )
                 except MySQLSetClusterPrimaryError:
-                    logger.warning("Failed to switch primary to unit 0")
+                    logger.warning("Failed to switch primary to leader unit")
+
+        # If instance is part of a replica cluster, locks are managed by the
+        # the primary cluster primary (i.e. cluster set global primary)
+        lock_instance = None
+        if self._mysql.is_cluster_replica():
+            lock_instance = self._mysql.get_cluster_set_global_primary_address()
+
         # The following operation uses locks to ensure that only one instance is removed
         # from the cluster at a time (to avoid split-brain or lack of majority issues)
-        self._mysql.remove_instance(self.unit_label)
+        self._mysql.remove_instance(self.unit_label, lock_instance=lock_instance)
 
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
