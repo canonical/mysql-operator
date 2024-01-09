@@ -97,8 +97,9 @@ class CachedSecret:
         """Getting cached secret content."""
         if not self._secret_content:
             if self.meta:
-                # temporary hack
-                self._secret_content = self.meta.peek_content()
+                # temporary hack for change in get_content behavior on juju 3.1.7
+                # TODO: update lib before merge
+                self._secret_content = self.meta.get_content(refresh=True)
         return self._secret_content
 
     def set_content(self, content: Dict[str, str]) -> None:
