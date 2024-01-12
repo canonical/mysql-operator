@@ -1343,7 +1343,8 @@ class MySQLBase(ABC):
             "communicationStack": "MySQL",
         }
 
-        if donor:
+        if donor and method == "clone":
+            # cloneDonor option is only available when recoveryMethod is set to clone
             options["cloneDonor"] = donor
 
         commands = (

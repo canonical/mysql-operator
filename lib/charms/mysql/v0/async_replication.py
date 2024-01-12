@@ -528,7 +528,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 # sync credentials only for necessary users
                 if key not in sync_keys:
                     continue
-                self._charm._mysql.update_user_password(sync_keys[key], password)
+                host = "localhost" if key == ROOT_PASSWORD_KEY else "%"
+                self._charm._mysql.update_user_password(sync_keys[key], password, host=host)
                 self._charm.set_secret("app", key, password)
                 logger.debug(f"Synced {sync_keys[key]} password")
 
