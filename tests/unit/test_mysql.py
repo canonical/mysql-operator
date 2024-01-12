@@ -377,7 +377,9 @@ class TestMySQLBase(unittest.TestCase):
             '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
         )
 
-        self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
+        self.mysql.add_instance_to_cluster(
+            instance_address="127.0.0.2", instance_unit_label="mysql-1"
+        )
 
         _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
 
@@ -391,7 +393,9 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLAddInstanceToClusterError):
-            self.mysql.add_instance_to_cluster("127.0.0.2", "mysql-1")
+            self.mysql.add_instance_to_cluster(
+                instance_address="127.0.0.2", instance_unit_label="mysql-1"
+            )
 
     @patch(
         "charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script", return_value="INSTANCE_CONFIGURED"

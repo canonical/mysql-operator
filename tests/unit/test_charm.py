@@ -166,6 +166,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
@@ -198,6 +199,7 @@ class TestCharm(unittest.TestCase):
         _check_call,
         _stop_mysqld,
         _create_cluster_set,
+        _active_status_message,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -368,6 +370,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
@@ -384,6 +387,7 @@ class TestCharm(unittest.TestCase):
         _get_cluster_primary_address,
         _get_member_state,
         _get_cluster_node_count,
+        _active_status_message,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
