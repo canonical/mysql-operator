@@ -4,12 +4,11 @@
 import importlib.metadata
 
 import juju.unit
-import ops
 
 # libjuju version != juju agent version, but the major version should be identical—which is good
 # enough to check for secrets
 _libjuju_version = importlib.metadata.version("juju")
-has_secrets = ops.JujuVersion(_libjuju_version).has_secrets
+has_secrets = int(_libjuju_version.split(".")[0]) >= 3
 
 
 async def run_action(unit: juju.unit.Unit, action_name, **params):

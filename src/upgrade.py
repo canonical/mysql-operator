@@ -185,6 +185,7 @@ class MySQLVMUpgrade(DataUpgrade):
             self._check_server_upgradeability()
             self.charm.unit.status = MaintenanceStatus("starting services...")
             self.charm._mysql.start_mysqld()
+            self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
