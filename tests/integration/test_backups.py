@@ -3,13 +3,13 @@
 # See LICENSE file for licensing details.
 
 import logging
-import os
 import socket
 import uuid
 from pathlib import Path
 
 import boto3
 import pytest
+import pytest_microceph
 from pytest_operator.plugin import OpsTest
 
 from . import juju_
@@ -45,7 +45,7 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="session")
-def cloud_configs():
+def cloud_configs(microceph: pytest_microceph.ConnectionInformation):
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
     path = f"mysql/{uuid.uuid4()}"
@@ -66,15 +66,17 @@ def cloud_configs():
         },
         "ceph": {
             "endpoint": f"http://{host_ip}",
-            "bucket": os.environ["S3_BUCKET"],
+            "bucket": microceph.bucket,
             "path": path,
-            "region": os.environ["S3_REGION"],
+            "region": "",
         },
     }
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+def cloud_credentials(
+    github_secrets, microceph: pytest_microceph.ConnectionInformation
+) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
     return {
         "aws": {
@@ -86,8 +88,8 @@ def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
             "secret-key": github_secrets["GCP_SECRET_KEY"],
         },
         "ceph": {
-            "access-key": os.environ["S3_ACCESS_KEY"],
-            "secret-key": os.environ["S3_SECRET_KEY"],
+            "access-key": microceph.access_key_id,
+            "secret-key": microceph.secret_access_key,
         },
     }
 
