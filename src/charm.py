@@ -90,7 +90,6 @@ from mysql_vm_helpers import (
     SnapServiceOperationError,
     instance_hostname,
     is_volume_mounted,
-    reboot_system,
     snap,
     snap_service_operation,
 )
@@ -429,10 +428,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self._join_unit_to_cluster()
             return
 
-        nodes = self._mysql.get_cluster_node_count()
-        if nodes > 0 and self.unit.is_leader():
-            self.app_peer_data["units-added-to-cluster"] = str(nodes)
-
         # retrieve and persist state for every unit
         try:
             state, role = self._mysql.get_member_state()
@@ -453,6 +448,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._handle_non_online_instance_status(state)
 
         if self.unit.is_leader():
+            nodes = self._mysql.get_cluster_node_count()
+            if nodes > 0:
+                self.app_peer_data["units-added-to-cluster"] = str(nodes)
             try:
                 primary_address = self._mysql.get_cluster_primary_address()
             except MySQLGetClusterPrimaryAddressError:
@@ -658,9 +656,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         # Safeguard against storage not attached
         if not is_volume_mounted():
-            logger.debug("Snap volume not mounted. Deferring")
-            self._reboot_on_detached_storage(event)
-            return False
+            logger.error("Data directory not attached. Will reboot unit.")
+            self.unit.status = WaitingStatus("Data directory not attached. Rebooting...")
+            # immediate reboot will make juju re-run the hook
+            self.unit.reboot(now=True)
 
         # Safeguard if receiving on start after unit initialization
         if self.unit_peer_data.get("unit-initialized") == "True":
@@ -669,19 +668,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return False
 
         return True
-
-    def _reboot_on_detached_storage(self, event) -> None:
-        """Reboot on detached storage.
-
-        Workaround for lxd containers not getting storage attached on startups.
-
-        Args:
-            event: the event that triggered this handler
-        """
-        event.defer()
-        logger.error("Data directory not attached. Reboot unit.")
-        self.unit.status = WaitingStatus("Data directory not attached")
-        reboot_system()
 
     def _is_unit_waiting_to_join_cluster(self) -> bool:
         """Return if the unit is waiting to join the cluster."""

@@ -27,7 +27,7 @@ from charms.mysql.v0.mysql import (
 )
 from charms.operator_libs_linux.v1 import snap
 from ops.charm import CharmBase
-from tenacity import retry, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
 from constants import (
@@ -637,7 +637,15 @@ class MySQL(MySQLBase):
             _file.write(script)
             _file.flush()
 
-            command = [CHARMED_MYSQLSH, "--no-wizard", "--python", "-f", _file.name]
+            command = [
+                CHARMED_MYSQLSH,
+                "--no-wizard",
+                "--log-file",
+                f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysqlsh/mysqlsh.log",
+                "--python",
+                "-f",
+                _file.name,
+            ]
 
             try:
                 # need to change permissions since charmed-mysql.mysqlsh runs as
@@ -746,18 +754,12 @@ class MySQL(MySQLBase):
 def is_volume_mounted() -> bool:
     """Returns if data directory is attached."""
     try:
-        subprocess.check_call(["mountpoint", "-q", CHARMED_MYSQL_COMMON_DIRECTORY])
-        return True
-    except subprocess.CalledProcessError:
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(12)):
+            with attempt:
+                subprocess.check_call(["mountpoint", "-q", CHARMED_MYSQL_COMMON_DIRECTORY])
+    except RetryError:
         return False
-
-
-def reboot_system() -> None:
-    """Reboot host machine."""
-    try:
-        subprocess.check_call(["systemctl", "reboot"])
-    except subprocess.CalledProcessError:
-        pass
+    return True
 
 
 def instance_hostname():
