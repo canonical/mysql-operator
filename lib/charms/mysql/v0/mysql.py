@@ -90,7 +90,7 @@ from ops.model import Unit
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed, wait_random
 
 from constants import (
-    BACKUPS_PASSWORD_KEY
+    BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
