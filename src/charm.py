@@ -33,22 +33,20 @@ from charms.mysql.v0.mysql import (
 )
 from charms.mysql.v0.tls import MySQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from ops import EventBase
-from ops.charm import (
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
+    EventBase,
     InstallEvent,
+    MaintenanceStatus,
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
     StartEvent,
-)
-from ops.main import main
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
     Unit,
     WaitingStatus,
 )
+from ops.main import main
 from tenacity import (
     RetryError,
     Retrying,

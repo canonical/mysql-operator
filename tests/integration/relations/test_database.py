@@ -11,12 +11,7 @@ import yaml
 from pytest_operator.plugin import OpsTest
 from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
 
-from constants import (
-    DB_RELATION_NAME,
-    PASSWORD_LENGTH,
-    ROOT_USERNAME,
-    SERVER_CONFIG_USERNAME,
-)
+from constants import DB_RELATION_NAME, PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
 from utils import generate_random_password
 
 from .. import markers

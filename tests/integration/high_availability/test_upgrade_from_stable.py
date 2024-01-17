@@ -8,11 +8,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .. import juju_
-from ..helpers import (
-    get_leader_unit,
-    get_primary_unit_wrapper,
-    retrieve_database_variable_value,
-)
+from ..helpers import get_leader_unit, get_primary_unit_wrapper, retrieve_database_variable_value
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
