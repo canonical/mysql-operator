@@ -3,11 +3,13 @@
 # See LICENSE file for licensing details.
 
 import logging
+import socket
 import uuid
 from pathlib import Path
 
 import boto3
 import pytest
+import pytest_microceph
 from pytest_operator.plugin import OpsTest
 
 from . import juju_
@@ -27,7 +29,7 @@ from .high_availability.high_availability_helpers import (
 logger = logging.getLogger(__name__)
 
 S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"
+S3_INTEGRATOR_CHANNEL = "latest/stable"
 TIMEOUT = 10 * 60
 CLUSTER_ADMIN_USER = "clusteradmin"
 CLUSTER_ADMIN_PASSWORD = "clusteradminpassword"
@@ -43,11 +45,12 @@ value_before_backup, value_after_backup = None, None
 
 
 @pytest.fixture(scope="session")
-def cloud_configs():
+def cloud_configs(microceph: pytest_microceph.ConnectionInformation):
     # Add UUID to path to avoid conflict with tests running in parallel (e.g. multiple Juju
     # versions on a PR, multiple PRs)
     path = f"mysql/{uuid.uuid4()}"
 
+    host_ip = socket.gethostbyname(socket.gethostname())
     return {
         "aws": {
             "endpoint": "https://s3.amazonaws.com",
@@ -61,11 +64,19 @@ def cloud_configs():
             "path": path,
             "region": "",
         },
+        "ceph": {
+            "endpoint": f"http://{host_ip}",
+            "bucket": microceph.bucket,
+            "path": path,
+            "region": "",
+        },
     }
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
+def cloud_credentials(
+    github_secrets, microceph: pytest_microceph.ConnectionInformation
+) -> dict[str, dict[str, str]]:
     """Read cloud credentials."""
     return {
         "aws": {
@@ -75,6 +86,10 @@ def cloud_credentials(github_secrets) -> dict[str, dict[str, str]]:
         "gcp": {
             "access-key": github_secrets["GCP_ACCESS_KEY"],
             "secret-key": github_secrets["GCP_SECRET_KEY"],
+        },
+        "ceph": {
+            "access-key": microceph.access_key_id,
+            "secret-key": microceph.secret_access_key,
         },
     }
 
