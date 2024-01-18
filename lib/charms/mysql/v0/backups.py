@@ -96,7 +96,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 
 if typing.TYPE_CHECKING:
@@ -220,9 +220,11 @@ Stderr:
             logger.info("Listing backups in the specified s3 path")
             backups = sorted(list_backups_in_s3_path(s3_parameters), key=lambda pair: pair[0])
             event.set_results({"backups": self._format_backups_list(backups)})
-        except Exception:
-            error_message = "Failed to retrieve backup ids from S3"
-            logger.exception(error_message)
+        except Exception as e:
+            error_message = (
+                e.message if hasattr(e, "message") else "Failed to retrieve backup ids from S3"
+            )
+            logger.error(error_message)
             event.fail(error_message)
 
     # ------------------ Create Backup ------------------
@@ -631,8 +633,6 @@ Juju Version: {str(juju_version)}
             MySQLServiceNotRunningError,
         ):
             return False, "Failed to configure restored instance for InnoDB cluster"
-
-        self.charm.unit_peer_data["unit-configured"] = "True"
 
         try:
             logger.info("Creating cluster on restored node")
