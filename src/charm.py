@@ -171,8 +171,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
         if not is_volume_mounted():
-            self._reboot_on_detached_storage(event)
-            return
+            # persistent data directory not mounted, reboot unit
+            logger.warning("Data directory not attached. Will reboot unit.")
+            self.unit.status = WaitingStatus("Data directory not attached. Rebooting...")
+            # immediate reboot will make juju re-run the hook
+            self.unit.reboot(now=True)
 
         if self.install_workload():
             self.unit.status = WaitingStatus("Waiting to start MySQL")
