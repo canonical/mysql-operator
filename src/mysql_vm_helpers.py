@@ -640,8 +640,6 @@ class MySQL(MySQLBase):
             command = [
                 CHARMED_MYSQLSH,
                 "--no-wizard",
-                "--log-file",
-                f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysqlsh/mysqlsh.log",
                 "--python",
                 "-f",
                 _file.name,
