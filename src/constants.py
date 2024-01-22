@@ -46,5 +46,4 @@ XTRABACKUP_PLUGIN_DIR = "/snap/charmed-mysql/current/usr/lib/xtrabackup/plugin"
 ROOT_SYSTEM_USER = "root"
 GR_MAX_MEMBERS = 9
 HOSTNAME_DETAILS = "hostname-details"
-SECRET_ID_KEY = "secret-id"
 COS_AGENT_RELATION_NAME = "cos-agent"
