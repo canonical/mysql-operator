@@ -12,7 +12,13 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterError,
     MySQLInitializeJujuOperationsTableError,
 )
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    SecretNotFoundError,
+    WaitingStatus,
+)
 from ops.testing import Harness
 from parameterized import parameterized
 from tenacity import Retrying, stop_after_attempt
@@ -360,12 +366,25 @@ class TestCharm(unittest.TestCase):
             self.peer_relation_id, self.charm.unit.name
         )
         self.charm.set_secret("unit", "password", "test-password")
-        secret_data = self.harness.model.get_secret(label="mysql.app").get_content()
+        secret_data = self.harness.model.get_secret(label="mysql.unit").get_content()
         assert secret_data["password"] == "test-password"
 
         assert "password" not in self.harness.get_relation_data(
             self.peer_relation_id, self.charm.unit.name
         )
+
+        # Test deletion.
+        self.charm.set_secret("app", "password", "")
+        with pytest.raises(SecretNotFoundError):
+            self.harness.model.get_secret(label="mysql.app")
+        assert self.charm.get_secret("app", "password") is None
+        assert self.charm.secrets.get("mysql.app") is None
+
+        self.charm.set_secret("unit", "password", "")
+        with pytest.raises(SecretNotFoundError):
+            self.harness.model.get_secret(label="mysql.unit")
+        assert self.charm.get_secret("unit", "password") is None
+        assert self.charm.secrets.get("mysql.unit") is None
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
