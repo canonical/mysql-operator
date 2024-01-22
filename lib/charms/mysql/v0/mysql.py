@@ -651,6 +651,7 @@ class MySQLCharmBase(CharmBase, ABC):
             secret.set_content(content)
         else:
             secret.meta.remove_all_revisions()
+            del self.secrets._secrets[label]
 
     def set_secret(
         self, scope: Scopes, key: str, value: Optional[str], fallback_key: Optional[str] = None
