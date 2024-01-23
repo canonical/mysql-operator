@@ -47,7 +47,7 @@ TIMEOUT = 17 * 60
 
 
 @pytest.mark.group(1)
-@pytest.mark.runner(["self-hosted"])
+@pytest.mark.runner("self-hosted")
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
