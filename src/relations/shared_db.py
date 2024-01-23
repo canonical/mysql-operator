@@ -4,17 +4,13 @@
 """Library containing the implementation of the legacy shared-db relation."""
 
 import logging
+import typing
 
 from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLGetClusterPrimaryAddressError,
 )
-from ops.charm import (
-    CharmBase,
-    LeaderElectedEvent,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import LeaderElectedEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus
 
@@ -23,11 +19,14 @@ from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
 
 class SharedDBRelation(Object):
     """Legacy `shared-db` relation implementation."""
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "shared-db-handler")
 
         self._charm = charm

@@ -11,11 +11,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import (
-    execute_queries_on_unit,
-    get_server_config_credentials,
-    scale_application,
-)
+from ..helpers import execute_queries_on_unit, get_server_config_credentials, scale_application
 
 logger = logging.getLogger(__name__)
 

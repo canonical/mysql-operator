@@ -4,11 +4,9 @@
 """Library containing the implementation of the standard relation."""
 
 import logging
+import typing
 
-from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProvides,
-    DatabaseRequestedEvent,
-)
+from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides, DatabaseRequestedEvent
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLCreateApplicationDatabaseAndScopedUserError,
@@ -29,11 +27,14 @@ from utils import generate_random_password
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
 
 class MySQLProvider(Object):
     """Standard database relation class."""
 
-    def __init__(self, charm):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, DB_RELATION_NAME)
 
         self.charm = charm
