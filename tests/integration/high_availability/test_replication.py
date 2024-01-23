@@ -54,6 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 
 @pytest.mark.group(1)
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Test that endpoints are running."""

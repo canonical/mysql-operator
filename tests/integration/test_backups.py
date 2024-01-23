@@ -323,6 +323,7 @@ async def test_restore_on_same_cluster(
 
 
 @pytest.mark.group(1)
+@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.abort_on_fail
 async def test_restore_on_new_cluster(
     ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
