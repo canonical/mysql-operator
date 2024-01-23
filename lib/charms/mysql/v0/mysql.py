@@ -79,21 +79,10 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, get_args
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
-from charms.data_platform_libs.v0.data_secrets import (
-    APP_SCOPE,
-    UNIT_SCOPE,
-    Scopes,
-    SecretCache,
-)
+from charms.data_platform_libs.v0.data_secrets import APP_SCOPE, UNIT_SCOPE, Scopes, SecretCache
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
 from ops.model import Unit
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_fixed,
-    wait_random,
-)
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed, wait_random
 
 from constants import (
     BACKUPS_PASSWORD_KEY,

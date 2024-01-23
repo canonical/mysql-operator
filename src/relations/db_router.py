@@ -5,6 +5,7 @@
 
 import json
 import logging
+import typing
 from collections import namedtuple
 from typing import Dict, List, Set, Tuple
 
@@ -15,12 +16,7 @@ from charms.mysql.v0.mysql import (
     MySQLDeleteUsersForUnitError,
     MySQLGetClusterPrimaryAddressError,
 )
-from ops.charm import (
-    CharmBase,
-    LeaderElectedEvent,
-    RelationChangedEvent,
-    RelationDepartedEvent,
-)
+from ops.charm import LeaderElectedEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, RelationDataContent
 
@@ -33,11 +29,14 @@ RequestedUser = namedtuple(
     "RequestedUser", ["application_name", "username", "hostname", "database"]
 )
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
 
 class DBRouterRelation(Object):
     """Encapsulation of the legacy db-router relation."""
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, LEGACY_DB_ROUTER)
 
         self.charm = charm

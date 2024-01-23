@@ -108,9 +108,6 @@ class TestCharm(unittest.TestCase):
         # trigger the leader_elected event
         self.harness.set_leader(True)
 
-        # ensure passwords set in the peer relation databag
-        secret_data = self.harness.model.get_secret(label="mysql.app").get_content()
-
         expected_peer_relation_databag_keys = [
             "root-password",
             "server-config-password",
@@ -119,7 +116,8 @@ class TestCharm(unittest.TestCase):
             "backups-password",
         ]
 
-        self.assertEqual(sorted(secret_data.keys()), sorted(expected_peer_relation_databag_keys))
+        for key in expected_peer_relation_databag_keys:
+            self.assertTrue(self.harness.charm.get_secret("app", key).isalnum())
 
     @patch_network_get(private_address="1.1.1.1")
     def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):

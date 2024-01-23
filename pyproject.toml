@@ -10,7 +10,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.5.0"
+ops = "^2.8.0"
 tenacity = "^8.2.2"
 boto3 = "^1.28.23"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
@@ -94,6 +94,7 @@ target-version = ["py38"]
 [tool.isort]
 profile = "black"
 known_third_party = "mysql.connector"
+line_length = 99
 
 # Linting tools configuration
 [tool.flake8]
