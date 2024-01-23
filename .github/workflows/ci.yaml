@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v9.3.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@self-hosted-runner-mark
 
   unit-test:
     name: Unit test charm
@@ -56,8 +56,9 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v9.3.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@self-hosted-runner-mark
     with:
+      cache: true
       charmcraft-snap-channel: beta
 
   integration-test:
@@ -73,9 +74,9 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v9.3.1
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@self-hosted-runner-mark
     with:
-      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: lxd
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
