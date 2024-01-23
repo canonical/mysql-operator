@@ -4,7 +4,7 @@
 import logging
 import unittest
 from pathlib import Path
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
 import pytest
 from charms.mysql.v0.mysql import MySQLCharmBase, MySQLSecretError
@@ -133,7 +133,7 @@ class TestCharmBase(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_migration_from_databag(self, scope, is_leader):
-        """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
+        """Check if we're moving on to use secrets when live upgrade from databag to Secrets."""
         # App has to be leader, unit can be either
         self.harness.set_leader(is_leader)
 
