@@ -572,9 +572,8 @@ class MySQLCharmBase(CharmBase, ABC):
         """Get secret from the secret storage.
 
         Retrieve secret from juju secrets backend if secret exists there.
-        Else retrieve from peer databag (with key or fallback_key). This is to
-        account for cases where secrets are stored in peer databag but the charm
-        is then refreshed to a newer revision.
+        Else retrieve from peer databag. This is to account for cases where secrets are stored in
+        peer databag but the charm is then refreshed to a newer revision.
         """
         peers = self.model.get_relation(PEER)
         if scope == APP_SCOPE:
