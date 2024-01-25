@@ -123,7 +123,7 @@ BYTES_1MiB = 1048576  # 1 mebibyte
 RECOVERY_CHECK_TIME = 10  # seconds
 GET_MEMBER_STATE_TIME = 10  # seconds
 
-SECRET_INTERNAL_LABEL = "internal-secret"
+SECRET_INTERNAL_LABEL = "secret-id"
 SECRET_DELETED_LABEL = "None"
 
 
@@ -2492,6 +2492,7 @@ class MySQLBase(ABC):
             self._run_mysqlsh_script("\n".join(connect_commands))
             return True
         except MySQLClientError:
+            logger.exception("Failed to connect to MySQL with mysqlsh")
             return False
 
     def get_pid_of_port_3306(self) -> Optional[str]:
