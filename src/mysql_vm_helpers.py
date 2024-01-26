@@ -162,7 +162,9 @@ class MySQL(MySQLBase):
 
         try:
             # install the charmed-mysql snap
-            logger.debug("Installing charmed-mysql snap")
+            logger.debug(
+                f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {CHARMED_MYSQL_SNAP_REVISION}"
+            )
             charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
