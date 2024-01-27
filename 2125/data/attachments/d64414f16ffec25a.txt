@@ -1,0 +1,40 @@
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:165 Destroying leader unit
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:184 Scaling back to 3 units
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [idle] active: 
+  mysql/3 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:88 Ensure 3 units are online
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
