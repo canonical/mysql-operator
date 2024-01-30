@@ -21,19 +21,23 @@ from .helpers import (
     scale_application,
     unit_file_md5,
 )
-from .markers import only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-TLS_APP_NAME = "self-signed-certificates"
+
+if juju_.has_secrets:
+    TLS_APP_NAME = "self-signed-certificates"
+    TLS_CONFIG = {"ca-common-name": "Test CA"}
+else:
+    TLS_APP_NAME = "tls-certificates-operator"
+    TLS_CONFIG = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@only_with_juju_secrets
 async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     if app := await app_name(ops_test):
@@ -68,7 +72,6 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@only_with_juju_secrets
 async def test_connection_before_tls(ops_test: OpsTest) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
     app = await app_name(ops_test)
@@ -98,7 +101,6 @@ async def test_connection_before_tls(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@only_with_juju_secrets
 async def test_enable_tls(ops_test: OpsTest) -> None:
     """Test for encryption enablement when relation to TLS charm."""
     app = await app_name(ops_test)
@@ -107,8 +109,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     logger.info("Deploy TLS operator")
     async with ops_test.fast_forward("60s"):
-        tls_config = {"ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_APP_NAME, channel="latest/stable", config=tls_config)
+        await ops_test.model.deploy(TLS_APP_NAME, channel="latest/stable", config=TLS_CONFIG)
         await ops_test.model.wait_for_idle(apps=[TLS_APP_NAME], status="active", timeout=15 * 60)
 
     # Relate with TLS charm
@@ -142,7 +143,6 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@only_with_juju_secrets
 async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """Verify rotating tls private keys restarts cluster with new certificates.
 
@@ -200,7 +200,6 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@only_with_juju_secrets
 async def test_disable_tls(ops_test: OpsTest) -> None:
     # Remove the relation
     app = await app_name(ops_test)
