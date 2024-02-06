@@ -190,8 +190,26 @@ class MySQLVMUpgrade(DataUpgrade):
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
             return
-        except (MySQLStopMySQLDError, MySQLStartMySQLDError):
-            logger.exception("Failed to stop/start MySQL server")
+        except MySQLStartMySQLDError:
+            # failed to start - check if is rolling back
+            if not self.unit_upgrade_data.get("state") == "recovery":
+                logger.exception("Failed to start MySQL server")
+                return
+
+            # if unit is in rollback/recovery and mysqld fails to start
+            # we assume the downgrade is incompatible. A full workload
+            # reset is required
+            logger.info("Downgrade is incompatible. Resetting workload")
+            self.charm._mysql.reset_data_dir()
+            self.charm.workload_initialise()
+            # reset flags
+            self.charm.unit_peer_data["member-role"] = "secondary"
+            self.charm.unit_peer_data["member-state"] = "waiting"
+            self.charm.join_unit_to_cluster()
+            self.set_unit_completed()
+            return
+        except MySQLStopMySQLDError:
+            logger.exception("Failed to stop MySQL server")
             self.set_unit_failed()
             return
 

@@ -750,6 +750,18 @@ class MySQL(MySQLBase):
         shutil.chown(path, owner, group)
         os.chmod(path, mode=permission)
 
+    @staticmethod
+    def reset_data_dir() -> None:
+        """Reset the data directory."""
+        # Remove the data directory
+        shutil.rmtree(MYSQL_DATA_DIR, ignore_errors=True)
+
+        # Recreate the data directory
+        os.makedirs(MYSQL_DATA_DIR, exist_ok=True)
+
+        # Change ownership of the data directory
+        shutil.chown(MYSQL_DATA_DIR, user=MYSQL_SYSTEM_USER, group="root")
+
 
 def is_volume_mounted() -> bool:
     """Returns if data directory is attached."""
