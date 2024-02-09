@@ -123,7 +123,7 @@ async def test_custom_variables(ops_test: OpsTest, mysql_charm_series) -> None:
 
     for unit in application.units:
         custom_vars = {}
-        custom_vars["max_connections"] = 20
+        custom_vars["max_connections"] = 100
         for k, v in custom_vars.items():
             logger.info(f"Checking that {k} is set to {v} on {unit.name}")
             value = await retrieve_database_variable_value(ops_test, unit, k)
