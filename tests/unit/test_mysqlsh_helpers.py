@@ -305,7 +305,7 @@ class TestMySQL(unittest.TestCase):
                 "bind-address = 0.0.0.0",
                 "mysqlx-bind-address = 0.0.0.0",
                 "report_host = 127.0.0.1",
-                "max_connections = 20",
+                "max_connections = 100",
                 "innodb_buffer_pool_size = 20971520",
                 "log_error_services = log_filter_internal;log_sink_internal",
                 "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
