@@ -31,7 +31,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 # botocore/urllib3 clutter the logs when on debug
 logging.getLogger("botocore").setLevel(logging.WARNING)
