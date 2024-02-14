@@ -1,0 +1,100 @@
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:139 Asserting that a connection to the database is still possible with application credentials
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:149 Removing relation mysql:mysql with mysql-test-app:mysql
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:158 Waiting till mysql is active and mysql-test-app is waiting
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/2 [executing] active: 
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:32:58Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.35-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            error       2  mysql-test-app  latest/edge   29  no       hook failed: "mysql-relation-changed"
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0   active    executing  0        10.102.197.245                  
+mysql-test-app/1*  error     idle       1        10.102.197.106                  hook failed: "mysql-relation-changed"
+mysql/0            active    executing  2        10.102.197.240  3306,33060/tcp  
+mysql/1*           active    executing  3        10.102.197.49   3306,33060/tcp  Primary
+mysql/2            active    executing  4        10.102.197.181  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.102.197.245  juju-3ed5e2-0  ubuntu@22.04      Running
+1        started  10.102.197.106  juju-3ed5e2-1  ubuntu@22.04      Running
+2        started  10.102.197.240  juju-3ed5e2-2  ubuntu@22.04      Running
+3        started  10.102.197.49   juju-3ed5e2-3  ubuntu@22.04      Running
+4        started  10.102.197.181  juju-3ed5e2-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-1: 01:30:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:01 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-1: 01:30:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:30:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:06 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:30:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:30:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:30:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:30:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:30:16 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-1: 01:30:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:30:17 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-4: 01:30:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:30:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:30:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:30:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:30:19 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:30:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:30:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-test-app-1: 01:32:46 ERROR unit.mysql-test-app/1.juju-log mysql:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/./src/charm.py", line 409, in <module>
+    main(MySQLTestApplication)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/src/relations/legacy_mysql.py", line 105, in _on_relation_changed
+    self.charm.app_peer_data[f"{LEGACY_MYSQL_RELATION}-host"] = relation_data["host"]
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 1685, in __getitem__
+    return super().__getitem__(key)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 790, in __getitem__
+    return self._data[key]
+KeyError: 'host'
+unit-mysql-test-app-1: 01:32:47 ERROR juju.worker.uniter.operation hook "mysql-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-test-app-1: 01:32:56 ERROR unit.mysql-test-app/1.juju-log mysql:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/./src/charm.py", line 409, in <module>
+    main(MySQLTestApplication)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/src/relations/legacy_mysql.py", line 105, in _on_relation_changed
+    self.charm.app_peer_data[f"{LEGACY_MYSQL_RELATION}-host"] = relation_data["host"]
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 1685, in __getitem__
+    return super().__getitem__(key)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 790, in __getitem__
+    return self._data[key]
+KeyError: 'host'
+unit-mysql-test-app-1: 01:32:57 ERROR juju.worker.uniter.operation hook "mysql-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[33mWARNING [0m juju.client.connection:connection.py:657 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m juju.client.connection:connection.py:665 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
