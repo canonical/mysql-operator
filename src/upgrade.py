@@ -198,7 +198,12 @@ class MySQLVMUpgrade(DataUpgrade):
 
             # if unit is in rollback/recovery and mysqld fails to start
             # we assume the downgrade is incompatible. A full workload
-            # reset is required
+            # reset is required, but only if there's more then one unit
+            if self.charm.app.planned_units() == 1:
+                logger.error("Downgrade is incompatible")
+                self.set_unit_failed()
+                return
+
             logger.info("Downgrade is incompatible. Resetting workload")
             self.charm._mysql.reset_data_dir()
             self.charm.workload_initialise()
