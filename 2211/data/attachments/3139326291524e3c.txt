@@ -1,0 +1,80 @@
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:391 Stopping server on unit mysql/1
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:394 Removing data directory
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:410 Purge binlogs on unit mysql/0
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:410 Purge binlogs on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:418 Waiting unit to enter in maintenance.
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:425 Waiting unit to be back online.
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:437 Check if instance in cluster
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:43:56Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.35-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   30  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.114.138.114                  
+mysql/0*           active    idle   0        10.114.138.192  3306,33060/tcp  Primary
+mysql/1            active    idle   1        10.114.138.220  3306,33060/tcp  
+mysql/2            active    idle   2        10.114.138.138  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.114.138.192  juju-3f8890-0  ubuntu@22.04      Running
+1        started  10.114.138.220  juju-3f8890-1  ubuntu@22.04      Running
+2        started  10.114.138.138  juju-3f8890-2  ubuntu@22.04      Running
+3        started  10.114.138.114  juju-3f8890-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:28:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:28:03 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:28:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:28:03 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:28:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:28:06 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:28:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:28:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:28:07 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:28:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:28:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:28:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:31:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:31:09 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-3: 01:31:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:31:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:32:25 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:32:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:32:35 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:32:35 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:32:40 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:32:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:32:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:32:48 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+machine-1: 01:35:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-mysql-1: 01:42:36 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:42:47 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:42:57 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
