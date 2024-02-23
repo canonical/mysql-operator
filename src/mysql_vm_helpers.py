@@ -195,6 +195,23 @@ class MySQL(MySQLBase):
             # other exceptions are not retried
             raise MySQLInstallError
 
+    @staticmethod
+    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(5))
+    def uninstall_mysql() -> None:
+        """Uninstall MySQL.
+
+        Raises: MySQLUninstallError if there is an error uninstalling MySQL
+        """
+        try:
+            logger.debug("Uninstalling MySQL")
+            subprocess.run(["snap", "remove", "charmed-mysql"], check=True)
+        except subprocess.CalledProcessError:
+            # uninstalls fail due to SNAP_DATA_DIR fails to umount
+            # try umount it, without check
+            subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
+            logger.exception("Failed to uninstall MySQL")
+            raise MySQLInstallError
+
     @override
     def get_available_memory(self) -> int:
         """Retrieves the total memory of the server where mysql is running."""
@@ -751,13 +768,21 @@ class MySQL(MySQLBase):
         os.chmod(path, mode=permission)
 
     @staticmethod
+    def fetch_error_log() -> Optional[str]:
+        """Fetch the mysqld error log."""
+        if os.path.exists(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log"):
+            # can be empty if just rotated
+            with open(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log", "r") as fd:
+                return fd.read()
+
+    @staticmethod
     def reset_data_dir() -> None:
         """Reset the data directory."""
         # Remove the data directory
-        shutil.rmtree(MYSQL_DATA_DIR, ignore_errors=True)
+        shutil.rmtree(MYSQL_DATA_DIR, ignore_errors=False)
 
         # Recreate the data directory
-        os.makedirs(MYSQL_DATA_DIR, exist_ok=True)
+        os.makedirs(MYSQL_DATA_DIR)
 
         # Change ownership of the data directory
         shutil.chown(MYSQL_DATA_DIR, user=MYSQL_SYSTEM_USER, group="root")
