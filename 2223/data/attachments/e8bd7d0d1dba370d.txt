@@ -1,0 +1,150 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  02:09:50Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.35-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   31  no       
+
+Unit               Workload     Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active       idle   3        10.203.209.197                  
+mysql/0            maintenance  idle   0        10.203.209.79   3306,33060/tcp  offline
+mysql/1            active       idle   1        10.203.209.2    3306,33060/tcp  
+mysql/2*           active       idle   2        10.203.209.182  3306,33060/tcp  Primary
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.203.209.79   juju-c400f8-0  ubuntu@22.04      Running
+1        started  10.203.209.2    juju-c400f8-1  ubuntu@22.04      Running
+2        started  10.203.209.182  juju-c400f8-2  ubuntu@22.04      Running
+3        started  10.203.209.197  juju-c400f8-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-2: 01:27:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:27:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:27:09 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-2: 01:27:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:27:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:27:10 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:27:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:27:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:27:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:27:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:27:18 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-0: 01:27:18 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:30:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:30:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:30:20 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-0: 01:30:20 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:31:48 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:31:56 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:31:59 ERROR unit.mysql/2.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:31:59 ERROR unit.mysql/2.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:32:04 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:32:10 ERROR unit.mysql/2.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:32:10 ERROR unit.mysql/2.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-2: 01:32:18 ERROR unit.mysql/2.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:32:18 ERROR unit.mysql/2.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+machine-1: 01:35:40 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-mysql-2: 01:38:02 ERROR unit.mysql/2.juju-log Failed to flush ERROR LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 655, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpitaoqdvq']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 2532, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands))
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 659, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\nmysqlsh.DBError: MySQL Error (2003): Shell.connect: Can\'t connect to MySQL server on \'juju-c400f8-2.lxd:3306\' (111)\n'
+unit-mysql-2: 01:38:04 ERROR unit.mysql/2.juju-log Failed to flush GENERAL LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 655, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpx6j12wws']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 2532, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands))
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 659, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\nmysqlsh.DBError: MySQL Error (2003): Shell.connect: Can\'t connect to MySQL server on \'juju-c400f8-2.lxd:3306\' (111)\n'
+unit-mysql-0: 01:39:08 ERROR unit.mysql/0.juju-log Failed to flush GENERAL LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 655, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpqomw7_ou']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2532, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands))
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 659, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\nmysqlsh.DBError: MySQL Error (2013): Shell.connect: Lost connection to MySQL server at \'reading initial communication packet\', system error: 104\n'
+unit-mysql-2: 01:39:51 ERROR unit.mysql/2.juju-log Failed to get cluster status for test_cluster
+unit-mysql-2: 01:39:51 ERROR unit.mysql/2.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1469, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-2: 01:40:47 ERROR unit.mysql/2.juju-log Failed to reboot cluster
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 655, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmp8kexf3vo']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1954, in reboot_from_complete_outage
+    self._run_mysqlsh_script("\n".join(reboot_from_outage_command))
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 659, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'No PRIMARY member found for cluster \'test_cluster\'\nRestoring the Cluster \'test_cluster\' from complete outage...\n\nCluster instances: \'juju-c400f8-0.lxd:3306\' (OFFLINE), \'juju-c400f8-1.lxd:3306\' (OFFLINE), \'juju-c400f8-2.lxd:3306\' (OFFLINE)\nWaiting for instances to apply pending received transactions...\n\x1b[36mNOTE: \x1b[0mThe instance \'juju-c400f8-2.lxd:3306\' is running auto-rejoin process, which will be cancelled.\n\nValidating instance configuration at juju-c400f8-2.lxd:3306...\n\nThis instance reports its own address as \x1b[1mjuju-c400f8-2.lxd:3306\x1b[0m\n\nInstance configuration is suitable.\n\x1b[36mNOTE: \x1b[0mCancelling active GR auto-initialization at juju-c400f8-2.lxd:3306\n* Waiting for seed instance to become ONLINE...\njuju-c400f8-2.lxd:3306 was restored.\n\x1b[31mERROR: \x1b[0mMySQL Error 2013 (HY000): Lost connection to MySQL server during query\nTraceback (most recent call last):\n  File "<string>", line 2, in <module>\nmysqlsh.DBError: MySQL Error (2013): Dba.reboot_cluster_from_complete_outage: Lost connection to MySQL server during query\n'
+unit-mysql-2: 01:40:47 ERROR unit.mysql/2.juju-log Failed to reboot cluster from complete outage.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
