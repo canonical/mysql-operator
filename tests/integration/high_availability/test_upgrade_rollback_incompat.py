@@ -58,7 +58,8 @@ async def test_upgrade_to_failling(
     logger.info("Build charm locally")
 
     sub_regex_failing_rejoin = (
-        's/logger.debug("Recovering unit")/self.charm._mysql.set_instance_offline_mode(True)/'
+        's/logger.debug("Recovering unit")'
+        "/self.charm._mysql.set_instance_offline_mode(True); raise RetryError/"
     )
     src_patch(sub_regex=sub_regex_failing_rejoin, file_name="src/upgrade.py")
     new_charm = await ops_test.build_charm(".")
@@ -91,6 +92,12 @@ async def test_upgrade_to_failling(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_rollback(ops_test, continuous_writes) -> None:
+    application = ops_test.model.applications[MYSQL_APP_NAME]
+
+    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
+    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+    charm = await ops_test.build_charm(".")
+
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
 
@@ -99,12 +106,6 @@ async def test_rollback(ops_test, continuous_writes) -> None:
     logger.info("Run pre-upgrade-check action")
     await juju_.run_action(leader_unit, "pre-upgrade-check")
 
-    application = ops_test.model.applications[MYSQL_APP_NAME]
-
-    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
-    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
-
-    charm = await ops_test.build_charm(".")
     logger.info("Refresh with previous charm")
     await application.refresh(path=charm)
 
