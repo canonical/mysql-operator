@@ -3,6 +3,7 @@
 
 import ast
 import logging
+import pathlib
 import subprocess
 
 import pytest
@@ -28,6 +29,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
     # store for later refreshing to it
+    remove_charm_file()
     await high_availability_test_setup(ops_test, mysql_charm_series)
 
     src_patch(revert=True)
@@ -62,6 +64,7 @@ async def test_upgrade_to_failling(
         "/self.charm._mysql.set_instance_offline_mode(True); raise RetryError/"
     )
     src_patch(sub_regex=sub_regex_failing_rejoin, file_name="src/upgrade.py")
+    remove_charm_file()
     new_charm = await ops_test.build_charm(".")
     src_patch(revert=True)
 
@@ -96,6 +99,7 @@ async def test_rollback(ops_test, continuous_writes) -> None:
 
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+    remove_charm_file()
     charm = await ops_test.build_charm(".")
 
     logger.info("Get leader unit")
@@ -129,3 +133,11 @@ def src_patch(sub_regex: str = "", file_name: str = "", revert: bool = False) ->
         cmd = f"sed -i -e '{sub_regex}' {file_name}"
         logger.info("Applying patch to source")
     subprocess.run([cmd], shell=True, check=True)
+
+
+def remove_charm_file() -> None:
+    """Remove the charm file."""
+    path = pathlib.Path(".")
+    charms = path.glob("*.charm")
+    for charm in charms:
+        charm.resolve().unlink()
