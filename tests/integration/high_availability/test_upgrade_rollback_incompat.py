@@ -28,9 +28,6 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
     # store for later refreshing to it
-    global charm
-    charm = await ops_test.build_charm(".")
-
     await high_availability_test_setup(ops_test, mysql_charm_series)
 
     src_patch(revert=True)
@@ -104,6 +101,10 @@ async def test_rollback(ops_test, continuous_writes) -> None:
 
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
+    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
+    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+
+    charm = await ops_test.build_charm(".")
     logger.info("Refresh with previous charm")
     await application.refresh(path=charm)
 
@@ -122,6 +123,8 @@ def src_patch(sub_regex: str = "", file_name: str = "", revert: bool = False) ->
     """Apply a patch to the source code."""
     if revert:
         cmd = "git checkout ."  # revert all changes
+        logger.info("Reverting patch on source")
     else:
         cmd = f"sed -i -e '{sub_regex}' {file_name}"
+        logger.info("Applying patch to source")
     subprocess.run([cmd], shell=True, check=True)

@@ -214,3 +214,31 @@ class TestUpgrade(unittest.TestCase):
         mock_is_server_upgradeable.reset_mock()
         self.charm.upgrade._check_server_upgradeability()
         mock_is_server_upgradeable.assert_not_called()
+
+    @patch("mysql_vm_helpers.MySQL.fetch_error_log")
+    def test_check_server_unsupported_downgrade(self, mock_fetch_error_log):
+        mock_fetch_error_log.return_value = "MY-013171"
+        self.assertTrue(self.charm.upgrade._check_server_unsupported_downgrade())
+        mock_fetch_error_log.return_value = "MY-013sdasa"
+        self.assertTrue(not self.charm.upgrade._check_server_unsupported_downgrade())
+
+    @patch("charm.MySQLOperatorCharm.join_unit_to_cluster")
+    @patch("mysql_vm_helpers.MySQL.rescan_cluster")
+    @patch("charm.MySQLOperatorCharm._get_primary_from_online_peer")
+    @patch("charm.MySQLOperatorCharm.workload_initialise")
+    @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
+    @patch("mysql_vm_helpers.MySQL.uninstall_mysql")
+    @patch("mysql_vm_helpers.MySQL.reset_data_dir")
+    def test_reset_on_unsupported_downgrade(
+        self,
+        mock_reset_data_dir,
+        mock_uninstall_workload,
+        mock_install_workload,
+        mock_init_workload,
+        mock_get_primary,
+        mock_rescan_cluster,
+        mock_join_unit,
+    ):
+        self.charm.upgrade._reset_on_unsupported_downgrade()
+        self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
