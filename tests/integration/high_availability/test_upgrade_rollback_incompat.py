@@ -3,8 +3,11 @@
 
 import ast
 import logging
+import os
 import pathlib
+import shutil
 import subprocess
+from zipfile import ZipFile
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -13,13 +16,14 @@ from .. import juju_
 from ..helpers import get_leader_unit, get_relation_data, get_unit_by_index
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
-    high_availability_test_setup,
+    relate_mysql_and_application,
 )
 
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 20 * 60
 MYSQL_APP_NAME = "mysql"
+TEST_APP = "mysql-test-app"
 
 
 @pytest.mark.group(1)
@@ -28,11 +32,33 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     """Simple test to ensure that the mysql and application charms get deployed."""
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
-    # store for later refreshing to it
-    remove_charm_file()
-    await high_availability_test_setup(ops_test, mysql_charm_series)
+    charm = await charm_local_build(ops_test)
 
     src_patch(revert=True)
+    config = {"profile": "testing"}
+
+    async with ops_test.fast_forward("10s"):
+        await ops_test.model.deploy(
+            charm,
+            application_name=MYSQL_APP_NAME,
+            config=config,
+            num_units=3,
+            series=mysql_charm_series,
+        )
+
+        await ops_test.model.deploy(
+            TEST_APP,
+            application_name=TEST_APP,
+            channel="latest/edge",
+            num_units=1,
+        )
+
+        await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP)
+        await ops_test.model.wait_for_idle(
+            apps=[MYSQL_APP_NAME, TEST_APP],
+            status="active",
+            timeout=TIMEOUT,
+        )
 
 
 @pytest.mark.group(1)
@@ -64,8 +90,7 @@ async def test_upgrade_to_failling(
         "/self.charm._mysql.set_instance_offline_mode(True); raise RetryError/"
     )
     src_patch(sub_regex=sub_regex_failing_rejoin, file_name="src/upgrade.py")
-    remove_charm_file()
-    new_charm = await ops_test.build_charm(".")
+    new_charm = await charm_local_build(ops_test, refresh=True)
     src_patch(revert=True)
 
     logger.info("Refresh the charm")
@@ -99,8 +124,7 @@ async def test_rollback(ops_test, continuous_writes) -> None:
 
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
-    remove_charm_file()
-    charm = await ops_test.build_charm(".")
+    charm = await charm_local_build(ops_test, refresh=True)
 
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
@@ -127,7 +151,7 @@ async def test_rollback(ops_test, continuous_writes) -> None:
 def src_patch(sub_regex: str = "", file_name: str = "", revert: bool = False) -> None:
     """Apply a patch to the source code."""
     if revert:
-        cmd = "git checkout ."  # revert all changes
+        cmd = "git checkout src/"  # revert changes on src/ dir
         logger.info("Reverting patch on source")
     else:
         cmd = f"sed -i -e '{sub_regex}' {file_name}"
@@ -135,9 +159,33 @@ def src_patch(sub_regex: str = "", file_name: str = "", revert: bool = False) ->
     subprocess.run([cmd], shell=True, check=True)
 
 
-def remove_charm_file() -> None:
-    """Remove the charm file."""
-    path = pathlib.Path(".")
-    charms = path.glob("*.charm")
-    for charm in charms:
-        charm.resolve().unlink()
+async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
+    """Wrapper for a local charm build zip file updating."""
+    local_charms = pathlib.Path().glob("local-*.charm")
+    for lc in local_charms:
+        # clean up local charms from previous runs to avoid
+        # pytest_operator_cache globbing them
+        lc.unlink()
+
+    charm = await ops_test.build_charm(".")
+
+    if os.environ.get("CI") == "true":
+        # CI will get charm from common cache
+        # make local copy and update charm zip
+
+        update_files = ["src/constants.py", "src/upgrade.py"]
+
+        charm = pathlib.Path(shutil.copy(charm, f"local-{charm.stem}.charm"))
+
+        for path in update_files:
+            with open(path, "r") as f:
+                content = f.read()
+
+            with ZipFile(charm, mode="a") as charm_zip:
+                charm_zip.writestr(path, content)
+
+    if refresh:
+        # when refreshing, return posix path
+        return charm
+    # when deploying, return prefixed full path
+    return f"local:{charm.resolve()}"
