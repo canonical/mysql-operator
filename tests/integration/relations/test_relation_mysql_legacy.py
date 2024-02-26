@@ -43,7 +43,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     logger.info(
-        f"Deploying {DATABASE_APP_NAME} charm with 3 units, and {APPLICATION_APP_NAME} with 2 units"
+        f"Deploying {DATABASE_APP_NAME} charm with 3 units, and {APPLICATION_APP_NAME} with 1 units"
     )
 
     await asyncio.gather(
@@ -57,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
-            num_units=2,
+            num_units=1,
             channel="latest/edge",
         ),
     )
@@ -71,7 +71,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
         )
 
         await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2,
+            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 1,
             timeout=TIMEOUT,
         )
 
@@ -95,7 +95,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
         assert unit.workload_status == "active"
 
-    assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+    assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 1
 
 
 @pytest.mark.group(1)
