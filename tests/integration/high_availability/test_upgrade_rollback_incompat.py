@@ -7,6 +7,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+from time import sleep
 from zipfile import ZipFile
 
 import pytest
@@ -131,9 +132,11 @@ async def test_rollback(ops_test, continuous_writes) -> None:
 
     assert leader_unit is not None, "No leader unit found"
 
+    sleep(10)
     logger.info("Run pre-upgrade-check action")
     await juju_.run_action(leader_unit, "pre-upgrade-check")
 
+    sleep(20)
     logger.info("Refresh with previous charm")
     await application.refresh(path=charm)
 
