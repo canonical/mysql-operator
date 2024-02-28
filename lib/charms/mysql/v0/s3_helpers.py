@@ -31,7 +31,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 # botocore/urllib3 clutter the logs when on debug
 logging.getLogger("botocore").setLevel(logging.WARNING)
@@ -59,8 +59,7 @@ def upload_content_to_s3(content: str, content_path: str, s3_parameters: Dict) -
             region_name=s3_parameters["region"] or None,
         )
         verif = True
-        ca_chain = s3_parameters["tls-ca-chain"]
-        if ca_chain:
+        if ca_chain := s3_parameters.get("tls-ca-chain"):
             ca = "\n".join([base64.b64decode(s).decode() for s in ca_chain])
             ca_file.write(ca.encode())
             ca_file.flush()
