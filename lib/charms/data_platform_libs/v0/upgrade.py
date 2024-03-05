@@ -607,6 +607,21 @@ class DataUpgrade(Object, ABC):
         self._upgrade_stack = stack
 
     @property
+    def other_unit_states(self) -> list:
+        """Current upgrade state for other units.
+
+        Returns:
+            Unsorted list of upgrade states for other units.
+        """
+        if not self.peer_relation:
+            return []
+
+        return [
+            self.peer_relation.data[unit].get("state", "")
+            for unit in list(self.peer_relation.units)
+        ]
+
+    @property
     def unit_states(self) -> list:
         """Current upgrade state for all units.
 
@@ -981,6 +996,7 @@ class DataUpgrade(Object, ABC):
             self.charm.unit == top_unit
             and top_state in ["ready", "upgrading"]
             and self.cluster_state == "ready"
+            and "upgrading" not in self.other_unit_states
         ):
             logger.debug(
                 f"{top_unit.name} is next to upgrade, emitting `upgrade_granted` event and upgrading..."
