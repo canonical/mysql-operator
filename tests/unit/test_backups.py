@@ -54,13 +54,20 @@ class TestMySQLBackups(unittest.TestCase):
             "bucket": "test_bucket",
             "access-key": "test-access-key",
             "secret-key": "test-secret-key",
+            "tls-ca-chain": ["Zm9vYmFy"],  # "foobar" in base64
         }
         _get_s3_connection_info.return_value = return_value
 
         s3_parameters, missing_required_parameters = self.mysql_backups._retrieve_s3_parameters()
         self.assertEqual(
             s3_parameters,
-            {"endpoint": "https://s3.amazonaws.com", "region": None, "path": "", **return_value},
+            {
+                "endpoint": "https://s3.amazonaws.com",
+                "region": None,
+                "path": "",
+                "tls-ca-chain": "foobar",
+                **return_value,
+            },
         )
         self.assertEqual(missing_required_parameters, [])
 

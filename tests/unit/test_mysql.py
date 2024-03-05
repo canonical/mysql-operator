@@ -370,18 +370,20 @@ class TestMySQLBase(unittest.TestCase):
     def test_add_instance_to_cluster(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
         """Test a successful execution of create_cluster."""
         add_instance_to_cluster_commands = (
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-            "cluster = dba.get_cluster('test_cluster')",
-            "shell.options['dba.restartWaitTimeout'] = 3600",
-            "cluster.add_instance('clusteradmin@127.0.0.2', {\"password\": "
-            '"clusteradminpassword", "label": "mysql-1", "recoveryMethod": "auto"})',
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')\n"
+            "cluster = dba.get_cluster('test_cluster')\n"
+            "shell.options['dba.restartWaitTimeout'] = 3600\n"
+            "cluster.add_instance('clusteradmin@127.0.0.2', {'password': 'clusteradminpassword',"
+            " 'label': 'mysql-1', 'recoveryMethod': 'auto'})"
         )
 
         self.mysql.add_instance_to_cluster(
             instance_address="127.0.0.2", instance_unit_label="mysql-1"
         )
 
-        _run_mysqlsh_script.assert_called_once_with("\n".join(add_instance_to_cluster_commands))
+        _run_mysqlsh_script.assert_called_once_with(add_instance_to_cluster_commands)
+        _acquire_lock.assert_called_once()
+        _release_lock.assert_called_once()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
@@ -396,6 +398,9 @@ class TestMySQLBase(unittest.TestCase):
             self.mysql.add_instance_to_cluster(
                 instance_address="127.0.0.2", instance_unit_label="mysql-1"
             )
+            _acquire_lock.assert_called_once()
+            _release_lock.assert_called_once()
+            _run_mysqlsh_script.assert_called()
 
     @patch(
         "charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script", return_value="INSTANCE_CONFIGURED"

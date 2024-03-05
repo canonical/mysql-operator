@@ -27,7 +27,13 @@ logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-TLS_APP_NAME = "tls-certificates-operator"
+
+if juju_.has_secrets:
+    TLS_APP_NAME = "self-signed-certificates"
+    TLS_CONFIG = {"ca-common-name": "Test CA"}
+else:
+    TLS_APP_NAME = "tls-certificates-operator"
+    TLS_CONFIG = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 
 
 @pytest.mark.group(1)
@@ -103,8 +109,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     # Deploy TLS Certificates operator.
     logger.info("Deploy TLS operator")
     async with ops_test.fast_forward("60s"):
-        tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_APP_NAME, channel="latest/stable", config=tls_config)
+        await ops_test.model.deploy(TLS_APP_NAME, channel="latest/stable", config=TLS_CONFIG)
         await ops_test.model.wait_for_idle(apps=[TLS_APP_NAME], status="active", timeout=15 * 60)
 
     # Relate with TLS charm
