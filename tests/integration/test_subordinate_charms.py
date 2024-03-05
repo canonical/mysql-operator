@@ -34,6 +34,10 @@ async def test_ubuntu_pro(ops_test, mysql_charm_series, github_secrets):
             config={"token": github_secrets["UBUNTU_PRO_TOKEN"]},
         ),
     )
+    await ops_test.model.relate(
+        f"{DATABASE_APP_NAME}:database", f"{APPLICATION_APP_NAME}:database"
+    )
+    await ops_test.model.relate(f"{DATABASE_APP_NAME}", f"{UBUNTU_PRO_APP_NAME}")
     async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME, APPLICATION_APP_NAME, UBUNTU_PRO_APP_NAME],
