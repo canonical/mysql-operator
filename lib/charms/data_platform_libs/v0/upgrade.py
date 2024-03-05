@@ -945,7 +945,6 @@ class DataUpgrade(Object, ABC):
             # on k8s only the upgrading unit will receive the upgrade-charm event
             # and deferring will prevent the upgrade stack from being popped
             logger.debug("Cluster in recovery, deferring...")
-            event.defer()
             return
 
         # if all units completed, mark as complete
