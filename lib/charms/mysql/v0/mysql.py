@@ -385,8 +385,8 @@ class MySQLCharmBase(CharmBase, ABC):
         )  # pyright: ignore [reportArgumentType]
         if pause_file.exists():
             logger.warning(
-                f"Pause file {pause_file.resolve()} exists, the charm will skip all events.\n"
-                "To resume normal operations, please remove the pause file."
+                f"\n\tPause file `{pause_file.resolve()}` found, the charm will skip all events."
+                "\n\tTo resume normal operations, please remove the pause file."
             )
             self.unit.status = MaintenanceStatus("Paused")
             sys.exit(0)
