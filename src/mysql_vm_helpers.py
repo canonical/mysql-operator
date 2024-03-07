@@ -78,6 +78,10 @@ class MySQLInstallError(Error):
     """Exception raised when there's an error installing MySQL."""
 
 
+class MySQLUninstallError(Error):
+    """Exception raised when there's an error installing MySQL."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -196,21 +200,23 @@ class MySQL(MySQLBase):
             raise MySQLInstallError
 
     @staticmethod
-    @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(5))
     def uninstall_mysql() -> None:
         """Uninstall MySQL.
 
         Raises: MySQLUninstallError if there is an error uninstalling MySQL
         """
-        try:
-            logger.debug("Uninstalling MySQL")
-            subprocess.run(["snap", "remove", "charmed-mysql"], check=True)
-        except subprocess.CalledProcessError:
-            # uninstalls fail due to SNAP_DATA_DIR fails to umount
-            # try umount it, without check
-            subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
-            logger.exception("Failed to uninstall MySQL")
-            raise MySQLInstallError
+        for attempt in range(1, 4):
+            # make 3 tries to uninstall MySQL
+            try:
+                logger.debug("Uninstalling MySQL")
+                subprocess.run(["snap", "remove", "charmed-mysql"], check=True)
+                return
+            except subprocess.CalledProcessError:
+                # uninstalls fail due to SNAP_DATA_DIR fails to umount
+                # try umount it, without check
+                subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
+                logger.exception(f"Failed to uninstall MySQL on {attempt=}")
+        raise MySQLUninstallError
 
     @override
     def get_available_memory(self) -> int:
