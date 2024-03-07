@@ -54,6 +54,7 @@ async def test_landscape_client(ops_test):
         LANDSCAPE_CLIENT_APP_NAME,
         application_name=LANDSCAPE_CLIENT_APP_NAME,
         channel="latest/edge",
+        config={"account-name": "foo-bar"},  # TODO: needs to be unique?
     )
     await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
     async with ops_test.fast_forward("60s"):
