@@ -42,7 +42,7 @@ class MySQLLogs(Object):
 
     def _flush_mysql_logs(self, _) -> None:
         """Flush the specified (via LOGS_TYPE env var) mysql logs."""
-        logs_type = os.environ.get("LOGS_TYPE")
+        logs_type = os.environ.get("LOGS_TYPE", "")
 
         try:
             text_logs = MySQLTextLogs[logs_type]
