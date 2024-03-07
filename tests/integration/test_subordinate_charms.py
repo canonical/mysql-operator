@@ -49,12 +49,12 @@ async def test_ubuntu_pro(ops_test, mysql_charm_series, github_secrets):
 
 
 @pytest.mark.group(1)
-async def test_landscape_client(ops_test):
+async def test_landscape_client(ops_test, github_secrets):
     await ops_test.model.deploy(
         LANDSCAPE_CLIENT_APP_NAME,
         application_name=LANDSCAPE_CLIENT_APP_NAME,
         channel="latest/edge",
-        config={"account-name": "foo-bar"},  # TODO: needs to be unique?
+        config={"account-name": "foo-bar", "registration-key": github_secrets["UBUNTU_PRO_TOKEN"]},  # TODO: needs to be unique?
     )
     await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
     async with ops_test.fast_forward("60s"):
