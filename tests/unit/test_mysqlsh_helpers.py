@@ -272,6 +272,8 @@ class TestMySQL(unittest.TestCase):
                 "general_log = ON",
                 "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
                 "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+                "innodb_flush_method = O_DIRECT",
+                "innodb_use_fdatasync = ON",
                 "innodb_buffer_pool_chunk_size = 5678",
                 "\n",
             )
@@ -312,6 +314,8 @@ class TestMySQL(unittest.TestCase):
                 "general_log = ON",
                 "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
                 "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+                "innodb_flush_method = O_DIRECT",
+                "innodb_use_fdatasync = ON",
                 "innodb_buffer_pool_chunk_size = 1048576",
                 "performance-schema-instrument = 'memory/%=OFF'",
                 "loose-group_replication_message_cache_size = 134217728",
