@@ -484,3 +484,12 @@ class TestMySQL(unittest.TestCase):
         with patch("builtins.open", mock_open(read_data="")):
             with self.assertRaises(MySQLGetAvailableMemoryError):
                 self.mysql.get_available_memory()
+
+    @patch("shutil.rmtree")
+    @patch("os.makedirs")
+    @patch("shutil.chown")
+    def test_reset_data_dir(self, _chown, _makedirs, _rmtree):
+        self.mysql.reset_data_dir()
+        _chown.assert_called_once()
+        _makedirs.assert_called_once()
+        _rmtree.assert_called_once()

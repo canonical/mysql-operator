@@ -1794,3 +1794,6 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         with self.assertRaises(NotImplementedError):
             self.mysql.get_available_memory()
+
+        with self.assertRaises(NotImplementedError):
+            self.mysql.reset_data_dir()

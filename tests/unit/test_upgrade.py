@@ -9,6 +9,7 @@ from charms.mysql.v0.mysql import (
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
+    MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
 from ops.testing import Harness
@@ -127,6 +128,8 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label.assert_called_once()
         assert mock_set_dynamic_variable.call_count == 2
 
+    @patch("upgrade.MySQLVMUpgrade._check_server_unsupported_downgrade")
+    @patch("upgrade.MySQLVMUpgrade._reset_on_unsupported_downgrade")
     @patch("mysql_vm_helpers.MySQL.hold_if_recovering")
     @patch("pathlib.Path.exists", return_value=True)
     @patch("upgrade.RECOVER_ATTEMPTS", 1)
@@ -150,6 +153,8 @@ class TestUpgrade(unittest.TestCase):
         mock_get_mysql_version,
         mock_path_exists,
         mock_hold_if_recovering,
+        mock_reset_on_unsupported_downgrade,
+        mock_check_server_unsupported_downgrade,
     ):
         """Test upgrade-granted hook."""
         self.charm.on.config_changed.emit()
@@ -180,6 +185,7 @@ class TestUpgrade(unittest.TestCase):
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "failed"
         )
 
+        # Failed to check server upgradeability
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
         )
@@ -188,7 +194,9 @@ class TestUpgrade(unittest.TestCase):
         self.assertEqual(
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "failed"
         )
+        mock_check_server_upgradeability.side_effect = None
 
+        # Failed to stop mysqld
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
         )
@@ -197,6 +205,16 @@ class TestUpgrade(unittest.TestCase):
         self.assertEqual(
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "failed"
         )
+        mock_stop_mysqld.side_effect = None
+
+        # Failed to start
+        self.harness.update_relation_data(
+            self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
+        )
+        mock_check_server_unsupported_downgrade.return_value = True
+        mock_start_mysqld.side_effect = MySQLStartMySQLDError
+        self.charm.upgrade._on_upgrade_granted(None)
+        mock_reset_on_unsupported_downgrade.assert_called_once()
 
     @patch("charm.MySQLOperatorCharm.unit_fqdn")
     @patch("mysql_vm_helpers.MySQL.verify_server_upgradable")
@@ -214,3 +232,65 @@ class TestUpgrade(unittest.TestCase):
         mock_is_server_upgradeable.reset_mock()
         self.charm.upgrade._check_server_upgradeability()
         mock_is_server_upgradeable.assert_not_called()
+
+    @patch("mysql_vm_helpers.MySQL.fetch_error_log")
+    def test_check_server_unsupported_downgrade(self, mock_fetch_error_log):
+        mock_fetch_error_log.return_value = "MY-013171"
+        self.assertTrue(self.charm.upgrade._check_server_unsupported_downgrade())
+        mock_fetch_error_log.return_value = "MY-013sdasa"
+        self.assertTrue(not self.charm.upgrade._check_server_unsupported_downgrade())
+
+    @patch("charm.MySQLOperatorCharm.join_unit_to_cluster")
+    @patch("mysql_vm_helpers.MySQL.rescan_cluster")
+    @patch("charm.MySQLOperatorCharm._get_primary_from_online_peer")
+    @patch("charm.MySQLOperatorCharm.workload_initialise")
+    @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
+    @patch("mysql_vm_helpers.MySQL.uninstall_mysql")
+    @patch("mysql_vm_helpers.MySQL.reset_data_dir")
+    def test_reset_on_unsupported_downgrade(
+        self,
+        mock_reset_data_dir,
+        mock_uninstall_workload,
+        mock_install_workload,
+        mock_init_workload,
+        mock_get_primary,
+        mock_rescan_cluster,
+        mock_join_unit,
+    ):
+        self.charm.upgrade._reset_on_unsupported_downgrade()
+        self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
+
+    @patch("upgrade.MySQLVMUpgrade._prepare_upgrade_from_legacy")
+    def test_upgrade_charm_legacy(self, mock_prepare_upgrade_from_legacy):
+        self.harness.update_relation_data(self.upgrade_relation_id, "mysql/0", {"state": ""})
+
+        # non leader
+        self.charm.on.upgrade_charm.emit()
+        self.assertEqual(
+            self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "ready"
+        )
+
+        # leader / deferred
+        self.harness.update_relation_data(self.upgrade_relation_id, "mysql/0", {"state": ""})
+        self.harness.set_leader(True)
+        self.charm.on.upgrade_charm.emit()
+        mock_prepare_upgrade_from_legacy.assert_not_called()
+
+        # leader / not deferred
+        mock_prepare_upgrade_from_legacy.reset_mock()
+        self.harness.update_relation_data(self.upgrade_relation_id, "mysql/0", {"state": ""})
+        self.harness.update_relation_data(self.upgrade_relation_id, "mysql/1", {"state": "ready"})
+        self.harness.set_leader(True)
+        self.charm.on.upgrade_charm.emit()
+        self.assertEqual(
+            self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"], "ready"
+        )
+        mock_prepare_upgrade_from_legacy.assert_called_once()
+
+    def test_prepare_upgrade_from_legacy(self):
+        self.charm.upgrade._prepare_upgrade_from_legacy()
+        self.assertEqual(
+            self.harness.get_relation_data(self.upgrade_relation_id, "mysql")["upgrade-stack"],
+            "[0, 1]",
+        )
