@@ -169,7 +169,7 @@ class MySQLVMUpgrade(DataUpgrade):
             event.defer()
 
     @override
-    def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:
+    def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:  # noqa: C901
         """Handle the upgrade granted event."""
         try:
             self.charm.unit.status = MaintenanceStatus("stopping services..")
@@ -190,8 +190,24 @@ class MySQLVMUpgrade(DataUpgrade):
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
             return
-        except (MySQLStopMySQLDError, MySQLStartMySQLDError):
-            logger.exception("Failed to stop/start MySQL server")
+        except MySQLStartMySQLDError:
+            # failed to start - check for a unsupported downgrade
+            if not self._check_server_unsupported_downgrade():
+                logger.error("Failed to start MySQL server after snap refresh")
+                self.set_unit_failed()
+                return
+
+            # on incompatible downgrade, a workload reset is required,
+            # but only if there's more then one unit, so SST can take place
+            if self.charm.app.planned_units() == 1:
+                logger.error("Downgrade is incompatible. Restore from backup is required.")
+                self.set_unit_failed()
+                return
+
+            logger.info("Downgrade is incompatible. Resetting workload")
+            self._reset_on_unsupported_downgrade()
+        except MySQLStopMySQLDError:
+            logger.exception("Failed to stop MySQL server")
             self.set_unit_failed()
             return
 
@@ -319,6 +335,33 @@ class MySQLVMUpgrade(DataUpgrade):
                 cause=e.message,
                 resolution="Check mysql-shell upgrade utility output for more details",
             )
+
+    def _check_server_unsupported_downgrade(self) -> bool:
+        """Check error log for unsupported downgrade.
+
+        https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+        """
+        if log_content := self.charm._mysql.fetch_error_log():
+            return "MY-013171" in log_content
+
+        return False
+
+    def _reset_on_unsupported_downgrade(self) -> None:
+        """Reset the server if unsupported downgrade is detected."""
+        self.charm._mysql.reset_data_dir()
+        # remove/install so initial setup can be done
+        self.charm._mysql.uninstall_mysql()
+        self.charm._mysql.install_and_configure_mysql_dependencies()
+        self.charm.workload_initialise()
+        # reset flags
+        self.charm.unit_peer_data["member-role"] = "secondary"
+        self.charm.unit_peer_data["member-state"] = "waiting"
+
+        # rescan is needed to remove the instance old incarnation from the cluster
+        leader = self.charm._get_primary_from_online_peer()
+        self.charm._mysql.rescan_cluster(from_instance=leader, remove_instances=True)
+        # rejoin after
+        self.charm.join_unit_to_cluster()
 
     def _prepare_upgrade_from_legacy(self) -> None:
         """Prepare upgrade from legacy charm without upgrade support.

@@ -78,6 +78,10 @@ class MySQLInstallError(Error):
     """Exception raised when there's an error installing MySQL."""
 
 
+class MySQLUninstallError(Error):
+    """Exception raised when there's an error installing MySQL."""
+
+
 class MySQL(MySQLBase):
     """Class to encapsulate all operations related to the MySQL instance and cluster.
 
@@ -194,6 +198,25 @@ class MySQL(MySQLBase):
             logger.exception("Failed to install and configure MySQL dependencies")
             # other exceptions are not retried
             raise MySQLInstallError
+
+    @staticmethod
+    def uninstall_mysql() -> None:
+        """Uninstall MySQL.
+
+        Raises: MySQLUninstallError if there is an error uninstalling MySQL
+        """
+        for attempt in range(1, 4):
+            # make 3 tries to uninstall MySQL
+            try:
+                logger.debug("Uninstalling MySQL")
+                subprocess.run(["snap", "remove", "charmed-mysql"], check=True)
+                return
+            except subprocess.CalledProcessError:
+                # uninstalls fail due to SNAP_DATA_DIR fails to umount
+                # try umount it, without check
+                subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
+                logger.exception(f"Failed to uninstall MySQL on {attempt=}")
+        raise MySQLUninstallError
 
     @override
     def get_available_memory(self) -> int:
@@ -620,8 +643,8 @@ class MySQL(MySQLBase):
 
     def restart_mysql_exporter(self) -> None:
         """Restart the mysqld exporter."""
-        self._stop_mysql_exporter()
-        self._connect_mysql_exporter()
+        self.stop_mysql_exporter()
+        self.connect_mysql_exporter()
 
     def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
         """Execute a MySQL shell script.
@@ -749,6 +772,26 @@ class MySQL(MySQLBase):
 
         shutil.chown(path, owner, group)
         os.chmod(path, mode=permission)
+
+    @staticmethod
+    def fetch_error_log() -> Optional[str]:
+        """Fetch the mysqld error log."""
+        if os.path.exists(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log"):
+            # can be empty if just rotated
+            with open(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log", "r") as fd:
+                return fd.read()
+
+    @staticmethod
+    def reset_data_dir() -> None:
+        """Reset the data directory."""
+        # Remove the data directory
+        shutil.rmtree(MYSQL_DATA_DIR, ignore_errors=False)
+
+        # Recreate the data directory
+        os.makedirs(MYSQL_DATA_DIR)
+
+        # Change ownership of the data directory
+        shutil.chown(MYSQL_DATA_DIR, user=MYSQL_SYSTEM_USER, group="root")
 
 
 def is_volume_mounted() -> bool:
