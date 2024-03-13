@@ -54,7 +54,10 @@ async def test_landscape_client(ops_test, github_secrets):
         LANDSCAPE_CLIENT_APP_NAME,
         application_name=LANDSCAPE_CLIENT_APP_NAME,
         channel="latest/edge",
-        config={"account-name": "foo-bar"},  # TODO: waiting on account
+        config={
+            "account-name": github_secrets["LANDSCAPE_ACCOUNT_NAME"],
+            "registration-key": github_secrets["LANDSCAPE_REGISTRATION_KEY"],
+        },
     )
     await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
     async with ops_test.fast_forward("60s"):
