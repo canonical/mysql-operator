@@ -9,7 +9,7 @@ import pytest
 
 from .relations.test_database import APPLICATION_APP_NAME, CLUSTER_NAME, DATABASE_APP_NAME, TIMEOUT
 
-UBUNTU_PRO_APP_NAME = "ubuntu-pro"
+UBUNTU_PRO_APP_NAME = "ubuntu-advantage"
 LANDSCAPE_CLIENT_APP_NAME = "landscape-client"
 
 
