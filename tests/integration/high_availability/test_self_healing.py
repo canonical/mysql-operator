@@ -306,7 +306,6 @@ async def test_replicate_data_on_restart(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.unstable
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Pause test.
 
