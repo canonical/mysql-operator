@@ -523,25 +523,38 @@ class MySQLCharmBase(CharmBase, ABC):
             event.fail("recreate-cluster action can only be run on the leader unit.")
             return
 
+        if self.app_peer_data.get("removed-from-cluster-set"):
+            # remove the flag if it exists. Allow further cluster rejoin
+            del self.app_peer_data["removed-from-cluster-set"]
+
         logger.info("Recreating cluster")
         try:
-            self._mysql.create_cluster(self.unit_label)
-            self._mysql.create_cluster_set()
-            # rescan cluster for cleanup of unused
-            # recovery users
-            self._mysql.rescan_cluster()
-            self.app_peer_data["units-added-to-cluster"] = "1"
-
-            state, role = self._mysql.get_member_state()
-
-            self.unit_peer_data.update(
-                {"member-state": state, "member-role": role, "unit-initialized": "True"}
-            )
-
+            self._mysql.reset_data_dir()
+            self.configure_instance()
+            self.create_cluster()
             self.unit.status = ops.ActiveStatus(self.active_status_message)
         except (MySQLCreateClusterError, MySQLCreateClusterSetError) as e:
             logger.exception("Failed to recreate cluster")
             event.fail(str(e))
+
+    def create_cluster(self) -> None:
+        """Create the MySQL InnoDB cluster on the unit.
+
+        Should only be run by the leader unit.
+        """
+        self._mysql.create_cluster(self.unit_label)
+        self._mysql.create_cluster_set()
+        self._mysql.initialize_juju_units_operations_table()
+        # rescan cluster for cleanup of unused
+        # recovery users
+        self._mysql.rescan_cluster()
+        self.app_peer_data["units-added-to-cluster"] = "1"
+
+        state, role = self._mysql.get_member_state()
+
+        self.unit_peer_data.update(
+            {"member-state": state, "member-role": role, "unit-initialized": "True"}
+        )
 
     @property
     def peers(self) -> Optional[ops.model.Relation]:
@@ -1426,7 +1439,8 @@ class MySQLBase(ABC):
                 initializing the juju_units_operations table
         """
         initialize_table_commands = (
-            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor "
+            "DROP TABLE IF EXISTS mysql.juju_units_operations",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor "
             "varchar(20), status varchar(20), primary key(task))",
             f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', "
             "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
@@ -1480,8 +1494,10 @@ class MySQLBase(ABC):
             "label": instance_unit_label,
         }
 
+        local_lock_instance = lock_instance or from_instance or self.instance_address
+
         if not self._acquire_lock(
-            lock_instance or from_instance or self.instance_address,
+            local_lock_instance,
             instance_unit_label,
             UNIT_ADD_LOCKNAME,
         ):
@@ -1528,9 +1544,7 @@ class MySQLBase(ABC):
             )
         finally:
             # always release the lock
-            self._release_lock(
-                from_instance or self.instance_address, instance_unit_label, UNIT_ADD_LOCKNAME
-            )
+            self._release_lock(local_lock_instance, instance_unit_label, UNIT_ADD_LOCKNAME)
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
@@ -2938,7 +2952,7 @@ class MySQLBase(ABC):
         return set(output.split())
 
     def get_non_system_databases(self) -> set[str]:
-        """Return a set wuith all non system databases on the server."""
+        """Return a set with all non system databases on the server."""
         return self.get_databases() - {
             "information_schema",
             "mysql",
@@ -2981,6 +2995,11 @@ class MySQLBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def reset_data_dir(self) -> None:
+        """Reset the data directory."""
+        raise NotImplementedError
+
+    @abstractmethod
     def _run_mysqlsh_script(self, script: str, timeout: Optional[int] = None) -> str:
         """Execute a MySQL shell script.
 
@@ -3015,9 +3034,4 @@ class MySQLBase(ABC):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset_data_dir(self) -> None:
-        """Reset the data directory."""
         raise NotImplementedError

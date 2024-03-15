@@ -306,8 +306,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         try:
             # Create the cluster and cluster set from the leader unit
-            self._create_cluster()
-            self._create_cluter_set()
+            self.create_cluster()
+            self._open_ports()
             self.unit.status = ActiveStatus(self.active_status_message)
         except (
             MySQLCreateClusterError,
@@ -637,28 +637,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         return str(self.peers.data[unit].get("private-address"))
 
-    def _create_cluster(self) -> None:
-        """Create cluster commands.
+    def _open_ports(self) -> None:
+        """Open ports.
 
-        Create a cluster from the current unit and initialise operations database.
+        Used if `juju expose` ran on application
         """
-        self._mysql.create_cluster(self.unit_label)
-        self._mysql.initialize_juju_units_operations_table()
-
-        self.app_peer_data["units-added-to-cluster"] = "1"
-        self.unit_peer_data["unit-initialized"] = "True"
-        self.unit_peer_data["member-role"] = "primary"
-        self.unit_peer_data["member-state"] = "online"
-
         try:
-            subprocess.check_call(["open-port", "3306/tcp"])
-            subprocess.check_call(["open-port", "33060/tcp"])
-        except subprocess.CalledProcessError:
+            self.unit.set_ports(3306, 33060)
+        except ops.ModelError:
             logger.exception("failed to open port")
-
-    def _create_cluter_set(self) -> None:
-        """Create cluster set from initialized cluster."""
-        self._mysql.create_cluster_set()
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
