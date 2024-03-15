@@ -744,6 +744,7 @@ class MySQLBase(ABC):
             "general_log": "ON",
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slowquery.log",
+            "loose-group_replication_paxos_single_leader": "ON",
         }
 
         if innodb_buffer_pool_chunk_size:
