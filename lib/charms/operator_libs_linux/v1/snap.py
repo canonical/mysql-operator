@@ -411,7 +411,7 @@ class Snap(object):
 
     def alias(self, application: str, alias: Optional[str] = None) -> None:
         """Create an alias for a given application.
-        
+
         Args:
             application: application to get an alias.
             alias: (optional) name of the alias; if not provided, the application name is used.
@@ -427,7 +427,6 @@ class Snap(object):
                     self._name, args, e.output
                 )
             )
-
 
     def restart(
         self, services: Optional[List[str]] = None, reload: Optional[bool] = False
