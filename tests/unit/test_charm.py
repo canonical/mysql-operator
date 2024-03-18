@@ -16,6 +16,7 @@ from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
+from constants import CHARMED_MYSQL_SNAP_NAME
 from mysql_vm_helpers import (
     MySQLCreateCustomMySQLDConfigError,
     MySQLResetRootPasswordAndStartMySQLDError,
@@ -45,10 +46,12 @@ class TestCharm(unittest.TestCase):
     @patch("socket.getfqdn", return_value="test-hostname")
     @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
+    @patch("charm.snap.SnapCache")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(self, _install_and_configure_mysql_dependencies, ____, ___, __, _, _____):
+    def test_on_install(self, _install_and_configure_mysql_dependencies, _snap_cache, ___, __, _, _____, ____):
         self.charm.on.install.emit()
+        mysql_snap = _snap_cache.return_value[CHARMED_MYSQL_SNAP_NAME]
         _install_and_configure_mysql_dependencies.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
