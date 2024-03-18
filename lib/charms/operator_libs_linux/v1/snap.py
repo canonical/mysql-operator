@@ -409,9 +409,9 @@ class Snap(object):
         """Remove the refresh hold of a snap."""
         self._snap("refresh", ["--unhold"])
 
-
     def alias(self, application: str, alias: Optional[str] = None) -> None:
         """Create an alias for a given application.
+        
         Args:
             application: application to get an alias.
             alias: (optional) name of the alias; if not provided, the application name is used.
