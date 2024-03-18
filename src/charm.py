@@ -182,6 +182,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         else:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")
 
+        cache = snap.SnapCache()
+        mysql_snap = cache[CHARMED_MYSQL_SNAP_NAME]
+        mysql_snap.alias("mysql")
+        mysql_snap.alias("mysqlrouter")
+        mysql_snap.alias("mysqlsh")
+        mysql_snap.alias("xbcloud")
+        mysql_snap.alias("xbstream")
+        mysql_snap.alias("xtrabackup")
+
     def _on_leader_elected(self, _) -> None:
         """Handle the leader elected event."""
         # Set MySQL config values in the peer relation databag
