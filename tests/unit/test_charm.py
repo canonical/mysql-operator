@@ -16,13 +16,13 @@ from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
+from constants import CHARMED_MYSQL_SNAP_NAME
 from mysql_vm_helpers import (
     MySQLCreateCustomMySQLDConfigError,
     MySQLResetRootPasswordAndStartMySQLDError,
 )
 
 from .helpers import patch_network_get
-from constants import CHARMED_MYSQL_SNAP_NAME
 
 
 class TestCharm(unittest.TestCase):
