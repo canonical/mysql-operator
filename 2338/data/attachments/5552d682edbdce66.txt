@@ -1,0 +1,252 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:83 Build charm locally
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:86 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:89 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:95 Wait for upgrade to complete
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: stopping services..
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: starting services...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: upgrading snap...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: stopping services..
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] maintenance: upgrade completed
+  mysql/2 [executing] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: Primary
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:100 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:36:14Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.36-0ubun...  active      3  mysql           8.0/stable     0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   33  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.145.148.180                  
+mysql/0*           active    idle   0        10.145.148.72   3306,33060/tcp  
+mysql/1            active    idle   1        10.145.148.63   3306,33060/tcp  
+mysql/2            active    idle   2        10.145.148.200  3306,33060/tcp  Primary
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.145.148.72   juju-969163-0  ubuntu@22.04      Running
+1        started  10.145.148.63   juju-969163-1  ubuntu@22.04      Running
+2        started  10.145.148.200  juju-969163-2  ubuntu@22.04      Running
+3        started  10.145.148.180  juju-969163-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:29:38 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:29:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:29:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:29:39 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:29:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:29:43 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:29:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:29:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:29:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:29:44 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-3: 01:29:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:29:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:29:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:46 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-1: 01:29:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:32:44 ERROR unit.mysql/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 2955, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mysql-1/secret-get', '--label', 'mysql.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 3311, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 2957, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR consumer label "mysql.app" not found
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 516, in meta
+    self._secret_meta = self.charm.model.get_secret(label=self.label)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 276, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 3314, in secret_get
+    raise SecretNotFoundError() from e
+ops.model.SecretNotFoundError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 2955, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mysql-1/secret-get', 'secret://6d487eee-58d4-4b19-864a-ce8834969163/cnselamc8frji26e6di0', '--label', 'mysql.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/./src/charm.py", line 770, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/./src/charm.py", line 216, in _on_config_changed
+    if not self._is_peer_data_set:
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 545, in _is_peer_data_set
+    and self.get_secret("app", ROOT_PASSWORD_KEY)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 581, in get_secret
+    value = self.peer_relation_app.fetch_my_relation_field(peers.id, key)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1008, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 997, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1592, in _fetch_my_specific_relation_data
+    return self._fetch_relation_data_with_secrets(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 875, in _fetch_relation_data_with_secrets
+    result, normal_fields = self._process_secret_fields(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 815, in _process_secret_fields
+    if group_result := operation(relation, group, secret_fields, *args, **kwargs):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1561, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 749, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 462, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1545, in _get_relation_secret
+    secret = self.secrets.get(label, secret_uri)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 574, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 519, in meta
+    self._secret_meta = self.charm.model.get_secret(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 276, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 3311, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/ops/model.py", line 2957, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR only unit leaders can update an application owned secret label
+
+unit-mysql-2: 01:32:44 ERROR unit.mysql/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 2955, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mysql-2/secret-get', '--label', 'mysql.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 3311, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 2957, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR consumer label "mysql.app" not found
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 516, in meta
+    self._secret_meta = self.charm.model.get_secret(label=self.label)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 276, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 3314, in secret_get
+    raise SecretNotFoundError() from e
+ops.model.SecretNotFoundError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 2955, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mysql-2/secret-get', 'secret://6d487eee-58d4-4b19-864a-ce8834969163/cnselamc8frji26e6di0', '--label', 'mysql.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/./src/charm.py", line 770, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/./src/charm.py", line 216, in _on_config_changed
+    if not self._is_peer_data_set:
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 545, in _is_peer_data_set
+    and self.get_secret("app", ROOT_PASSWORD_KEY)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 581, in get_secret
+    value = self.peer_relation_app.fetch_my_relation_field(peers.id, key)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1008, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 997, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1592, in _fetch_my_specific_relation_data
+    return self._fetch_relation_data_with_secrets(
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 875, in _fetch_relation_data_with_secrets
+    result, normal_fields = self._process_secret_fields(
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 815, in _process_secret_fields
+    if group_result := operation(relation, group, secret_fields, *args, **kwargs):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1561, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 749, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 462, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1545, in _get_relation_secret
+    secret = self.secrets.get(label, secret_uri)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 574, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 519, in meta
+    self._secret_meta = self.charm.model.get_secret(
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 276, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 3311, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/ops/model.py", line 2957, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR only unit leaders can update an application owned secret label
+
+unit-mysql-1: 01:32:44 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-2: 01:32:44 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
