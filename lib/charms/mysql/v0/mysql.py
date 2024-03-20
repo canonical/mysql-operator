@@ -2617,3 +2617,8 @@ class MySQLBase(ABC):
             timeout: (optional) time before the query should timeout
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def reset_data_dir(self) -> None:
+        """Reset the data directory."""
+        raise NotImplementedError

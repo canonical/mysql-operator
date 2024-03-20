@@ -945,3 +945,16 @@ async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -
                     raise Exception
     except RetryError:
         raise Exception("Failed to stop the flush_mysql_logs logrotate process.")
+
+
+def get_unit_by_index(app_name: str, units: list, index: int):
+    """Get unit by index.
+
+    Args:
+        app_name: Name of the application
+        units: List of units
+        index: index of the unit to get
+    """
+    for unit in units:
+        if unit.name == f"{app_name}/{index}":
+            return unit

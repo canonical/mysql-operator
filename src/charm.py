@@ -271,7 +271,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit.status = MaintenanceStatus("Setting up cluster node")
 
         try:
-            self._workload_initialise()
+            self.workload_initialise()
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
@@ -315,7 +315,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
 
         if self._is_unit_waiting_to_join_cluster():
-            self._join_unit_to_cluster()
+            self.join_unit_to_cluster()
             for port in ["3306", "33060"]:
                 try:
                     subprocess.check_call(["open-port", f"{port}/tcp"])
@@ -426,7 +426,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         del self.restart_peers.data[self.unit]["state"]
 
         if self._is_unit_waiting_to_join_cluster():
-            self._join_unit_to_cluster()
+            self.join_unit_to_cluster()
             return
 
         # retrieve and persist state for every unit
@@ -572,7 +572,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return False
         return True
 
-    def _workload_initialise(self) -> None:
+    def workload_initialise(self) -> None:
         """Workload initialisation commands.
 
         Create users and configuration to setup instance as an Group Replication node.
@@ -692,7 +692,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     # try next unit
                     continue
 
-    def _join_unit_to_cluster(self) -> None:
+    def join_unit_to_cluster(self) -> None:
         """Join the unit to the cluster.
 
         Try to join the unit from the primary unit.
