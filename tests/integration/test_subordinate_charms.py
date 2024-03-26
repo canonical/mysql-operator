@@ -9,7 +9,8 @@ import pytest
 
 from .relations.test_database import APPLICATION_APP_NAME, CLUSTER_NAME, DATABASE_APP_NAME, TIMEOUT
 
-UBUNTU_PRO_APP_NAME = "ubuntu-pro"
+UBUNTU_PRO_APP_NAME = "ubuntu-advantage"
+LANDSCAPE_CLIENT_APP_NAME = "landscape-client"
 
 
 @pytest.mark.group(1)
@@ -37,10 +38,32 @@ async def test_ubuntu_pro(ops_test, mysql_charm_series, github_secrets):
     await ops_test.model.relate(
         f"{DATABASE_APP_NAME}:database", f"{APPLICATION_APP_NAME}:database"
     )
-    await ops_test.model.relate(f"{DATABASE_APP_NAME}", f"{UBUNTU_PRO_APP_NAME}")
+    await ops_test.model.relate(DATABASE_APP_NAME, UBUNTU_PRO_APP_NAME)
     async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME, APPLICATION_APP_NAME, UBUNTU_PRO_APP_NAME],
+            status="active",
+            raise_on_blocked=True,
+            timeout=TIMEOUT,
+        )
+
+
+@pytest.mark.group(1)
+async def test_landscape_client(ops_test, github_secrets):
+    await ops_test.model.deploy(
+        LANDSCAPE_CLIENT_APP_NAME,
+        application_name=LANDSCAPE_CLIENT_APP_NAME,
+        channel="latest/edge",
+        config={
+            "account-name": github_secrets["LANDSCAPE_ACCOUNT_NAME"],
+            "registration-key": github_secrets["LANDSCAPE_REGISTRATION_KEY"],
+            "ppa": "ppa:landscape/self-hosted-beta",
+        },
+    )
+    await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
+    async with ops_test.fast_forward("60s"):
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME, APPLICATION_APP_NAME, LANDSCAPE_CLIENT_APP_NAME],
             status="active",
             raise_on_blocked=True,
             timeout=TIMEOUT,
