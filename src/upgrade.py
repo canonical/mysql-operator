@@ -17,6 +17,7 @@ from charms.data_platform_libs.v0.upgrade import (
     VersionError,
 )
 from charms.mysql.v0.mysql import (
+    MySQLGetClusterEndpointsError,
     MySQLGetMySQLVersionError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
@@ -171,6 +172,11 @@ class MySQLVMUpgrade(DataUpgrade):
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:  # noqa: C901
         """Handle the upgrade granted event."""
+        if self.charm.unit.is_leader():
+            # preemptively change primary on leader unit
+            # we assume the leader is primary, since the switchover is done on pre-upgrade-check
+            self._primary_switchover()
+
         try:
             self.charm.unit.status = MaintenanceStatus("stopping services..")
             self.charm._mysql.stop_mysqld()
@@ -259,6 +265,21 @@ class MySQLVMUpgrade(DataUpgrade):
         """Recover single unit cluster."""
         logger.debug("Recovering single unit cluster")
         self.charm._mysql.reboot_from_complete_outage()
+
+    def _primary_switchover(self) -> None:
+        """Switchover primary to the first available RO endpoint."""
+        try:
+            _, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints(get_ips=False)
+            if not ro_endpoints:
+                # no ro endpoints, can't switchover
+                return
+            new_primary_address = ro_endpoints.split(",")[0]
+            self.charm._mysql.set_cluster_primary(new_primary_address)
+        except (MySQLSetClusterPrimaryError, MySQLGetClusterEndpointsError):
+            # If upgrading mysql version, older mysqlsh will fail to set primary
+            logger.warning(
+                "Failed to switchover primary. Endpoints will be updated after upgrade."
+            )
 
     def _on_upgrade_changed(self, _) -> None:
         """Handle the upgrade changed event.
