@@ -47,3 +47,12 @@ ROOT_SYSTEM_USER = "root"
 GR_MAX_MEMBERS = 9
 HOSTNAME_DETAILS = "hostname-details"
 COS_AGENT_RELATION_NAME = "cos-agent"
+SECRET_KEY_FALLBACKS = {
+    "root-password": "root_password",
+    "server-config-password": "server_config_password",
+    "cluster-admin-password": "cluster_admin_password",
+    "monitoring-password": "monitoring_password",
+    "backups-password": "backups_password",
+    "certificate": "cert",
+    "certificate-authority": "ca",
+}
