@@ -25,7 +25,7 @@ from charms.mysql.v0.mysql import (
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
-from charms.operator_libs_linux.v1 import snap
+from charms.operator_libs_linux.v2 import snap
 from ops.charm import CharmBase
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override

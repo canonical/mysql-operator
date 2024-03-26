@@ -57,6 +57,7 @@ async def test_landscape_client(ops_test, github_secrets):
         config={
             "account-name": github_secrets["LANDSCAPE_ACCOUNT_NAME"],
             "registration-key": github_secrets["LANDSCAPE_REGISTRATION_KEY"],
+            "ppa": "ppa:landscape/self-hosted-beta",
         },
     )
     await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
