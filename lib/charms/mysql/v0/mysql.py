@@ -68,6 +68,7 @@ error handling on the subclass and in the charm code.
 import configparser
 import dataclasses
 import enum
+import hashlib
 import io
 import json
 import logging
@@ -115,7 +116,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 56
+LIBPATCH = 57
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -542,10 +543,14 @@ class MySQLCharmBase(CharmBase, ABC):
             # remove the flag if it exists. Allow further cluster rejoin
             del self.app_peer_data["removed-from-cluster-set"]
 
+        # reset cluster-set-name to config or previous value
+        hash = self.generate_random_hash()
+        self.app_peer_data["cluster-set-domain-name"] = self.model.config.get(
+            "cluster-set-name", f"cluster-set-{hash}"
+        )
+
         logger.info("Recreating cluster")
         try:
-            self._mysql.reset_data_dir()
-            self.configure_instance()
             self.create_cluster()
             self.unit.status = ops.ActiveStatus(self.active_status_message)
         except (MySQLCreateClusterError, MySQLCreateClusterSetError) as e:
@@ -587,7 +592,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         Fully initialized means that all unit that can be joined are joined.
         """
-        return self._mysql.get_cluster_node_count() == min(
+        return self._mysql.get_cluster_node_count(node_status=MySQLMemberState["ONLINE"]) == min(
             GR_MAX_MEMBERS, self.app.planned_units()
         )
 
@@ -665,6 +670,11 @@ class MySQLCharmBase(CharmBase, ABC):
 
         return ""
 
+    @property
+    def removing_unit(self) -> bool:
+        """Check if the unit is being removed."""
+        return self.unit_peer_data.get("unit-status") == "removing"
+
     def get_secret(
         self,
         scope: Scopes,
@@ -710,6 +720,16 @@ class MySQLCharmBase(CharmBase, ABC):
             self.peer_relation_app.delete_relation_data(peers.id, [key])
         else:
             self.peer_relation_unit.delete_relation_data(peers.id, [key])
+
+    @staticmethod
+    def generate_random_hash() -> str:
+        """Generate a hash based on a random string.
+
+        Returns:
+            A hash based on a random string.
+        """
+        random_characters = generate_random_password(10)
+        return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
 
 class MySQLMemberState(str, enum.Enum):
@@ -1384,7 +1404,7 @@ class MySQLBase(ABC):
             raise MySQLFencingWritesError
 
     def unfence_writes(self) -> None:
-        """Fence writes on the primary cluster.
+        """Unfence writes on the primary cluster and reset read_only flag.
 
         Raises:
             MySQLFenceUnfenceWritesError
@@ -1393,6 +1413,7 @@ class MySQLBase(ABC):
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             "c = dba.get_cluster()",
             "c.unfence_writes()",
+            "session.run_sql('SET GLOBAL read_only=OFF')",
         )
 
         try:
@@ -1741,6 +1762,17 @@ class MySQLBase(ABC):
         except MySQLClientError:
             logger.warning("Failed to get cluster-set status")
 
+    def get_cluster_names(self) -> set[str]:
+        """Get the names of the clusters in the cluster set.
+
+        Returns:
+            A set of cluster names
+        """
+        status = self.get_cluster_set_status()
+        if not status:
+            return set()
+        return set(status["clusters"])
+
     def get_replica_cluster_status(self, replica_cluster_name: str) -> str:
         """Get the replica cluster status.
 
@@ -1763,16 +1795,29 @@ class MySQLBase(ABC):
             logger.warning(f"Failed to get replica cluster status for {replica_cluster_name}")
             return "unknown"
 
-    def get_cluster_node_count(self, from_instance: Optional[str] = None) -> int:
+    def get_cluster_node_count(
+        self, from_instance: Optional[str] = None, node_status: Optional[MySQLMemberState] = None
+    ) -> int:
         """Retrieve current count of cluster nodes.
+
+        Args:
+            from_instance: member instance to run the command from (fallback to current)
+            node_status: status of the nodes to count
 
         Returns:
             Amount of cluster nodes.
         """
+        if not node_status:
+            query = "SELECT COUNT(*) FROM performance_schema.replication_group_members"
+        else:
+            query = (
+                "SELECT COUNT(*) FROM performance_schema.replication_group_members"
+                f" WHERE member_state = '{node_status.value.upper()}'"
+            )
         size_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}"
             f"@{from_instance or self.instance_address}')",
-            'result = session.run_sql("SELECT COUNT(*) FROM performance_schema.replication_group_members")',
+            f'result = session.run_sql("{query}")',
             'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
         )
 
@@ -1853,6 +1898,8 @@ class MySQLBase(ABC):
         Args:
             unit_label: The label for this unit's instance (to be torn down)
         """
+        remaining_cluster_member_addresses = list()
+        skip_release_lock = False
         try:
             # Get the cluster primary's address to direct lock acquisition request to.
             primary_address = self.get_cluster_primary_address()
@@ -1868,33 +1915,48 @@ class MySQLBase(ABC):
             if not acquired_lock:
                 raise MySQLRemoveInstanceRetryError("Did not acquire lock to remove unit")
 
-            # Get remaining cluster member addresses before calling mysqlsh.remove_instance()
-            remaining_cluster_member_addresses, valid = self._get_cluster_member_addresses(
-                exclude_unit_labels=[unit_label]
-            )
-            if not valid:
-                raise MySQLRemoveInstanceRetryError("Unable to retrieve cluster member addresses")
-
             # Remove instance from cluster, or dissolve cluster if no other members remain
             logger.debug(
                 f"Removing instance {self.instance_address} from cluster {self.cluster_name}"
             )
-            remove_instance_options = {
-                "password": self.cluster_admin_password,
-                "force": "true",
-            }
-            dissolve_cluster_options = {
-                "force": "true",
-            }
-            remove_instance_commands = (
-                f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
-                f"cluster = dba.get_cluster('{self.cluster_name}')",
-                "number_cluster_members = len(cluster.status()['defaultReplicaSet']['topology'])",
-                f"cluster.remove_instance('{self.cluster_admin_user}@{self.instance_address}', "
-                f"{json.dumps(remove_instance_options)}) if number_cluster_members > 1 else"
-                f" cluster.dissolve({json.dumps(dissolve_cluster_options)})",
-            )
-            self._run_mysqlsh_script("\n".join(remove_instance_commands))
+
+            if self.get_cluster_node_count() == 1:
+                # Last instance in the cluster, dissolve the cluster
+                cluster_names = self.get_cluster_names()
+                if len(cluster_names) > 1 and not self.is_cluster_replica():
+                    # when last instance from a primary cluster belonging to a cluster set
+                    # promote another cluster to primary prior to dissolving
+                    another_cluster = (cluster_names - {self.cluster_name}).pop()
+                    self.promote_cluster_to_primary(another_cluster)
+                    # update lock instance
+                    lock_instance = self.get_cluster_set_global_primary_address()
+                    self.remove_replica_cluster(self.cluster_name)
+                else:
+                    skip_release_lock = True
+                self.dissolve_cluster()
+
+            else:
+                # Get remaining cluster member addresses before calling mysqlsh.remove_instance()
+                remaining_cluster_member_addresses, valid = self._get_cluster_member_addresses(
+                    exclude_unit_labels=[unit_label]
+                )
+                if not valid:
+                    raise MySQLRemoveInstanceRetryError(
+                        "Unable to retrieve cluster member addresses"
+                    )
+
+                # Just remove instance
+                remove_instance_options = {
+                    "password": self.cluster_admin_password,
+                    "force": "true",
+                }
+                remove_instance_commands = (
+                    f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+                    f"cluster = dba.get_cluster('{self.cluster_name}')",
+                    "cluster.remove_instance("
+                    f"'{self.cluster_admin_user}@{self.instance_address}', {remove_instance_options})",
+                )
+                self._run_mysqlsh_script("\n".join(remove_instance_commands))
         except MySQLClientError as e:
             # In case of an error, raise an error and retry
             logger.warning(
@@ -1902,36 +1964,42 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLRemoveInstanceRetryError(e.message)
+        finally:
+            # There is no need to release the lock if single cluster was dissolved
+            if skip_release_lock:
+                return
 
-        # There is no need to release the lock if cluster was dissolved
-        if not remaining_cluster_member_addresses:
-            return
+            # The below code should not result in retries of this method since the
+            # instance would already be removed from the cluster.
+            try:
+                if not lock_instance:
+                    if len(remaining_cluster_member_addresses) == 0:
+                        raise MySQLRemoveInstanceError(
+                            "No remaining instance to query cluster primary from."
+                        )
 
-        # The below code should not result in retries of this method since the
-        # instance would already be removed from the cluster.
-        try:
-            # Retrieve the cluster primary's address again (in case the old primary is scaled down)
-            # Release the lock by making a request to this primary member's address
-            primary_address = self.get_cluster_primary_address(
-                connect_instance_address=remaining_cluster_member_addresses[0]
-            )
-            if not primary_address:
-                raise MySQLRemoveInstanceError(
-                    "Unable to retrieve the address of the cluster primary"
+                    # Retrieve the cluster primary's address again (in case the old primary is
+                    # scaled down)
+                    # Release the lock by making a request to this primary member's address
+                    lock_instance = self.get_cluster_primary_address(
+                        connect_instance_address=remaining_cluster_member_addresses[0]
+                    )
+                    if not lock_instance:
+                        raise MySQLRemoveInstanceError(
+                            "Unable to retrieve the address of the cluster primary"
+                        )
+
+                self._release_lock(lock_instance, unit_label, UNIT_TEARDOWN_LOCKNAME)
+            except MySQLClientError as e:
+                # Raise an error that does not lead to a retry of this method
+                logger.exception(
+                    f"Failed to release lock on {unit_label} with error {e.message}", exc_info=e
                 )
-
-            self._release_lock(
-                lock_instance or primary_address, unit_label, UNIT_TEARDOWN_LOCKNAME
-            )
-        except MySQLClientError as e:
-            # Raise an error that does not lead to a retry of this method
-            logger.exception(
-                f"Failed to release lock on {unit_label} with error {e.message}", exc_info=e
-            )
-            raise MySQLRemoveInstanceError(e.message)
+                raise MySQLRemoveInstanceError(e.message)
 
     def dissolve_cluster(self) -> None:
         """Dissolve the cluster independently of the unit teardown process."""
+        logger.debug(f"Dissolving cluster {self.cluster_name}")
         dissolve_cluster_commands = (
             f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
@@ -1990,7 +2058,8 @@ class MySQLBase(ABC):
 
         release_lock_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{primary_address}')",
-            f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='{lock_name}' AND executor='{unit_label}';\")",
+            "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"
+            f" WHERE task='{lock_name}' AND executor='{unit_label}';\")",
         )
         self._run_mysqlsh_script("\n".join(release_lock_commands))
 
@@ -2336,6 +2405,21 @@ class MySQLBase(ABC):
             return
 
         return cs_status["clusters"][self.cluster_name.lower()]["clusterrole"] == "replica"
+
+    def cluster_set_cluster_count(self, from_instance: Optional[str] = None) -> int:
+        """Get the number of clusters in the cluster set.
+
+        Args:
+            from_instance: The instance to run the command from (optional)
+
+        Returns:
+            The number of clusters in the cluster set.
+        """
+        cs_status = self.get_cluster_set_status(extended=0, from_instance=from_instance)
+        if not cs_status:
+            return 0
+
+        return len(cs_status["clusters"])
 
     def get_cluster_set_name(self, from_instance: Optional[str] = None) -> Optional[str]:
         """Get cluster set name.

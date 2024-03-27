@@ -102,7 +102,7 @@ from relations.mysql import MySQLRelation
 from relations.mysql_provider import MySQLProvider
 from relations.shared_db import SharedDBRelation
 from upgrade import MySQLVMUpgrade, get_mysql_dependencies_model
-from utils import compare_dictionaries, generate_random_hash, generate_random_password
+from utils import compare_dictionaries, generate_random_password
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +217,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit_peer_data.update({"leader": "true"})
 
         # Create and set cluster and cluster-set names in the peer relation databag
-        common_hash = generate_random_hash()
+        common_hash = self.generate_random_hash()
         self.app_peer_data.setdefault(
             "cluster-name", self.config.cluster_name or f"cluster-{common_hash}"
         )
@@ -314,6 +314,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         try:
             # Create the cluster and cluster set from the leader unit
+            logger.info(f"Creating cluster {self.app_peer_data['cluster-name']}")
             self.create_cluster()
             self._open_ports()
             self.unit.status = ActiveStatus(self.active_status_message)

@@ -300,10 +300,13 @@ class TestMySQLBase(unittest.TestCase):
     def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
         """Test a successful initialization of the mysql.juju_units_operations table."""
         expected_initialize_table_commands = (
-            "CREATE TABLE IF NOT EXISTS mysql.juju_units_operations (task varchar(20), executor varchar(20), "
+            "DROP TABLE IF EXISTS mysql.juju_units_operations",
+            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), "
             "status varchar(20), primary key(task))",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
-            "INSERT INTO mysql.juju_units_operations values ('unit-add', '', 'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') "
+            "ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
+            "INSERT INTO mysql.juju_units_operations values ('unit-add', '', 'not-started') "
+            "ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
         self.mysql.initialize_juju_units_operations_table()
@@ -458,6 +461,7 @@ class TestMySQLBase(unittest.TestCase):
         )
         self.assertFalse(is_instance_configured)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
@@ -470,21 +474,21 @@ class TestMySQLBase(unittest.TestCase):
         _get_cluster_member_addresses,
         _acquire_lock,
         _get_cluster_primary_address,
+        _get_cluster_node_count,
     ):
         """Test with no exceptions while running the remove_instance() method."""
         _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
         _acquire_lock.return_value = True
         _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
+        _get_cluster_node_count.return_value = 2
 
         self.mysql.remove_instance("mysql-0")
 
-        expected_remove_instance_commands = "\n".join(
-            [
-                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-                "cluster = dba.get_cluster('test_cluster')",
-                "number_cluster_members = len(cluster.status()['defaultReplicaSet']['topology'])",
-                'cluster.remove_instance(\'clusteradmin@127.0.0.1\', {"password": "clusteradminpassword", "force": "true"}) if number_cluster_members > 1 else cluster.dissolve({"force": "true"})',
-            ]
+        expected_remove_instance_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')\n"
+            "cluster = dba.get_cluster('test_cluster')\n"
+            "cluster.remove_instance('clusteradmin@127.0.0.1', "
+            "{'password': 'clusteradminpassword', 'force': 'true'})"
         )
 
         self.assertEqual(_get_cluster_primary_address.call_count, 2)
@@ -513,7 +517,7 @@ class TestMySQLBase(unittest.TestCase):
         # disable tenacity retry
         self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
-        with self.assertRaises(MySQLRemoveInstanceRetryError):
+        with self.assertRaises(MySQLRemoveInstanceError):
             self.mysql.remove_instance("mysql-0")
 
         self.assertEqual(_get_cluster_primary_address.call_count, 1)
@@ -522,6 +526,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.assert_not_called()
         _release_lock.assert_not_called()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
@@ -534,23 +539,23 @@ class TestMySQLBase(unittest.TestCase):
         _get_cluster_member_addresses,
         _acquire_lock,
         _get_cluster_primary_address,
+        _get_cluster_node_count,
     ):
         """Test an issue releasing locks while running the remove_instance() method."""
         _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
         _acquire_lock.return_value = True
         _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
         _release_lock.side_effect = MySQLClientError("Error on subprocess")
+        _get_cluster_node_count.return_value = 2
 
         with self.assertRaises(MySQLRemoveInstanceError):
             self.mysql.remove_instance("mysql-0")
 
-        expected_remove_instance_commands = "\n".join(
-            [
-                "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-                "cluster = dba.get_cluster('test_cluster')",
-                "number_cluster_members = len(cluster.status()['defaultReplicaSet']['topology'])",
-                'cluster.remove_instance(\'clusteradmin@127.0.0.1\', {"password": "clusteradminpassword", "force": "true"}) if number_cluster_members > 1 else cluster.dissolve({"force": "true"})',
-            ]
+        expected_remove_instance_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')\n"
+            "cluster = dba.get_cluster('test_cluster')\n"
+            "cluster.remove_instance('clusteradmin@127.0.0.1', "
+            "{'password': 'clusteradminpassword', 'force': 'true'})"
         )
 
         self.assertEqual(_get_cluster_primary_address.call_count, 2)

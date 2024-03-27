@@ -17,6 +17,7 @@ from ops import (
     Relation,
     RelationDataContent,
     Secret,
+    SecretNotFoundError,
     WaitingStatus,
 )
 from ops.framework import Object
@@ -48,6 +49,7 @@ LIBPATCH = 1
 
 PRIMARY_RELATION = "async-primary"
 REPLICA_RELATION = "async-replica"
+SECRET_LABEL = "async-secret"
 
 
 class ClusterSetInstanceState(typing.NamedTuple):
@@ -104,6 +106,16 @@ class MySQLAsyncReplication(Object):
 
         return ClusterSetInstanceState(cluster_role, instance_role, relation_side)
 
+    @property
+    def cluster_name(self) -> str:
+        """This cluster name."""
+        return self._charm.app_peer_data["cluster-name"]
+
+    @property
+    def cluster_set_name(self) -> str:
+        """Cluster set name."""
+        return self._charm.app_peer_data["cluster-set-domain-name"]
+
     def get_remote_relation_data(self, relation: Relation) -> Optional[RelationDataContent]:
         """Remote data."""
         if not relation.app:
@@ -120,32 +132,26 @@ class MySQLAsyncReplication(Object):
             event.fail("Only a standby cluster can be promoted")
             return
 
-        cluster_set_name = event.params.get("cluster-set-name")
-        if (
-            not cluster_set_name
-            or cluster_set_name != self._charm.app_peer_data["cluster-set-domain-name"]
-        ):
-            event.fail("Invalid cluster set name")
+        if event.params.get("cluster-set-name") != self.cluster_set_name:
+            event.fail("Invalid/empty cluster set name")
             return
 
         # promote cluster to primary
-        cluster_name = self._charm.app_peer_data["cluster-name"]
+        cluster_name = self.cluster_name
         force = event.params.get("force", False)
 
         try:
             self._charm._mysql.promote_cluster_to_primary(cluster_name, force)
             event.set_results({"message": f"Cluster {cluster_name} promoted to primary"})
+            self._charm._on_update_status(None)
         except MySQLPromoteClusterToPrimaryError:
             logger.exception("Failed to promote cluster to primary")
             event.fail("Failed to promote cluster to primary")
 
     def _on_fence_unfence_writes_action(self, event: ActionEvent) -> None:
         """Fence or unfence writes to a cluster."""
-        if (
-            event.params.get("cluster-set-name")
-            != self._charm.app_peer_data["cluster-set-domain-name"]
-        ):
-            event.fail("Invalid cluster set name")
+        if event.params.get("cluster-set-name") != self.cluster_set_name:
+            event.fail("Invalid/empty cluster set name")
             return
 
         if self.role.cluster_role == "replica":
@@ -167,16 +173,19 @@ class MySQLAsyncReplication(Object):
                 logger.info("Unfencing writes to the cluster")
                 self._charm._mysql.unfence_writes()
                 event.set_results({"message": "Writes to the cluster are now resumed"})
+            # update status
+            self._charm._on_update_status(None)
         except MySQLFencingWritesError:
             event.fail("Failed to fence writes. Check logs for details")
-            return
 
     def on_async_relation_broken(self, event):  # noqa: C901
         """Handle the async relation being broken from either side."""
         # Remove the replica cluster, if this is the primary
 
-        if self.role.cluster_role == "replica":
+        if self.role.cluster_role in ("replica", "unset") and not self._charm.removing_unit:
             # The cluster being removed is a replica cluster
+            # role is `unset` when the primary cluster dissolved the replica before
+            # this hook execution i.e. was faster on running the handler
 
             self._charm.unit.status = WaitingStatus("Waiting for cluster to be dissolved")
             try:
@@ -187,7 +196,15 @@ class MySQLAsyncReplication(Object):
                             logger.debug("Waiting for cluster to be dissolved")
                             raise Exception
             except RetryError:
-                raise
+                self._charm.unit.status = BlockedStatus(
+                    "Replica cluster not dissolved after relation broken"
+                )
+                logger.warning(
+                    "Replica cluster not dissolved after relation broken, by the primary cluster."
+                    "\n\tThe happens when the primary cluster was removed prior to removing the async relation."
+                    "\n\tThis cluster can be promoted to primary with the `promote-standby-cluster` action."
+                )
+                return
 
             self._charm.unit.status = BlockedStatus("Standalone read-only unit.")
             # reset flag to allow instances rejoining the cluster
@@ -315,8 +332,22 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
     def _get_secret(self) -> Secret:
         """Return async replication necessary secrets."""
-        secret = self.model.get_secret(label=f"{self.model.app.name}.app")
-        return secret
+        try:
+            # Avoid recreating the secret
+            secret = self._charm.model.get_secret(label=SECRET_LABEL)
+            if not secret.id:
+                # workaround for the secret id not being set with model uuid
+                secret._id = f"secret://{self.model.uuid}/{secret.get_info().id.split(':')[1]}"
+            return secret
+        except SecretNotFoundError:
+            pass
+
+        app_secret = self._charm.model.get_secret(label=f"{self.model.app.name}.app")
+        content = app_secret.peek_content()
+        # filter out unnecessary secrets
+        shared_content = dict(filter(lambda x: "password" in x[0], content.items()))
+
+        return self._charm.model.app.add_secret(content=shared_content, label=SECRET_LABEL)
 
     def _on_primary_created(self, event):
         """Validate relations and share credentials with replica cluster."""
@@ -338,11 +369,22 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         self._charm.app.status = MaintenanceStatus("Setting up async replication")
         logger.debug("Granting secrets access to async replication relation")
         secret = self._get_secret()
-        secret_id = secret.get_info().id
+        secret_id = secret.id
         secret.grant(event.relation)
 
-        logger.debug(f"Sharing {secret_id} with replica cluster")
-        event.relation.data[self.model.app]["secret-id"] = secret_id
+        # get workload version
+        version = self._charm._mysql.get_mysql_version()
+
+        logger.debug(f"Sharing {secret_id=} with replica cluster")
+        # Set variables for credential sync and validations
+        event.relation.data[self.model.app].update(
+            {
+                "secret-id": secret_id,
+                "cluster-name": self.cluster_name,
+                "mysql-version": version,
+                "cluster-set-name": self.cluster_set_name,
+            }
+        )
 
     def _on_primary_relation_changed(self, event):
         """Handle the async_primary relation being changed."""
@@ -357,6 +399,14 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             cluster = remote_data["cluster-name"]
             endpoint = remote_data["endpoint"]
             unit_label = remote_data["node-label"]
+
+            if cluster == self.cluster_name:
+                import uuid
+
+                logger.warning(
+                    "Cluster name is the same as the primary cluster. Appending generetade value"
+                )
+                cluster = f"{cluster}{uuid.uuid4().hex[:4]}"
 
             logger.debug("Looking for a donor node")
             _, ro, _ = self._charm._mysql.get_cluster_endpoints(get_ips=False)
@@ -463,21 +513,41 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
 
         Used for skipping checks when a replica cluster was removed through broken relation.
         """
-        return self._charm.app_peer_data.get("removed-from-cluster-set") == "true"
+        remote_cluster_set_name = self.remote_relation_data.get("cluster-set-name")
+        return (
+            self._charm.app_peer_data.get("removed-from-cluster-set") == "true"
+            and self.cluster_set_name == remote_cluster_set_name
+        )
 
     @property
     def replica_initialized(self) -> bool:
         """Whether the replica cluster is initialized as such."""
         return self.remote_relation_data.get("replica-state") == "initialized"
 
-    def _get_secret(self) -> Secret:
+    def _check_version(self) -> bool:
+        """Check if the MySQL version is compatible with the primary cluster."""
+        remote_version = self.remote_relation_data.get("mysql-version")
+        local_version = self._charm._mysql.get_mysql_version()
+
+        if not remote_version:
+            return False
+
+        if remote_version != local_version:
+            logger.error(
+                f"Primary cluster MySQL version {remote_version} is not compatible with this cluster MySQL version {local_version}"
+            )
+            return False
+
+        return True
+
+    def _obtain_secret(self) -> Secret:
         """Get secret from primary cluster."""
         secret_id = self.remote_relation_data.get("secret-id")
-        return self.model.get_secret(id=secret_id)
+        return self._charm.model.get_secret(id=secret_id, label=SECRET_LABEL)
 
     def _async_replication_credentials(self) -> dict[str, str]:
         """Get async replication credentials from primary cluster."""
-        secret = self._get_secret()
+        secret = self._obtain_secret()
         return secret.peek_content()
 
     def _get_endpoint(self) -> str:
@@ -534,11 +604,11 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 # re-create the cluster and wait
                 logger.debug("Recreating cluster prior to sync credentials")
                 self._charm.create_cluster()
-                event.defer()
                 # (re)set flags
                 self._charm.app_peer_data.update(
                     {"removed-from-cluster-set": "", "rejoin-secondaries": "true"}
                 )
+                event.defer()
                 return
             if not self._charm.cluster_fully_initialized:
                 # cluster is not fully initialized
@@ -548,10 +618,24 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 )
                 event.defer()
                 return
+
+            if not self._check_version():
+                self._charm.unit.status = BlockedStatus(
+                    f"MySQL version mismatch with primary cluster. Check logs for details"
+                )
+                logger.error("MySQL version mismatch with primary cluster. Remove relation.")
+                return
+
             logger.debug("Syncing credentials from primary cluster")
             self._charm.unit.status = MaintenanceStatus("Syncing credentials")
+            self._charm.app.status = MaintenanceStatus("Setting up async replication")
 
-            credentials = self._async_replication_credentials()
+            try:
+                credentials = self._async_replication_credentials()
+            except SecretNotFoundError:
+                logger.debug("Secret not found, deferring event")
+                event.defer()
+                return
             sync_keys = {
                 SERVER_CONFIG_PASSWORD_KEY: SERVER_CONFIG_USERNAME,
                 CLUSTER_ADMIN_PASSWORD_KEY: CLUSTER_ADMIN_USERNAME,
@@ -579,7 +663,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
             self._charm.unit.status = MaintenanceStatus("Populate endpoint")
 
             # this cluster name is used by the primary cluster to identify the replica cluster
-            self.relation_data["cluster-name"] = self._charm.app_peer_data["cluster-name"]
+            self.relation_data["cluster-name"] = self.cluster_name
             # the reachable endpoint address
             self.relation_data["endpoint"] = self._get_endpoint()
             # the node label in the replica cluster to be created
@@ -605,7 +689,9 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
         elif state == States.RECOVERING:
             # recoveryng cluster (copying data and/or joining units)
             self._charm.app.status = MaintenanceStatus("Recovering replica cluster")
-            self._charm.unit.status = WaitingStatus("Waiting for recovery to complete")
+            self._charm.unit.status = WaitingStatus(
+                "Waiting for recovery to complete on other units"
+            )
             logger.debug("Awaiting other units to join the cluster")
             # reset the number of units added to the cluster
             # this will trigger secondaries to join the cluster
