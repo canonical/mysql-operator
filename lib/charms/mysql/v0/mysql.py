@@ -114,7 +114,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 56
+LIBPATCH = 57
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -739,7 +739,12 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size,
                 group_replication_message_cache_size,
             ) = self.get_innodb_buffer_pool_parameters(available_memory)
-            max_connections = max(self.get_max_connections(available_memory), MIN_MAX_CONNECTIONS)
+
+            # constrain max_connections based on the available memory
+            # after innodb_buffer_pool_size calculation
+            remaining_memory = available_memory - innodb_buffer_pool_size
+            max_connections = max(self.get_max_connections(remaining_memory), MIN_MAX_CONNECTIONS)
+
             if available_memory < 2 * BYTES_1GiB:
                 # disable memory instruments if we have less than 2GiB of RAM
                 performance_schema_instrument = "'memory/%=OFF'"
