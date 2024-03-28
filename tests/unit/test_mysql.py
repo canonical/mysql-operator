@@ -34,7 +34,6 @@ from charms.mysql.v0.mysql import (
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
-    MySQLRemoveInstanceRetryError,
     MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
