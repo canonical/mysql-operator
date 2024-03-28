@@ -170,47 +170,31 @@ class TestCharm(unittest.TestCase):
 
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
-    @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
-    @patch("mysql_vm_helpers.MySQL.connect_mysql_exporter")
-    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
-    @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
-    @patch("mysql_vm_helpers.MySQL.configure_instance")
-    @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
-    @patch("mysql_vm_helpers.MySQL.create_cluster")
-    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
-    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
-    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
+    @patch("charm.MySQLOperatorCharm.create_cluster")
+    @patch("charm.MySQLOperatorCharm.workload_initialise")
     def test_on_start(
         self,
-        _setup_logrotate_and_cron,
-        _write_mysqld_config,
-        _get_pid_of_port_3306,
-        _reset_root_password_and_start_mysqld,
+        _workload_initialise,
         _create_cluster,
-        _initialize_juju_units_operations_table,
-        _configure_instance,
-        _configure_mysql_users,
-        _wait_until_mysql_connection,
-        _connect_mysql_exporter,
-        _get_mysql_version,
-        _is_volume_mounted,
         _check_call,
-        _stop_mysqld,
-        _create_cluster_set,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         self.charm.on.start.emit()
+        _workload_initialise.assert_called_once()
+        _create_cluster.assert_called_once()
+        _check_call.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+        self.harness.set_leader(False)
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+        self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
@@ -299,6 +283,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
@@ -310,11 +295,12 @@ class TestCharm(unittest.TestCase):
         self,
         _,
         _snap_service_operation,
-        __reboot_from_complete_outage,
+        _reboot_from_complete_outage,
         _is_volume_mounted,
         _get_cluster_primary_address,
         _get_member_state,
         _get_cluster_node_count,
+        _active_status_message,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
@@ -335,7 +321,7 @@ class TestCharm(unittest.TestCase):
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_not_called()
+        _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
         _is_volume_mounted.assert_called_once()
         _get_cluster_node_count.assert_called_once()
@@ -358,7 +344,7 @@ class TestCharm(unittest.TestCase):
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_called_once()
+        _reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_not_called()
         _get_cluster_primary_address.assert_called_once()
 
@@ -367,13 +353,13 @@ class TestCharm(unittest.TestCase):
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
 
-        __reboot_from_complete_outage.reset_mock()
+        _reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
         _get_member_state.return_value = ("unreachable", "primary")
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_not_called()
+        _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 

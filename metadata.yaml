@@ -41,6 +41,8 @@ provides:
   cos-agent:
     interface: cos_agent
     limit: 1
+  async-primary:
+    interface: async_replication
 
 requires:
   certificates:
@@ -49,6 +51,10 @@ requires:
     optional: true
   s3-parameters:
     interface: s3
+    limit: 1
+    optional: true
+  async-replica:
+    interface: async_replication
     limit: 1
     optional: true
 

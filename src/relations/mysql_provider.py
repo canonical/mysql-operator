@@ -266,14 +266,14 @@ class MySQLProvider(Object):
             # run once by the leader
             return
 
-        if self.charm.unit_peer_data.get("unit-status", None) == "removing":
+        if self.charm.removing_unit:
             # safeguard against relation broken being triggered for
             # a unit being torn down (instead of un-related)
             # https://github.com/canonical/mysql-operator/issues/32
             return
 
+        relation_id = event.relation.id
         try:
-            relation_id = event.relation.id
             self.charm._mysql.delete_users_for_relation(relation_id)
             logger.info(f"Removed user for relation {relation_id}")
         except (MySQLDeleteUsersForRelationError, KeyError):

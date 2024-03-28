@@ -3,7 +3,6 @@
 
 """A collection of utility functions that are used in the charm."""
 
-import hashlib
 import secrets
 import string
 
@@ -19,16 +18,6 @@ def generate_random_password(length: int) -> str:
     """
     choices = string.ascii_letters + string.digits
     return "".join([secrets.choice(choices) for i in range(length)])
-
-
-def generate_random_hash() -> str:
-    """Generate a random hash.
-
-    Returns:
-        A random MD5 hash
-    """
-    random_characters = generate_random_password(20)
-    return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
 
 
 def compare_dictionaries(dict1: dict, dict2: dict) -> set:
