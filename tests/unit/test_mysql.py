@@ -50,16 +50,19 @@ SHORT_CLUSTER_STATUS = {
             "mysql-k8s-0": {
                 "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
                 "memberrole": "secondary",
+                "mode": "r/o",
                 "status": "online",
             },
             "mysql-k8s-1": {
                 "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
                 "memberrole": "primary",
+                "mode": "r/w",
                 "status": "online",
             },
             "mysql-k8s-2": {
                 "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
                 "memberrole": "",
+                "mode": "r/o",
                 "status": "offline",
             },
         }
