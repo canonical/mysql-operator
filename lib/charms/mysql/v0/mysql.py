@@ -127,7 +127,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 93
+LIBPATCH = 94
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -597,9 +597,14 @@ class MySQLCharmBase(CharmBase, ABC):
 
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used  to retrieve the cluster status."""
+        extended = event.params.get("extended", 0)
+        if not 0 <= extended < 4:
+            event.fail("Extended parameter outside valid range")
+            return
+
         if event.params.get("cluster-set"):
             logger.debug("Getting cluster set status")
-            status = self._mysql.get_cluster_set_status(extended=0)
+            status = self._mysql.get_cluster_set_status(extended=extended)
         else:
             logger.debug("Getting cluster status")
             status = self._mysql.get_cluster_status()
@@ -2378,7 +2383,7 @@ class MySQLBase(ABC):
         retry=retry_if_exception_type(TimeoutError),
     )
     def get_cluster_status(
-        self, from_instance: str | None = None, extended: bool | None = False
+        self, from_instance: str | None = None, extended: int | None = 0
     ) -> dict | None:
         """Get the cluster status dictionary."""
         options = {"extended": extended}
