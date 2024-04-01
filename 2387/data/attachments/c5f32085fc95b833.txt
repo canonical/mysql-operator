@@ -1,0 +1,71 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:31:25Z
+
+App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql                    waiting    0/3  mysql                          0  no       agent initialising
+mysql-test-app  0.0.2    error        2  mysql-test-app  latest/edge   35  no       hook failed: "start"
+
+Unit               Workload  Agent       Machine  Public address  Ports  Message
+mysql-test-app/0*  waiting   idle        0        10.240.31.159          
+mysql-test-app/1   error     idle        1        10.240.31.64           hook failed: "start"
+mysql/0*           waiting   allocating  2        10.240.31.210          agent initialising
+mysql/1            waiting   allocating  3        10.240.31.28           waiting for machine
+mysql/2            waiting   allocating  4        10.240.31.40           agent initialising
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.240.31.159  juju-698a3a-0  ubuntu@22.04      Running
+1        started  10.240.31.64   juju-698a3a-1  ubuntu@22.04      Running
+2        started  10.240.31.210  juju-698a3a-2  ubuntu@22.04      Running
+3        pending  10.240.31.28   juju-698a3a-3  ubuntu@22.04      Running
+4        started  10.240.31.40   juju-698a3a-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:30:58 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:30:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:30:59 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:31:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:10 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-1: 01:31:11 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:31:21 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:31:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:31:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:31:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:31:21 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-4: 01:31:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:31:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 01:31:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-test-app-1: 01:31:24 ERROR unit.mysql-test-app/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/./src/charm.py", line 447, in <module>
+    main(MySQLTestApplication)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 544, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 520, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 509, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 851, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/framework.py", line 941, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/./src/charm.py", line 290, in _on_start
+    self.app_peer_data["initialized"] = "true"
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 1685, in __setitem__
+    self._validate_write(key, value)
+  File "/var/lib/juju/agents/unit-mysql-test-app-1/charm/venv/ops/model.py", line 1671, in _validate_write
+    raise RelationDataAccessError(
+ops.model.RelationDataAccessError: mysql-test-app/1 is not leader and cannot write application data.
+unit-mysql-test-app-1: 01:31:24 ERROR juju.worker.uniter.operation hook "start" (via hook dispatching script: dispatch) failed: exit status 1
+
+[33mWARNING [0m juju.client.connection:connection.py:657 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m juju.client.connection:connection.py:665 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
