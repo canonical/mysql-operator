@@ -1,0 +1,12 @@
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:159 Unit mysql/2 it's on machine juju-4a7c93-2 ✅
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:174 Cutting network for juju-4a7c93-2
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:193 Restoring network for juju-4a7c93-2
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:208 Waiting for mysql/2 to enter maintenance
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:212 Waiting for mysql/2 to enter active
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:363 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:474 Retrieving primary unit
