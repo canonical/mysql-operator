@@ -625,7 +625,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         fallback_key_to_secret_key = {v: k for k, v in SECRET_KEY_FALLBACKS.items()}
         if key in fallback_key_to_secret_key:
-            if value := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
+            if self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
                 self.remove_secret(scope, key)
             self.peer_relation_data(scope).update_relation_data(
                 peers.id, {fallback_key_to_secret_key[key]: value}
