@@ -620,8 +620,9 @@ class MySQLCharmBase(CharmBase, ABC):
 
         if not value:
             if key in SECRET_KEY_FALLBACKS:
-                self.remove_secret(scope, SECRET_ACCESS_KEY[key])
-            return self.remove_secret(scope, key)
+                self.remove_secret(scope, SECRET_KEY_FALLBACKS[key])
+            self.remove_secret(scope, key)
+            return
 
         peers = self.model.get_relation(PEER)
 
