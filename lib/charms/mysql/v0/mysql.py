@@ -619,6 +619,8 @@ class MySQLCharmBase(CharmBase, ABC):
             raise MySQLSecretError("Can only set app secrets on the leader unit")
 
         if not value:
+            if key in SECRET_KEY_FALLBACKS:
+                self.remove_secret(scope, SECRET_ACCESS_KEY[key])
             return self.remove_secret(scope, key)
 
         peers = self.model.get_relation(PEER)
