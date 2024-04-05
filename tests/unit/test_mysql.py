@@ -731,7 +731,7 @@ class TestMySQLBase(unittest.TestCase):
             (
                 "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
                 "cluster = dba.get_cluster('test_cluster')",
-                "print(cluster.status({'extended': False}))",
+                "print(cluster.status({'extended': 0}))",
             )
         )
         _run_mysqlsh_script.assert_called_once_with(expected_commands, timeout=30)

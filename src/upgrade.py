@@ -110,7 +110,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 if not item.get("instanceerrors", [])
             ].count("online")
 
-        if cluster_status := self.charm._mysql.get_cluster_status(extended=True):
+        if cluster_status := self.charm._mysql.get_cluster_status(extended=1):
             if _online_instances(cluster_status) < self.charm.app.planned_units():
                 # case any not fully online unit is found
                 raise ClusterNotReadyError(

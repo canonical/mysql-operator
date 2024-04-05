@@ -3,6 +3,12 @@
 
 get-cluster-status:
   description: Get cluster status information
+  params:
+    extended:
+      type: integer
+      default: 0
+      description: The extended attribute for cluster-status, the default value 0.
+        possible values - 0, 1, 2, 3
 
 get-password:
   description: Fetch the system user's password, which is used by charm.
