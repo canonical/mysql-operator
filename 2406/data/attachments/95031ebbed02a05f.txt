@@ -1,0 +1,1525 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  02:13:06Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.36-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   36  no       Last written value=220094
+
+Unit               Workload     Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active       idle       3        10.43.175.113                   Last written value=220094
+mysql/0*           maintenance  executing  0        10.43.175.124   3306,33060/tcp  offline
+mysql/1            active       executing  1        10.43.175.74    3306,33060/tcp  Primary
+mysql/2            active       idle       2        10.43.175.134   3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.43.175.124  juju-01fe1a-0  ubuntu@22.04      Running
+1        started  10.43.175.74   juju-01fe1a-1  ubuntu@22.04      Running
+2        started  10.43.175.134  juju-01fe1a-2  ubuntu@22.04      Running
+3        started  10.43.175.113  juju-01fe1a-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:29:35 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:29:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:29:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:29:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:29:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:41 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:29:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:29:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:29:47 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:29:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:29:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:29:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:33:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:14 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-0: 01:33:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:34:27 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:34:34 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:34:38 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:34:38 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:34:42 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:34:49 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:34:49 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:34:50 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+machine-1: 01:38:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-mysql-0: 01:41:02 ERROR unit.mysql/0.juju-log Failed to flush ERROR LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 678, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpfz24289n']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2565, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands))
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 682, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\nmysqlsh.DBError: MySQL Error (2003): Shell.connect: Can\'t connect to MySQL server on \'juju-01fe1a-0.lxd:3306\' (111)\n'
+unit-mysql-0: 01:41:04 ERROR unit.mysql/0.juju-log Failed to flush GENERAL LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 678, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmp3mzybhrr']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2565, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands))
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 682, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\nmysqlsh.DBError: MySQL Error (2003): Shell.connect: Can\'t connect to MySQL server on \'juju-01fe1a-0.lxd:3306\' (111)\n'
+unit-mysql-0: 01:43:07 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:43:07 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:04 ERROR unit.mysql/0.juju-log Failed to reboot cluster
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 678, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpc_jm_3d_']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1987, in reboot_from_complete_outage
+    self._run_mysqlsh_script("\n".join(reboot_from_outage_command))
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 682, in _run_mysqlsh_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b'No PRIMARY member found for cluster \'test_cluster\'\nRestoring the Cluster \'test_cluster\' from complete outage...\n\nCluster instances: \'juju-01fe1a-0.lxd:3306\' (OFFLINE), \'juju-01fe1a-1.lxd:3306\' (OFFLINE), \'juju-01fe1a-2.lxd:3306\' (OFFLINE)\nWaiting for instances to apply pending received transactions...\nSwitching over to instance \'juju-01fe1a-1.lxd:3306\' (which has the highest GTID set), to be used as seed.\n\x1b[36mNOTE: \x1b[0mThe instance \'juju-01fe1a-1.lxd:3306\' is running auto-rejoin process, which will be cancelled.\n\nValidating instance configuration at juju-01fe1a-1.lxd:3306...\n\nThis instance reports its own address as \x1b[1mjuju-01fe1a-1.lxd:3306\x1b[0m\n\nInstance configuration is suitable.\n\x1b[36mNOTE: \x1b[0mCancelling active GR auto-initialization at juju-01fe1a-1.lxd:3306\n* Waiting for seed instance to become ONLINE...\njuju-01fe1a-1.lxd:3306 was restored.\n\x1b[31mERROR: \x1b[0mMySQL Error 2013 (HY000): Lost connection to MySQL server during query\nTraceback (most recent call last):\n  File "<string>", line 2, in <module>\nmysqlsh.DBError: MySQL Error (2013): Dba.reboot_cluster_from_complete_outage: Lost connection to MySQL server during query\n'
+unit-mysql-0: 01:44:04 ERROR unit.mysql/0.juju-log Failed to reboot cluster from complete outage.
+unit-mysql-0: 01:44:05 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:12 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:12 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:21 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:33 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:42 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:42 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:44:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:44:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:04 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:04 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:13 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:13 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:24 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:24 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:34 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:34 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:43 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:43 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:45:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:45:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:05 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:13 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:13 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:21 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:32 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:40 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:40 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:49 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:49 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:46:59 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:46:59 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:47:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:47:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:47:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:47:21 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:47:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:47:32 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:47:41 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:47:41 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:47:52 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:47:52 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:04 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:04 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:12 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:12 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:21 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:48:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:48:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:02 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:02 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:14 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:14 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:31 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:31 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:42 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:42 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:49:52 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:49:52 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:12 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:12 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:34 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:34 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:50:55 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:50:55 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:05 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:14 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:14 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:31 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:31 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:40 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:40 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:51:52 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:51:52 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:03 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:03 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:20 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:20 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:28 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:28 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:40 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:40 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:50 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:50 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:52:59 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:52:59 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:53:10 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:53:10 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:53:22 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:53:22 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:53:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:53:32 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:53:41 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:53:41 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:53:51 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:53:51 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:10 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:10 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:22 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:22 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:33 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:45 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:45 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:54:54 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:54:54 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:05 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:15 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:15 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:26 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:26 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:38 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:38 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:48 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:48 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:55:59 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:55:59 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:21 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:29 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:29 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:38 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:38 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:47 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:47 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:56:57 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:56:57 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:08 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:08 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:18 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:18 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:27 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:27 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:37 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:37 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:47 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:47 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:57:55 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:57:55 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:06 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:06 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:14 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:14 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:24 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:24 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:34 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:34 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:58:55 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:58:55 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:05 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:15 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:15 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:25 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:25 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:33 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 01:59:52 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:59:52 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:02 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:02 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:20 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:20 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:30 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:30 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:40 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:40 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:00:49 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:00:49 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:33 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:43 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:43 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:01:51 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:01:51 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:08 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:08 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:16 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:16 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:27 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:27 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:38 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:38 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:47 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:47 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:02:58 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:02:58 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:03:07 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:03:07 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:03:18 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:03:18 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:03:28 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:03:28 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:03:38 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:03:38 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:03:50 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:03:50 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:09 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:09 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:17 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:17 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:27 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:27 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:36 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:36 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:48 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:48 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:04:58 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:04:58 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:05:09 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:05:09 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:05:20 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:05:20 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:05:29 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:05:29 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:05:39 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:05:39 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:05:51 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:05:51 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:00 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:00 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:10 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:10 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:18 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:18 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:27 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:27 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:37 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:37 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:48 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:48 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:06:59 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:06:59 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:08 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:08 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:17 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:17 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:25 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:25 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:35 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:35 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:45 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:45 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:07:55 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:07:55 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:03 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:03 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:14 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:14 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:24 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:24 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:32 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:41 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:41 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:08:50 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:08:51 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:01 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:01 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:13 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:13 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:24 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:24 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:33 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:33 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:43 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:43 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:09:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:09:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:04 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:04 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:14 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:14 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:25 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:25 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:36 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:36 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:47 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:47 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:10:57 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:10:57 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:06 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:06 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:13 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:13 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:32 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:32 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:43 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:43 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:11:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:11:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:03 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:03 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:11 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:11 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:23 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:23 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:35 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:35 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:44 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:44 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+unit-mysql-0: 02:12:53 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:53 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1502, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
