@@ -101,6 +101,7 @@ from constants import (
     PEER,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
+    SECRET_KEY_FALLBACKS,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
 )
@@ -116,7 +117,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 57
+LIBPATCH = 58
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -379,6 +380,10 @@ class MySQLFencingWritesError(Error):
     """Exception raised when there is an issue fencing or unfencing writes."""
 
 
+class MySQLRejoinClusterError(Error):
+    """Exception raised when there is an issue trying to rejoin a cluster to the cluster set."""
+
+
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
@@ -429,8 +434,8 @@ class MySQLCharmBase(CharmBase, ABC):
             additional_secret_fields=[
                 "key",
                 "csr",
-                "cert",
-                "cauth",
+                "certificate",
+                "certificate-authority",
                 "chain",
             ],
             secret_field_name=SECRET_INTERNAL_LABEL,
@@ -514,8 +519,10 @@ class MySQLCharmBase(CharmBase, ABC):
     def _get_cluster_status(self, event: ActionEvent) -> None:
         """Action used  to retrieve the cluster status."""
         if event.params.get("cluster-set"):
+            logger.debug("Getting cluster set status")
             status = self._mysql.get_cluster_set_status(extended=0)
         else:
+            logger.debug("Getting cluster status")
             status = self._mysql.get_cluster_status()
 
         if status:
@@ -662,7 +669,11 @@ class MySQLCharmBase(CharmBase, ABC):
         """Active status message."""
         if self.unit_peer_data.get("member-role") == "primary":
             if self._mysql.is_cluster_replica():
-                return "Primary (standby)"
+                status = self._mysql.get_replica_cluster_status()
+                if status == "ok":
+                    return "Primary (standby)"
+                else:
+                    return f"Primary (standby, {status})"
             elif self._mysql.is_cluster_writes_fenced():
                 return "Primary (fenced writes)"
             else:
@@ -675,6 +686,13 @@ class MySQLCharmBase(CharmBase, ABC):
         """Check if the unit is being removed."""
         return self.unit_peer_data.get("unit-status") == "removing"
 
+    def peer_relation_data(self, scope: Scopes) -> DataPeer:
+        """Returns the peer relation data per scope."""
+        if scope == APP_SCOPE:
+            return self.peer_relation_app
+        elif scope == UNIT_SCOPE:
+            return self.peer_relation_unit
+
     def get_secret(
         self,
         scope: Scopes,
@@ -686,11 +704,15 @@ class MySQLCharmBase(CharmBase, ABC):
         Else retrieve from peer databag. This is to account for cases where secrets are stored in
         peer databag but the charm is then refreshed to a newer revision.
         """
+        if scope not in get_args(Scopes):
+            raise ValueError("Unknown secret scope")
+
         peers = self.model.get_relation(PEER)
-        if scope == APP_SCOPE:
-            value = self.peer_relation_app.fetch_my_relation_field(peers.id, key)
-        else:
-            value = self.peer_relation_unit.fetch_my_relation_field(peers.id, key)
+        if not (value := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key)):
+            if key in SECRET_KEY_FALLBACKS:
+                value = self.peer_relation_data(scope).fetch_my_relation_field(
+                    peers.id, SECRET_KEY_FALLBACKS[key]
+                )
         return value
 
     def set_secret(self, scope: Scopes, key: str, value: Optional[str]) -> None:
@@ -702,13 +724,22 @@ class MySQLCharmBase(CharmBase, ABC):
             raise MySQLSecretError("Can only set app secrets on the leader unit")
 
         if not value:
-            return self.remove_secret(scope, key)
+            if key in SECRET_KEY_FALLBACKS:
+                self.remove_secret(scope, SECRET_KEY_FALLBACKS[key])
+            self.remove_secret(scope, key)
+            return
 
         peers = self.model.get_relation(PEER)
-        if scope == APP_SCOPE:
-            self.peer_relation_app.update_relation_data(peers.id, {key: value})
-        elif scope == UNIT_SCOPE:
-            self.peer_relation_unit.update_relation_data(peers.id, {key: value})
+
+        fallback_key_to_secret_key = {v: k for k, v in SECRET_KEY_FALLBACKS.items()}
+        if key in fallback_key_to_secret_key:
+            if self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
+                self.remove_secret(scope, key)
+            self.peer_relation_data(scope).update_relation_data(
+                peers.id, {fallback_key_to_secret_key[key]: value}
+            )
+        else:
+            self.peer_relation_data(scope).update_relation_data(peers.id, {key: value})
 
     def remove_secret(self, scope: Scopes, key: str) -> None:
         """Removing a secret."""
@@ -716,10 +747,7 @@ class MySQLCharmBase(CharmBase, ABC):
             raise RuntimeError("Unknown secret scope.")
 
         peers = self.model.get_relation(PEER)
-        if scope == APP_SCOPE:
-            self.peer_relation_app.delete_relation_data(peers.id, [key])
-        else:
-            self.peer_relation_unit.delete_relation_data(peers.id, [key])
+        self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
 
     @staticmethod
     def generate_random_hash() -> str:
@@ -1449,22 +1477,42 @@ class MySQLBase(ABC):
 
         return cluster_name in cs_status["clusters"]
 
-    def remove_replica_cluster(self, replica_cluster_name: str) -> None:
+    def rejoin_cluster(self, cluster_name) -> None:
+        """Try to rejoin a cluster to the cluster set."""
+        commands = (
+            f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            "cs = dba.get_cluster_set()",
+            f"cs.rejoin_cluster('{cluster_name}')",
+        )
+
+        try:
+            logger.debug(f"Rejoining {cluster_name=}")
+            self._run_mysqlsh_script("\n".join(commands))
+            logger.info(f"Rejoined {cluster_name=}")
+        except MySQLClientError:
+            logger.exception("Failed to rejoin cluster")
+            raise MySQLRejoinClusterError
+
+    def remove_replica_cluster(self, replica_cluster_name: str, force: bool = False) -> None:
         """Remove a replica cluster on the primary cluster.
 
         The removed cluster will be implicitly dissolved.
 
         Args:
             replica_cluster_name: The name of the replica cluster
+            force: Whether to force the removal of the replica cluster
 
         Raises:
             MySQLRemoveReplicaClusterError
         """
-        commands = (
+        commands = [
             f"shell.connect_to_primary('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             "cs = dba.get_cluster_set()",
-            f"cs.remove_cluster('{replica_cluster_name}')",
-        )
+        ]
+        if force:
+            commands.append(f"cs.remove_cluster('{replica_cluster_name}', {{'force': True}})")
+        else:
+            commands.append(f"cs.remove_cluster('{replica_cluster_name}')")
 
         try:
             logger.debug(f"Removing replica cluster {replica_cluster_name}")
@@ -1762,11 +1810,11 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(status_commands), timeout=30)
+            output = self._run_mysqlsh_script("\n".join(status_commands), timeout=150)
             output_dict = json.loads(output.lower())
             return output_dict
         except MySQLClientError:
-            logger.warning("Failed to get cluster-set status")
+            logger.warning("Failed to get cluster set status")
 
     def get_cluster_names(self) -> set[str]:
         """Get the names of the clusters in the cluster set.
@@ -1779,7 +1827,7 @@ class MySQLBase(ABC):
             return set()
         return set(status["clusters"])
 
-    def get_replica_cluster_status(self, replica_cluster_name: str) -> str:
+    def get_replica_cluster_status(self, replica_cluster_name: Optional[str] = None) -> str:
         """Get the replica cluster status.
 
         Executes script to retrieve replica cluster status.
@@ -1788,6 +1836,8 @@ class MySQLBase(ABC):
         Returns:
             Replica cluster status as a string
         """
+        if not replica_cluster_name:
+            replica_cluster_name = self.cluster_name
         status_commands = (
             f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
             "cs = dba.get_cluster_set()",
@@ -1919,6 +1969,7 @@ class MySQLBase(ABC):
                 lock_instance or primary_address, unit_label, UNIT_TEARDOWN_LOCKNAME
             )
             if not acquired_lock:
+                logger.debug(f"Failed to acquire lock to remove unit {unit_label}. Retrying.")
                 raise MySQLRemoveInstanceRetryError("Did not acquire lock to remove unit")
 
             # Remove instance from cluster, or dissolve cluster if no other members remain
@@ -1975,12 +2026,10 @@ class MySQLBase(ABC):
             if skip_release_lock:
                 return
 
-            # The below code should not result in retries of this method since the
-            # instance would already be removed from the cluster.
             try:
                 if not lock_instance:
                     if len(remaining_cluster_member_addresses) == 0:
-                        raise MySQLRemoveInstanceError(
+                        raise MySQLRemoveInstanceRetryError(
                             "No remaining instance to query cluster primary from."
                         )
 
@@ -1998,9 +2047,7 @@ class MySQLBase(ABC):
                 self._release_lock(lock_instance, unit_label, UNIT_TEARDOWN_LOCKNAME)
             except MySQLClientError as e:
                 # Raise an error that does not lead to a retry of this method
-                logger.exception(
-                    f"Failed to release lock on {unit_label} with error {e.message}", exc_info=e
-                )
+                logger.exception(f"Failed to release lock on {unit_label}")
                 raise MySQLRemoveInstanceError(e.message)
 
     def dissolve_cluster(self) -> None:
@@ -2041,7 +2088,7 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
         except MySQLClientError:
-            logger.debug("Failed to acquire lock")
+            logger.debug(f"Failed to acquire lock {lock_name}")
             return False
         matches = re.search(r"<ACQUIRED_LOCK>(\d)</ACQUIRED_LOCK>", output)
         if not matches:
@@ -3139,4 +3186,9 @@ class MySQLBase(ABC):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset_data_dir(self) -> None:
+        """Reset the data directory."""
         raise NotImplementedError
