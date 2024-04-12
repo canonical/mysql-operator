@@ -34,6 +34,7 @@ from charms.mysql.v0.mysql import (
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
+    MySQLRemoveInstanceRetryError,
     MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
@@ -519,7 +520,7 @@ class TestMySQLBase(unittest.TestCase):
         # disable tenacity retry
         self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
-        with self.assertRaises(MySQLRemoveInstanceError):
+        with self.assertRaises(MySQLRemoveInstanceRetryError):
             self.mysql.remove_instance("mysql-0")
 
         self.assertEqual(_get_cluster_primary_address.call_count, 1)

@@ -9,7 +9,11 @@ import typing
 import uuid
 from functools import cached_property
 
-from charms.mysql.v0.mysql import MySQLFencingWritesError, MySQLPromoteClusterToPrimaryError
+from charms.mysql.v0.mysql import (
+    MySQLFencingWritesError,
+    MySQLPromoteClusterToPrimaryError,
+    MySQLRejoinClusterError,
+)
 from ops import (
     ActionEvent,
     ActiveStatus,
@@ -144,7 +148,9 @@ class MySQLAsyncReplication(Object):
 
         try:
             self._charm._mysql.promote_cluster_to_primary(cluster_name, force)
-            event.set_results({"message": f"Cluster {cluster_name} promoted to primary"})
+            message = f"Cluster {cluster_name} promoted to primary"
+            logger.info(message)
+            event.set_results({"message": message})
             self._charm._on_update_status(None)
         except MySQLPromoteClusterToPrimaryError:
             logger.exception("Failed to promote cluster to primary")
@@ -202,8 +208,8 @@ class MySQLAsyncReplication(Object):
                     "Replica cluster not dissolved after relation broken"
                 )
                 logger.warning(
-                    "Replica cluster not dissolved after relation broken, by the primary cluster."
-                    "\n\tThe happens when the primary cluster was removed prior to removing the async relation."
+                    "Replica cluster not dissolved after relation broken by the primary cluster."
+                    "\n\tThis happens when the primary cluster was removed prior to removing the async relation."
                     "\n\tThis cluster can be promoted to primary with the `promote-standby-cluster` action."
                 )
                 return
@@ -217,7 +223,6 @@ class MySQLAsyncReplication(Object):
                 logger.info(
                     "\n\tThis is a replica cluster and will be dissolved.\n"
                     "\tThe cluster can be recreated with the `recreate-cluster` action.\n"
-                    "\tData will be wiped out by the action.\n"
                     "\tAlternatively the cluster can be rejoined to the cluster set."
                 )
                 # reset the cluster node count flag
@@ -233,7 +238,14 @@ class MySQLAsyncReplication(Object):
                     if self._charm._mysql.is_cluster_in_cluster_set(cluster_name):
                         self._charm.unit.status = MaintenanceStatus("Removing replica cluster")
                         logger.debug(f"Removing replica cluster {cluster_name}")
-                        self._charm._mysql.remove_replica_cluster(cluster_name)
+
+                        # force removal when cluster is invalidated
+                        force = self._charm._mysql.get_replica_cluster_status(cluster_name) in [
+                            "invalidated",
+                            "unknown",
+                        ]
+
+                        self._charm._mysql.remove_replica_cluster(cluster_name, force=force)
                         logger.debug(f"Replica cluster {cluster_name} removed")
                         self._charm.unit.status = ActiveStatus(self._charm.active_status_message)
                     else:
@@ -249,6 +261,38 @@ class MySQLAsyncReplication(Object):
                 self._charm.unit_peer_data["member-state"] = "unknown"
             self._charm._on_update_status(None)
 
+    def _on_rejoin_cluster_action(self, event: ActionEvent) -> None:
+        """Rejoin cluster to cluster set action handler."""
+        cluster = event.params.get("cluster-name")
+        if not cluster:
+            message = "Invalid/empty cluster name"
+            event.fail(message)
+            logger.info(message)
+            return
+
+        if not self._charm._mysql.is_cluster_in_cluster_set(cluster):
+            message = f"Cluster {cluster=} not found in cluster set"
+            event.fail(message)
+            logger.info(message)
+            return
+
+        status = self._charm._mysql.get_replica_cluster_status(cluster)
+        if status != "invalidated":
+            message = f"Cluster {status=}. Only `invalidated` clusters can be rejoined"
+            event.fail(message)
+            logger.info(message)
+            return
+
+        try:
+            self._charm._mysql.rejoin_cluster(cluster)
+            message = f"{cluster=} rejoined to cluster set"
+            logger.info(message)
+            event.set_results({"message": message})
+        except MySQLRejoinClusterError:
+            message = f"Failed to rejoin {cluster=} to the cluster set"
+            event.fail(message)
+            logger.error(message)
+
 
 class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
     """MySQL async replication primary side.
@@ -259,8 +303,8 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
     def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, PRIMARY_RELATION)
 
-        # Actions observed only on the primary side to avoid duplicated execution
-        # promotion action
+        # Actions observed only on the primary class to avoid duplicated execution
+        # promotion action since both classes are always instantiated
         self.framework.observe(
             self._charm.on.promote_standby_cluster_action, self._on_promote_standby_cluster
         )
@@ -272,6 +316,10 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         # unfence writes action
         self.framework.observe(
             self._charm.on.unfence_writes_action, self._on_fence_unfence_writes_action
+        )
+        # rejoin invalidated cluster action
+        self.framework.observe(
+            self._charm.on.rejoin_cluster_action, self._on_rejoin_cluster_action
         )
 
         if self._charm.unit.is_leader():
@@ -313,7 +361,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             replica_status = self._charm._mysql.get_replica_cluster_status(
                 remote_data["cluster-name"]
             )
-            if replica_status == "ok":
+            if replica_status in ["ok", "invalidated"]:
                 return States.READY
             elif replica_status == "unknown":
                 return States.INITIALIZING
@@ -401,12 +449,6 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             cluster = remote_data["cluster-name"]
             endpoint = remote_data["endpoint"]
             unit_label = remote_data["node-label"]
-
-            if cluster == self.cluster_name:
-                logger.warning(
-                    "Cluster name is the same as the primary cluster. Appending generetade value"
-                )
-                cluster = f"{cluster}{uuid.uuid4().hex[:4]}"
 
             logger.debug("Looking for a donor node")
             _, ro, _ = self._charm._mysql.get_cluster_endpoints(get_ips=False)
@@ -562,7 +604,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
 
     def _on_replica_created(self, event):
         """Handle the async_replica relation being created on the leader unit."""
-        if not self._charm.unit_initialized:
+        if not self._charm.unit_initialized and not self.returning_cluster:
+            # avoid running too early for non returning clusters
             logger.debug("Unit not initialized, deferring event")
             event.defer()
             return
@@ -662,6 +705,15 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
             del self._charm.app_peer_data["units-added-to-cluster"]
             # reset force rejoin-secondaries flag
             del self._charm.app_peer_data["rejoin-secondaries"]
+
+            if self.remote_relation_data["cluster-name"] == self.cluster_name:
+                # this cluster need a new cluster name
+                logger.warning(
+                    "Cluster name is the same as the primary cluster. Appending generatade value"
+                )
+                self._charm.app_peer_data[
+                    "cluster-name"
+                ] = f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
 
             self._charm.unit.status = MaintenanceStatus("Populate endpoint")
 

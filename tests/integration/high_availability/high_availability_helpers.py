@@ -95,12 +95,10 @@ async def ensure_n_online_mysql_members(
     try:
         for attempt in Retrying(stop=stop_after_delay(10 * 60), wait=wait_fixed(10)):
             with attempt:
-                cluster_status = await get_cluster_status(ops_test, mysql_unit)
+                cluster_status = await get_cluster_status(mysql_unit)
                 online_members = [
                     label
-                    for label, member in cluster_status["status"]["defaultreplicaset"][
-                        "topology"
-                    ].items()
+                    for label, member in cluster_status["defaultreplicaset"]["topology"].items()
                     if member["status"] == "online"
                 ]
                 assert len(online_members) == number_online_members
