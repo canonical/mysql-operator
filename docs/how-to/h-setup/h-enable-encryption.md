@@ -21,7 +21,7 @@ First, deploy the TLS charm:
 ```shell
 juju deploy self-signed-certificates
 ```
-To enable TLS, integrate (also known as "relate") the two applications:
+To enable TLS, integrate the two applications:
 ```shell
 juju integrate self-signed-certificates mysql
 ```
@@ -38,7 +38,6 @@ openssl genrsa -out internal-key.pem 3072
 ```
 
 Apply the newly generated internal key on each `juju` unit:
-
 ```shell
 juju run mysql/0 set-tls-private-key "internal-key=$(base64 -w0 internal-key.pem)"
 juju run mysql/1 set-tls-private-key "internal-key=$(base64 -w0 internal-key.pem)"
