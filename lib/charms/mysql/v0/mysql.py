@@ -1352,6 +1352,7 @@ class MySQLBase(ABC):
             replica_cluster_name: The name of the replica cluster
             instance_label: The label to apply to the replica cluster instance
             donor: The donor instance address definition to clone from
+            method: The method to use to create the replica cluster (auto, clone)
 
         Raises:
             MySQLCreateReplicaClusterError
