@@ -294,3 +294,11 @@ class TestUpgrade(unittest.TestCase):
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql")["upgrade-stack"],
             "[0, 1]",
         )
+
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_primary_switchover(self, _mysql):
+        _mysql.get_cluster_endpoints.return_value = (None, "1.1.1.1:3306,1.1.1.2:3306", None)
+
+        self.charm.upgrade._primary_switchover()
+
+        _mysql.set_cluster_primary.assert_called_once_with("1.1.1.1:3306")

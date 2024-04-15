@@ -7,6 +7,7 @@ from unittest.mock import patch
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
+from charms.mysql.v0.mysql import RouterUser
 from constants import DB_RELATION_NAME
 
 from .helpers import patch_network_get
@@ -82,3 +83,54 @@ class TestDatase(unittest.TestCase):
         _create_application_database_and_scoped_user.assert_called_once()
         _get_cluster_endpoints.assert_called_once()
         _get_mysql_version.assert_called_once()
+
+    @patch("relations.mysql_provider.MySQLProvider._on_database_broken")
+    @patch("mysql_vm_helpers.MySQL.remove_router_from_cluster_metadata")
+    @patch("mysql_vm_helpers.MySQL.delete_user")
+    @patch("mysql_vm_helpers.MySQL.get_mysql_router_users_for_unit")
+    def test_relation_departed(
+        self,
+        _get_users,
+        _delete_user,
+        _remove_router,
+        _on_database_broken,
+    ):
+        self.harness.set_leader(True)
+
+        router_user = RouterUser(username="user1", router_id="router_id")
+        _get_users.return_value = [router_user]
+
+        self.harness.remove_relation(self.database_relation_id)
+        _delete_user.assert_called_once_with("user1")
+        _remove_router.assert_called_once_with("router_id")
+
+    def test_remove_unit_from_endpoints(self):
+        self.harness.set_leader(True)
+        self.charm.on.config_changed.emit()
+        self.harness.update_relation_data(
+            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
+        )
+
+        self.harness.update_relation_data(
+            self.database_relation_id,
+            self.charm.app.name,
+            {
+                "data": '{"database": "test_db"}',
+                "password": "super_secure_password",
+                "username": f"relation-{self.database_relation_id}",
+                "endpoints": "2.2.2.2:3306",
+                "version": "8.0.36-0ubuntu0.22.04.3",
+                "database": "test_db",
+                "read-only-endpoints": "2.2.2.1:3306",
+            },
+        )
+
+        remove_unit = self.harness.model.get_unit("mysql/1")
+        with patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="2.2.2.1"):
+            self.charm.database_relation.remove_unit_from_endpoints(remove_unit)
+
+        relation_data = self.harness.get_relation_data(
+            self.database_relation_id, self.charm.app.name
+        )
+
+        self.assertNotIn("read-only-endpoints", relation_data.keys())
