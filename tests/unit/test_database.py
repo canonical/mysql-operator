@@ -12,7 +12,7 @@ from constants import DB_RELATION_NAME
 from .helpers import patch_network_get
 
 
-class TestDatase(unittest.TestCase):
+class TestDatabase(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(MySQLOperatorCharm)
         self.addCleanup(self.harness.cleanup)
