@@ -4,10 +4,10 @@
 import unittest
 from unittest.mock import patch
 
+from charms.mysql.v0.mysql import RouterUser
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from charms.mysql.v0.mysql import RouterUser
 from constants import DB_RELATION_NAME
 
 from .helpers import patch_network_get
