@@ -60,7 +60,6 @@ NOTE: Make sure you are inside Multipass VM: `multipass shell maas` !
 
 ```shell
 sudo snap install juju
-sudo snap install jhack --channel edge
 ```
 
 # Add MAAS cloud and credentials into Juju
