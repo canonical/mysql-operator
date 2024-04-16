@@ -322,14 +322,13 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             self._charm.on.rejoin_cluster_action, self._on_rejoin_cluster_action
         )
 
-        if self._charm.unit.is_leader():
-            self.framework.observe(
-                self._charm.on[PRIMARY_RELATION].relation_created, self._on_primary_created
-            )
-            self.framework.observe(
-                self._charm.on[PRIMARY_RELATION].relation_changed,
-                self._on_primary_relation_changed,
-            )
+        self.framework.observe(
+            self._charm.on[PRIMARY_RELATION].relation_created, self._on_primary_created
+        )
+        self.framework.observe(
+            self._charm.on[PRIMARY_RELATION].relation_changed,
+            self._on_primary_relation_changed,
+        )
 
     def get_relation(self, relation_id: int) -> Optional[Relation]:
         """Return the relation."""
@@ -401,6 +400,9 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
     def _on_primary_created(self, event):
         """Validate relations and share credentials with replica cluster."""
+        if not self._charm.unit.is_leader():
+            return
+
         if not self._charm.unit_initialized:
             logger.debug("Unit not initialized, deferring event")
             event.defer()
@@ -438,6 +440,9 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
     def _on_primary_relation_changed(self, event):
         """Handle the async_primary relation being changed."""
+        if not self._charm.unit.is_leader():
+            return
+
         state = self.get_state(event.relation)
 
         if state == States.INITIALIZING:
@@ -483,24 +488,22 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
     def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, REPLICA_RELATION)
 
-        if self._charm.unit.is_leader():
-            # leader/primary
-            self.framework.observe(
-                self._charm.on[REPLICA_RELATION].relation_created, self._on_replica_created
-            )
-            self.framework.observe(
-                self._charm.on[REPLICA_RELATION].relation_changed, self._on_replica_changed
-            )
-        else:
-            # non-leader/secondaries
-            self.framework.observe(
-                self._charm.on[REPLICA_RELATION].relation_created,
-                self._on_replica_non_leader_created,
-            )
-            self.framework.observe(
-                self._charm.on[REPLICA_RELATION].relation_changed,
-                self._on_replica_non_leader_changed,
-            )
+        # leader/primary
+        self.framework.observe(
+            self._charm.on[REPLICA_RELATION].relation_created, self._on_replica_created
+        )
+        self.framework.observe(
+            self._charm.on[REPLICA_RELATION].relation_changed, self._on_replica_changed
+        )
+        # non-leader/secondaries
+        self.framework.observe(
+            self._charm.on[REPLICA_RELATION].relation_created,
+            self._on_replica_non_leader_created,
+        )
+        self.framework.observe(
+            self._charm.on[REPLICA_RELATION].relation_changed,
+            self._on_replica_non_leader_changed,
+        )
 
     @property
     def relation(self) -> Optional[Relation]:
@@ -604,6 +607,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
 
     def _on_replica_created(self, event):
         """Handle the async_replica relation being created on the leader unit."""
+        if not self._charm.unit.is_leader():
+            return
         if not self._charm.unit_initialized and not self.returning_cluster:
             # avoid running too early for non returning clusters
             logger.debug("Unit not initialized, deferring event")
@@ -638,6 +643,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
 
     def _on_replica_changed(self, event):  # noqa: C901
         """Handle the async_replica relation being changed."""
+        if not self._charm.unit.is_leader():
+            return
         state = self.state
         logger.debug(f"Replica cluster {state.value=}")
 
