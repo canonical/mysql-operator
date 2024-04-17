@@ -19,6 +19,7 @@ from charms.mysql.v0.mysql import (
     MySQLCreateApplicationDatabaseAndScopedUserError,
     MySQLCreateClusterError,
     MySQLCreateClusterSetError,
+    MySQLCreateReplicaClusterError,
     MySQLDeleteTempBackupDirectoryError,
     MySQLDeleteTempRestoreDirectoryError,
     MySQLDeleteUserError,
@@ -89,7 +90,7 @@ class TestMySQLBase(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
-        )
+        )  # pyright: ignore
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_configure_mysql_users(self, _run_mysqlcli_script):
@@ -1780,6 +1781,56 @@ xtrabackup/location --defaults-file=defaults/config/file
         mock_get_member_state.return_value = ("online", "primary")
         self.mysql.hold_if_recovering()
         self.assertEqual(mock_get_member_state.call_count, 1)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_replica_cluster(self, _run_mysqlsh_script):
+        """Test create_replica_cluster."""
+        endpoint = "address:3306"
+        replica_cluster_name = "replica_cluster"
+        instance_label = "label"
+        method = "auto"
+        options = {
+            "recoveryProgress": 0,
+            "recoveryMethod": method,
+            "timeout": 0,
+            "communicationStack": "MySQL",
+        }
+        commands = (
+            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.instance_address}')",
+            "cs = dba.get_cluster_set()",
+            f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
+            f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
+        )
+        self.mysql.create_replica_cluster(
+            endpoint,
+            replica_cluster_name,
+            instance_label,
+        )
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLCreateReplicaClusterError):
+            self.mysql.create_replica_cluster(
+                endpoint,
+                replica_cluster_name,
+                instance_label,
+            )
+
+        options["recoveryMethod"] = "clone"
+        commands2 = (
+            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.instance_address}')",
+            "cs = dba.get_cluster_set()",
+            f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
+            f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
+        )
+        _run_mysqlsh_script.has_calls(
+            [
+                call("\n".join(commands)),
+                call("\n".join(commands2)),
+            ]
+        )
 
     def test_abstract_methods(self):
         """Test abstract methods."""
