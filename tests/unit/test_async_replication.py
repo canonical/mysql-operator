@@ -12,7 +12,7 @@ from charms.mysql.v0.async_replication import (
     States,
 )
 from ops import BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.testing import Harness
+from ops.testing import ActionFailed, Harness
 
 from charm import MySQLOperatorCharm
 from constants import (
@@ -402,3 +402,127 @@ class TestAsyncRelation(unittest.TestCase):
 
         self.assertEqual(self.charm.app_peer_data["units-added-to-cluster"], "2")
         _defer.assert_called_once()
+
+    def test_replica_created_non_leader(self):
+        """Test replica changed for non-leader unit."""
+        self.harness.set_leader(False)
+        self.charm.unit_peer_data["member-state"] = "online"
+        self.harness.add_relation(REPLICA_RELATION, "db1")
+
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
+
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_replica_changed_non_leader(self, _mysql):
+        """Test replica changed for non-leader unit."""
+        self.harness.set_leader(False)
+        with self.harness.hooks_disabled():
+            async_relation_id = self.harness.add_relation(REPLICA_RELATION, "db1")
+
+        _mysql.is_instance_in_cluster.return_value = False
+
+        self.harness.update_relation_data(
+            async_relation_id,
+            "db1",
+            {"replica-state": "initialized"},
+        )
+
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
+
+    # actions
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_promote_standby_cluster(self, _mysql):
+        self.harness.set_leader(True)
+
+        _mysql.is_cluster_replica.return_value = True
+
+        self.harness.run_action(
+            "promote-standby-cluster",
+            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
+        )
+
+        _mysql.promote_cluster_to_primary.assert_called_with(
+            self.charm.app_peer_data["cluster-name"], False
+        )
+
+        _mysql.reset_mock()
+
+        self.harness.run_action(
+            "promote-standby-cluster",
+            {
+                "cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"],
+                "force": True,
+            },
+        )
+
+        _mysql.promote_cluster_to_primary.assert_called_with(
+            self.charm.app_peer_data["cluster-name"], True
+        )
+
+    @patch("charm.MySQLOperatorCharm._on_update_status")
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_fence_cluster(self, _mysql, _update_status):
+        self.harness.set_leader(True)
+
+        _mysql.is_cluster_replica.return_value = False
+        _mysql.get_member_state.return_value = ("online", "primary")
+        _mysql.is_cluster_writes_fenced.return_value = False
+
+        with self.harness.hooks_disabled():
+            self.harness.add_relation(REPLICA_RELATION, "db1")
+
+        self.harness.run_action(
+            "fence-writes",
+            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
+        )
+
+        _mysql.fence_writes.assert_called_once()
+        _update_status.assert_called_once()
+
+    @patch("charm.MySQLOperatorCharm._on_update_status")
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_unfence_cluster(self, _mysql, _update_status):
+        self.harness.set_leader(True)
+
+        _mysql.is_cluster_replica.return_value = False
+        _mysql.get_member_state.return_value = ("online", "primary")
+        _mysql.is_cluster_writes_fenced.return_value = True
+
+        with self.harness.hooks_disabled():
+            self.harness.add_relation(REPLICA_RELATION, "db1")
+
+        self.harness.run_action(
+            "unfence-writes",
+            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
+        )
+
+        _mysql.unfence_writes.assert_called_once()
+        _update_status.assert_called_once()
+
+    @patch("charm.MySQLOperatorCharm._mysql")
+    def test_rejoin_cluster_action(self, _mysql):
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action("rejoin-cluster")
+
+        self.harness.set_leader(True)
+        _mysql.is_cluster_in_cluster_set.return_value = False
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action(
+                "rejoin-cluster", {"cluster-name": self.charm.app_peer_data["cluster-name"]}
+            )
+
+        _mysql.is_cluster_in_cluster_set.return_value = True
+        _mysql.get_replica_cluster_status.return_value = "ok"
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action(
+                "rejoin-cluster", {"cluster-name": self.charm.app_peer_data["cluster-name"]}
+            )
+
+        # happy path
+        _mysql.is_cluster_in_cluster_set.return_value = True
+        _mysql.get_replica_cluster_status.return_value = "invalidated"
+
+        self.harness.run_action(
+            "rejoin-cluster", {"cluster-name": self.charm.app_peer_data["cluster-name"]}
+        )
+
+        _mysql.rejoin_cluster.assert_called_once_with(self.charm.app_peer_data["cluster-name"])
