@@ -63,5 +63,4 @@ Please check the "[Contributing](https://github.com/canonical/mysql-operator/blo
 Please check/deploy the charm [mysql-bundle](https://charmhub.io/mysql-bundle) ([Git](https://github.com/canonical/mysql-bundle)). It deploy and test all the necessary parts at once.
 
 ## Performance test
-
-Please check the separate [document](/t/11073).
+Refer to the [sysbench documentation](https://discourse.charmhub.io/t/charmed-sysbench-documentation-home/13945).
