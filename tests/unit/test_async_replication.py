@@ -462,9 +462,33 @@ class TestAsyncRelation(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_fence_cluster(self, _mysql, _update_status):
         self.harness.set_leader(True)
+        # fail on wrong cluster set name
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action(
+                "fence-writes",
+                {"cluster-set-name": "incorrect-name"},
+            )
 
-        _mysql.is_cluster_replica.return_value = False
+        cluster_set_name = self.charm.app_peer_data["cluster-set-domain-name"]
         _mysql.get_member_state.return_value = ("online", "primary")
+        _mysql.is_cluster_replica.return_value = True
+        # fail on replica
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action(
+                "fence-writes",
+                {"cluster-set-name": cluster_set_name},
+            )
+
+        del self.async_primary.role
+        _mysql.is_cluster_replica.return_value = False
+        _mysql.is_cluster_writes_fenced.return_value = True
+        # fail on fence already fenced
+        with self.assertRaises(ActionFailed):
+            self.harness.run_action(
+                "fence-writes",
+                {"cluster-set-name": cluster_set_name},
+            )
+
         _mysql.is_cluster_writes_fenced.return_value = False
 
         with self.harness.hooks_disabled():
@@ -472,7 +496,7 @@ class TestAsyncRelation(unittest.TestCase):
 
         self.harness.run_action(
             "fence-writes",
-            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
+            {"cluster-set-name": cluster_set_name},
         )
 
         _mysql.fence_writes.assert_called_once()

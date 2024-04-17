@@ -161,7 +161,6 @@ class MySQLAsyncReplication(Object):
         if event.params.get("cluster-set-name") != self.cluster_set_name:
             event.fail("Invalid/empty cluster set name")
             return
-
         if self.role.cluster_role == "replica":
             event.fail("Only a primary cluster can have writes fenced/unfence")
             return
@@ -181,6 +180,9 @@ class MySQLAsyncReplication(Object):
                 logger.info("Unfencing writes to the cluster")
                 self._charm._mysql.unfence_writes()
                 event.set_results({"message": "Writes to the cluster are now resumed"})
+            else:
+                event.fail("Writes are already fenced/unfenced")
+                return
             # update status
             self._charm._on_update_status(None)
         except MySQLFencingWritesError:
@@ -716,7 +718,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
             if self.remote_relation_data["cluster-name"] == self.cluster_name:
                 # this cluster need a new cluster name
                 logger.warning(
-                    "Cluster name is the same as the primary cluster. Appending generatade value"
+                    "Cluster name is the same as the primary cluster. Appending generated value"
                 )
                 self._charm.app_peer_data[
                     "cluster-name"
