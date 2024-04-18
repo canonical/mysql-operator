@@ -28,14 +28,17 @@ from charms.mysql.v0.mysql import (
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
     MySQLGetAutoTunningParametersError,
+    MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLMemberState,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
+    MySQLRemoveReplicaClusterError,
     MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
@@ -69,6 +72,26 @@ SHORT_CLUSTER_STATUS = {
             },
         }
     }
+}
+
+CLUSTER_SET_STATUS = {
+    "clusters": {
+        "test_cluster": {
+            "clusterrole": "replica",
+            "clustersetreplicationstatus": "ok",
+            "globalstatus": "ok",
+        },
+        "lisbon": {
+            "clusterrole": "primary",
+            "globalstatus": "ok",
+            "primary": "juju-3f9f94-1.lxd:3306",
+        },
+    },
+    "domainname": "test_cluster_set",
+    "globalprimaryinstance": "juju-3f9f94-1.lxd:3306",
+    "primarycluster": "lisbon",
+    "status": "healthy",
+    "statustext": "all clusters available.",
 }
 
 
@@ -1831,6 +1854,97 @@ xtrabackup/location --defaults-file=defaults/config/file
                 call("\n".join(commands2)),
             ]
         )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_remove_replica_cluster(self, _run_mysqlsh_script):
+        """Test remove_replica_cluster."""
+        replica_cluster_name = "replica_cluster"
+        commands = [
+            f"shell.connect_to_primary('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.instance_address}')",
+            "cs = dba.get_cluster_set()",
+            f"cs.remove_cluster('{replica_cluster_name}')",
+        ]
+        self.mysql.remove_replica_cluster(replica_cluster_name)
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        commands[2] = f"cs.remove_cluster('{replica_cluster_name}', {{'force': True}})"
+        self.mysql.remove_replica_cluster(replica_cluster_name, force=True)
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLRemoveReplicaClusterError):
+            self.mysql.remove_replica_cluster(replica_cluster_name)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_replica_cluster_status(self, _run_mysqlsh_script):
+        """Test get_replica_cluster_status."""
+        replica_cluster_name = "replica_cluster"
+        _run_mysqlsh_script.return_value = "OK "
+        status = self.mysql.get_replica_cluster_status(replica_cluster_name)
+        self.assertEqual(status, "ok")
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        status = self.mysql.get_replica_cluster_status(replica_cluster_name)
+        self.assertEqual(status, "unknown")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_cluster_node_count(self, _run_mysqlsh_script):
+        """Test get_cluster_node_count."""
+        _run_mysqlsh_script.return_value = "<NODES>2</NODES>"
+        count = self.mysql.get_cluster_node_count()
+        self.assertEqual(count, 2)
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        count = self.mysql.get_cluster_node_count()
+        self.assertEqual(count, 0)
+
+        query = (
+            "SELECT COUNT(*) FROM performance_schema.replication_group_members"
+            " WHERE member_state = 'ONLINE'"
+        )
+        commands = (
+            f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}"
+            f"@{self.mysql.instance_address}')",
+            f'result = session.run_sql("{query}")',
+            'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
+        )
+        self.mysql.get_cluster_node_count(node_status=MySQLMemberState.ONLINE)
+        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_cluster_set_global_primary(self, _run_mysqlsh_script):
+        """Test get_cluster_set_global_primary."""
+        _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>mysql-k8s-1</PRIMARY_ADDRESS>"
+        primary = self.mysql.get_cluster_set_global_primary_address()
+        self.assertEqual(primary, "mysql-k8s-1")
+
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLGetClusterPrimaryAddressError):
+            self.mysql.get_cluster_set_global_primary_address()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
+    def test_is_cluster_replica(self, _get_cluster_set_status):
+        """Test is_cluster_replica."""
+        _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
+
+        self.assertTrue(self.mysql.is_cluster_replica())
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
+    def test_cluster_set_cluster_count(self, _get_cluster_set_status):
+        """Test cluster_set_cluster_count."""
+        _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
+
+        self.assertEqual(self.mysql.cluster_set_cluster_count(), 2)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
+    def test_get_cluster_set_name(self, _get_cluster_set_status):
+        """Test cluster_set_name."""
+        _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
+
+        self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
 
     def test_abstract_methods(self):
         """Test abstract methods."""

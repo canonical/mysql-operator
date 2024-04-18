@@ -239,7 +239,7 @@ class MySQLAsyncReplication(Object):
                 if cluster_name := remote_data.get("cluster-name"):
                     if self._charm._mysql.is_cluster_in_cluster_set(cluster_name):
                         self._charm.unit.status = MaintenanceStatus("Removing replica cluster")
-                        logger.debug(f"Removing replica cluster {cluster_name}")
+                        logger.info(f"Removing replica cluster {cluster_name}")
 
                         # force removal when cluster is invalidated
                         force = self._charm._mysql.get_replica_cluster_status(cluster_name) in [
@@ -248,7 +248,7 @@ class MySQLAsyncReplication(Object):
                         ]
 
                         self._charm._mysql.remove_replica_cluster(cluster_name, force=force)
-                        logger.debug(f"Replica cluster {cluster_name} removed")
+                        logger.info(f"Replica cluster {cluster_name} removed")
                         self._charm.unit.status = ActiveStatus(self._charm.active_status_message)
                     else:
                         logger.warning(
@@ -421,7 +421,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             return
 
         self._charm.app.status = MaintenanceStatus("Setting up async replication")
-        logger.debug("Granting secrets access to async replication relation")
+        logger.info("Granting secrets access to async replication relation")
         secret = self._get_secret()
         secret_id = secret.id
         secret.grant(event.relation)
@@ -449,7 +449,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
         if state == States.INITIALIZING:
             # Add replica cluster primary node
-            logger.debug("Initializing replica cluster")
+            logger.info("Creating replica cluster primary node")
             self._charm.unit.status = MaintenanceStatus("Adding replica cluster")
             remote_data = self.get_remote_relation_data(event.relation) or {}
 
@@ -473,7 +473,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
                 )
 
             event.relation.data[self.model.app]["replica-state"] = "initialized"
-            logger.debug("Replica cluster created")
+            logger.info("Replica cluster created")
             self._charm._on_update_status(None)
 
         elif state == States.RECOVERING:
@@ -668,6 +668,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 logger.debug(
                     "Cluster not fully initialized yet, waiting until all units join the cluster"
                 )
+                self._charm.unit.status = WaitingStatus("Waiting other units join the cluster")
                 event.defer()
                 return
 
@@ -708,7 +709,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 logger.debug(f"Synced {user=} password")
 
             self._charm.unit.status = MaintenanceStatus("Dissolving replica cluster")
-            logger.debug("Dissolving replica cluster")
+            logger.info("Dissolving replica cluster")
             self._charm._mysql.dissolve_cluster()
             # reset the cluster node count flag
             del self._charm.app_peer_data["units-added-to-cluster"]
@@ -738,7 +739,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
             self._charm.unit.status = WaitingStatus("Waiting for primary cluster")
         elif state == States.READY:
             # update status
-            logger.debug("Replica cluster primary is ready")
+            logger.info("Replica cluster is ready")
 
             # sync cluster-set domain name across clusters
             if cluster_set_domain_name := self._charm._mysql.get_cluster_set_name():
@@ -761,6 +762,9 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
             # this will trigger secondaries to join the cluster
             node_count = self._charm._mysql.get_cluster_node_count()
             self._charm.app_peer_data["units-added-to-cluster"] = str(node_count)
+            # set state flags to allow secondaries to join the cluster
+            self._charm.unit_peer_data["member-state"] = "online"
+            self._charm.unit_peer_data["member-role"] = "primary"
             event.defer()
 
     def _on_replica_non_leader_created(self, _):
