@@ -103,34 +103,3 @@ class TestDatase(unittest.TestCase):
         self.harness.remove_relation(self.database_relation_id)
         _delete_user.assert_called_once_with("user1")
         _remove_router.assert_called_once_with("router_id")
-
-    def test_remove_unit_from_endpoints(self):
-        self.harness.set_leader(True)
-        self.charm.on.config_changed.emit()
-        self.harness.update_relation_data(
-            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
-        )
-
-        self.harness.update_relation_data(
-            self.database_relation_id,
-            self.charm.app.name,
-            {
-                "data": '{"database": "test_db"}',
-                "password": "super_secure_password",
-                "username": f"relation-{self.database_relation_id}",
-                "endpoints": "2.2.2.2:3306",
-                "version": "8.0.36-0ubuntu0.22.04.3",
-                "database": "test_db",
-                "read-only-endpoints": "2.2.2.1:3306",
-            },
-        )
-
-        remove_unit = self.harness.model.get_unit("mysql/1")
-        with patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="2.2.2.1"):
-            self.charm.database_relation.remove_unit_from_endpoints(remove_unit)
-
-        relation_data = self.harness.get_relation_data(
-            self.database_relation_id, self.charm.app.name
-        )
-
-        self.assertNotIn("read-only-endpoints", relation_data.keys())

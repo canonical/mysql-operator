@@ -20,7 +20,7 @@ from charms.mysql.v0.mysql import (
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation, Unit
+from ops.model import BlockedStatus, Relation
 
 from constants import DB_RELATION_NAME, PASSWORD_LENGTH, PEER
 from utils import generate_random_password
@@ -311,45 +311,3 @@ class MySQLProvider(Object):
             logger.info(f"Removed router from metadata {user.router_id}")
         except MySQLRemoveRouterFromMetadataError:
             logger.error(f"Failed to remove router from metadata with ID {user.router_id}")
-
-    def remove_unit_from_endpoints(self, unit: Unit) -> None:
-        """Remove a unit from the endpoints for related applications.
-
-        Args:
-            unit (ops.Unit): The the unit to be removed.
-        """
-        if not self.charm.unit.is_leader():
-            return
-
-        if not self.charm.cluster_initialized:
-            logger.debug("Waiting cluster to be initialized")
-            return
-
-        unit_address = self.charm.get_unit_ip(unit)
-
-        # filter out the unit address from the (ro)endpoints
-        for relation in self.active_relations:
-            # rw endpoints
-            endpoints = (
-                self.database.fetch_my_relation_field(relation.id, "endpoints", DB_RELATION_NAME)
-                or ""
-            )
-            if unit_address in endpoints:
-                self.database.set_endpoints(
-                    relation.id,
-                    ",".join([e for e in endpoints.split(",") if unit_address not in e]),
-                )
-                continue
-
-            # ro endpoints
-            ro_endpoints = (
-                self.database.fetch_my_relation_field(
-                    relation.id, "read-only-endpoints", DB_RELATION_NAME
-                )
-                or ""
-            )
-            if unit_address in ro_endpoints:
-                self.database.set_read_only_endpoints(
-                    relation.id,
-                    ",".join([e for e in ro_endpoints.split(",") if unit_address not in e]),
-                )
