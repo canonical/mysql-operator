@@ -113,6 +113,7 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_cha
     logger.info(f"Freezing process id {pid}")
     await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-19", pid)
 
+    logger.info("Get cluster admin password")
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
         "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
@@ -120,6 +121,7 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_cha
     }
 
     # verify that connection is not possible
+    logger.info(f"Verifying that connection to host {primary_unit_ip} is not possible")
     assert not is_connection_possible(config), "❌ Mysqld is not paused"
 
     # unfreeze (CONT signal) mysqld for the unit
@@ -127,6 +129,7 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes, mysql_cha
     await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-18", pid)
 
     # verify that connection is possible
+    logger.info(f"Verifying that connection to host {primary_unit_ip} is possible")
     assert is_connection_possible(config), "❌ Mysqld is paused"
 
     # ensure continuous writes still incrementing for all units
@@ -306,7 +309,6 @@ async def test_replicate_data_on_restart(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-@pytest.mark.unstable
 async def test_cluster_pause(ops_test: OpsTest, continuous_writes, mysql_charm_series: str):
     """Pause test.
 

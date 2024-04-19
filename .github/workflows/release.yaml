@@ -23,28 +23,28 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - run: |
           # Workaround for https://github.com/canonical/charmcraft/issues/1389#issuecomment-1880921728
           touch requirements.txt
       - name: Release charm libraries
-        uses: canonical/charming-actions/release-libraries@2.3.0
+        uses: canonical/charming-actions/release-libraries@2.4.0
         with:
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v12.6.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.0
 
   release:
     name: Release charm
     needs:
       - ci-tests
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v12.6.2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v13.1.0
     with:
       channel: 8.0/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}

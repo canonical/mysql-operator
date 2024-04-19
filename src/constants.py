@@ -25,7 +25,7 @@ TLS_SSL_KEY_FILE = "custom-server-key.pem"
 TLS_SSL_CERT_FILE = "custom-server-cert.pem"
 MYSQL_EXPORTER_PORT = 9104
 CHARMED_MYSQL_SNAP_NAME = "charmed-mysql"
-CHARMED_MYSQL_SNAP_REVISION = 96  # MySQL v8.0.35
+CHARMED_MYSQL_SNAP_REVISION = 98  # MySQL v8.0.36
 CHARMED_MYSQLD_EXPORTER_SERVICE = "mysqld-exporter"
 CHARMED_MYSQLD_SERVICE = "mysqld"
 CHARMED_MYSQL = "charmed-mysql.mysql"
@@ -47,3 +47,12 @@ ROOT_SYSTEM_USER = "root"
 GR_MAX_MEMBERS = 9
 HOSTNAME_DETAILS = "hostname-details"
 COS_AGENT_RELATION_NAME = "cos-agent"
+SECRET_KEY_FALLBACKS = {
+    "root-password": "root_password",
+    "server-config-password": "server_config_password",
+    "cluster-admin-password": "cluster_admin_password",
+    "monitoring-password": "monitoring_password",
+    "backups-password": "backups_password",
+    "certificate": "cert",
+    "certificate-authority": "ca",
+}
