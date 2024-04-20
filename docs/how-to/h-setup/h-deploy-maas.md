@@ -1,70 +1,89 @@
-# Deploy Charmed MySQL on MAAS
-[note type="negative"]
-Warning: at the moment, known blocking issues for MAAS deployment: [GH-336](https://github.com/canonical/mysql-operator/issues/366)
-[/note]
+# How to deploy on MAAS
 
-To deploy **MAAS for production** usage, follow [the official MAAS documentation](https://maas.io/docs/tutorial-bootstrapping-maas) and [Charmed MySQL tutorial](/t/9922).
+This guide aims to provide a quick start to deploying Charmed MySQL on MAAS. It summarizes the instructions from the [Build a MAAS and LXD environment with Multipass Tutorial](https://discourse.maas.io/t/5360) to set up and tear down a **playground environment**.
 
-This **playground deployment** based on the [Multipass-based blueprint instruction](https://discourse.maas.io/t/5360) (assuming Ubuntu 22.04 LTS is in use).
+If you want to deploy MySQL on MAAS in a **production environment**, refer to the official [Bootstrap MAAS Tutorial](https://maas.io/docs/tutorial-bootstrapping-maas) followed by the [Charmed MySQL Tutorial](/t/9912).
 
-# Summary
- * Bootstrap isolated VM for playground
- * Install MAAS inside VM using cloud-init blueprint
- * Configure MAAS
- * Install and bootstrap Juju
- * Register MAAS as a new cloud on Juju
- * Deploy Charmed MySQL on MAAS using Juju
- * Test Charmed MySQL deployment
- * Remove playground VM to keep the house clean
+## Summary
+ * [Bootstrap a Multipass VM](#heading--bootstrap-multipass-vm)
+ * [Configure MAAS](#heading--configure-maas)
+ * [Register MAAS with Juju](#heading--register-maas-juju)
+ * [Deploy Charmed MySQL on MAAS](#heading--deploy-mysql-maas)
+ * [Test Charmed MySQL deployment](#heading--test-mysql)
+ * [Clean up the environment](#heading--clean-up)
 
-# Bootstrap the new Multipass VM with pre-installed MAAS
+For further details and explanation about each step, remember you can refer to the [original tutorial](https://discourse.maas.io/t/5360). 
+
+---
+ <a href="#heading--bootstrap-multipass-vm"><h2 id="heading--bootstrap-multipass-vm"> Bootstrap a Multipass VM </h2></a>
+
+Install Multipass and launch a VM:
 ```shell
 sudo snap install multipass
 
 wget -qO- https://raw.githubusercontent.com/canonical/maas-multipass/main/maas.yml \
  | multipass launch --name maas -c8 -m12GB -d50GB --cloud-init -
-
-multipass ls
-> maas     Running    10.76.203.138    Ubuntu 22.04 LTS
->                     10.10.10.1
-# note: YOUR_MAAS_IP for further use is 10.76.203.138 
-
-multipass shell maas
 ```
-# Configure MAAS and dump credentials for Juju:
- * Open http://YOUR_MAAS_IP:5240/MAAS/ and finish MAAS initial configuration: add DNS IPs, pull your SSH keys from GH/Launchpad, ... (MAAS WEB default login/pass: admin/admin).
+> The wget command provides a [cloud-init](https://github.com/canonical/maas-multipass/blob/main/maas.yml) file that will set up the VM's LXD and MAAS environment.
 
- * Wait for images download completed on http://YOUR_MAAS_IP:5240/MAAS/r/images
-![Screenshot from 2024-04-12 12-48-40|690x228](upload://kyNPhsHr7GHyFouEpp7sxPytb6g.png)
+ <a href="#heading--configure-maas"><h2 id="heading--configure-maas"> Configure MAAS </h2></a>
 
-    Note: Make sure you are downloading 22.04 images as well (20.04 is the current default).
+**1.** Find your MAAS IP with
+```shell
+multipass list
+```
 
-* add tag `juju` on http://YOUR_MAAS_IP:5240/MAAS/r/tags (just create new tag with tag-name=juju, all other options keep default)
+**2.** Open `http://<MAAS_IP>:5240/MAAS/` and log in with the default credentials: username=`admin`, password=`admin`.
 
-* assign newly created tag to already available pre-created LXD machine:
-![Screenshot from 2024-04-12 12-51-30|690x299](upload://44dY32yFYSybmvypdEgDtj0lFid.png)
-  Note: the LXD machine will be up and running after the images downloading and sync is completed!
+**3.** Complete the additional MAAS configuration in the welcome screen.
 
- * MAAS uses DHCP to boot/install new machines. Enable DHCP manually if you see this banner on each MAAS page:
+
+<details>
+<summary><b>4.</b> Wait for image downloads to complete on <code>http://<MAAS_IP>:5240/MAAS/r/images</code> </summary>
+
+[![Screenshot from 2024-04-12 12-48-40](upload://kyNPhsHr7GHyFouEpp7sxPytb6g.png)](https://assets.ubuntu.com/v1/901aa34b-image_downloads.png)
+</details>
+</br>
+
+[note]
+Make sure you are downloading 22.04 images as well (20.04 is the current default).
+[/note]
+
+The LXD machine will be up and running after the images downloading and sync is completed.
+<details>
+<summary><b>5.</b> Navigate to  <code>http://<MASS_IP>:5240/MAAS/r/tags</code> and create a tag with <code>tag-name=juju</code>. Assign it to the LXD machine. </summary>
+
+[![Screenshot from 2024-04-12 12-51-30](upload://44dY32yFYSybmvypdEgDtj0lFid.png)](https://assets.ubuntu.com/v1/1c82f803-tags.png)
+</details>
+
+> **A note on DHCP**
+>
+> MAAS uses DHCP to boot and install new machines. You must enable DHCP manually if you see this banner on MAAS pages:
 ![image|690x46](upload://g458TLPPqGIISCFHKdfUwXRepeZ.png)
-  Note: enable DHCP service inside MAAS VM only! Use internal VM network `fabric-1` on `10.10.10.0/24`, choose a range you want, e.g. `10.10.10.100-10.10.10.120`. Follow [the official MAAS manual](https://maas.io/docs/enabling-dhcp)!
+>
+> **Make sure to enable DHCP service inside the MAAS VM only.**
+>
+ >Use the internal VM network `fabric-1` on `10.10.10.0/24` and choose a range (e.g. `10.10.10.100-10.10.10.120`). Check the [official MAAS manual](https://maas.io/docs/enabling-dhcp) for more information about enabling DHCP.
 
- * Dump MAAS admin user API key to add as a Juju credentials later:
-```
+
+**6.** Finally, dump MAAS admin user API key to add as Juju credentials later:
+```shell
 sudo maas apikey --username admin
 ```
 
-# Install Juju into Multipass VM
+ <a href="#heading--register-maas-juju"><h2 id="heading--register-maas-juju"> Register MAAS with Juju </h2></a>
 
-NOTE: Make sure you are inside Multipass VM: `multipass shell maas` !
-
+**1.** Enter the Multipass shell and install juju:
 ```shell
+multipass shell maas
 sudo snap install juju
 ```
+**2.** Add MAAS cloud and credentials into juju. 
 
-# Add MAAS cloud and credentials into Juju
+These commands are interactive, so the following code block shows the commands followed by a sample output. **Make sure to enter your own information when prompted by juju.**
 ```shell
 juju add-cloud
+
 > Since Juju 2 is being run for the first time, downloading latest cloud information. Fetching latest public cloud list... Your list of public clouds is up to date, see `juju clouds`. Cloud Types
 >    maas
 >    manual
@@ -74,10 +93,12 @@ juju add-cloud
 > 
 > Select cloud type: maas
 > Enter a name for your maas cloud: maas-cloud 
-> Enter the API endpoint url: http://YOUR_MAAS_IP:5240/MAAS
+> Enter the API endpoint url: http://<MAAS_IP>:5240/MAAS
 > Cloud "maas-cloud" 
-
+```
+```shell
 juju add-credential maas-cloud 
+
 > ...
 > Enter credential name: maas-credentials
 > 
@@ -90,43 +111,43 @@ juju add-credential maas-cloud
 > Credential "maas-credentials" added locally for cloud "maas-cloud".
 ```
 
-# Bootstrap Juju
-Note: use `--credential` if you regestered several MAAS credentials and `--debug` option if you want to see bootstrap details.
+**3.** Bootstrap Juju. 
+
+Add the flags `--credential` if you registered several MAAS credentials, and `--debug` if you want to see bootstrap details:
 ```shell
-juju bootstrap --constraints tags=juju maas-cloud maas-controller # --credential maas-credentials --debug
+juju bootstrap --constraints tags=juju maas-cloud maas-controller
 ```
 
-# Deploy Charmed MySQL on MAAS using Juju
+# Deploy Charmed MySQL on MAAS
 ```shell
 juju add-model mysql
 juju deploy mysql --channel 8.0/stable
-juju status --watch 1s
 ```
-
-The expected result:
+<!--
+Sample `juju status` output:
 ```shell
 TODO
 ```
+-->
 
 # Test your Charmed MySQL deployment
 
 Check the [Testing](/t/11770) reference to test your deployment.
 
-# Clean your playground
-
-Above, we have successfully deployed Charmed MySQL on MAAS, but it is important to keep the house clean.  To stop your VM, execute: 
+ <a href="#heading--clean-up"><h2 id="heading--clean-up"> Clean up the environment </h2></a>
+To stop your VM, run: 
 ```shell
 multipass stop maas
 ```
 If you're done with testing and would like to free up resources on your machine, you can remove the VM entirely.
 
-[note type="negative"]
-**Warning**: When you remove VM as shown below, you will lose all the data in MySQL and any other applications inside Multipass VM! 
+[note type="caution"]
+**Warning**: When you remove the VM as shown below, **you will lose all the data** in MySQL and any other applications inside it! 
 
 For more information, see the docs for [`multipass delete`](https://multipass.run/docs/delete-command).
 [/note]
 
-To delete your VM and its data, run:
+To completely delete your VM and all its data, run:
 ```shell
 multipass delete --purge maas
 ```
