@@ -78,11 +78,10 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, get_args
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, get_args
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
-from charms.data_platform_libs.v0.data_secrets import APP_SCOPE, UNIT_SCOPE, Scopes, SecretCache
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
 from ops.model import Unit
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed, wait_random
@@ -115,7 +114,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 57
+LIBPATCH = 58
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -130,6 +129,10 @@ MIN_MAX_CONNECTIONS = 100
 
 SECRET_INTERNAL_LABEL = "secret-id"
 SECRET_DELETED_LABEL = "None"
+
+APP_SCOPE = "app"
+UNIT_SCOPE = "unit"
+Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
 
 
 class Error(Exception):
@@ -392,7 +395,6 @@ class MySQLCharmBase(CharmBase, ABC):
             self.unit.status = ops.BlockedStatus("Disabled")
             sys.exit(0)
 
-        self.secrets = SecretCache(self)
         self.peer_relation_app = DataPeer(
             self,
             relation_name=PEER,
