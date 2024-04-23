@@ -503,7 +503,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.unit_fqdn,
+            self.unit_host_alias,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),
@@ -532,6 +532,14 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def unit_fqdn(self) -> str:
         """Returns the unit's FQDN."""
         return socket.getfqdn()
+
+    @property
+    def unit_host_alias(self) -> str:
+        """Returns the unit's host alias.
+
+        The format is <unit_label>.<model_uuid>
+        """
+        return self.unit_label + "." + self.model.uuid
 
     @property
     def restart_peers(self) -> Optional[ops.model.Relation]:
@@ -594,6 +602,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.configure_mysql_users()
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
+        # ensure hosts file is up to date
+        self.hostname_resolution.potentially_update_etc_hosts(None)
         self._mysql.configure_instance()
 
         for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20), reraise=True):

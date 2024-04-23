@@ -3,15 +3,16 @@
 
 """Library containing logic pertaining to hostname resolutions in the VM charm."""
 
-import io
 import json
 import logging
 import socket
 import typing
 
+from ops import Relation
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import BlockedStatus, Unit
+from python_hosts import Hosts, HostsEntry
 
 from constants import HOSTNAME_DETAILS, PEER
 from ip_address_observer import IPAddressChangeCharmEvents, IPAddressObserver
@@ -22,11 +23,42 @@ logger = logging.getLogger(__name__)
 if typing.TYPE_CHECKING:
     from charm import MySQLOperatorCharm
 
+COMMENT_PREFIX = "unit="
+# relations that contain hostname details
+PEER_RELATIONS = [PEER]
+
+
+class SearchableHosts(Hosts):
+    """Extended Hosts class with find_by_comment method."""
+
+    def find_by_comment(self, comment: str) -> typing.Optional[HostsEntry]:
+        """
+        ReturnHostsEntry instances from the Hosts object
+        where the supplied unit matches
+
+        Args:
+            unit_name: The unit name to search for
+        Returns:
+            HostEntry instance
+        """
+        if not self.entries:
+            return None
+
+        for entry in self.entries:
+            if not entry.is_real_entry():
+                # skip comments and blank lines
+                continue
+            if entry.comment and comment in entry.comment:
+                # return the first match, we assume no duplication
+                return entry
+
 
 class MySQLMachineHostnameResolution(Object):
     """Encapsulation of the the machine hostname resolution."""
 
-    on = IPAddressChangeCharmEvents()
+    on = (  # pyright: ignore [reportIncompatibleMethodOverride, reportAssignmentType]
+        IPAddressChangeCharmEvents()
+    )
 
     def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "hostname-resolution")
@@ -39,7 +71,11 @@ class MySQLMachineHostnameResolution(Object):
         self.framework.observe(self.on.ip_address_change, self._update_host_details_in_databag)
 
         self.framework.observe(
-            self.charm.on[PEER].relation_changed, self._potentially_update_etc_hosts
+            self.charm.on[PEER].relation_created, self._update_host_details_in_databag
+        )
+
+        self.framework.observe(
+            self.charm.on[PEER].relation_changed, self.potentially_update_etc_hosts
         )
         self.framework.observe(
             self.charm.on[PEER].relation_departed, self._remove_host_from_etc_hosts
@@ -47,7 +83,17 @@ class MySQLMachineHostnameResolution(Object):
 
         self.ip_address_observer.start_observer()
 
+    @property
+    def _relations_with_peers(self) -> list[Relation]:
+        """Return all relations that have hostname details."""
+        relations = []
+        for rel_name in PEER_RELATIONS:
+            relations.extend(self.charm.model.relations[rel_name])
+
+        return relations
+
     def _update_host_details_in_databag(self, _) -> None:
+        """Update the hostname details in the peer databag."""
         hostname = socket.gethostname()
         fqdn = socket.getfqdn()
 
@@ -60,83 +106,64 @@ class MySQLMachineHostnameResolution(Object):
             logger.exception("Unable to get local IP address")
             ip = "127.0.0.1"
 
-        host_details = {
-            "hostname": hostname,
-            "fqdn": fqdn,
-            "ip": ip,
-        }
+        host_details = {"names": [hostname, fqdn, self.charm.unit_host_alias], "address": ip}
 
         self.charm.unit_peer_data[HOSTNAME_DETAILS] = json.dumps(host_details)
 
-    def _get_host_details(self) -> dict[str, str]:
-        host_details = {}
+    def _get_peer_host_details(self) -> list[HostsEntry]:
+        """Return a list of HostsEntry instances for peer units."""
+        host_entries = list()
 
-        for key, data in self.charm.peers.data.items():
-            if isinstance(key, Unit) and data.get(HOSTNAME_DETAILS):
-                unit_details = json.loads(data[HOSTNAME_DETAILS])
-                unit_details["unit"] = key.name
-                host_details[unit_details["hostname"]] = unit_details
+        # iterate over all relations that contain hostname details
+        for relation in self._relations_with_peers:
+            for key, data in relation.data.items():
+                if isinstance(key, Unit) and data.get(HOSTNAME_DETAILS):
+                    unit_details = json.loads(data[HOSTNAME_DETAILS])
+                    host_entries.append(
+                        HostsEntry(
+                            address=unit_details["address"],
+                            names=unit_details["names"],
+                            comment=f"{COMMENT_PREFIX}{unit_details['names'][2]}",
+                            entry_type="ipv4",
+                        )
+                    )
 
-        return host_details
+        return host_entries
 
-    def _does_etc_hosts_need_update(self, host_details: dict[str, str]) -> bool:
-        outdated_hosts = host_details.copy()
+    def _does_etc_hosts_need_update(self, hosts_entries: list[HostsEntry]) -> bool:
+        # load host file
+        hosts = SearchableHosts()
 
-        with open("/etc/hosts", "r") as hosts_file:
-            for line in hosts_file:
-                if "# unit=" not in line:
-                    continue
+        for host_entry in hosts_entries:
+            assert host_entry.comment, "Host entries should have comments"
+            if current_entry := hosts.find_by_comment(host_entry.comment):
+                if current_entry.address != host_entry.address:
+                    # need update if the IP address is different
+                    return True
+            else:
+                # need update if a new entry is found
+                return True
+        return False
 
-                ip, fqdn, hostname = line.split("#")[0].strip().split()
-                if outdated_hosts.get(hostname).get("ip") == ip:
-                    outdated_hosts.pop(hostname)
-
-        return bool(outdated_hosts)
-
-    def _potentially_update_etc_hosts(self, _) -> None:
+    def potentially_update_etc_hosts(self, _) -> None:
         """Potentially update the /etc/hosts file with new hostname to IP for units."""
         if not self.charm._is_peer_data_set:
             return
 
-        host_details = self._get_host_details()
+        host_details = self._get_peer_host_details()
         if not host_details:
             logger.debug("No hostnames in the peer databag. Skipping update of /etc/hosts")
             return
 
         if not self._does_etc_hosts_need_update(host_details):
-            logger.debug("No hostnames in /etc/hosts changed. Skipping update to /etc/hosts")
+            logger.debug("No changes in /etc/hosts changed. Skipping update to /etc/hosts")
             return
 
-        hosts_in_file = []
+        hosts = Hosts()
 
-        with io.StringIO() as updated_hosts_file:
-            with open("/etc/hosts", "r") as hosts_file:
-                for line in hosts_file:
-                    if "# unit=" not in line:
-                        updated_hosts_file.write(line)
-                        continue
-
-                    for hostname, details in host_details.items():
-                        if hostname == line.split()[2]:
-                            hosts_in_file.append(hostname)
-
-                            fqdn, ip, unit = details["fqdn"], details["ip"], details["unit"]
-
-                            logger.debug(
-                                f"Overwriting {hostname} ({unit=}) with {ip=}, {fqdn=} in /etc/hosts"
-                            )
-                            updated_hosts_file.write(f"{ip} {fqdn} {hostname} # unit={unit}\n")
-                            break
-
-            for hostname, details in host_details.items():
-                if hostname not in hosts_in_file:
-                    fqdn, ip, unit = details["fqdn"], details["ip"], details["unit"]
-
-                    logger.debug(f"Adding {hostname} ({unit=} with {ip=}, {fqdn=} in /etc/hosts")
-                    updated_hosts_file.write(f"{ip} {fqdn} {hostname} # unit={unit}\n")
-
-            with open("/etc/hosts", "w") as hosts_file:
-                hosts_file.write(updated_hosts_file.getvalue())
+        # Add all host entries
+        hosts.add(host_details)
+        hosts.write()
 
         try:
             self.charm._mysql.flush_host_cache()
@@ -144,25 +171,18 @@ class MySQLMachineHostnameResolution(Object):
             self.charm.unit.status = BlockedStatus("Unable to flush MySQL host cache")
 
     def _remove_host_from_etc_hosts(self, event: RelationDepartedEvent) -> None:
-        departing_unit_name = event.unit.name
-
+        """Remove the departing unit from the /etc/hosts file."""
+        departing_unit_name = f"{event.unit.name.replace('/', '-')}.{self.model.uuid}"
         logger.debug(f"Checking if an entry for {departing_unit_name} is in /etc/hosts")
-        with open("/etc/hosts", "r") as hosts_file:
-            for line in hosts_file:
-                if f"# unit={departing_unit_name}" in line:
-                    break
-            else:
-                return
 
-        logger.debug(f"Removing entry for {departing_unit_name} from /etc/hosts")
-        with io.StringIO() as updated_hosts_file:
-            with open("/etc/hosts", "r") as hosts_file:
-                for line in hosts_file:
-                    if f"# unit={departing_unit_name}" not in line:
-                        updated_hosts_file.write(line)
+        hosts = Hosts()
+        if not hosts.exists(names=[departing_unit_name]):
+            logger.debug(f"Entry {departing_unit_name} not found in /etc/hosts. Skipping removal.")
+            return
 
-            with open("/etc/hosts", "w") as hosts_file:
-                hosts_file.write(updated_hosts_file.getvalue())
+        logger.debug(f"Entry {departing_unit_name} found in /etc/hosts. Removing it.")
+        hosts.remove_all_matching(name=departing_unit_name)
+        hosts.write()
 
         try:
             self.charm._mysql.flush_host_cache()
