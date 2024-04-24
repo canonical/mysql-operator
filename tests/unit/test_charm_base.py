@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 from charms.mysql.v0.mysql import MySQLCharmBase, MySQLSecretError
-from ops import RelationDataTypeError
 from ops.testing import Harness
 from parameterized import parameterized
 
@@ -29,7 +28,7 @@ class TestCharmBase(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
 
     @patch_network_get(private_address="1.1.1.1")
-    def test_get_secret(self):
+    def test_get_secret_databag(self):
         self.harness.set_leader()
 
         # Test application scope.
@@ -74,6 +73,7 @@ class TestCharmBase(unittest.TestCase):
 
     @parameterized.expand([("app"), ("unit")])
     @patch_network_get(private_address="1.1.1.1")
+    @pytest.mark.usefixtures("with_juju_secrets")
     def test_set_secret(self, scope):
         self.harness.set_leader()
 
@@ -82,9 +82,9 @@ class TestCharmBase(unittest.TestCase):
         assert "password" not in self.harness.get_relation_data(self.peer_relation_id, entity)
         self.charm.set_secret(scope, "password", "test-password")
         assert (
-            self.harness.get_relation_data(self.peer_relation_id, entity)["password"]
-            == "test-password"
+            self.harness.get_relation_data(self.peer_relation_id, entity).get("password") is None
         )
+        self.charm.get_secret(scope, "password") == "test-password"
 
         self.charm.set_secret(scope, "password", None)
         assert "password" not in self.harness.get_relation_data(self.peer_relation_id, entity)
@@ -118,7 +118,7 @@ class TestCharmBase(unittest.TestCase):
         # App has to be leader, unit can be either
         self.harness.set_leader(is_leader)
 
-        with self.assertRaises(RelationDataTypeError):
+        with self.assertRaises(TypeError):
             self.harness.charm.set_secret(scope, "somekey", 1)  # type: ignore
 
         self.harness.charm.set_secret(scope, "somekey", "")

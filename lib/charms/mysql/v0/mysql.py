@@ -81,7 +81,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, get_args
 
 import ops
-from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
+from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
 from ops.model import Unit
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed, wait_random
@@ -395,29 +395,15 @@ class MySQLCharmBase(CharmBase, ABC):
             self.unit.status = ops.BlockedStatus("Disabled")
             sys.exit(0)
 
-        self.peer_relation_app = DataPeer(
-            self,
+        self.peer_relation_app = DataPeerData(
+            self.model,
             relation_name=PEER,
-            additional_secret_fields=[
-                ROOT_PASSWORD_KEY,
-                SERVER_CONFIG_PASSWORD_KEY,
-                MONITORING_PASSWORD_KEY,
-                CLUSTER_ADMIN_PASSWORD_KEY,
-                BACKUPS_PASSWORD_KEY,
-            ],
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
-        self.peer_relation_unit = DataPeerUnit(
-            self,
+        self.peer_relation_unit = DataPeerUnitData(
+            self.model,
             relation_name=PEER,
-            additional_secret_fields=[
-                "key",
-                "csr",
-                "certificate",
-                "certificate-authority",
-                "chain",
-            ],
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
@@ -583,7 +569,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         return len(active_cos_relations) > 0
 
-    def peer_relation_data(self, scope: Scopes) -> DataPeer:
+    def peer_relation_data(self, scope: Scopes) -> DataPeerData:
         """Returns the peer relation data per scope."""
         if scope == APP_SCOPE:
             return self.peer_relation_app
@@ -604,7 +590,12 @@ class MySQLCharmBase(CharmBase, ABC):
         if scope not in get_args(Scopes):
             raise ValueError("Unknown secret scope")
 
-        peers = self.model.get_relation(PEER)
+        if not (peers := self.model.get_relation(PEER)):
+            logger.warning("Peer relation unavailable.")
+            return
+
+        # NOTE: here we purposefully search both in secrets and in databag by using
+        # the fetch_my_relation_field instead of peer_relation_data(scope).get_secrets().
         if not (value := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key)):
             if key in SECRET_KEY_FALLBACKS:
                 value = self.peer_relation_data(scope).fetch_my_relation_field(
@@ -620,31 +611,35 @@ class MySQLCharmBase(CharmBase, ABC):
         if scope == APP_SCOPE and not self.unit.is_leader():
             raise MySQLSecretError("Can only set app secrets on the leader unit")
 
+        if not (peers := self.model.get_relation(PEER)):
+            logger.warning("Peer relation unavailable.")
+            return
+
         if not value:
             if key in SECRET_KEY_FALLBACKS:
                 self.remove_secret(scope, SECRET_KEY_FALLBACKS[key])
             self.remove_secret(scope, key)
             return
 
-        peers = self.model.get_relation(PEER)
-
         fallback_key_to_secret_key = {v: k for k, v in SECRET_KEY_FALLBACKS.items()}
         if key in fallback_key_to_secret_key:
             if self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
                 self.remove_secret(scope, key)
-            self.peer_relation_data(scope).update_relation_data(
-                peers.id, {fallback_key_to_secret_key[key]: value}
+            self.peer_relation_data(scope).set_secret(
+                peers.id, fallback_key_to_secret_key[key], value
             )
         else:
-            self.peer_relation_data(scope).update_relation_data(peers.id, {key: value})
+            self.peer_relation_data(scope).set_secret(peers.id, key, value)
 
     def remove_secret(self, scope: Scopes, key: str) -> None:
         """Removing a secret."""
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        peers = self.model.get_relation(PEER)
-        self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
+        if peers := self.model.get_relation(PEER):
+            self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
+        else:
+            logger.warning("Peer relation unavailable.")
 
 
 class MySQLMemberState(str, enum.Enum):
