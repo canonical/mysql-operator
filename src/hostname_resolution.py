@@ -32,12 +32,10 @@ class SearchableHosts(Hosts):
     """Extended Hosts class with find_by_comment method."""
 
     def find_by_comment(self, comment: str) -> typing.Optional[HostsEntry]:
-        """
-        ReturnHostsEntry instances from the Hosts object
-        where the supplied unit matches
+        """Returns HostsEntry instances from the Hosts object where the supplied comment matches.
 
         Args:
-            unit_name: The unit name to search for
+            comment: The comment line to search for
         Returns:
             HostEntry instance
         """
@@ -71,11 +69,7 @@ class MySQLMachineHostnameResolution(Object):
         self.framework.observe(self.on.ip_address_change, self._update_host_details_in_databag)
 
         self.framework.observe(
-            self.charm.on[PEER].relation_created, self._update_host_details_in_databag
-        )
-
-        self.framework.observe(
-            self.charm.on[PEER].relation_changed, self.potentially_update_etc_hosts
+            self.charm.on[PEER].relation_changed, self._potentially_update_etc_hosts
         )
         self.framework.observe(
             self.charm.on[PEER].relation_departed, self._remove_host_from_etc_hosts
@@ -91,6 +85,12 @@ class MySQLMachineHostnameResolution(Object):
             relations.extend(self.charm.model.relations[rel_name])
 
         return relations
+
+    @property
+    def unit_in_hosts(self) -> bool:
+        """Check if the unit is in the /etc/hosts file."""
+        hosts = Hosts()
+        return hosts.exists(names=[self.charm.unit_host_alias])
 
     def _update_host_details_in_databag(self, _) -> None:
         """Update the hostname details in the peer databag."""
@@ -108,6 +108,7 @@ class MySQLMachineHostnameResolution(Object):
 
         host_details = {"names": [hostname, fqdn, self.charm.unit_host_alias], "address": ip}
 
+        logger.debug("Updating hostname details in the peer databag")
         self.charm.unit_peer_data[HOSTNAME_DETAILS] = json.dumps(host_details)
 
     def _get_peer_host_details(self) -> list[HostsEntry]:
@@ -145,7 +146,7 @@ class MySQLMachineHostnameResolution(Object):
                 return True
         return False
 
-    def potentially_update_etc_hosts(self, _) -> None:
+    def _potentially_update_etc_hosts(self, _) -> None:
         """Potentially update the /etc/hosts file with new hostname to IP for units."""
         if not self.charm._is_peer_data_set:
             return
@@ -159,10 +160,12 @@ class MySQLMachineHostnameResolution(Object):
             logger.debug("No changes in /etc/hosts changed. Skipping update to /etc/hosts")
             return
 
+        logger.debug("Updating /etc/hosts with new hostname to IP mappings")
         hosts = Hosts()
 
         # Add all host entries
-        hosts.add(host_details)
+        # (force is required to overwrite existing 127.0.1.1 on MAAS)
+        hosts.add(host_details, force=True)
         hosts.write()
 
         try:
@@ -188,3 +191,9 @@ class MySQLMachineHostnameResolution(Object):
             self.charm._mysql.flush_host_cache()
         except MySQLFlushHostCacheError:
             self.charm.unit.status = BlockedStatus("Unable to flush MySQL host cache")
+
+    def init_hosts(self, _) -> None:
+        """Initialize the /etc/hosts file with the unit's hostname."""
+        logger.debug("Initializing /etc/hosts with the unit data")
+        self._update_host_details_in_databag(None)
+        self._potentially_update_etc_hosts(None)

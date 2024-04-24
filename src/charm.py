@@ -278,6 +278,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self.unit.status = MaintenanceStatus("Setting up cluster node")
 
+        if not self.hostname_resolution.unit_in_hosts:
+            self.hostname_resolution.init_hosts(None)
+
         try:
             self.workload_initialise()
         except MySQLConfigureMySQLUsersError:
@@ -602,8 +605,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.configure_mysql_users()
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
-        # ensure hosts file is up to date
-        self.hostname_resolution.potentially_update_etc_hosts(None)
         self._mysql.configure_instance()
 
         for attempt in Retrying(wait=wait_fixed(30), stop=stop_after_attempt(20), reraise=True):

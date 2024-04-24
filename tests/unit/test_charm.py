@@ -171,6 +171,7 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution.unit_in_hosts", return_value=True)
     @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
@@ -203,6 +204,7 @@ class TestCharm(unittest.TestCase):
         _check_call,
         _stop_mysqld,
         _create_cluster_set,
+        _unit_in_hosts,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -213,6 +215,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("hostname_resolution.MySQLMachineHostnameResolution.unit_in_hosts", return_value=True)
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
@@ -237,6 +240,7 @@ class TestCharm(unittest.TestCase):
         _is_volume_mounted,
         _check_call,
         _stop_mysqld,
+        _unit_in_hosts,
     ):
         patch("tenacity.BaseRetrying.wait", side_effect=lambda *args, **kwargs: 0)
 
