@@ -5,6 +5,7 @@ import pytest
 
 from . import juju_
 
+juju3 = pytest.mark.skipif(juju_.juju_major_version < 3, reason="Requires juju 3+")
 only_with_juju_secrets = pytest.mark.skipif(
     not juju_.has_secrets, reason="Requires juju version w/secrets"
 )

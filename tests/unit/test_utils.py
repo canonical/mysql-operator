@@ -4,14 +4,7 @@
 
 import re
 
-from utils import compare_dictionaries, generate_random_hash, generate_random_password
-
-
-def test_generate_random_hash():
-    """Test generate_random_hash function."""
-    random_hash = generate_random_hash()
-    assert len(random_hash) == 32
-    assert re.match(r"^[a-f0-9]{32}$", random_hash)
+from utils import compare_dictionaries, generate_random_password
 
 
 def test_generate_random_password():

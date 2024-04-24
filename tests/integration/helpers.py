@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
+from juju.model import Model
 from juju.unit import Unit
 from mysql.connector.errors import (
     DatabaseError,
@@ -571,9 +572,20 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
     return read_only_endpoints
 
 
-async def get_leader_unit(ops_test: OpsTest, app_name: str) -> Optional[Unit]:
+async def get_leader_unit(
+    ops_test: Optional[OpsTest], app_name: str, model: Optional[Model] = None
+) -> Optional[Unit]:
+    """Get the leader unit of a given application.
+
+    Args:
+        ops_test: The ops test framework instance
+        app_name: The name of the application
+        model: The model to use (overrides ops_test.model)
+    """
     leader_unit = None
-    for unit in ops_test.model.applications[app_name].units:
+    if not model:
+        model = ops_test.model
+    for unit in model.applications[app_name].units:
         if await unit.is_leader_from_status():
             leader_unit = unit
             break
@@ -798,7 +810,7 @@ async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> st
         return None
 
 
-async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
+async def get_cluster_status(unit: Unit, cluster_set: Optional[bool] = False) -> Dict:
     """Get the cluster status by running the get-cluster-status action.
 
     Args:
@@ -808,7 +820,13 @@ async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
     Returns:
         A dictionary representing the cluster status
     """
-    return await juju_.run_action(unit, "get-cluster-status")
+    if cluster_set:
+        result = await juju_.run_action(
+            unit, "get-cluster-status", **{"--wait": "5m", "cluster-set": True}
+        )
+    else:
+        result = await juju_.run_action(unit, "get-cluster-status")
+    return result.get("status", {})
 
 
 async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, path: str) -> bool:
