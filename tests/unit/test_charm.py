@@ -170,7 +170,9 @@ class TestCharm(unittest.TestCase):
 
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
-    @patch("hostname_resolution.MySQLMachineHostnameResolution.unit_in_hosts", return_value=True)
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.is_unit_in_hosts", return_value=True
+    )
     @patch("subprocess.check_call")
     @patch("charm.MySQLOperatorCharm.create_cluster")
     @patch("charm.MySQLOperatorCharm.workload_initialise")
@@ -199,7 +201,9 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution.unit_in_hosts", return_value=True)
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.is_unit_in_hosts", return_value=True
+    )
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)

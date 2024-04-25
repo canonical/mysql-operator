@@ -184,6 +184,7 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
             self.charm.unit.status = MaintenanceStatus("starting services...")
+            self._rewrite_config()
             self.charm._mysql.start_mysqld()
             self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
@@ -263,10 +264,16 @@ class MySQLVMUpgrade(DataUpgrade):
     def _on_upgrade_changed(self, _) -> None:
         """Handle the upgrade changed event.
 
-        Run update status for every unit when the upgrade is completed.
+        Run update status for every unit when the upgrade is completed
+        and cluster rescan on leader.
         """
         if not self.upgrade_stack and self.idle:
             self.charm._on_update_status(None)
+
+            if self.charm.unit.is_leader():
+                # Rescan is used to sync any changed cluster metadata
+                # e.g. changes in report host
+                self.charm._mysql.rescan_cluster()
 
     @override
     def log_rollback_instructions(self) -> None:
@@ -362,6 +369,13 @@ class MySQLVMUpgrade(DataUpgrade):
         self.charm._mysql.rescan_cluster(from_instance=leader, remove_instances=True)
         # rejoin after
         self.charm.join_unit_to_cluster()
+
+    def _rewrite_config(self) -> None:
+        """Rewrite the MySQL configuration."""
+        self.charm._mysql.write_mysqld_config(
+            profile=self.charm.config.profile,
+            memory_limit=self.charm.config.profile_limit_memory,
+        )
 
     def _prepare_upgrade_from_legacy(self) -> None:
         """Prepare upgrade from legacy charm without upgrade support.

@@ -8,6 +8,7 @@ import logging
 import socket
 import typing
 
+from charms.mysql.v0.async_replication import PRIMARY_RELATION, REPLICA_RELATION
 from ops import Relation
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
@@ -25,7 +26,7 @@ if typing.TYPE_CHECKING:
 
 COMMENT_PREFIX = "unit="
 # relations that contain hostname details
-PEER_RELATIONS = [PEER]
+PEER_RELATIONS = [PEER, PRIMARY_RELATION, REPLICA_RELATION]
 
 
 class SearchableHosts(Hosts):
@@ -67,19 +68,21 @@ class MySQLMachineHostnameResolution(Object):
 
         self.framework.observe(self.charm.on.config_changed, self._update_host_details_in_databag)
         self.framework.observe(self.on.ip_address_change, self._update_host_details_in_databag)
+        self.framework.observe(self.charm.on.upgrade_charm, self._update_host_details_in_databag)
 
-        self.framework.observe(
-            self.charm.on[PEER].relation_changed, self._potentially_update_etc_hosts
-        )
-        self.framework.observe(
-            self.charm.on[PEER].relation_departed, self._remove_host_from_etc_hosts
-        )
+        for relation in PEER_RELATIONS:
+            self.framework.observe(
+                self.charm.on[relation].relation_changed, self._potentially_update_etc_hosts
+            )
+            self.framework.observe(
+                self.charm.on[relation].relation_departed, self._remove_host_from_etc_hosts
+            )
 
         self.ip_address_observer.start_observer()
 
     @property
     def _relations_with_peers(self) -> list[Relation]:
-        """Return all relations that have hostname details."""
+        """Return list of Relation that have hostname details."""
         relations = []
         for rel_name in PEER_RELATIONS:
             relations.extend(self.charm.model.relations[rel_name])
@@ -87,7 +90,7 @@ class MySQLMachineHostnameResolution(Object):
         return relations
 
     @property
-    def unit_in_hosts(self) -> bool:
+    def is_unit_in_hosts(self) -> bool:
         """Check if the unit is in the /etc/hosts file."""
         hosts = Hosts()
         return hosts.exists(names=[self.charm.unit_host_alias])
@@ -108,8 +111,10 @@ class MySQLMachineHostnameResolution(Object):
 
         host_details = {"names": [hostname, fqdn, self.charm.unit_host_alias], "address": ip}
 
-        logger.debug("Updating hostname details in the peer databag")
-        self.charm.unit_peer_data[HOSTNAME_DETAILS] = json.dumps(host_details)
+        logger.debug("Updating hostname details for relations")
+
+        for relation in self._relations_with_peers:
+            relation.data[self.charm.unit][HOSTNAME_DETAILS] = json.dumps(host_details)
 
     def _get_peer_host_details(self) -> list[HostsEntry]:
         """Return a list of HostsEntry instances for peer units."""
@@ -120,14 +125,24 @@ class MySQLMachineHostnameResolution(Object):
             for key, data in relation.data.items():
                 if isinstance(key, Unit) and data.get(HOSTNAME_DETAILS):
                     unit_details = json.loads(data[HOSTNAME_DETAILS])
-                    host_entries.append(
-                        HostsEntry(
+                    if unit_details.get("address"):
+                        entry = HostsEntry(
                             address=unit_details["address"],
                             names=unit_details["names"],
                             comment=f"{COMMENT_PREFIX}{unit_details['names'][2]}",
                             entry_type="ipv4",
                         )
-                    )
+                    else:
+                        # case when migrating from old format
+                        unit_name = f"{key.name.replace('/', '-')}.{self.model.uuid}"
+                        entry = HostsEntry(
+                            address=unit_details["ip"],
+                            names=[unit_details["hostname"], unit_details["fqdn"], unit_name],
+                            comment=f"{COMMENT_PREFIX}{unit_name}",
+                            entry_type="ipv4",
+                        )
+
+                    host_entries.append(entry)
 
         return host_entries
 

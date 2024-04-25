@@ -61,7 +61,7 @@ class TestHostnameResolution(unittest.TestCase):
 
     def test_unit_in_hosts(self):
         """Test _unit_in_hosts method."""
-        self.assertFalse(self.hostname_resolution.unit_in_hosts)
+        self.assertFalse(self.hostname_resolution.is_unit_in_hosts)
 
     @patch("charm.MySQLOperatorCharm._mysql")
     @patch(
@@ -81,6 +81,6 @@ class TestHostnameResolution(unittest.TestCase):
 
         with patch("python_hosts.Hosts.determine_hosts_path", return_value="/tmp/hosts"):
             self.hostname_resolution._potentially_update_etc_hosts(None)
-            self.assertTrue(self.hostname_resolution.unit_in_hosts)
+            self.assertTrue(self.hostname_resolution.is_unit_in_hosts)
 
         _mysql.flush_host_cache.assert_called_once()
