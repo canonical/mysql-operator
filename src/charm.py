@@ -289,7 +289,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit.status = MaintenanceStatus("Setting up cluster node")
 
         if not self.hostname_resolution.is_unit_in_hosts:
-            self.hostname_resolution.init_hosts(None)
+            self.hostname_resolution.update_etc_hosts(None)
 
         try:
             self.workload_initialise()

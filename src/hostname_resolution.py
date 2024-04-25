@@ -71,9 +71,7 @@ class MySQLMachineHostnameResolution(Object):
         self.framework.observe(self.charm.on.upgrade_charm, self._update_host_details_in_databag)
 
         for relation in PEER_RELATIONS:
-            self.framework.observe(
-                self.charm.on[relation].relation_changed, self._potentially_update_etc_hosts
-            )
+            self.framework.observe(self.charm.on[relation].relation_changed, self.update_etc_hosts)
             self.framework.observe(
                 self.charm.on[relation].relation_departed, self._remove_host_from_etc_hosts
             )
@@ -207,7 +205,7 @@ class MySQLMachineHostnameResolution(Object):
         except MySQLFlushHostCacheError:
             self.charm.unit.status = BlockedStatus("Unable to flush MySQL host cache")
 
-    def init_hosts(self, _) -> None:
+    def update_etc_hosts(self, _) -> None:
         """Initialize the /etc/hosts file with the unit's hostname."""
         logger.debug("Initializing /etc/hosts with the unit data")
         self._update_host_details_in_databag(None)

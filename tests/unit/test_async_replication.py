@@ -150,9 +150,10 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertIn("secret-id", relation_data)
         self.assertEqual(relation_data["mysql-version"], "8.0.36-0ubuntu0.22.04.1")
 
+    @patch("python_hosts.Hosts.write")
     @patch("charms.mysql.v0.async_replication.MySQLAsyncReplicationPrimary.get_state")
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_primary_relation_changed(self, _mysql, _get_state):
+    def test_primary_relation_changed(self, _mysql, _get_state, _write):
         self.harness.set_leader(True)
         async_primary_relation_id = self.harness.add_relation(PRIMARY_RELATION, "db2")
 
