@@ -36,6 +36,7 @@ from constants import (
     CLUSTER_ADMIN_USERNAME,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
+    PEER,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
     SERVER_CONFIG_PASSWORD_KEY,
@@ -393,7 +394,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         except SecretNotFoundError:
             pass
 
-        app_secret = self._charm.model.get_secret(label=f"{self.model.app.name}.app")
+        app_secret = self._charm.model.get_secret(label=f"{PEER}.{self.model.app.name}.app")
         content = app_secret.peek_content()
         # filter out unnecessary secrets
         shared_content = dict(filter(lambda x: "password" in x[0], content.items()))
