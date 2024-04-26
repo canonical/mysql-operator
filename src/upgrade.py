@@ -270,10 +270,10 @@ class MySQLVMUpgrade(DataUpgrade):
         if not self.upgrade_stack and self.idle:
             self.charm._on_update_status(None)
 
-            if self.charm.unit.is_leader():
-                # Rescan is used to sync any changed cluster metadata
-                # e.g. changes in report host
-                self.charm._mysql.rescan_cluster()
+        if self.state == "completed" and self.cluster_state in ["idle", "completed"]:
+            # on completion rescan is used to sync any changed cluster metadata
+            # e.g. changes in report host
+            self.charm._mysql.rescan_cluster()
 
     @override
     def log_rollback_instructions(self) -> None:
