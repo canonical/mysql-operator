@@ -1,0 +1,96 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:285 Stopping continuous writes after 5s
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:293 Remove async relation
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:299 waiting for units to be blocked
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:305 Waiting for the primary to settle
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [executing] maintenance: Removing replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:312 Re relating the two mysql clusters
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:315 Waiting for the applications to settle
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [idle] blocked: Standalone read-only unit.
+  db2/1 [idle] blocked: Standalone read-only unit.
+  db2/2 [idle] blocked: Standalone read-only unit.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [idle] active: Primary
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [idle] active: Primary
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [idle] active: 
+  db2/1 [executing] maintenance: joining the cluster
+  db2/2 [idle] waiting: Waiting other units join the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [executing] active: Primary
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] active: 
+  db2/1 [executing] active: 
+  db2/2 [executing] waiting: Waiting for primary cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] maintenance: joining the cluster
+  db2/1 [idle] active: 
+  db2/2 [idle] waiting: Waiting for recovery to complete on other units
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [idle] active: 
+  db2/1 [idle] active: 
+  db2/2 [idle] active: Primary (standby)
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:341 Testing data replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:348 Stopping continuous writes and wait (5s) for replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:355 Querying max value on all units
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:61 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:46:43Z
+
+App             Version          Status  Scale  Charm           Channel        Rev  Exposed  Message
+db1             8.0.36-0ubun...  active      3  mysql                            0  no       
+mysql-router    8.0.36-0ubun...  active      1  mysql-router    dpe/edge       175  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/stable   36  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+db1/0*             active    idle   0        10.80.237.92    3306,33060/tcp  Primary
+db1/1              active    idle   1        10.80.237.145   3306,33060/tcp  
+db1/2              active    idle   2        10.80.237.55    3306,33060/tcp  
+mysql-test-app/0*  active    idle   3        10.80.237.201                   
+  mysql-router/0*  active    idle            10.80.237.201                   
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.80.237.92   juju-225d9b-0  ubuntu@22.04      Running
+1        started  10.80.237.145  juju-225d9b-1  ubuntu@22.04      Running
+2        started  10.80.237.55   juju-225d9b-2  ubuntu@22.04      Running
+3        started  10.80.237.201  juju-225d9b-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint       Interface          Role
+db1    db1          mysql  0    1/1        async-primary  async_replication  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:29:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:29:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:29:54 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-db1-0: 01:29:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:30:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:08 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:30:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:30:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:30:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:30:10 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:30:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:30:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:36:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:36:40 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-3: 01:36:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:36:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:36:44 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 127
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
