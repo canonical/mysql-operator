@@ -117,7 +117,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 58
+LIBPATCH = 59
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -1364,7 +1364,7 @@ class MySQLBase(ABC):
             "communicationStack": "MySQL",
         }
 
-        if donor:
+        if donor and method == "clone":
             options["cloneDonor"] = donor
 
         commands = (

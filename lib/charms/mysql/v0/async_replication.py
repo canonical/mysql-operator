@@ -8,6 +8,7 @@ import logging
 import typing
 import uuid
 from functools import cached_property
+from time import sleep
 
 from charms.mysql.v0.mysql import (
     MySQLFencingWritesError,
@@ -36,6 +37,7 @@ from constants import (
     CLUSTER_ADMIN_USERNAME,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
+    PEER,
     ROOT_PASSWORD_KEY,
     ROOT_USERNAME,
     SERVER_CONFIG_PASSWORD_KEY,
@@ -220,17 +222,21 @@ class MySQLAsyncReplication(Object):
             # reset flag to allow instances rejoining the cluster
             self._charm.unit_peer_data["member-state"] = "waiting"
             del self._charm.unit_peer_data["unit-initialized"]
-            if self._charm.unit.is_leader():
-                self._charm.app.status = BlockedStatus("Recreate or rejoin cluster.")
-                logger.info(
-                    "\n\tThis is a replica cluster and will be dissolved.\n"
-                    "\tThe cluster can be recreated with the `recreate-cluster` action.\n"
-                    "\tAlternatively the cluster can be rejoined to the cluster set."
-                )
-                # reset the cluster node count flag
-                del self._charm.app_peer_data["units-added-to-cluster"]
-                # set flag to persist removed from cluster-set state
-                self._charm.app_peer_data["removed-from-cluster-set"] = "true"
+            if not self._charm.unit.is_leader():
+                # delay non leader to avoid `update_status` running before
+                # leader updates app peer data
+                sleep(10)
+                return
+            self._charm.app.status = BlockedStatus("Recreate or rejoin cluster.")
+            logger.info(
+                "\n\tThis is a replica cluster and will be dissolved.\n"
+                "\tThe cluster can be recreated with the `recreate-cluster` action.\n"
+                "\tAlternatively the cluster can be rejoined to the cluster set."
+            )
+            # reset the cluster node count flag
+            del self._charm.app_peer_data["units-added-to-cluster"]
+            # set flag to persist removed from cluster-set state
+            self._charm.app_peer_data["removed-from-cluster-set"] = "true"
 
         elif self.role.cluster_role == "primary":
             if self._charm.unit.is_leader():
@@ -393,7 +399,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         except SecretNotFoundError:
             pass
 
-        app_secret = self._charm.model.get_secret(label=f"{self.model.app.name}.app")
+        app_secret = self._charm.model.get_secret(label=f"{PEER}.{self.model.app.name}.app")
         content = app_secret.peek_content()
         # filter out unnecessary secrets
         shared_content = dict(filter(lambda x: "password" in x[0], content.items()))
