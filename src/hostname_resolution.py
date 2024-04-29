@@ -41,8 +41,8 @@ class MySQLMachineHostnameResolution(Object):
         self.framework.observe(self.charm.on.config_changed, self._update_host_details_in_databag)
         self.framework.observe(self.on.ip_address_change, self._update_host_details_in_databag)
 
-        self.framework.observe(self.charm.on[PEER].relation_changed, self._update_etc_hosts)
-        self.framework.observe(self.charm.on[PEER].relation_departed, self._update_etc_hosts)
+        self.framework.observe(self.charm.on[PEER].relation_changed, self.update_etc_hosts)
+        self.framework.observe(self.charm.on[PEER].relation_departed, self.update_etc_hosts)
 
         self.ip_address_observer.start_observer()
 
@@ -88,7 +88,7 @@ class MySQLMachineHostnameResolution(Object):
 
         return host_details
 
-    def _update_etc_hosts(self, _) -> None:
+    def update_etc_hosts(self, _) -> None:
         """Potentially update the /etc/hosts file with new hostname to IP for units."""
         if not self.charm._is_peer_data_set:
             return
