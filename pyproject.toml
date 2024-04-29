@@ -17,6 +17,7 @@ boto3 = "^1.28.23"
 pyopenssl = "^24.0.0"
 typing_extensions = "^4.7.1"
 jinja2 = "^3.1.2"
+python_hosts = "*"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
