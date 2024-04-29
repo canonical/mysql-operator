@@ -83,11 +83,8 @@ class MySQLProvider(Object):
             if "mysqlrouter" in relation_data[relation.id].get("extra-user-roles", ""):
                 # update hostname mapping for MySQL Router
                 self.database.set_hostname_mapping(
-                    relation.id,
-                    self.charm.hostname_resolution.get_hostname_mapping()
+                    relation.id, self.charm.hostname_resolution.get_hostname_mapping()
                 )
-
-
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
         """Handle the peer relation departed event for the database relation."""
@@ -236,8 +233,7 @@ class MySQLProvider(Object):
 
             if "mysqlrouter" in extra_user_roles:
                 self.database.set_hostname_mapping(
-                    relation_id,
-                    self.charm.hostname_resolution.get_hostname_mapping()
+                    relation_id, self.charm.hostname_resolution.get_hostname_mapping()
                 )
                 self.charm._mysql.create_application_database_and_scoped_user(
                     db_name,

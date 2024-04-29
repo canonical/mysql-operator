@@ -71,9 +71,6 @@ class MySQLMachineHostnameResolution(Object):
 
     def _update_host_details_in_databag(self, _) -> None:
         """Update the hostname details in the peer databag."""
-        hostname = socket.gethostname()
-        fqdn = socket.getfqdn()
-
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0)
         try:
@@ -83,7 +80,6 @@ class MySQLMachineHostnameResolution(Object):
             logger.exception("Unable to get local IP address")
             ip = "127.0.0.1"
 
-        #host_details = {"names": [hostname, fqdn, self.charm.unit_host_alias], "address": ip}
         host_details = {"names": [self.charm.unit_host_alias], "address": ip}
 
         logger.debug("Updating hostname details for relations")
@@ -107,7 +103,6 @@ class MySQLMachineHostnameResolution(Object):
                         unit_alias = f"{key.name.replace('/', '-')}.{self.model.uuid}"
                         entry = HostsEntry(
                             address=unit_details["ip"],
-                            #names=[unit_details["hostname"], unit_details["fqdn"], unit_alias],
                             names=[unit_alias],
                             comment=COMMENT,
                             entry_type="ipv4",

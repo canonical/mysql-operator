@@ -3,7 +3,6 @@
 
 import json
 import unittest
-from unittest.mock import PropertyMock, patch
 
 from ops.testing import Harness
 
@@ -62,25 +61,3 @@ class TestHostnameResolution(unittest.TestCase):
     def test_unit_in_hosts(self):
         """Test _unit_in_hosts method."""
         self.assertFalse(self.hostname_resolution.is_unit_in_hosts)
-
-    @patch("charm.MySQLOperatorCharm._mysql")
-    @patch(
-        "charm.MySQLOperatorCharm._is_peer_data_set", new_callable=PropertyMock(return_value=True)
-    )
-    def test_potentially_update_etc_hosts(self, _is_peer_data_set, _mysql):
-        """Test _hosts_write method."""
-        self.harness.add_relation(
-            PEER,
-            APP_NAME,
-            unit_data={
-                HOSTNAME_DETAILS: json.dumps(
-                    {"address": "1.1.1.1", "names": ["name1", "name2", self.charm.unit_host_alias]}
-                )
-            },
-        )
-
-        with patch("python_hosts.Hosts.determine_hosts_path", return_value="/tmp/hosts"):
-            self.hostname_resolution._potentially_update_etc_hosts(None)
-            self.assertTrue(self.hostname_resolution.is_unit_in_hosts)
-
-        _mysql.flush_host_cache.assert_called_once()

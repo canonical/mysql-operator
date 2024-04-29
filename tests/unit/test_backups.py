@@ -313,8 +313,10 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
+    @patch("python_hosts.Hosts.write")
     def test_can_unit_perform_backup(
         self,
+        _,
         _get_member_state,
         _offline_mode_and_hidden_instance_exists,
     ):
@@ -329,7 +331,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_can_unit_perform_backup_failure(
         self,
         _,
@@ -381,7 +383,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_backup(
         self,
         _,
@@ -551,7 +553,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_restore_checks_failure(
         self,
         _,
