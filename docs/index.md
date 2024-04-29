@@ -1,5 +1,9 @@
 # Charmed MySQL Documentation
 
+[note type="positive"]
+This is **[IAAS/VM](https://canonical.com/data/docs)** operator. To deploy in **[K8s](https://canonical.com/data/docs)**, use [Charmed MySQL K8s](https://charmhub.io/postgresql-k8s).
+[/note]
+
 The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/).
 
 ![image|690x424](upload://vpevillwv3S9C44LDFBxkGCxpGq.png)
