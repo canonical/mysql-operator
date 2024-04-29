@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # The unique Charmhub library identifier, never change it
 LIBID = "4de21f1a022c4e2c87ac8e672ec16f6a"
 LIBAPI = 0
-LIBPATCH = 2
+LIBPATCH = 1
 
 PRIMARY_RELATION = "async-primary"
 REPLICA_RELATION = "async-replica"
