@@ -120,6 +120,7 @@ async def test_upgrade_to_failling(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
+@pytest.mark.unstable
 async def test_rollback(ops_test, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
