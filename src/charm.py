@@ -288,6 +288,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self.unit.status = MaintenanceStatus("Setting up cluster node")
 
+        if not self.hostname_resolution.is_unit_in_hosts:
+            self.hostname_resolution.update_etc_hosts(None)
+
         try:
             self.workload_initialise()
         except MySQLConfigureMySQLUsersError:
@@ -526,7 +529,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
-            self.unit_fqdn,
+            self.unit_host_alias,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),  # pyright: ignore [reportArgumentType]
@@ -561,6 +564,14 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def unit_fqdn(self) -> str:
         """Returns the unit's FQDN."""
         return socket.getfqdn()
+
+    @property
+    def unit_host_alias(self) -> str:
+        """Returns the unit's host alias.
+
+        The format is <unit_label>.<model_uuid>
+        """
+        return self.unit_label + "." + self.model.uuid
 
     @property
     def restart_peers(self) -> Optional[ops.model.Relation]:

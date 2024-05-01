@@ -170,6 +170,9 @@ class TestCharm(unittest.TestCase):
 
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.is_unit_in_hosts", return_value=True
+    )
     @patch("subprocess.check_call")
     @patch("charm.MySQLOperatorCharm.create_cluster")
     @patch("charm.MySQLOperatorCharm.workload_initialise")
@@ -178,6 +181,7 @@ class TestCharm(unittest.TestCase):
         _workload_initialise,
         _create_cluster,
         _check_call,
+        _unit_in_hosts,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
@@ -197,6 +201,9 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.is_unit_in_hosts", return_value=True
+    )
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
@@ -221,6 +228,7 @@ class TestCharm(unittest.TestCase):
         _is_volume_mounted,
         _check_call,
         _stop_mysqld,
+        _unit_in_hosts,
     ):
         patch("tenacity.BaseRetrying.wait", side_effect=lambda *args, **kwargs: 0)
 
@@ -290,10 +298,8 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
     def test_on_update(
         self,
-        _,
         _snap_service_operation,
         _reboot_from_complete_outage,
         _is_volume_mounted,

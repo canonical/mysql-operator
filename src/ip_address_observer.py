@@ -10,8 +10,9 @@ import socket
 import subprocess
 import sys
 import time
+import typing
 
-from ops.charm import CharmBase, CharmEvents
+from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ActiveStatus
 
@@ -19,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 # File path for the spawned ip address observer process to write logs.
 LOG_FILE_PATH = "/var/log/ip_address_observer.log"
+
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class IPAddressChangeEvent(EventBase):
@@ -40,7 +45,7 @@ class IPAddressObserver(Object):
     Observed IP address changes cause :class:`IPAddressChangeEvent` to be emitted.
     """
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "ip-address-observer")
 
         self.charm = charm

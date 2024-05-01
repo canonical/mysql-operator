@@ -1361,7 +1361,7 @@ class MySQLBase(ABC):
             "communicationStack": "MySQL",
         }
 
-        if donor:
+        if donor and method == "clone":
             options["cloneDonor"] = donor
 
         commands = (
