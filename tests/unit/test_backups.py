@@ -39,7 +39,8 @@ class TestMySQLBackups(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
-        self.harness.set_leader(True)
+        with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks") as _:
+            self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
         self.charm = self.harness.charm
         self.s3_integrator_id = self.harness.add_relation(
@@ -319,9 +320,6 @@ Juju Version: 0.0.0
         _offline_mode_and_hidden_instance_exists,
     ):
         """Test _can_unit_perform_backup()."""
-        self.harness.set_leader(True)
-        self.charm.on.config_changed.emit()
-
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertTrue(success)
         self.assertIsNone(error_message)

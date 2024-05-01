@@ -41,7 +41,8 @@ class TestDatabase(unittest.TestCase):
         _get_mysql_version,
     ):
         # run start-up events to enable usage of the helper class
-        self.harness.set_leader(True)
+        with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks") as _:
+            self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         # confirm that the relation databag is empty

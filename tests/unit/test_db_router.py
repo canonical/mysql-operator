@@ -17,6 +17,7 @@ from charm import MySQLOperatorCharm
 from .helpers import patch_network_get
 
 
+@patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestDBRouter(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(MySQLOperatorCharm)
@@ -41,6 +42,7 @@ class TestDBRouter(unittest.TestCase):
         _does_mysql_user_exist,
         _get_cluster_primary_address,
         _generate_random_password,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -128,6 +130,7 @@ class TestDBRouter(unittest.TestCase):
         _configure_mysqlrouter_user,
         _does_mysql_user_exist,
         _generate_random_password,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
