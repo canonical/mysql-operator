@@ -60,11 +60,12 @@ class TestUpgrade(unittest.TestCase):
         self.assertTrue(len(us) == 3)
         self.assertEqual(us, [0, 1, 2])
 
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
     @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
     @patch("upgrade.MySQLVMUpgrade._pre_upgrade_prepare")
     @patch("mysql_vm_helpers.MySQL.get_cluster_status", return_value=MOCK_STATUS_ONLINE)
     def test_pre_upgrade_check(
-        self, mock_get_cluster_status, mock_pre_upgrade_prepare, mock_get_unit_ip
+        self, mock_get_cluster_status, mock_pre_upgrade_prepare, mock_get_unit_ip, _
     ):
         """Test the pre upgrade check."""
         self.harness.set_leader(True)
@@ -107,6 +108,7 @@ class TestUpgrade(unittest.TestCase):
         ]
         mock_logging.assert_has_calls(calls)
 
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
     @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
     @patch("mysql_vm_helpers.MySQL.set_dynamic_variable")
     @patch("mysql_vm_helpers.MySQL.get_primary_label", return_value="mysql-1")
@@ -117,6 +119,7 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label,
         mock_set_dynamic_variable,
         mock_get_unit_ip,
+        _,
     ):
         """Test the pre upgrade prepare."""
         self.harness.set_leader(True)
@@ -261,8 +264,9 @@ class TestUpgrade(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
     @patch("upgrade.MySQLVMUpgrade._prepare_upgrade_from_legacy")
-    def test_upgrade_charm_legacy(self, mock_prepare_upgrade_from_legacy):
+    def test_upgrade_charm_legacy(self, mock_prepare_upgrade_from_legacy, _):
         self.harness.update_relation_data(self.upgrade_relation_id, "mysql/0", {"state": ""})
 
         # non leader

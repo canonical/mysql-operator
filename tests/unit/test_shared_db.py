@@ -14,6 +14,7 @@ from constants import LEGACY_DB_SHARED
 from .helpers import patch_network_get
 
 
+@patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestSharedDBRelation(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(MySQLOperatorCharm)
@@ -34,6 +35,7 @@ class TestSharedDBRelation(unittest.TestCase):
         _create_application_database_and_scoped_user,
         _generate_random_password,
         _get_cluster_primary_address,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -89,7 +91,7 @@ class TestSharedDBRelation(unittest.TestCase):
     @patch("utils.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_changed_error_on_user_creation(
-        self, _create_application_database_and_scoped_user, _generate_random_password
+        self, _create_application_database_and_scoped_user, _generate_random_password, _
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -123,6 +125,7 @@ class TestSharedDBRelation(unittest.TestCase):
         _generate_random_password,
         _delete_users_for_unit,
         _get_cluster_primary_address,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
