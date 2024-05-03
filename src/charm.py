@@ -620,6 +620,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
+        # ensure hostname can be resolved
+        self.hostname_resolution.update_etc_hosts(None)
+
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
 

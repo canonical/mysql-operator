@@ -290,7 +290,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_on_update(
         self,
         _,

@@ -1752,6 +1752,17 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "python-hosts"
+version = "1.0.6"
+description = "A hosts file manager library written in python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "python-hosts-1.0.6.tar.gz", hash = "sha256:2df59f07327753202b707c6b2140ec21af2922bd569148a47fa17abfe2152c6e"},
+    {file = "python_hosts-1.0.6-py3-none-any.whl", hash = "sha256:f902433664cad0f1bc50ef09be7906ac2a06df40945d0515c3e3f4ef39578762"},
+]
+
+[[package]]
 name = "pytz"
 version = "2023.3"
 description = "World timezone definitions, modern and historical"
@@ -2274,4 +2285,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2a5086863d1db642d6476bba5aba299aa1b494f0df8abb54574c567e778b06fe"
+content-hash = "099499829dacf52d7a1bb57bb08d1c85204c062c1536e319a5319d7e797b6962"
