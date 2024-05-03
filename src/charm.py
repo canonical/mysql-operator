@@ -240,11 +240,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # the upgrade already restart the daemon
             return
 
-        if not self._mysql.is_mysqld_running():
-            # defer config-changed event until MySQL is running
-            logger.debug("Deferring config-changed event until MySQL is running")
-            event.defer()
-            return
+        # restart not required if mysqld is not running
+        restart = self._mysql.is_mysqld_running()
 
         previous_config = self.mysql_config.custom_config
         if not previous_config:
@@ -263,14 +260,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.mysql_config.keys_requires_restart(changed_config):
             # there are static configurations in changed keys
-            logger.info("Configuration change requires restart")
-
+            logger.info("Persisting configuration changes to file")
             # persist config to file
             self._mysql.write_content_to_file(
                 path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
             )
-            self.on[f"{self.restart.name}"].acquire_lock.emit()
-            return
+            if restart:
+                logger.info("Configuration change requires restart")
+                self.on[f"{self.restart.name}"].acquire_lock.emit()
+                return
 
         if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
             # if only dynamic config changed, apply it
@@ -796,6 +794,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
     def _restart(self, event: EventBase) -> None:
         """Restart the MySQL service."""
+        if self.peers.units != self.restart_peers.units:
+            # defer restart until all units are in the relation
+            logger.debug("Deferring restart until all units are in the relation")
+            event.defer()
+            return
         if self._mysql.is_unit_primary(self.unit_label):
             restart_states = {
                 self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
