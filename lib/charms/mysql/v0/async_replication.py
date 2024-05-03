@@ -5,10 +5,10 @@
 
 import enum
 import logging
-from time import sleep
 import typing
 import uuid
 from functools import cached_property
+from time import sleep
 
 from charms.mysql.v0.mysql import (
     MySQLFencingWritesError,
@@ -427,7 +427,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             return
 
         if not self.model.get_relation(PRIMARY_RELATION, event.relation.id):
-            # safeguard against a defered event a previous relation.
+            # safeguard against a deferred event a previous relation.
             logger.error(
                 (
                     "Relation created running against removed relation.\n"
@@ -763,9 +763,9 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 logger.warning(
                     "Cluster name is the same as the primary cluster. Appending generated value"
                 )
-                self._charm.app_peer_data["cluster-name"] = (
-                    f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
-                )
+                self._charm.app_peer_data[
+                    "cluster-name"
+                ] = f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
 
             self._charm.unit.status = MaintenanceStatus("Populate endpoint")
 
