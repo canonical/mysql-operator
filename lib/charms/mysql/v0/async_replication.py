@@ -5,6 +5,7 @@
 
 import enum
 import logging
+from time import sleep
 import typing
 import uuid
 from functools import cached_property
@@ -20,7 +21,10 @@ from ops import (
     BlockedStatus,
     MaintenanceStatus,
     Relation,
+    RelationBrokenEvent,
+    RelationCreatedEvent,
     RelationDataContent,
+    RelationDepartedEvent,
     Secret,
     SecretNotFoundError,
     WaitingStatus,
@@ -51,11 +55,10 @@ logger = logging.getLogger(__name__)
 # The unique Charmhub library identifier, never change it
 LIBID = "4de21f1a022c4e2c87ac8e672ec16f6a"
 LIBAPI = 0
-LIBPATCH = 1
+LIBPATCH = 2
 
 PRIMARY_RELATION = "async-primary"
 REPLICA_RELATION = "async-replica"
-SECRET_LABEL = "async-secret"
 
 
 class ClusterSetInstanceState(typing.NamedTuple):
@@ -189,7 +192,7 @@ class MySQLAsyncReplication(Object):
         except MySQLFencingWritesError:
             event.fail("Failed to fence writes. Check logs for details")
 
-    def on_async_relation_broken(self, event):  # noqa: C901
+    def on_async_relation_broken(self, event: RelationBrokenEvent):  # noqa: C901
         """Handle the async relation being broken from either side."""
         # Remove the replica cluster, if this is the primary
 
@@ -221,17 +224,21 @@ class MySQLAsyncReplication(Object):
             # reset flag to allow instances rejoining the cluster
             self._charm.unit_peer_data["member-state"] = "waiting"
             del self._charm.unit_peer_data["unit-initialized"]
-            if self._charm.unit.is_leader():
-                self._charm.app.status = BlockedStatus("Recreate or rejoin cluster.")
-                logger.info(
-                    "\n\tThis is a replica cluster and will be dissolved.\n"
-                    "\tThe cluster can be recreated with the `recreate-cluster` action.\n"
-                    "\tAlternatively the cluster can be rejoined to the cluster set."
-                )
-                # reset the cluster node count flag
-                del self._charm.app_peer_data["units-added-to-cluster"]
-                # set flag to persist removed from cluster-set state
-                self._charm.app_peer_data["removed-from-cluster-set"] = "true"
+            if not self._charm.unit.is_leader():
+                # delay non leader to avoid `update_status` running before
+                # leader updates app peer data
+                sleep(10)
+                return
+            self._charm.app.status = BlockedStatus("Recreate or rejoin cluster.")
+            logger.info(
+                "\n\tThis is a replica cluster and will be dissolved.\n"
+                "\tThe cluster can be recreated with the `recreate-cluster` action.\n"
+                "\tAlternatively the cluster can be rejoined to the cluster set."
+            )
+            # reset the cluster node count flag
+            del self._charm.app_peer_data["units-added-to-cluster"]
+            # set flag to persist removed from cluster-set state
+            self._charm.app_peer_data["removed-from-cluster-set"] = "true"
 
         elif self.role.cluster_role == "primary":
             if self._charm.unit.is_leader():
@@ -332,6 +339,9 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             self._charm.on[PRIMARY_RELATION].relation_changed,
             self._on_primary_relation_changed,
         )
+        self.framework.observe(
+            self._charm.on[PRIMARY_RELATION].relation_broken, self._on_primary_relation_broken
+        )
 
     def get_relation(self, relation_id: int) -> Optional[Relation]:
         """Return the relation."""
@@ -384,31 +394,49 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
     def _get_secret(self) -> Secret:
         """Return async replication necessary secrets."""
-        try:
-            # Avoid recreating the secret
-            secret = self._charm.model.get_secret(label=SECRET_LABEL)
-            if not secret.id:
-                # workaround for the secret id not being set with model uuid
-                secret._id = f"secret://{self.model.uuid}/{secret.get_info().id.split(':')[1]}"
-            return secret
-        except SecretNotFoundError:
-            pass
-
         app_secret = self._charm.model.get_secret(label=f"{PEER}.{self.model.app.name}.app")
         content = app_secret.peek_content()
         # filter out unnecessary secrets
         shared_content = dict(filter(lambda x: "password" in x[0], content.items()))
 
-        return self._charm.model.app.add_secret(content=shared_content, label=SECRET_LABEL)
+        return self._charm.model.app.add_secret(content=shared_content)
 
-    def _on_primary_created(self, event):
+    def _on_primary_created(self, event: RelationCreatedEvent):
         """Validate relations and share credentials with replica cluster."""
         if not self._charm.unit.is_leader():
             return
 
+        if (
+            isinstance(self._charm.app.status, BlockedStatus)
+            and self._charm.app_peer_data.get("removed-from-cluster-set") == "true"
+        ):
+            # Test for a broken relation on the primary side
+            logger.error(
+                (
+                    "Cannot setup async relation with primary cluster in blocked/read-only state\n"
+                    "Remove the relation."
+                )
+            )
+            message = f"Cluster is in a blocked state. Remove {PRIMARY_RELATION} relation"
+            self._charm.unit.status = BlockedStatus(message)
+            self._charm.app.status = BlockedStatus(message)
+
         if not self._charm.unit_initialized:
             logger.debug("Unit not initialized, deferring event")
             event.defer()
+            return
+
+        if not self.model.get_relation(PRIMARY_RELATION, event.relation.id):
+            # safeguard against a defered event a previous relation.
+            logger.error(
+                (
+                    "Relation created running against removed relation.\n"
+                    f"Remove {PRIMARY_RELATION} relation and retry."
+                )
+            )
+            self._charm.unit.status = BlockedStatus(
+                f"Remove {PRIMARY_RELATION} relation and retry"
+            )
             return
 
         if self._charm._mysql.is_cluster_replica():
@@ -480,6 +508,19 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         elif state == States.RECOVERING:
             # Recover replica cluster
             self._charm.unit.status = MaintenanceStatus("Replica cluster in recovery")
+
+    def _on_primary_relation_broken(self, event: RelationDepartedEvent):
+        """Handle the async_primary relation being broken."""
+        if self._charm.unit.is_leader():
+            logger.debug("Removing async replication secret")
+            # remove relation secret by id
+            if secret_id := self.get_local_relation_data(event.relation).get("secret-id"):
+                secret = self._charm.model.get_secret(id=secret_id)
+                # revoke secret access before removing
+                secret.revoke(event.relation)
+                secret.remove_all_revisions()
+            else:
+                logger.debug("Secret not set, skipping removal")
 
 
 class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
@@ -591,7 +632,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
     def _obtain_secret(self) -> Secret:
         """Get secret from primary cluster."""
         secret_id = self.remote_relation_data.get("secret-id")
-        return self._charm.model.get_secret(id=secret_id, label=SECRET_LABEL)
+        return self._charm.model.get_secret(id=secret_id)
 
     def _async_replication_credentials(self) -> dict[str, str]:
         """Get async replication credentials from primary cluster."""
@@ -722,9 +763,9 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 logger.warning(
                     "Cluster name is the same as the primary cluster. Appending generated value"
                 )
-                self._charm.app_peer_data[
-                    "cluster-name"
-                ] = f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
+                self._charm.app_peer_data["cluster-name"] = (
+                    f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
+                )
 
             self._charm.unit.status = MaintenanceStatus("Populate endpoint")
 
@@ -771,6 +812,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
     def _on_replica_non_leader_created(self, _):
         """Handle the async_replica relation being created for secondaries/non-leader."""
         # set waiting state to inhibit auto recovery, only when not already set
+        if self._charm.unit.is_leader():
+            return
         if not self._charm.unit_peer_data.get("member-state") == "waiting":
             self._charm.unit_peer_data["member-state"] = "waiting"
             self._charm.unit.status = WaitingStatus("waiting replica cluster be configured")
@@ -779,6 +822,8 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
         """Reset cluster secondaries to allow cluster rejoin after primary recovery."""
         # the replica state is initialized when the primary cluster finished
         # creating the replica cluster on this cluster primary/leader unit
+        if self._charm.unit.is_leader():
+            return
         if (
             self.replica_initialized
             or self._charm.app_peer_data.get("rejoin-secondaries") == "true"
