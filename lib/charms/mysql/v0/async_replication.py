@@ -516,8 +516,6 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             # remove relation secret by id
             if secret_id := self.get_local_relation_data(event.relation).get("secret-id"):
                 secret = self._charm.model.get_secret(id=secret_id)
-                # revoke secret access before removing
-                secret.revoke(event.relation)
                 secret.remove_all_revisions()
             else:
                 logger.debug("Secret not set, skipping removal")
