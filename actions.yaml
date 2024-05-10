@@ -59,6 +59,10 @@ restore:
 pre-upgrade-check:
   description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
 
+setup-async:
+  description: |
+    Setup async replication between two clusters. This action is must be run on the offer side
+
 promote-standby-cluster:
   description: |
     Promotes this cluster to become the leader in the cluster-set. Used for safe switchover or failover.

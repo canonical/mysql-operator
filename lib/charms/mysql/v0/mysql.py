@@ -116,7 +116,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 58
+LIBPATCH = 59
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -548,6 +548,7 @@ class MySQLCharmBase(CharmBase, ABC):
         try:
             self.create_cluster()
             self.unit.status = ops.ActiveStatus(self.active_status_message)
+            self.app.status = ops.ActiveStatus()
         except (MySQLCreateClusterError, MySQLCreateClusterSetError) as e:
             logger.exception("Failed to recreate cluster")
             event.fail(str(e))
@@ -659,9 +660,9 @@ class MySQLCharmBase(CharmBase, ABC):
             if self._mysql.is_cluster_replica():
                 status = self._mysql.get_replica_cluster_status()
                 if status == "ok":
-                    return "Primary (standby)"
+                    return "Standby"
                 else:
-                    return f"Primary (standby, {status})"
+                    return f"Standby ({status})"
             elif self._mysql.is_cluster_writes_fenced():
                 return "Primary (fenced writes)"
             else:
