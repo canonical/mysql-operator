@@ -1,0 +1,47 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:675 Connecting to existing model localhost-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2069 Deploying local:jammy/mysql-0
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Installing MySQL
+  mysql/1 [executing] maintenance: Installing MySQL
+  mysql/2 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Setting up cluster node
+  mysql/1 [executing] maintenance: Setting up cluster node
+  mysql/2 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [executing] waiting: waiting to join the cluster.
+  mysql/2 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-test-app-37
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: agent initialising
+[33mWARNING [0m juju.model:model.py:1558 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql-test-app/0 [idle] waiting:
