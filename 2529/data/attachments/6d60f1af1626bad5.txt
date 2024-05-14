@@ -1,0 +1,57 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:238 Scaling mysql application to 1 unit
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups:test_backups.py:252 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:268 Restoring backup with id 2024-05-14T01:42:23Z
+[32mINFO    [0m integration.test_backups:test_backups.py:275 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:288 Inserting value after restore from aws
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:295 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:252 Syncing credentials for gcp
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:268 Restoring backup with id 2024-05-14T01:42:51Z
+[32mINFO    [0m integration.test_backups:test_backups.py:275 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:288 Inserting value after restore from gcp
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:295 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:252 Syncing credentials for ceph
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:268 Restoring backup with id 2024-05-14T01:43:23Z
+[32mINFO    [0m integration.test_backups:test_backups.py:275 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:288 Inserting value after restore from ceph
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:295 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:305 Scaling mysql application to 3 units
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [executing] maintenance: Installing MySQL
+  mysql/4 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/3 [executing] maintenance: Setting up cluster node
+  mysql/4 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [executing] maintenance: joining the cluster
+  mysql/4 [executing] waiting: waiting to join the cluster.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [idle] active: 
+  mysql/4 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:308 Ensuring inserted values before backup and after restore exist on all units
