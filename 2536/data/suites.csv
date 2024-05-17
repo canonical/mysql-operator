@@ -1,0 +1,84 @@
+"Status","Start Time","Stop Time","Duration in ms","Parent Suite","Suite","Sub Suite","Test Class","Test Method","Name","Description"
+"passed","Fri May 17 01:34:35 UTC 2024","Fri May 17 01:45:29 UTC 2024","653963","tests.integration.relations","test_database","","","","test_read_only_endpoints","Check read-only-endpoints are correctly updated."
+"passed","Fri May 17 01:32:26 UTC 2024","Fri May 17 01:34:21 UTC 2024","114493","tests.integration","test_tls","","","","test_enable_tls","Test for encryption enablement when relation to TLS charm."
+"passed","Fri May 17 01:34:27 UTC 2024","Fri May 17 01:34:35 UTC 2024","8282","tests.integration.high_availability","test_upgrade_rollback_incompat","","","","test_pre_upgrade_check","Test that the pre-upgrade-check action runs successfully."
+"passed","Fri May 17 01:34:21 UTC 2024","Fri May 17 01:35:02 UTC 2024","40908","tests.integration","test_tls","","","","test_rotate_tls_key","Verify rotating tls private keys restarts cluster with new certificates.
+
+    This test rotates tls private keys to randomly generated keys.
+    "
+"passed","Fri May 17 01:33:29 UTC 2024","Fri May 17 01:33:45 UTC 2024","15921","tests.integration.high_availability","test_upgrade_from_stable","","","","test_pre_upgrade_check","Test that the pre-upgrade-check action runs successfully."
+"passed","Fri May 17 02:03:57 UTC 2024","Fri May 17 02:04:15 UTC 2024","18330","tests.integration.high_availability","test_async_replication","","","","test_rejoin_invalidated_cluster","Test rejoin invalidated cluster with."
+"passed","Fri May 17 01:41:01 UTC 2024","Fri May 17 01:43:24 UTC 2024","143822","tests.integration.high_availability","test_self_healing","","","","test_cluster_pause","Pause test.
+
+    A graceful simultaneous restart of all instances,
+    check primary election after the start, write and read data
+    "
+"passed","Fri May 17 01:36:21 UTC 2024","Fri May 17 01:39:34 UTC 2024","193561","tests.integration.high_availability","test_self_healing","","","","test_network_cut","Completely cut and restore network."
+"passed","Fri May 17 01:28:31 UTC 2024","Fri May 17 01:38:48 UTC 2024","616920","tests.integration.high_availability","test_replication","","","","test_scaling_without_data_loss","Test that data is preserved during scale up and scale down."
+"passed","Fri May 17 01:33:47 UTC 2024","Fri May 17 01:33:55 UTC 2024","8157","tests.integration.relations","test_database","","","","test_password_rotation_root_user_implicit","Rotate password and confirm changes."
+"passed","Fri May 17 01:33:45 UTC 2024","Fri May 17 01:37:57 UTC 2024","251628","tests.integration.high_availability","test_upgrade_from_stable","","","","test_upgrade_from_stable","Test updating from stable channel."
+"passed","Fri May 17 01:29:46 UTC 2024","Fri May 17 01:38:34 UTC 2024","528303","tests.integration.high_availability","test_replication","","","","test_cluster_isolation","Test for cluster data isolation.
+
+    This test creates a new cluster, create a new table on both cluster, write a single record with
+    the application name for each cluster, retrieve and compare these records, asserting they are
+    not the same.
+    "
+"passed","Fri May 17 01:36:19 UTC 2024","Fri May 17 01:41:32 UTC 2024","313281","tests.integration.high_availability","test_replication","","","","test_kill_primary_check_reelection","Confirm that a new primary is elected when the current primary is torn down."
+"passed","Fri May 17 01:52:36 UTC 2024","Fri May 17 01:59:59 UTC 2024","443104","tests.integration","test_backups","","","","test_restore_on_same_cluster","Test to restore a backup to the same mysql cluster."
+"passed","Fri May 17 01:31:19 UTC 2024","Fri May 17 01:32:19 UTC 2024","60204","tests.integration","test_subordinate_charms","","","","test_landscape_client",""
+"passed","Fri May 17 01:58:50 UTC 2024","Fri May 17 01:58:59 UTC 2024","9145","tests.integration.high_availability","test_async_replication","","","","test_data_replication","Test to write to primary, and read the same data back from replicas."
+"passed","Fri May 17 01:41:32 UTC 2024","Fri May 17 01:41:52 UTC 2024","20449","tests.integration.high_availability","test_replication","","","","test_log_rotation","Test the log rotation of text files."
+"passed","Fri May 17 02:04:18 UTC 2024","Fri May 17 02:07:40 UTC 2024","202385","tests.integration.high_availability","test_async_replication","","","","test_remove_relation_and_relate","Test removing and re-relating the two mysql clusters."
+"passed","Fri May 17 01:39:37 UTC 2024","Fri May 17 01:40:58 UTC 2024","80234","tests.integration.high_availability","test_self_healing","","","","test_replicate_data_on_restart","Stop server, write data, start and validate replication."
+"passed","Fri May 17 01:35:52 UTC 2024","Fri May 17 01:36:19 UTC 2024","26796","tests.integration.high_availability","test_replication","","","","test_consistent_data_replication_across_cluster","Confirm that data is replicated from the primary node to all the replicas."
+"passed","Fri May 17 01:35:52 UTC 2024","Fri May 17 01:44:07 UTC 2024","495479","tests.integration.high_availability","test_upgrade_rollback_incompat","","","","test_rollback",""
+"passed","Fri May 17 01:45:29 UTC 2024","Fri May 17 01:45:52 UTC 2024","22690","tests.integration.relations","test_database","","","","test_relation_broken","Remove relation and wait for the expected changes in status."
+"passed","Fri May 17 01:28:33 UTC 2024","Fri May 17 01:32:23 UTC 2024","230046","tests.integration","test_tls","","","","test_build_and_deploy","Build the charm and deploy 3 units to ensure a cluster is formed."
+"passed","Fri May 17 01:37:02 UTC 2024","Fri May 17 01:40:07 UTC 2024","185905","tests.integration.high_availability","test_upgrade","","","","test_fail_and_rollback",""
+"passed","Fri May 17 01:35:21 UTC 2024","Fri May 17 01:36:18 UTC 2024","56759","tests.integration.high_availability","test_self_healing","","","","test_freeze_db_process","Freeze and unfreeze process and check for auto cluster recovery."
+"passed","Fri May 17 01:59:33 UTC 2024","Fri May 17 02:03:54 UTC 2024","261443","tests.integration.high_availability","test_async_replication","","","","test_failover","Test switchover on primary cluster fail."
+"passed","Fri May 17 01:28:51 UTC 2024","Fri May 17 01:33:34 UTC 2024","283287","tests.integration.relations","test_database","","","","test_build_and_deploy","Build the charm and deploy 3 units to ensure a cluster is formed."
+"passed","Fri May 17 01:35:44 UTC 2024","Fri May 17 01:35:52 UTC 2024","8188","tests.integration.high_availability","test_replication","","","","test_custom_variables","Query database for custom variables."
+"skipped","Fri May 17 01:33:55 UTC 2024","Fri May 17 01:33:55 UTC 2024","0","tests.integration.relations","test_database","","","","test_relation_creation_databag","Relate charms and wait for the expected changes in status."
+"passed","Fri May 17 01:55:28 UTC 2024","Fri May 17 01:58:47 UTC 2024","199164","tests.integration.high_availability","test_async_replication","","","","test_deploy_router_and_app","Deploy the router and the test application."
+"passed","Fri May 17 01:34:37 UTC 2024","Fri May 17 01:35:48 UTC 2024","70436","tests.integration.high_availability","test_upgrade_rollback_incompat","","","","test_upgrade_to_failling",""
+"passed","Fri May 17 01:33:56 UTC 2024","Fri May 17 01:35:44 UTC 2024","107921","tests.integration.high_availability","test_replication","","","","test_exporter_endpoints","Test that endpoints are running."
+"passed","Fri May 17 01:59:05 UTC 2024","Fri May 17 01:59:32 UTC 2024","27156","tests.integration.high_availability","test_async_replication","","","","test_standby_promotion","Test graceful promotion of a standby cluster to primary."
+"passed","Fri May 17 01:35:02 UTC 2024","Fri May 17 01:35:33 UTC 2024","31444","tests.integration","test_tls","","","","test_disable_tls",""
+"passed","Fri May 17 01:50:50 UTC 2024","Fri May 17 01:52:36 UTC 2024","106256","tests.integration","test_backups","","","","test_backup","Test to create a backup and list backups."
+"passed","Fri May 17 01:53:23 UTC 2024","Fri May 17 01:55:28 UTC 2024","125530","tests.integration.high_availability","test_async_replication","","","","test_async_relate","Relate the two mysql clusters."
+"passed","Fri May 17 01:28:45 UTC 2024","Fri May 17 01:33:54 UTC 2024","308872","tests.integration.high_availability","test_self_healing","","","","test_build_and_deploy","Build and deploy."
+"passed","Fri May 17 01:33:09 UTC 2024","Fri May 17 01:33:41 UTC 2024","32311","tests.integration.relations","test_relation_mysql_legacy","","","","test_relation_broken","Remove relation and wait for the expected changes in status."
+"passed","Fri May 17 01:59:59 UTC 2024","Fri May 17 02:09:02 UTC 2024","543215","tests.integration","test_backups","","","","test_restore_on_new_cluster","Test to restore a backup on a new mysql cluster."
+"passed","Fri May 17 01:28:33 UTC 2024","Fri May 17 01:52:55 UTC 2024","1461436","tests.integration.relations","test_db_router","","","","test_keystone_bundle_db_router","Deploy the keystone bundle to test the 'db-router' relation.
+
+    Args:
+        ops_test: The ops test framework
+        mysql_charm_series: The series for the database machine
+    "
+"passed","Fri May 17 01:28:31 UTC 2024","Fri May 17 01:34:27 UTC 2024","356338","tests.integration.high_availability","test_upgrade_rollback_incompat","","","","test_build_and_deploy","Simple test to ensure that the mysql and application charms get deployed."
+"passed","Fri May 17 01:28:40 UTC 2024","Fri May 17 01:31:19 UTC 2024","158807","tests.integration","test_subordinate_charms","","","","test_ubuntu_pro",""
+"passed","Fri May 17 01:28:53 UTC 2024","Fri May 17 01:33:29 UTC 2024","276148","tests.integration.high_availability","test_upgrade_from_stable","","","","test_deploy_stable","Simple test to ensure that the mysql and application charms get deployed."
+"passed","Fri May 17 01:32:23 UTC 2024","Fri May 17 01:32:26 UTC 2024","3700","tests.integration","test_tls","","","","test_connection_before_tls","Ensure connections (with and without ssl) are possible before relating with TLS operator."
+"passed","Fri May 17 01:28:39 UTC 2024","Fri May 17 01:33:37 UTC 2024","298126","tests.integration.high_availability","test_upgrade","","","","test_deploy_latest","Simple test to ensure that the mysql and application charms get deployed."
+"passed","Fri May 17 01:46:49 UTC 2024","Fri May 17 01:53:23 UTC 2024","393613","tests.integration.high_availability","test_async_replication","","","","test_build_and_deploy","Simple test to ensure that the mysql and application charms get deployed."
+"passed","Fri May 17 01:33:00 UTC 2024","Fri May 17 01:33:09 UTC 2024","9480","tests.integration.relations","test_relation_mysql_legacy","","","","test_relation_creation","Relate charms and wait for the expected changes in status."
+"passed","Fri May 17 01:28:29 UTC 2024","Fri May 17 01:33:56 UTC 2024","327125","tests.integration.high_availability","test_replication","","","","test_build_and_deploy","Build the charm and deploy 3 units to ensure a cluster is formed."
+"passed","Fri May 17 01:33:54 UTC 2024","Fri May 17 01:36:57 UTC 2024","183009","tests.integration.high_availability","test_upgrade","","","","test_upgrade_from_edge",""
+"passed","Fri May 17 01:28:55 UTC 2024","Fri May 17 01:33:00 UTC 2024","244610","tests.integration.relations","test_relation_mysql_legacy","","","","test_build_and_deploy","Build the charm and deploy 3 units to ensure a cluster is formed."
+"passed","Fri May 17 01:45:39 UTC 2024","Fri May 17 01:50:50 UTC 2024","310551","tests.integration","test_backups","","","","test_build_and_deploy","Simple test to ensure that the mysql charm gets deployed."
+"passed","Fri May 17 01:33:34 UTC 2024","Fri May 17 01:33:41 UTC 2024","7262","tests.integration.relations","test_database","","","","test_password_rotation","Rotate password and confirm changes."
+"passed","Fri May 17 01:33:41 UTC 2024","Fri May 17 01:33:47 UTC 2024","6177","tests.integration.relations","test_database","","","","test_password_rotation_silent","Rotate password and confirm changes."
+"passed","Fri May 17 01:33:55 UTC 2024","Fri May 17 01:34:35 UTC 2024","39611","tests.integration.relations","test_database","","","","test_relation_creation","Relate charms and wait for the expected changes in status."
+"passed","Fri May 17 01:43:29 UTC 2024","Fri May 17 01:46:26 UTC 2024","176663","tests.integration.high_availability","test_self_healing","","","","test_sst_test","The SST test.
+
+    A forceful restart instance with deleted data and without transaction logs (forced clone).
+    "
+"passed","Fri May 17 01:44:18 UTC 2024","Fri May 17 02:06:56 UTC 2024","1358283","tests.integration.relations","test_shared_db","","","","test_keystone_bundle_shared_db","Deploy the keystone bundle to test the 'shared-db' relation.
+
+    Args:
+        ops_test: The ops test framework
+        mysql_charm_series: The series for the database machine
+    "
+"passed","Fri May 17 01:33:37 UTC 2024","Fri May 17 01:33:52 UTC 2024","15664","tests.integration.high_availability","test_upgrade","","","","test_pre_upgrade_check","Test that the pre-upgrade-check action runs successfully."
+"passed","Fri May 17 01:33:56 UTC 2024","Fri May 17 01:35:18 UTC 2024","81772","tests.integration.high_availability","test_self_healing","","","","test_kill_db_process","Kill mysqld process and check for auto cluster recovery."
