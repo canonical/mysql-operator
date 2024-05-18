@@ -110,13 +110,27 @@ async def test_build_and_deploy(
 async def test_async_relate(first_model: Model, second_model: Model) -> None:
     """Relate the two mysql clusters."""
     logger.info("Creating offers in first model")
-    await first_model.create_offer(f"{MYSQL_APP1}:async-primary")
+    await first_model.create_offer(f"{MYSQL_APP1}:async-offer")
 
     logger.info("Consume offer in second model")
     await second_model.consume(endpoint=f"admin/{first_model.info.name}.{MYSQL_APP1}")
 
     logger.info("Relating the two mysql clusters")
-    await second_model.integrate(f"{MYSQL_APP1}", f"{MYSQL_APP2}:async-replica")
+    await second_model.integrate(f"{MYSQL_APP1}", f"{MYSQL_APP2}:async")
+
+    logger.info("Waiting for the applications to settle")
+    await gather(
+        first_model.wait_for_idle(
+            apps=[MYSQL_APP1],
+            status="active",
+            timeout=10 * MINUTE,
+        ),
+        second_model.wait_for_idle(
+            apps=[MYSQL_APP2],
+            status="active",
+            timeout=10 * MINUTE,
+        ),
+    )
 
     logger.info("Waiting for the applications to settle")
     await gather(
