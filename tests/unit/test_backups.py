@@ -39,7 +39,8 @@ class TestMySQLBackups(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
-        self.harness.set_leader(True)
+        with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks") as _:
+            self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
         self.charm = self.harness.charm
         self.s3_integrator_id = self.harness.add_relation(
@@ -319,9 +320,6 @@ Juju Version: 0.0.0
         _offline_mode_and_hidden_instance_exists,
     ):
         """Test _can_unit_perform_backup()."""
-        self.harness.set_leader(True)
-        self.charm.on.config_changed.emit()
-
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertTrue(success)
         self.assertIsNone(error_message)
@@ -329,7 +327,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_can_unit_perform_backup_failure(
         self,
         _,
@@ -381,7 +379,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_backup(
         self,
         _,
@@ -551,7 +549,7 @@ Juju Version: 0.0.0
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_restore_checks_failure(
         self,
         _,

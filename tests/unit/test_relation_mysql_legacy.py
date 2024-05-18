@@ -13,6 +13,7 @@ from constants import LEGACY_MYSQL, PEER
 from .helpers import patch_network_get
 
 
+@patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestMariaDBRelation(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(MySQLOperatorCharm)
@@ -37,6 +38,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _get_or_set_password_in_peer_secrets,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -92,6 +94,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _get_or_set_password_in_peer_secrets,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -118,7 +121,9 @@ class TestMariaDBRelation(unittest.TestCase):
         _does_mysql_user_exist.assert_called_once_with("mysql", "%")
 
         maria_db_relation = self.charm.model.get_relation(LEGACY_MYSQL)
-        root_pw = self.harness.model.get_secret(label="mysql.app").get_content()["root-password"]
+        root_pw = self.harness.model.get_secret(label="database-peers.mysql.app").get_content()[
+            "root-password"
+        ]
 
         # confirm that the relation databag is populated
         self.assertEqual(
@@ -149,6 +154,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _delete_users_for_unit,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
+        _,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)

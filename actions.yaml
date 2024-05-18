@@ -3,6 +3,12 @@
 
 get-cluster-status:
   description: Get cluster status information
+  params:
+    cluster-set:
+      type: boolean
+      default: False
+      description: Whether to fetch the cluster or cluster-set status.
+        Possible values are False (default) or True.
 
 get-password:
   description: Fetch the system user's password, which is used by charm.
@@ -53,3 +59,53 @@ restore:
 pre-upgrade-check:
   description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
 
+promote-standby-cluster:
+  description: |
+    Promotes this cluster to become the leader in the cluster-set. Used for safe switchover or failover.
+    Must be run against the charm leader unit of a standby cluster.
+  params:
+    cluster-set-name:
+      type: string
+      description: |
+        The name of the cluster-set. Mandatory option, used for confirmation.
+    force:
+      type: boolean
+      default: False
+      description: |
+        Use force when previous primary is unreachable (failover). Will invalidate previous
+        primary.
+
+recreate-cluster:
+  description: |
+    Recreates cluster on one or more standalone units that were previously part of a standby cluster.
+
+    When a standby cluster is removed from an async replication relation, the cluster will be dissolved and
+    each unit will be kept in blocked status. Recreating the cluster allows to rejoin the async replication
+    relation, or usage as a standalone cluster.
+
+fence-writes:
+  description: |
+    Stops write traffic to a primary cluster of a ClusterSet.
+  params:
+    cluster-set-name:
+      type: string
+      description: |
+        The name of the cluster-set. Mandatory option, used for confirmation.
+
+unfence-writes:
+  description: |
+    Resumes write traffic to a primary cluster of a ClusterSet.
+  params:
+    cluster-set-name:
+      type: string
+      description: |
+        The name of the cluster-set. Mandatory option, used for confirmation.
+
+rejoin-cluster:
+  description: |
+    Rejoins an invalidated cluster to the cluster-set, after a previous failover or switchover.
+  params:
+    cluster-name:
+      type: string
+      description: |
+        The name of the cluster to be rejoined.
