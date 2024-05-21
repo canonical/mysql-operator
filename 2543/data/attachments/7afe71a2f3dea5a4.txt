@@ -1,0 +1,15 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:361 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:113 Freezing process id 6348
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:116 Get cluster admin password
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:124 Verifying that connection to host 10.13.214.23 is not possible
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:128 Unfreezing process id 6348
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:132 Verifying that connection to host 10.13.214.23 is possible
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:361 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
