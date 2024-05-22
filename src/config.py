@@ -10,6 +10,7 @@ import re
 from typing import Optional
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
+from charms.mysql.v0.mysql import MIN_MAX_CONNECTIONS
 from pydantic import validator
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ class CharmConfig(BaseConfigModel):
     profile_limit_memory: Optional[int]
     mysql_interface_user: Optional[str]
     mysql_interface_database: Optional[str]
+    experimental_max_connections: Optional[int]
 
     @validator("profile")
     @classmethod
@@ -101,5 +103,16 @@ class CharmConfig(BaseConfigModel):
             raise ValueError("MySQL Charm requires at least 600MB for bootstrapping")
         if value > 9999999:
             raise ValueError("`profile-limit-memory` limited to 7 digits (9999999MB)")
+
+        return value
+
+    @validator("experimental_max_connections")
+    @classmethod
+    def experimental_max_connections_validator(cls, value: int) -> Optional[int]:
+        """Check experimental max connections."""
+        if value < MIN_MAX_CONNECTIONS:
+            raise ValueError(
+                f"experimental-max-connections must be greater than {MIN_MAX_CONNECTIONS}"
+            )
 
         return value

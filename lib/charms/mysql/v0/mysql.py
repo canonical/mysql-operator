@@ -128,6 +128,7 @@ BYTES_1MiB = 1048576  # 1 mebibyte
 RECOVERY_CHECK_TIME = 10  # seconds
 GET_MEMBER_STATE_TIME = 10  # seconds
 MIN_MAX_CONNECTIONS = 100
+MIM_MEM_BUFFERS = 200 * BYTES_1MiB
 
 SECRET_INTERNAL_LABEL = "secret-id"
 SECRET_DELETED_LABEL = "None"
@@ -847,6 +848,7 @@ class MySQLBase(ABC):
         *,
         profile: str,
         memory_limit: Optional[int] = None,
+        experimental_max_connections: Optional[int] = None,
         snap_common: str = "",
     ) -> tuple[str, dict]:
         """Render mysqld ini configuration file.
@@ -854,6 +856,7 @@ class MySQLBase(ABC):
         Args:
             profile: profile to use for the configuration (testing, production)
             memory_limit: memory limit to use for the configuration in bytes
+            experimental_max_connections: explicit max connections to use for the configuration
             snap_common: snap common directory (for log files locations in vm)
 
         Returns: a tuple with mysqld ini file string content and a the config dict
@@ -871,6 +874,17 @@ class MySQLBase(ABC):
                 # when memory limit is set, we need to use the minimum
                 # between the available memory and the limit
                 available_memory = min(available_memory, memory_limit)
+
+            if experimental_max_connections:
+                # when set, we use the experimental max connections
+                # and it takes precedence over buffers usage, ensuring minimal memory buffers
+                max_safe_connections = self.get_max_connections(available_memory - MIM_MEM_BUFFERS)
+
+                max_connections = max(
+                    MIN_MAX_CONNECTIONS, min(experimental_max_connections, max_safe_connections)
+                )
+                available_memory -= max_connections * 12 * BYTES_1MiB
+
             (
                 innodb_buffer_pool_size,
                 innodb_buffer_pool_chunk_size,
@@ -879,8 +893,13 @@ class MySQLBase(ABC):
 
             # constrain max_connections based on the available memory
             # after innodb_buffer_pool_size calculation
-            remaining_memory = available_memory - innodb_buffer_pool_size
-            max_connections = max(self.get_max_connections(remaining_memory), MIN_MAX_CONNECTIONS)
+            available_memory -= innodb_buffer_pool_size + (
+                group_replication_message_cache_size or 0
+            )
+            if not experimental_max_connections:
+                max_connections = max(
+                    self.get_max_connections(available_memory), MIN_MAX_CONNECTIONS
+                )
 
             if available_memory < 2 * BYTES_1GiB:
                 # disable memory instruments if we have less than 2GiB of RAM
