@@ -254,6 +254,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             profile=self.config.profile,
             snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
             memory_limit=memory_limit_bytes,
+            experimental_max_connections=self.config.experimental_max_connections,
         )
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
@@ -612,7 +613,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Raised errors must be treated on handlers.
         """
         self._mysql.write_mysqld_config(
-            profile=self.config.profile, memory_limit=self.config.profile_limit_memory
+            profile=self.config.profile,
+            memory_limit=self.config.profile_limit_memory,
+            experimental_max_connections=self.config.experimental_max_connections,
         )
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
@@ -799,7 +802,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.debug("Deferring restart until all units are in the relation")
             event.defer()
             return
-        if self._mysql.is_unit_primary(self.unit_label):
+        if self.peers.units and self._mysql.is_unit_primary(self.unit_label):
             restart_states = {
                 self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
             }
