@@ -244,6 +244,7 @@ class MySQL(MySQLBase):
         Args:
             profile: profile to use for the mysql config
             memory_limit: memory limit to use for the mysql config in MB
+            experimental_max_connections: experimental max connections to use for the mysql config
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
