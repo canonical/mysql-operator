@@ -16,8 +16,8 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.async_replication import (
-    MySQLAsyncReplicationPrimary,
-    MySQLAsyncReplicationReplica,
+    MySQLAsyncReplicationConsumer,
+    MySQLAsyncReplicationOffer,
 )
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
@@ -167,8 +167,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
 
         self.mysql_logs = MySQLLogs(self)
-        self.async_primary = MySQLAsyncReplicationPrimary(self)
-        self.async_replica = MySQLAsyncReplicationReplica(self)
+        self.async_primary = MySQLAsyncReplicationOffer(self)
+        self.async_replica = MySQLAsyncReplicationConsumer(self)
 
     # =======================
     #  Charm Lifecycle Hooks
