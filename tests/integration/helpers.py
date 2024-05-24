@@ -723,7 +723,7 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
         "CREATE TABLE test.data_replication_table (id varchar(40), primary key(id))",
         (
             "INSERT INTO test.data_replication_table"
-            f" VALUES ('{(random_chars:=generate_random_string(40))}')"
+            f" VALUES ('{(random_chars := generate_random_string(40))}')"
         ),
     ]
 

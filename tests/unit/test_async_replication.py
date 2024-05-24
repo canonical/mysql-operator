@@ -157,7 +157,7 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertIn("secret-id", relation_data)
         self.assertEqual(relation_data["mysql-version"], "8.0.36-0ubuntu0.22.04.1")
 
-    @patch("charms.mysql.v0.async_replication.MySQLAsyncReplicationPrimary.get_state")
+    @patch("charms.mysql.v0.async_replication.MySQLAsyncReplicationOffer.get_state")
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_offer_relation_changed(self, _mysql, _get_state, _):
         self.harness.set_leader(True)
@@ -285,11 +285,11 @@ class TestAsyncRelation(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("ops.framework.EventBase.defer")
     @patch(
-        "charms.mysql.v0.async_replication.MySQLAsyncReplicationReplica.returning_cluster",
+        "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.returning_cluster",
         new_callable=PropertyMock,
     )
     @patch(
-        "charms.mysql.v0.async_replication.MySQLAsyncReplicationReplica.state",
+        "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.state",
         new_callable=PropertyMock,
     )
     @patch("charm.MySQLOperatorCharm._mysql")
@@ -366,7 +366,7 @@ class TestAsyncRelation(unittest.TestCase):
 
     @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch(
-        "charms.mysql.v0.async_replication.MySQLAsyncReplicationReplica.state",
+        "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.state",
         new_callable=PropertyMock,
     )
     @patch("charm.MySQLOperatorCharm._mysql")
@@ -390,7 +390,7 @@ class TestAsyncRelation(unittest.TestCase):
 
     @patch("ops.framework.EventBase.defer")
     @patch(
-        "charms.mysql.v0.async_replication.MySQLAsyncReplicationReplica.state",
+        "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.state",
         new_callable=PropertyMock,
     )
     @patch("charm.MySQLOperatorCharm._mysql")

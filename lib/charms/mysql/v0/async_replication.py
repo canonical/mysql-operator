@@ -804,9 +804,9 @@ class MySQLAsyncReplicationConsumer(MySQLAsyncReplication):
                 logger.warning(
                     "Cluster name is the same as the primary cluster. Appending generated value"
                 )
-                self._charm.app_peer_data["cluster-name"] = (
-                    f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
-                )
+                self._charm.app_peer_data[
+                    "cluster-name"
+                ] = f"{self.cluster_name}{uuid.uuid4().hex[:4]}"
 
             self._charm.unit.status = MaintenanceStatus("Populate endpoint")
 
