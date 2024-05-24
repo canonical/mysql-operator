@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""MySQL async replication module."""
+"""MySQL cluster-set async replication module."""
 
 import enum
 import logging
@@ -57,8 +57,8 @@ LIBID = "4de21f1a022c4e2c87ac8e672ec16f6a"
 LIBAPI = 0
 LIBPATCH = 2
 
-PRIMARY_RELATION = "async-offer"
-REPLICA_RELATION = "async"
+PRIMARY_RELATION = "replication-offer"
+REPLICA_RELATION = "replication"
 
 
 class ClusterSetInstanceState(typing.NamedTuple):
@@ -132,7 +132,7 @@ class MySQLAsyncReplication(Object):
             return
         return relation.data[relation.app]
 
-    def _on_promote_standby_cluster(self, event: ActionEvent) -> None:
+    def _on_promote_to_primary(self, event: ActionEvent) -> None:
         """Promote a standby cluster to primary."""
         if not self._charm.unit.is_leader():
             event.fail("Only the leader unit can promote a standby cluster")
@@ -216,7 +216,7 @@ class MySQLAsyncReplication(Object):
                 logger.warning(
                     "Replica cluster not dissolved after relation broken by the primary cluster."
                     "\n\tThis happens when the primary cluster was removed prior to removing the async relation."
-                    "\n\tThis cluster can be promoted to primary with the `promote-standby-cluster` action."
+                    "\n\tThis cluster can be promoted to primary with the `promote-to-primary` action."
                 )
                 return
 
@@ -320,24 +320,18 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
         # Actions observed only on the primary class to avoid duplicated execution
         # promotion action since both classes are always instantiated
         self.framework.observe(
-            self._charm.on.promote_standby_cluster_action, self._on_promote_standby_cluster
+            self._charm.on.promote_to_primary_action, self._on_promote_to_primary
         )
 
-        # fence writes action
-        self.framework.observe(
-            self._charm.on.fence_writes_action, self._on_fence_unfence_writes_action
-        )
-        # unfence writes action
-        self.framework.observe(
-            self._charm.on.unfence_writes_action, self._on_fence_unfence_writes_action
-        )
         # rejoin invalidated cluster action
         self.framework.observe(
             self._charm.on.rejoin_cluster_action, self._on_rejoin_cluster_action
         )
 
         # promote offer side as primary
-        self.framework.observe(self._charm.on.setup_async_action, self._on_setup_async)
+        self.framework.observe(
+            self._charm.on.create_replication_action, self._on_create_replication
+        )
 
         self.framework.observe(
             self._charm.on[PRIMARY_RELATION].relation_created, self._on_primary_created
@@ -416,7 +410,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
         return self._charm.model.app.add_secret(content=shared_content)
 
-    def _on_setup_async(self, event: ActionEvent):
+    def _on_create_replication(self, event: ActionEvent):
         """Promote the offer side to primary on initial setup."""
         if not self._charm.app_peer_data.get("async-ready") == "true":
             event.fail("Relation created but not ready")
@@ -441,9 +435,13 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
             event.fail(f"{PRIMARY_RELATION} relation not found")
             return
 
-        self._charm.app.status = MaintenanceStatus("Setting up async replication")
+        if self.get_local_relation_data(relation).get("secret-id"):
+            event.fail("Action already run")
+            return
+
+        self._charm.app.status = MaintenanceStatus("Setting up replication")
         self._charm.unit.status = MaintenanceStatus("Sharing credentials with replica cluster")
-        logger.info("Granting secrets access to async replication relation")
+        logger.info("Granting secrets access to replication relation")
         secret = self._get_secret()
         secret_id = secret.id or ""
         secret.grant(relation)
@@ -459,6 +457,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
                 "cluster-name": self.cluster_name,
                 "mysql-version": version,
                 "cluster-set-name": self.cluster_set_name,
+                "replication-name": event.params.get("name", "default"),
             }
         )
         # reset async-ready flag set on relation created
@@ -509,7 +508,7 @@ class MySQLAsyncReplicationPrimary(MySQLAsyncReplication):
 
         # sets ok flag
         self._charm.app_peer_data["async-ready"] = "true"
-        message = "Relation created. Ready to setup async replication"
+        message = "Ready to create replication"
         self._charm.unit.status = BlockedStatus(message)
         self._charm.app.status = BlockedStatus(message)
 
@@ -698,9 +697,9 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
         if not self._charm.unit_initialized and not self.returning_cluster:
             # avoid running too early for non returning clusters
             self._charm.unit.status = BlockedStatus(
-                "Wait until unit is initialized before running setup-async on offer side"
+                "Wait until unit is initialized before running create-replication on offer side"
             )
-            self._charm.app.status = MaintenanceStatus("Setting up async replication")
+            self._charm.app.status = MaintenanceStatus("Setting up replication")
             return
         if self.returning_cluster:
             # flag set on prior async relation broken
@@ -726,7 +725,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
                 self.relation_data["user-data-found"] = "true"
                 return
 
-        self._charm.app.status = MaintenanceStatus("Setting up async replication")
+        self._charm.app.status = MaintenanceStatus("Setting up replication")
         self._charm.unit.status = WaitingStatus("Awaiting sync data from primary cluster")
 
     def _on_replica_changed(self, event):  # noqa: C901
@@ -767,7 +766,7 @@ class MySQLAsyncReplicationReplica(MySQLAsyncReplication):
 
             logger.debug("Syncing credentials from primary cluster")
             self._charm.unit.status = MaintenanceStatus("Syncing credentials")
-            self._charm.app.status = MaintenanceStatus("Setting up async replication")
+            self._charm.app.status = MaintenanceStatus("Setting up replication")
 
             try:
                 credentials = self._async_replication_credentials()

@@ -1848,7 +1848,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
             f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
         )
-        _run_mysqlsh_script.has_calls(
+        _run_mysqlsh_script.assert_has_calls(
             [
                 call("\n".join(commands)),
                 call("\n".join(commands2)),

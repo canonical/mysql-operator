@@ -41,7 +41,7 @@ provides:
   cos-agent:
     interface: cos_agent
     limit: 1
-  async-offer:
+  replication-offer:
     interface: mysql_async
     limit: 1
 
@@ -54,7 +54,7 @@ requires:
     interface: s3
     limit: 1
     optional: true
-  async:
+  replication:
     interface: mysql_async
     limit: 1
     optional: true

@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from charms.mysql.v0.async_replication import (
@@ -44,14 +44,16 @@ class TestAsyncRelation(unittest.TestCase):
         self.async_primary_relation_id = self.harness.add_relation(PRIMARY_RELATION, "db2")
 
         self.assertEqual(
-            self.async_primary.role, ClusterSetInstanceState("replica", "primary", "primary")
+            self.async_primary.role,
+            ClusterSetInstanceState("replica", "primary", "replication-offer"),
         )
         # reset cached value
         del self.async_primary.role
         _mysql.is_cluster_replica.return_value = False
         _mysql.get_member_state.return_value = (None, "secondary")
         self.assertEqual(
-            self.async_primary.role, ClusterSetInstanceState("primary", "secondary", "primary")
+            self.async_primary.role,
+            ClusterSetInstanceState("primary", "secondary", "replication-offer"),
         )
         del self.async_primary.role
 
@@ -128,20 +130,26 @@ class TestAsyncRelation(unittest.TestCase):
 
     @pytest.mark.usefixtures("with_juju_secrets")
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_primary_created(self, _mysql, _):
+    def test_create_replication(self, _mysql, _):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         _mysql.is_cluster_replica.return_value = False
         _mysql.get_mysql_version.return_value = "8.0.36-0ubuntu0.22.04.1"
+        _mysql.get_member_state.return_value = ("online", "primary")
 
         self.harness.update_relation_data(
             self.peers_relation_id, self.charm.unit.name, {"unit-initialized": "True"}
+        )
+        self.harness.update_relation_data(
+            self.peers_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
         )
 
         async_primary_relation_id = self.harness.add_relation(
             PRIMARY_RELATION, "db2", app_data={"is-replica": "true"}
         )
+
+        self.harness.run_action("create-replication")
 
         relation_data = self.harness.get_relation_data(
             async_primary_relation_id, self.charm.app.name
@@ -431,13 +439,13 @@ class TestAsyncRelation(unittest.TestCase):
 
     # actions
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_promote_standby_cluster(self, _mysql, _):
+    def test_promote_to_primary(self, _mysql, _):
         self.harness.set_leader(True)
 
         _mysql.is_cluster_replica.return_value = True
 
         self.harness.run_action(
-            "promote-standby-cluster",
+            "promote-to-primary",
             {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
         )
 
@@ -448,7 +456,7 @@ class TestAsyncRelation(unittest.TestCase):
         _mysql.reset_mock()
 
         self.harness.run_action(
-            "promote-standby-cluster",
+            "promote-to-primary",
             {
                 "cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"],
                 "force": True,
@@ -458,70 +466,6 @@ class TestAsyncRelation(unittest.TestCase):
         _mysql.promote_cluster_to_primary.assert_called_with(
             self.charm.app_peer_data["cluster-name"], True
         )
-
-    @patch("charm.MySQLOperatorCharm._on_update_status")
-    @patch("charm.MySQLOperatorCharm._mysql")
-    def test_fence_cluster(self, _mysql, _update_status, _):
-        self.harness.set_leader(True)
-        # fail on wrong cluster set name
-        with self.assertRaises(ActionFailed):
-            self.harness.run_action(
-                "fence-writes",
-                {"cluster-set-name": "incorrect-name"},
-            )
-
-        cluster_set_name = self.charm.app_peer_data["cluster-set-domain-name"]
-        _mysql.get_member_state.return_value = ("online", "primary")
-        _mysql.is_cluster_replica.return_value = True
-        # fail on replica
-        with self.assertRaises(ActionFailed):
-            self.harness.run_action(
-                "fence-writes",
-                {"cluster-set-name": cluster_set_name},
-            )
-
-        del self.async_primary.role
-        _mysql.is_cluster_replica.return_value = False
-        _mysql.is_cluster_writes_fenced.return_value = True
-        # fail on fence already fenced
-        with self.assertRaises(ActionFailed):
-            self.harness.run_action(
-                "fence-writes",
-                {"cluster-set-name": cluster_set_name},
-            )
-
-        _mysql.is_cluster_writes_fenced.return_value = False
-
-        with self.harness.hooks_disabled():
-            self.harness.add_relation(REPLICA_RELATION, "db1")
-
-        self.harness.run_action(
-            "fence-writes",
-            {"cluster-set-name": cluster_set_name},
-        )
-
-        _mysql.fence_writes.assert_called_once()
-        _update_status.assert_called_once()
-
-    @patch("charm.MySQLOperatorCharm._on_update_status")
-    @patch("charm.MySQLOperatorCharm._mysql")
-    def test_unfence_cluster(self, _mysql, _update_status, _):
-        self.harness.set_leader(True)
-
-        _mysql.is_cluster_replica.return_value = False
-        _mysql.get_member_state.return_value = ("online", "primary")
-        _mysql.is_cluster_writes_fenced.return_value = True
-
-        with self.harness.hooks_disabled():
-            self.harness.add_relation(REPLICA_RELATION, "db1")
-
-        self.harness.run_action(
-            "unfence-writes",
-            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
-        )
-
-        _mysql.unfence_writes.assert_called_once()
-        _update_status.assert_called_once()
 
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_rejoin_cluster_action(self, _mysql, _):
