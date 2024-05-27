@@ -9,6 +9,7 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import typing
 from typing import Dict, List, Optional, Tuple
 
 import jinja2
@@ -26,7 +27,6 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v2 import snap
-from ops.charm import CharmBase
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
@@ -52,6 +52,9 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
@@ -103,7 +106,7 @@ class MySQL(MySQLBase):
         monitoring_password: str,
         backups_user: str,
         backups_password: str,
-        charm: CharmBase,
+        charm: "MySQLOperatorCharm",
     ):
         """Initialize the MySQL class.
 
@@ -233,6 +236,16 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
+    @override
+    def set_cluster_primary(self, new_primary_address: str) -> None:
+        """Set the primary instance of the cluster.
+
+        Args:
+            new_primary_address: the address of the new primary instance
+        """
+        super().set_cluster_primary(new_primary_address)
+        self.charm.database_relation._update_endpoints_all_relations(None)
+
     def write_mysqld_config(self, profile: str, memory_limit: Optional[int]) -> None:
         """Create custom mysql config file.
 
@@ -356,11 +369,11 @@ class MySQL(MySQLBase):
                 except MySQLServiceNotRunningError:
                     raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
-    @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
+    @retry(reraise=True, stop=stop_after_delay(300), wait=wait_fixed(5))
     def wait_until_mysql_connection(self, check_port: bool = True) -> None:
         """Wait until a connection to MySQL has been obtained.
 
-        Retry every 5 seconds for 120 seconds if there is an issue obtaining a connection.
+        Retry every 5 seconds for 300 seconds if there is an issue obtaining a connection.
         """
         logger.debug("Waiting for MySQL connection")
 

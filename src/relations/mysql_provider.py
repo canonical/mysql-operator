@@ -20,7 +20,7 @@ from charms.mysql.v0.mysql import (
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
 from ops.framework import Object
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, Relation
 
 from constants import DB_RELATION_NAME, PASSWORD_LENGTH, PEER
 from utils import generate_random_password
@@ -55,14 +55,19 @@ class MySQLProvider(Object):
         self.framework.observe(self.charm.on.leader_elected, self._update_endpoints_all_relations)
         self.framework.observe(self.charm.on.update_status, self._update_endpoints_all_relations)
 
+    @property
+    def active_relations(self) -> list[Relation]:
+        """Return the active relations."""
+        relation_data = self.database.fetch_relation_data()
+        return [
+            rel
+            for rel in self.model.relations[DB_RELATION_NAME]
+            if rel.id in relation_data  # rel.id in relation data after on_database_requested
+        ]
+
     def _update_endpoints_all_relations(self, _):
         """Update endpoints for all relations."""
         if not self.charm.unit.is_leader():
-            return
-        # get all relations involving the database relation
-        relations = list(self.model.relations[DB_RELATION_NAME])
-        # check if there are relations in place
-        if len(relations) == 0:
             return
 
         if not self.charm.cluster_initialized or not self.charm.unit_peer_data.get(
@@ -71,13 +76,9 @@ class MySQLProvider(Object):
             logger.debug("Waiting cluster/unit to be initialized")
             return
 
-        relation_data = self.database.fetch_relation_data()
         # for all relations update the read-only-endpoints
-        for relation in relations:
+        for relation in self.active_relations:
             # check if the on_database_requested has been executed
-            if relation.id not in relation_data:
-                logger.debug("On database requested not happened yet! Nothing to do in this case")
-                continue
             self._update_endpoints(relation.id, relation.app.name)
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
@@ -207,6 +208,7 @@ class MySQLProvider(Object):
         # get base relation data
         relation_id = event.relation.id
         db_name = event.database
+        assert db_name, "Database name must be provided"
         extra_user_roles = []
         if event.extra_user_roles:
             extra_user_roles = event.extra_user_roles.split(",")

@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import patch
 
+from charms.mysql.v0.mysql import RouterUser
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
@@ -83,3 +84,23 @@ class TestDatabase(unittest.TestCase):
         _create_application_database_and_scoped_user.assert_called_once()
         _get_cluster_endpoints.assert_called_once()
         _get_mysql_version.assert_called_once()
+
+    @patch("relations.mysql_provider.MySQLProvider._on_database_broken")
+    @patch("mysql_vm_helpers.MySQL.remove_router_from_cluster_metadata")
+    @patch("mysql_vm_helpers.MySQL.delete_user")
+    @patch("mysql_vm_helpers.MySQL.get_mysql_router_users_for_unit")
+    def test_relation_departed(
+        self,
+        _get_users,
+        _delete_user,
+        _remove_router,
+        _on_database_broken,
+    ):
+        self.harness.set_leader(True)
+
+        router_user = RouterUser(username="user1", router_id="router_id")
+        _get_users.return_value = [router_user]
+
+        self.harness.remove_relation(self.database_relation_id)
+        _delete_user.assert_called_once_with("user1")
+        _remove_router.assert_called_once_with("router_id")
