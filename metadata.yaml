@@ -57,6 +57,9 @@ requires:
     interface: async_replication
     limit: 1
     optional: true
+  tracing:
+    interface: tracing
+    limit: 1
 
 storage:
   database:
