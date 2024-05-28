@@ -86,6 +86,7 @@ from constants import (
     S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
+    TRACING_RELATION_NAME,
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
@@ -189,14 +190,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.async_primary = MySQLAsyncReplicationPrimary(self)
         self.async_replica = MySQLAsyncReplicationReplica(self)
 
-        self.tracing = TracingEndpointRequirer(self, relation_name="tracing")
-
-    @property
-    def tracing_endpoint(self) -> Optional[str]:
-        """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.otlp_http_endpoint()
-        return None
+        self.tracing = TracingEndpointRequirer(self, relation_name=TRACING_RELATION_NAME)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -547,6 +541,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     # =======================
     #  Helpers
     # =======================
+
+    @property
+    def tracing_endpoint(self) -> Optional[str]:
+        """Otlp http endpoint for charm instrumentation."""
+        if self.tracing.is_ready():
+            return self.tracing.otlp_http_endpoint()
+        return None
 
     @property
     def _mysql(self):
