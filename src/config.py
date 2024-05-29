@@ -10,7 +10,7 @@ import re
 from typing import Optional
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
-from charms.mysql.v0.mysql import MIN_MAX_CONNECTIONS
+from charms.mysql.v0.mysql import MAX_CONNECTIONS_FLOOR
 from pydantic import validator
 
 logger = logging.getLogger(__name__)
@@ -110,9 +110,9 @@ class CharmConfig(BaseConfigModel):
     @classmethod
     def experimental_max_connections_validator(cls, value: int) -> Optional[int]:
         """Check experimental max connections."""
-        if value < MIN_MAX_CONNECTIONS:
+        if value < MAX_CONNECTIONS_FLOOR:
             raise ValueError(
-                f"experimental-max-connections must be greater than {MIN_MAX_CONNECTIONS}"
+                f"experimental-max-connections must be greater than {MAX_CONNECTIONS_FLOOR}"
             )
 
         return value
