@@ -1,0 +1,175 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:331 Deploying a new mysql cluster
+[32mINFO    [0m juju.model:model.py:2069 Deploying local:jammy/mysql-1
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [executing] waiting: Waiting to start MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+[33mWARNING [0m juju.model:model.py:1558 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:351 Rotating all mysql credentials
+[32mINFO    [0m integration.test_backups:test_backups.py:371 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups:test_backups.py:387 Restoring backup with id 2024-05-31T01:34:41Z
+[32mINFO    [0m integration.test_backups:test_backups.py:394 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:407 Inserting value after restore from aws
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:415 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:371 Syncing credentials for gcp
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [executing] active: 
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:387 Restoring backup with id 2024-05-31T01:35:22Z
+[32mINFO    [0m integration.test_backups:test_backups.py:394 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:407 Inserting value after restore from gcp
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:415 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:371 Syncing credentials for ceph
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [executing] active: 
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:387 Restoring backup with id 2024-05-31T01:35:54Z
+[32mINFO    [0m integration.test_backups:test_backups.py:394 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backups:test_backups.py:407 Inserting value after restore from ceph
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:415 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backups:test_backups.py:425 Scaling mysql application to 3 units
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: 
+  another-mysql/1 [allocating] waiting: waiting for machine
+  another-mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: 
+  another-mysql/1 [allocating] waiting: waiting for machine
+  another-mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/1 [allocating] waiting: waiting for machine
+  another-mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/1 [executing] maintenance: installing charm software
+  another-mysql/2 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [executing] active: Primary
+  another-mysql/1 [executing] maintenance: Setting up cluster node
+  another-mysql/2 [executing] waiting: Waiting to start MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  another-mysql/1 [executing] waiting: waiting to get cluster primary from peers
+  another-mysql/2 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  another-mysql/1 [executing] maintenance: joining the cluster
+  another-mysql/2 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:428 Ensuring inserted values before backup and after restore exist on all units
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  01:53:21Z
+
+App            Version          Status  Scale  Charm          Channel        Rev  Exposed  Message
+another-mysql  8.0.36-0ubun...  active      3  mysql                           1  no       
+mysql                           active      0  mysql                           0  no       
+s3-integrator                   active      1  s3-integrator  latest/stable   17  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports           Message
+another-mysql/0*  active    idle   6        10.148.35.106   3306,33060/tcp  Primary
+another-mysql/1   active    idle   7        10.148.35.101   3306,33060/tcp  
+another-mysql/2   active    idle   8        10.148.35.119   3306,33060/tcp  
+s3-integrator/0*  active    idle   3        10.148.35.137                   
+
+Machine  State    Address        Inst id        Base          AZ  Message
+3        started  10.148.35.137  juju-d86178-3  ubuntu@22.04      Running
+6        started  10.148.35.106  juju-d86178-6  ubuntu@22.04      Running
+7        started  10.148.35.101  juju-d86178-7  ubuntu@22.04      Running
+8        started  10.148.35.119  juju-d86178-8  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-2: 01:30:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:30:13 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:30:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:30:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:30:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:23 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-1: 01:30:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:30:24 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:30:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:30:25 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:33:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:50 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-s3-integrator-0: 01:33:50 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:41:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:41:02 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-5: 01:41:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-4: 01:41:03 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:41:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:14 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-3: 01:41:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 01:45:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:45:01 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-6: 01:45:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-mysql-0: 01:45:01 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-7: 01:51:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:51:10 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-7: 01:51:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-mysql-1: 01:51:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-8: 01:51:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:51:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 01:51:17 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-another-mysql-2: 01:51:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
+[32mINFO    [0m integration.test_backups:test_backups.py:102 Cleaning backups from cloud buckets
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x7fe8df6c4310>
+transport: <_SelectorSocketTransport closing fd=10>
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 924, in write
+    n = self._sock.send(data)
+OSError: [Errno 9] Bad file descriptor
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/asyncio/sslproto.py", line 690, in _process_write_backlog
+    self._transport.write(chunk)
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 930, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 725, in _fatal_error
+    self._force_close(exc)
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 737, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 753, in call_soon
+    self._check_closed()
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task-47' coro=<WebSocketCommonProtocol.transfer_data() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/protocol.py:959> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[Task.task_wakeup(), <2 more>, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task-49' coro=<WebSocketCommonProtocol.close_connection() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/protocol.py:1302> wait_for=<Task pending name='Task-47' coro=<WebSocketCommonProtocol.transfer_data() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/protocol.py:959> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[Task.task_wakeup(), <2 more>, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task-48' coro=<WebSocketCommonProtocol.keepalive_ping() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/protocol.py:1250> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task_Pinger' coro=<Connection._pinger() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:619> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task_Receiver' coro=<Connection._receiver() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:570> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task-12950' coro=<WebSocketCommonProtocol.recv() running at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/protocol.py:551> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[create_task_with_handler.<locals>._task_result_exp_handler(task_name='tmp', logger=<Logger juju....ection (INFO)>)() at /home/runner/work/mysql-operator/mysql-operator/.tox/integration/lib/python3.10/site-packages/juju/jasyncio.py:39, <1 more>, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task was destroyed but it is pending!
+task: <Task pending name='Task-12951' coro=<Event.wait() running at /usr/lib/python3.10/asyncio/locks.py:214> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720, gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
