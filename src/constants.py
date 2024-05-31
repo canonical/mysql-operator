@@ -57,3 +57,6 @@ SECRET_KEY_FALLBACKS = {
     "certificate-authority": "ca",
 }
 TRACING_RELATION_NAME = "tracing"
+TRACING_CERTIFICATES_RELATION_NAME = "tracing-certificates"
+TEMPO_SERVER_CERT_KEY = "tempo-server-cert"
+TRACING_SERVER_CA_CERT_PATH = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/run/tracing-ca.crt"
