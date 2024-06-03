@@ -1,0 +1,48 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:61 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.1.7    unsupported  02:05:35Z
+
+App             Version          Status   Scale  Charm           Channel        Rev  Exposed  Message
+db1             8.0.36-0ubun...  active       3  mysql                            0  no       
+mysql-router    8.0.36-0ubun...  waiting      1  mysql-router    dpe/edge       196  no       Waiting for db1 app on backend-database endpoint
+mysql-test-app  0.0.2            active       1  mysql-test-app  latest/stable   37  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+db1/0*             active    idle   0        10.35.112.77    3306,33060/tcp  Primary
+db1/1              active    idle   1        10.35.112.102   3306,33060/tcp  
+db1/2              active    idle   2        10.35.112.48    3306,33060/tcp  
+mysql-test-app/0*  active    idle   3        10.35.112.161                   
+  mysql-router/0*  waiting   idle            10.35.112.161                   
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.35.112.77   juju-c7dcc6-0  ubuntu@22.04      Running
+1        started  10.35.112.102  juju-c7dcc6-1  ubuntu@22.04      Running
+2        started  10.35.112.48   juju-c7dcc6-2  ubuntu@22.04      Running
+3        started  10.35.112.161  juju-c7dcc6-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint       Interface          Role
+db1    db1          mysql  0    1/1        async-primary  async_replication  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:51:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:51:21 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:51:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 01:51:22 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:51:32 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:51:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:51:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:51:32 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:51:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:51:38 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:51:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:51:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:58:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:58:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:58:51 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-0: 01:58:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:58:55 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 127
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
