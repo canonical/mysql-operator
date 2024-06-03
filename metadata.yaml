@@ -60,6 +60,7 @@ requires:
   tracing:
     interface: tracing
     limit: 1
+    optional: true
 
 storage:
   database:
