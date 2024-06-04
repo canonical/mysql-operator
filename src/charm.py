@@ -167,8 +167,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
 
         self.mysql_logs = MySQLLogs(self)
-        self.async_primary = MySQLAsyncReplicationOffer(self)
-        self.async_replica = MySQLAsyncReplicationConsumer(self)
+        self.replication_offer = MySQLAsyncReplicationOffer(self)
+        self.replication_consumer = MySQLAsyncReplicationConsumer(self)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -448,7 +448,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.debug("skip status update while upgrading")
             return
 
-        if not (self.async_primary.idle and self.async_replica.idle):
+        if not (self.replication_offer.idle and self.replication_consumer.idle):
             # avoid changing status while in async replication
             logger.debug("skip status update while setting up async replication")
             return
