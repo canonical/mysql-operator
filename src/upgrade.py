@@ -183,6 +183,11 @@ class MySQLVMUpgrade(DataUpgrade):
                 return
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
+            # override config, avoid restart
+            self.charm._mysql.write_mysqld_config(
+                profile=self.charm.config.profile,
+                memory_limit=self.charm.config.profile_limit_memory,
+            )
             self.charm.unit.status = MaintenanceStatus("starting services...")
             self.charm._mysql.start_mysqld()
             self.charm._mysql.setup_logrotate_and_cron()
