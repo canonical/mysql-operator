@@ -65,10 +65,10 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.49
+          - agent: 2.9.49  # renovate: juju-agent-pin-minor
             libjuju: ^2
             allure: false
-          - agent: 3.1.8
+          - agent: 3.1.8  # renovate: juju-agent-pin-minor
             allure: true
     name: Integration test charm | ${{ matrix.juju.agent }}
     needs:
