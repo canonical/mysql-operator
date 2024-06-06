@@ -127,7 +127,7 @@ BYTES_1MB = 1000000  # 1 megabyte
 BYTES_1MiB = 1048576  # 1 mebibyte
 RECOVERY_CHECK_TIME = 10  # seconds
 GET_MEMBER_STATE_TIME = 10  # seconds
-MAX_CONNECTIONS_FLOOR = 100
+MAX_CONNECTIONS_FLOOR = 10
 MIM_MEM_BUFFERS = 200 * BYTES_1MiB
 
 SECRET_INTERNAL_LABEL = "secret-id"
@@ -861,12 +861,13 @@ class MySQLBase(ABC):
 
         Returns: a tuple with mysqld ini file string content and a the config dict
         """
+        max_connections = None
         performance_schema_instrument = ""
         if profile == "testing":
             innodb_buffer_pool_size = 20 * BYTES_1MiB
             innodb_buffer_pool_chunk_size = 1 * BYTES_1MiB
             group_replication_message_cache_size = 128 * BYTES_1MiB
-            max_connections = MAX_CONNECTIONS_FLOOR
+            max_connections = 100
             performance_schema_instrument = "'memory/%=OFF'"
         else:
             available_memory = self.get_available_memory()
@@ -877,13 +878,13 @@ class MySQLBase(ABC):
 
             if experimental_max_connections:
                 # when set, we use the experimental max connections
-                # and it takes precedence over buffers usage, ensuring minimal memory buffers
-                max_safe_connections = self.get_max_connections(available_memory - MIM_MEM_BUFFERS)
-
-                max_connections = max(
-                    MAX_CONNECTIONS_FLOOR, min(experimental_max_connections, max_safe_connections)
+                # and it takes precedence over buffers usage
+                max_connections = experimental_max_connections
+                # we reserve 200MiB for memory buffers
+                # even when there's some overcommittment
+                available_memory = max(
+                    available_memory - max_connections * 12 * BYTES_1MiB, 200 * BYTES_1MiB
                 )
-                available_memory -= max_connections * 12 * BYTES_1MiB
 
             (
                 innodb_buffer_pool_size,
@@ -896,7 +897,7 @@ class MySQLBase(ABC):
             available_memory -= innodb_buffer_pool_size + (
                 group_replication_message_cache_size or 0
             )
-            if not experimental_max_connections:
+            if not max_connections:
                 max_connections = max(
                     self.get_max_connections(available_memory), MAX_CONNECTIONS_FLOOR
                 )

@@ -8,7 +8,6 @@ from unittest.mock import call, patch
 
 import tenacity
 from charms.mysql.v0.mysql import (
-    MAX_CONNECTIONS_FLOOR,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLBase,
@@ -1860,21 +1859,12 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(rendered_config["max_connections"], "500")
 
-        # max_connections set, but constrained by memory
+        # max_connections set,constrained by memory, but enforced
         _, rendered_config = self.mysql.render_mysqld_configuration(
             profile="production", experimental_max_connections=800, memory_limit=memory_limit
         )
 
-        self.assertEqual(rendered_config["max_connections"], "786")
-
-        # 1GB, max connections constrained to minimum value
-        memory_limit = 1010670080
-        # max_connections set
-        _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=500, memory_limit=memory_limit
-        )
-
-        self.assertEqual(rendered_config["max_connections"], str(MAX_CONNECTIONS_FLOOR))
+        self.assertEqual(rendered_config["max_connections"], "800")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_create_replica_cluster(self, _run_mysqlsh_script):

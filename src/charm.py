@@ -806,7 +806,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             restart_states = {
                 self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
             }
-            if restart_states != {"release"}:
+            if restart_states == {"unset"}:
+                logger.debug("Restarting leader")
+            elif restart_states != {"release"}:
                 # Wait other units restart first to minimize primary switchover
                 logger.debug("Primary is waiting for other units to restart")
                 event.defer()
@@ -814,7 +816,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self.unit.status = MaintenanceStatus("restarting MySQL")
         self._mysql.restart_mysqld()
-        self.unit.status = ActiveStatus(self.active_status_message)
+        sleep(10)
+        self._on_update_status(None)
 
 
 if __name__ == "__main__":
