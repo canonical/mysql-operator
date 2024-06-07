@@ -1,0 +1,35 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:141 Deploying router and application
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-router-198
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-test-app-37
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:158 Relate app and router
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:163 Relate router and db
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [executing] maintenance: Installing snap
+  mysql-test-app/0 [idle] waiting: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [executing] waiting: 
+  mysql-test-app/0 [idle] waiting: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [idle] active: 
+  mysql-test-app/0 [idle] active:
