@@ -1805,6 +1805,67 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.mysql.hold_if_recovering()
         self.assertEqual(mock_get_member_state.call_count, 1)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_available_memory")
+    def test_render_mysqld_configuration(self, _get_available_memory):
+        """Test render_mysqld_configuration."""
+        # 32GB of memory, production profile
+        _get_available_memory.return_value = 32341442560
+
+        expected_config = {
+            "bind-address": "0.0.0.0",
+            "mysqlx-bind-address": "0.0.0.0",
+            "report_host": "127.0.0.1",
+            "max_connections": "724",
+            "innodb_buffer_pool_size": "23219666944",
+            "log_error_services": "log_filter_internal;log_sink_internal",
+            "log_error": "/var/log/mysql/error.log",
+            "general_log": "ON",
+            "general_log_file": "/var/log/mysql/general.log",
+            "slow_query_log_file": "/var/log/mysql/slowquery.log",
+            "innodb_buffer_pool_chunk_size": "2902458368",
+        }
+
+        _, rendered_config = self.mysql.render_mysqld_configuration(profile="production")
+        self.assertEqual(rendered_config, expected_config)
+
+        # < 2GB of memory, production profile
+        memory_limit = 2147483600
+
+        expected_config["innodb_buffer_pool_size"] = "536870912"
+        del expected_config["innodb_buffer_pool_chunk_size"]
+        expected_config["performance-schema-instrument"] = "'memory/%=OFF'"
+        expected_config["max_connections"] = "127"
+
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", memory_limit=memory_limit
+        )
+        self.assertEqual(rendered_config, expected_config)
+
+        # testing profile
+        expected_config["innodb_buffer_pool_size"] = "20971520"
+        expected_config["innodb_buffer_pool_chunk_size"] = "1048576"
+        expected_config["loose-group_replication_message_cache_size"] = "134217728"
+        expected_config["max_connections"] = "100"
+
+        _, rendered_config = self.mysql.render_mysqld_configuration(profile="testing")
+        self.assertEqual(rendered_config, expected_config)
+
+        # 10GB, max connections set by value
+        memory_limit = 10106700800
+        # max_connections set
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", experimental_max_connections=500, memory_limit=memory_limit
+        )
+
+        self.assertEqual(rendered_config["max_connections"], "500")
+
+        # max_connections set,constrained by memory, but enforced
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", experimental_max_connections=800, memory_limit=memory_limit
+        )
+
+        self.assertEqual(rendered_config["max_connections"], "800")
+
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_create_replica_cluster(self, _run_mysqlsh_script):
         """Test create_replica_cluster."""

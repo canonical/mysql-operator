@@ -233,12 +233,18 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(self, profile: str, memory_limit: Optional[int]) -> None:
+    def write_mysqld_config(
+        self,
+        profile: str,
+        memory_limit: Optional[int],
+        experimental_max_connections: Optional[int] = None,
+    ) -> None:
         """Create custom mysql config file.
 
         Args:
             profile: profile to use for the mysql config
             memory_limit: memory limit to use for the mysql config in MB
+            experimental_max_connections: experimental max connections to use for the mysql config
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
@@ -252,6 +258,7 @@ class MySQL(MySQLBase):
                 profile=profile,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
+                experimental_max_connections=experimental_max_connections,
             )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
