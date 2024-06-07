@@ -41,8 +41,9 @@ provides:
   cos-agent:
     interface: cos_agent
     limit: 1
-  async-primary:
-    interface: async_replication
+  replication-offer:
+    interface: mysql_async
+    limit: 1
 
 requires:
   certificates:
@@ -53,8 +54,8 @@ requires:
     interface: s3
     limit: 1
     optional: true
-  async-replica:
-    interface: async_replication
+  replication:
+    interface: mysql_async
     limit: 1
     optional: true
   tracing:
@@ -70,3 +71,10 @@ storage:
 
 assumes:
   - juju
+  - any-of:
+      - all-of:
+          - juju >= 2.9.44
+          - juju < 3
+      - all-of:
+          - juju >= 3.4.3
+          - juju < 4

@@ -16,8 +16,8 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.mysql.v0.async_replication import (
-    MySQLAsyncReplicationPrimary,
-    MySQLAsyncReplicationReplica,
+    MySQLAsyncReplicationConsumer,
+    MySQLAsyncReplicationOffer,
 )
 from charms.mysql.v0.backups import MySQLBackups
 from charms.mysql.v0.mysql import (
@@ -121,8 +121,8 @@ class MySQLDNotRestartedError(Error):
         COSAgentProvider,
         DBRouterRelation,
         MySQL,
-        MySQLAsyncReplicationPrimary,
-        MySQLAsyncReplicationReplica,
+        MySQLAsyncReplicationConsumer,
+        MySQLAsyncReplicationOffer,
         MySQLBackups,
         MySQLConfig,
         MySQLLogs,
@@ -193,8 +193,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
 
         self.mysql_logs = MySQLLogs(self)
-        self.async_primary = MySQLAsyncReplicationPrimary(self)
-        self.async_replica = MySQLAsyncReplicationReplica(self)
+        self.replication_offer = MySQLAsyncReplicationOffer(self)
+        self.replication_consumer = MySQLAsyncReplicationConsumer(self)
 
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
@@ -476,7 +476,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.debug("skip status update while upgrading")
             return
 
-        if not (self.async_primary.idle and self.async_replica.idle):
+        if not (self.replication_offer.idle and self.replication_consumer.idle):
             # avoid changing status while in async replication
             logger.debug("skip status update while setting up async replication")
             return
