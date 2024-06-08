@@ -39,6 +39,8 @@ from charms.mysql.v0.mysql import (
 )
 from charms.mysql.v0.tls import MySQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
+from charms.tempo_k8s.v1.charm_tracing import trace_charm
+from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -84,6 +86,8 @@ from constants import (
     S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
+    TRACING_PROTOCOL,
+    TRACING_RELATION_NAME,
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
@@ -111,6 +115,27 @@ class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
 
 
+@trace_charm(
+    tracing_endpoint="tracing_endpoint",
+    extra_types=(
+        COSAgentProvider,
+        DBRouterRelation,
+        MySQL,
+        MySQLAsyncReplicationConsumer,
+        MySQLAsyncReplicationOffer,
+        MySQLBackups,
+        MySQLConfig,
+        MySQLLogs,
+        MySQLMachineHostnameResolution,
+        MySQLProvider,
+        MySQLRelation,
+        MySQLTLS,
+        MySQLVMUpgrade,
+        RollingOpsManager,
+        S3Requirer,
+        SharedDBRelation,
+    ),
+)
 class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     """Operator framework charm for MySQL."""
 
@@ -164,11 +189,16 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             relation_name="upgrade",
             substrate="vm",
         )
+
         self.restart = RollingOpsManager(self, relation="restart", callback=self._restart)
 
         self.mysql_logs = MySQLLogs(self)
         self.replication_offer = MySQLAsyncReplicationOffer(self)
         self.replication_consumer = MySQLAsyncReplicationConsumer(self)
+
+        self.tracing = TracingEndpointRequirer(
+            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
+        )
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -520,6 +550,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     # =======================
     #  Helpers
     # =======================
+
+    @property
+    def tracing_endpoint(self) -> Optional[str]:
+        """Otlp http endpoint for charm instrumentation."""
+        if self.tracing.is_ready():
+            return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
     @property
     def _mysql(self):
