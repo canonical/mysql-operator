@@ -336,11 +336,18 @@ async def test_remove_relation_and_relate(
         timeout=10 * MINUTE,
     )
 
-    logger.info("Waiting for the primary to settle")
-    await first_model.wait_for_idle(
-        apps=[MYSQL_APP1],
-        status="active",
-        timeout=10 * MINUTE,
+    logger.info("Waiting for the applications to settle")
+    await gather(
+        first_model.wait_for_idle(
+            apps=[MYSQL_APP1],
+            status="active",
+            timeout=10 * MINUTE,
+        ),
+        second_model.wait_for_idle(
+            apps=[MYSQL_APP2],
+            status="blocked",
+            timeout=10 * MINUTE,
+        ),
     )
 
     logger.info("Re relating the two mysql clusters")
