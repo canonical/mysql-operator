@@ -1,0 +1,36 @@
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:173 Inserting value before backup
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:182 Syncing credentials for aws
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/2 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:198 Listing existing backup ids
+[32mINFO    [0m integration.test_backups:test_backups.py:205 Creating backup
+[32mINFO    [0m integration.test_backups:test_backups.py:211 Listing backup ids post backup
+[32mINFO    [0m integration.test_backups:test_backups.py:182 Syncing credentials for gcp
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/2 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:198 Listing existing backup ids
+[32mINFO    [0m integration.test_backups:test_backups.py:205 Creating backup
+[32mINFO    [0m integration.test_backups:test_backups.py:211 Listing backup ids post backup
+[32mINFO    [0m integration.test_backups:test_backups.py:182 Syncing credentials for ceph
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/2 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:198 Listing existing backup ids
+[32mINFO    [0m integration.test_backups:test_backups.py:205 Creating backup
+[32mINFO    [0m integration.test_backups:test_backups.py:211 Listing backup ids post backup
+[32mINFO    [0m integration.test_backups:test_backups.py:222 Inserting value after backup
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
