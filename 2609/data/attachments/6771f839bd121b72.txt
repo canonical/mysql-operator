@@ -1,0 +1,58 @@
+[32mINFO    [0m pytest_microceph._plugin:_plugin.py:22 Setting up microceph
+[32mINFO    [0m pytest_microceph._plugin:_plugin.py:45 Creating microceph bucket
+[32mINFO    [0m pytest_microceph._plugin:_plugin.py:52 Set up microceph
+[32mINFO    [0m pytest_operator.plugin:plugin.py:675 Connecting to existing model localhost-localhost:test on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade UserSecretsDrain received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade UserSecretsManager received from the controller
+[32mINFO    [0m juju.model:model.py:2069 Deploying local:jammy/mysql-0
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: agent initialising
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [executing] maintenance: Installing MySQL
+  mysql/2 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [executing] maintenance: Setting up cluster node
+  mysql/2 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Installing MySQL
+  mysql/1 [idle] active: Primary
+  mysql/2 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Setting up cluster node
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: joining the cluster
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.test_backups:test_backups.py:130 Rotating all mysql credentials
+[32mINFO    [0m integration.test_backups:test_backups.py:140 Deploying s3 integrator
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/s3-integrator-17
+[33mWARNING [0m juju.model:model.py:1558 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  s3-integrator/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  s3-integrator/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  s3-integrator/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  s3-integrator/0 [idle] blocked: Missing parameters: ['access-key', 'secret-key']

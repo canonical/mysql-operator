@@ -1,0 +1,86 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:61 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.3    unsupported  01:52:50Z
+
+App             Version          Status   Scale  Charm           Channel        Rev  Exposed  Message
+db1             8.0.36-0ubun...  active       3  mysql                            0  no       
+mysql-router    8.0.36-0ubun...  waiting      1  mysql-router    dpe/edge       198  no       Waiting for db1 app on backend-database endpoint
+mysql-test-app  0.0.2            active       1  mysql-test-app  latest/stable   37  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+db1/0              active    idle   0        10.87.155.127   3306,33060/tcp  
+db1/1              active    idle   1        10.87.155.89    3306,33060/tcp  
+db1/2*             active    idle   2        10.87.155.214   3306,33060/tcp  Standby
+mysql-test-app/0*  active    idle   3        10.87.155.125                   
+  mysql-router/0*  waiting   idle            10.87.155.125                   
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.87.155.127  juju-59bcd1-0  ubuntu@22.04      Running
+1        started  10.87.155.89   juju-59bcd1-1  ubuntu@22.04      Running
+2        started  10.87.155.214  juju-59bcd1-2  ubuntu@22.04      Running
+3        started  10.87.155.125  juju-59bcd1-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-2: 01:38:17 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:38:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:38:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:38:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:38:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:38:38 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-db1-0: 01:38:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:40:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:38 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:40:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:40:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:46:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:00 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-3: 01:46:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:46:00 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:46:11 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 127
+unit-mysql-test-app-0: 01:52:48 ERROR unit.mysql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/mysql/connector/connection_cext.py", line 291, in _open_connection
+    self._cmysql.connect(**cnx_kwargs)
+_mysql_connector.MySQLInterfaceError: Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/run/mysqlrouter/mysql.sock' (2)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/./src/charm.py", line 446, in <module>
+    main(MySQLTestApplication)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/main.py", line 544, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/main.py", line 520, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/main.py", line 509, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/framework.py", line 350, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/framework.py", line 849, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/ops/framework.py", line 939, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/./src/charm.py", line 297, in _on_clear_continuous_writes_action
+    with MySQLConnector(self._database_config) as cursor:
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/src/connector.py", line 42, in __enter__
+    self.connection = mysql.connector.connect(**self.config)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/mysql/connector/pooling.py", line 293, in connect
+    return CMySQLConnection(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/mysql/connector/connection_cext.py", line 120, in __init__
+    self.connect(**kwargs)
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/mysql/connector/abstracts.py", line 1181, in connect
+    self._open_connection()
+  File "/var/lib/juju/agents/unit-mysql-test-app-0/charm/venv/mysql/connector/connection_cext.py", line 296, in _open_connection
+    raise get_mysql_exception(
+mysql.connector.errors.InterfaceError: 2002 (HY000): Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/run/mysqlrouter/mysql.sock' (2)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
