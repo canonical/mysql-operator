@@ -1,0 +1,24 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:175 Deploying router and application
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-router-198
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-test-app-37
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:192 Relate app and router
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:197 Relate router and db
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router (not enough units yet - 0/1)
+  mysql-test-app/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [executing] maintenance: Installing snap
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [executing] active: 
+  mysql-test-app/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-router/0 [idle] active:
