@@ -158,10 +158,6 @@ class MySQLAsyncReplication(Object):
             event.fail("Only a standby cluster can be promoted")
             return
 
-        if event.params.get("cluster-set-name") != self.cluster_set_name:
-            event.fail("Invalid/empty cluster set name")
-            return
-
         # promote cluster to primary
         cluster_name = self.cluster_name
         force = event.params.get("force", False)
