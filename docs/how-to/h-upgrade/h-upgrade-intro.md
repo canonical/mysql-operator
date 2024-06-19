@@ -15,3 +15,5 @@ In-place minor upgrade:
 
 * [Minor rollback](/t/11749), e.g. MySQL 8.0.34 -> MySQL 8.0.33<br/>
 (including charm revision return 43 -> 42).
+
+For the new charm revision [depending on the new Juju version](/t/11742) (due to [Juju Secrets](https://juju.is/docs/juju/secret), etc): read [the explanation](/t/14325) and follow [how-to](/t/14328).
