@@ -172,7 +172,7 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
         MYSQL_ROUTER_APP_NAME,
         application_name=MYSQL_ROUTER_APP_NAME,
         series="jammy",
-        channel="dpe/edge",
+        channel="dpe/edge/dpe4643",  # TODO: Remove once router is published
         num_units=1,
         trust=True,
     )
