@@ -5,6 +5,7 @@
 """Charmed Machine Operator for MySQL."""
 
 import logging
+import pathlib
 import random
 import socket
 import subprocess
@@ -38,9 +39,10 @@ from charms.mysql.v0.mysql import (
     MySQLSetClusterPrimaryError,
 )
 from charms.mysql.v0.tls import MySQLTLS
+from charms.observability_libs.v1.cert_handler import CertHandler
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer, charm_tracing_config
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -86,8 +88,11 @@ from constants import (
     S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
+    TEMPO_SERVER_CERT_KEY,
+    TRACING_CERTIFICATES_RELATION_NAME,
     TRACING_PROTOCOL,
     TRACING_RELATION_NAME,
+    TRACING_SERVER_CA_CERT_PATH,
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
@@ -117,6 +122,7 @@ class MySQLDNotRestartedError(Error):
 
 @trace_charm(
     tracing_endpoint="tracing_endpoint",
+    server_cert="tracing_server_ca_cert",
     extra_types=(
         COSAgentProvider,
         DBRouterRelation,
@@ -198,6 +204,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
+        )
+        self.tracing_endpoint_config, self.tracing_server_ca_cert_config = charm_tracing_config(
+            self.tracing, TRACING_SERVER_CA_CERT_PATH
+        )
+
+        self.cert_handler = CertHandler(
+            self,
+            key=TEMPO_SERVER_CERT_KEY,
+            certificates_relation_name=TRACING_CERTIFICATES_RELATION_NAME,
+            sans=[socket.getfqdn()],
+        )
+        self.framework.observe(
+            self.cert_handler.on.cert_changed, self._update_tracing_server_ca_cert
         )
 
     # =======================
@@ -552,12 +571,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     # =======================
 
     @property
-    def tracing_endpoint(self) -> Optional[str]:
-        """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
-
-    @property
     def _mysql(self):
         """Returns an instance of the MySQL object."""
         return MySQL(
@@ -601,6 +614,40 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def restart_peers(self) -> Optional[ops.model.Relation]:
         """Retrieve the peer relation."""
         return self.model.get_relation("restart")
+
+    @property
+    def tracing_endpoint(self) -> Optional[str]:
+        """The tracing endpoint if tracing is ready."""
+        return self.tracing_endpoint_config
+
+    @property
+    def tracing_server_ca_cert(self) -> Optional[str]:
+        """The tracing server CA cert if such a CA cert exists."""
+        return self.tracing_server_ca_cert_config
+
+    @property
+    def tracing_tls_enabled(self) -> bool:
+        """Whether tracing TLS is enabled and certs are found."""
+        return (
+            self.cert_handler.enabled
+            and (self.cert_handler.server_cert is not None)
+            and (self.cert_handler.private_key is not None)
+            and (self.cert_handler.ca_cert is not None)
+        )
+
+    def _update_tracing_server_ca_cert(self, _) -> None:
+        """Retrieve and store tracing CA cert if TLS is enabled."""
+        tempo_ca_cert_path = pathlib.Path(TRACING_SERVER_CA_CERT_PATH)
+        if not self.tracing_tls_enabled:
+            tempo_ca_cert_path.unlink(missing_ok=True)
+            return
+
+        if tempo_ca_cert_path.exists():
+            return
+
+        tempo_ca_cert_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.cert_handler.ca_cert:
+            tempo_ca_cert_path.write_text(self.cert_handler.ca_cert)
 
     def is_unit_busy(self) -> bool:
         """Returns whether the unit is in blocked state and should not run any operations."""
