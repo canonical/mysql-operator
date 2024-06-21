@@ -213,6 +213,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self,
             key=TEMPO_SERVER_CERT_KEY,
             certificates_relation_name=TRACING_CERTIFICATES_RELATION_NAME,
+            peer_relation_name=PEER,
             sans=[socket.getfqdn()],
         )
         self.framework.observe(
