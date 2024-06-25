@@ -747,21 +747,24 @@ Juju Version: 0.0.0
         event.fail.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
     @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore(self, _stop_mysqld, _kill_client_sessions):
+    def test_pre_restore(self, _stop_mysqld, _kill_client_sessions, _mysqld_running):
         """Test _pre_restore()."""
         success, error = self.mysql_backups._pre_restore()
 
         self.assertTrue(success)
         self.assertEqual(error, "")
+        _mysqld_running.assert_called_once()
         _stop_mysqld.assert_called_once()
         _kill_client_sessions.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
     @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore_failure(self, _stop_mysqld, _):
+    def test_pre_restore_failure(self, _stop_mysqld, _kill_client_sessions, _mysqld_running):
         """Test failure of _pre_restore()."""
         _stop_mysqld.side_effect = MySQLStopMySQLDError()
 

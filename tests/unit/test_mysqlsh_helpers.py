@@ -398,16 +398,14 @@ class TestMySQL(unittest.TestCase):
         _path_exists.return_value = False
         self.assertFalse(self.mysql.is_mysqld_running())
 
-    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.snap_service_operation")
-    def test_stop_mysqld(self, _snap_service_operation, _kill_client_sessions):
+    def test_stop_mysqld(self, _snap_service_operation):
         """Test execution of stop_mysqld()."""
         self.mysql.stop_mysqld()
 
         _snap_service_operation.assert_called_once_with(
             CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop"
         )
-        _kill_client_sessions.assert_called_once()
 
     @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.snap_service_operation")

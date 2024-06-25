@@ -594,7 +594,6 @@ class MySQL(MySQLBase):
         )
 
         try:
-            self.kill_client_sessions()
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
         except (SnapServiceOperationError, MySQLKillSessionError) as e:
             raise MySQLStopMySQLDError(e.message)
