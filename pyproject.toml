@@ -11,7 +11,7 @@ authors = []
 [tool.poetry.dependencies]
 python = "^3.10"
 ops = "^2.8.0"
-tenacity = "^8.2.2"
+tenacity = "<8.4"
 boto3 = "^1.28.23"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
 pyopenssl = "^24.0.0"
