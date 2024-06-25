@@ -1094,33 +1094,33 @@ class TestMySQLBase(unittest.TestCase):
         _expected_tmp_dir_commands = (
             "mktemp --directory /tmp/base/directory/xtra_backup_XXXX".split()
         )
-        _expected_xtrabackup_commands = """
-/xtrabackup/location --defaults-file=/defaults/file.cnf
-            --defaults-group=mysqld
-            --no-version-check
-            --parallel=16
-            --user=backups
-            --password=backupspassword
-            --socket=/mysqld/socket/file.sock
-            --lock-ddl
-            --backup
-            --stream=xbstream
-            --xtrabackup-plugin-dir=/xtrabackup/plugin/dir
-            --target-dir=/tmp/base/directory/xtra_backup_ABCD
-            --no-server-version-check
-    | /xbcloud/location put
-            --curl-retriable-errors=7
-            --insecure
-            --parallel=10
-            --md5
-            --storage=S3
-            --s3-region=s3_region
-            --s3-bucket=s3_bucket
-            --s3-endpoint=s3_endpoint
-            --s3-api-version=s3_api_version
-            --s3-bucket-lookup=s3_uri_style
-            s3_directory
-""".split()
+        _expected_xtrabackup_commands = [
+            "/xtrabackup/location --defaults-file=/defaults/file.cnf",
+            "--defaults-group=mysqld",
+            "--no-version-check",
+            "--parallel=16",
+            "--user=backups",
+            "--password=backupspassword",
+            "--socket=/mysqld/socket/file.sock",
+            "--lock-ddl",
+            "--backup",
+            "--stream=xbstream",
+            "--xtrabackup-plugin-dir=/xtrabackup/plugin/dir",
+            "--target-dir=/tmp/base/directory/xtra_backup_ABCD",
+            "--no-server-version-check",
+            "| /xbcloud/location put",
+            "--curl-retriable-errors=7",
+            "--insecure",
+            "--parallel=10",
+            "--md5",
+            "--storage=S3",
+            "--s3-region=s3_region",
+            "--s3-bucket=s3_bucket",
+            "--s3-endpoint=s3_endpoint",
+            "--s3-api-version=s3_api_version",
+            "--s3-bucket-lookup=s3_uri_style",
+            "s3_directory",
+        ]
 
         self.assertEqual(
             sorted(_execute_commands.mock_calls),
@@ -1137,6 +1137,7 @@ class TestMySQLBase(unittest.TestCase):
                             "ACCESS_KEY_ID": "s3_access_key",
                             "SECRET_ACCESS_KEY": "s3_secret_key",
                         },
+                        stream_output="stderr",
                     ),
                 ]
             ),
@@ -1258,23 +1259,23 @@ class TestMySQLBase(unittest.TestCase):
         _expected_temp_dir_commands = (
             "mktemp --directory mysql/data/directory/#mysql_sst_XXXX".split()
         )
-        _expected_retrieve_backup_commands = """
-xbcloud/location get
-        --curl-retriable-errors=7
-        --parallel=10
-        --storage=S3
-        --s3-region=s3_region
-        --s3-bucket=s3_bucket
-        --s3-endpoint=s3_endpoint
-        --s3-bucket-lookup=s3_uri_style
-        --s3-api-version=s3_api_version
-        s3_path/backup-id
-    | xbstream/location
-        --decompress
-        -x
-        -C mysql/data/directory/#mysql_sst_ABCD
-        --parallel=16
-""".split()
+        _expected_retrieve_backup_commands = [
+            "xbcloud/location get",
+            "--curl-retriable-errors=7",
+            "--parallel=10",
+            "--storage=S3",
+            "--s3-region=s3_region",
+            "--s3-bucket=s3_bucket",
+            "--s3-endpoint=s3_endpoint",
+            "--s3-bucket-lookup=s3_uri_style",
+            "--s3-api-version=s3_api_version",
+            "s3_path/backup-id",
+            "| xbstream/location",
+            "--decompress",
+            "-x",
+            "-C mysql/data/directory/#mysql_sst_ABCD",
+            "--parallel=16",
+        ]
 
         self.assertEqual(
             sorted(_execute_commands.mock_calls),
@@ -1291,6 +1292,7 @@ xbcloud/location get
                         },
                         user="test-user",
                         group="test-group",
+                        stream_output="stderr",
                     ),
                 ]
             ),
