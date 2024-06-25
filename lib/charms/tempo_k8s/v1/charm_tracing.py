@@ -430,7 +430,7 @@ def trace_charm(
         For example, charm libs, relation endpoint wrappers, workload abstractions, ...
     """
 
-    def _decorator(charm_type: Type[CharmBase]):
+    def _decorator(charm_type):
         """Autoinstrument the wrapped charmbase type."""
         _autoinstrument(
             charm_type,

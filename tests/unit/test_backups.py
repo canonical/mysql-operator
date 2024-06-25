@@ -28,7 +28,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from constants import S3_INTEGRATOR_RELATION_NAME
+from lib.charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME
 
 from .helpers import patch_network_get
 

@@ -2745,7 +2745,7 @@ class MySQLBase(ABC):
         except MySQLExecError:
             logger.exception("Failed to execute commands prior to running backup")
             raise MySQLExecuteBackupCommandsError
-        except Exception as e:
+        except Exception:
             # Catch all other exceptions to prevent the database being stuck in
             # a bad state due to pre-backup operations
             logger.exception("Failed to execute commands prior to running backup")
@@ -3099,7 +3099,10 @@ class MySQLBase(ABC):
             raise MySQLTLSSetupError("Failed to set custom TLS configuration")
 
     def kill_unencrypted_sessions(self) -> None:
-        """Kill non local, non system open unencrypted connections."""
+        """Kill non local, non system open unencrypted connections.
+
+        Raises: MySQLKillSessionError if there is an issue killing the sessions.
+        """
         kill_connections_command = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             (
@@ -3119,7 +3122,10 @@ class MySQLBase(ABC):
             raise MySQLKillSessionError
 
     def kill_client_sessions(self) -> None:
-        """Kill non local, non system open unencrypted connections."""
+        """Kill non local, non system open unencrypted connections.
+
+        Raises: MySQLKillSessionError if there is an issue killing the sessions.
+        """
         kill_connections_command = (
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
             (

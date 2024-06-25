@@ -51,8 +51,6 @@ import pathlib
 import typing
 from typing import Dict, List, Optional, Tuple
 
-from ops import MaintenanceStatus
-
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
@@ -84,7 +82,7 @@ from charms.mysql.v0.s3_helpers import (
 from ops.charm import ActionEvent
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, MaintenanceStatus
 
 from constants import MYSQL_DATA_DIR
 
