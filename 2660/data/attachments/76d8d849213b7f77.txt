@@ -1,0 +1,48 @@
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/landscape-client-69
+[33mWARNING [0m juju.model:model.py:1558 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql-test-app/0 [idle] active: 
+  landscape-client/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  landscape-client/0 [executing] maintenance: Adding client PPA..
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  landscape-client/0 [executing] maintenance: Configuring landscape client..
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  landscape-client/0 [executing] maintenance: Configuring landscape client..
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.3    unsupported  01:32:11Z
+
+App               Version          Status   Scale  Charm             Channel      Rev  Exposed  Message
+landscape-client                   blocked      1  landscape-client  latest/edge   69  no       Registration failed!
+mysql             8.0.36-0ubun...  active       1  mysql                            0  no       
+mysql-test-app    0.0.2            active       1  mysql-test-app    latest/edge   38  no       Last written value=9471
+ubuntu-advantage                   active       1  ubuntu-advantage  latest/edge   79  no       Attached (esm-apps,esm-infra)
+
+Unit                   Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*      active    idle       0        10.116.205.91                   Last written value=9471
+mysql/0*               active    executing  1        10.116.205.237  3306,33060/tcp  Primary
+  landscape-client/0*  blocked   executing           10.116.205.237                  (config-changed) Registration failed!
+  ubuntu-advantage/0*  active    idle                10.116.205.237                  Attached (esm-apps,esm-infra)
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.116.205.91   juju-557383-0  ubuntu@22.04      Running
+1        started  10.116.205.237  juju-557383-1  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:28:56 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:28:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:28:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:28:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:29:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:05 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-0: 01:29:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-ubuntu-advantage-0: 01:29:30 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 1
+unit-landscape-client-0: 01:30:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-landscape-client-0: 01:30:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/jammy/landscape-client-69" for landscape-client/0: failed to download charm "ch:amd64/jammy/landscape-client-69" from API server: download request with archiveSha256 length 0 not valid
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
