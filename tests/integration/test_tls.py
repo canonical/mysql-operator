@@ -114,7 +114,7 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
 
     # Relate with TLS charm
     logger.info("Relate to TLS operator")
-    await ops_test.model.relate(app, TLS_APP_NAME)
+    await ops_test.model.relate(f"{app}:certificates", f"{TLS_APP_NAME}:certificates")
 
     # Wait for hooks start reconfiguring app
     # add as a wait since app state does not change
