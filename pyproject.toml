@@ -78,6 +78,7 @@ boto3 = "^1.28.11"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
 allure-pytest = "^2.13.2"
+allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.2.1", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 
 
 [tool.coverage.run]
