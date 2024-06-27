@@ -1,0 +1,15 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:361 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:159 Unit mysql/1 it's on machine juju-471de0-1 ✅
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:174 Cutting network for juju-471de0-1
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:193 Restoring network for juju-471de0-1
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:208 Waiting for mysql/1 to enter maintenance
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:212 Waiting for mysql/1 to enter active
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:361 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:475 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
