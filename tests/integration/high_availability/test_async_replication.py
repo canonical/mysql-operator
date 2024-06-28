@@ -4,6 +4,7 @@
 
 
 import logging
+import subprocess
 from asyncio import gather
 from pathlib import Path
 from time import sleep
@@ -14,7 +15,7 @@ import yaml
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_
+from .. import architecture, juju_
 from ..helpers import execute_queries_on_unit, get_cluster_status, get_leader_unit
 from ..markers import juju3
 from .high_availability_helpers import DATABASE_NAME, TABLE_NAME
@@ -47,6 +48,11 @@ async def second_model(
     second_model_name = f"{first_model.info.name}-other"
     logger.info(f"Creating second model {second_model_name}")
     await ops_test._controller.add_model(second_model_name)
+    subprocess.run(["juju", "switch", second_model_name], check=True)
+    subprocess.run(
+        ["juju", "set-model-constraints", f"arch={architecture.architecture}"], check=True
+    )
+    subprocess.run(["juju", "switch", first_model.info.name], check=True)
     second_model = Model()
     await second_model.connect(model_name=second_model_name)
     yield second_model  # pyright: ignore [reportReturnType]
