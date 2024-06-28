@@ -19,6 +19,8 @@ parts:
           exit 1
       fi
     charm-strict-dependencies: true
+    prime:
+      - snap_revisions.json
     build-packages:
       - libffi-dev
       - libssl-dev
