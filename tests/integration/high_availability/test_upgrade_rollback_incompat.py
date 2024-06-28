@@ -29,7 +29,7 @@ TEST_APP = "mysql-test-app"
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
     src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
@@ -44,7 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             application_name=MYSQL_APP_NAME,
             config=config,
             num_units=3,
-            series=mysql_charm_series,
+            series="jammy",
         )
 
         await ops_test.model.deploy(

@@ -14,14 +14,14 @@ LANDSCAPE_CLIENT_APP_NAME = "landscape-client"
 
 
 @pytest.mark.group(1)
-async def test_ubuntu_pro(ops_test, mysql_charm_series, github_secrets):
+async def test_ubuntu_pro(ops_test, github_secrets):
     db_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
             db_charm,
             application_name=DATABASE_APP_NAME,
             config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
-            series=mysql_charm_series,
+            series="jammy",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
