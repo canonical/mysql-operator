@@ -32,7 +32,7 @@ TEST_APP = "mysql-test-app"
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
-    snap_revisions = pathlib.Path("src/snap_revisions.json")
+    snap_revisions = pathlib.Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
     new_revisions = old_revisions.copy()
@@ -132,7 +132,7 @@ async def test_upgrade_to_failling(
 async def test_rollback(ops_test, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
-    snap_revisions = pathlib.Path("src/snap_revisions.json")
+    snap_revisions = pathlib.Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
     new_revisions = old_revisions.copy()
@@ -191,7 +191,7 @@ async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
         # CI will get charm from common cache
         # make local copy and update charm zip
 
-        update_files = ["src/snap_revisions.json", "src/upgrade.py"]
+        update_files = ["snap_revisions.json", "src/upgrade.py"]
 
         charm = pathlib.Path(shutil.copy(charm, f"local-{charm.stem}.charm"))
 
