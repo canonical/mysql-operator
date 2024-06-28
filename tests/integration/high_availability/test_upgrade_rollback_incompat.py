@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import ast
+import json
 import logging
 import os
 import pathlib
@@ -31,11 +32,18 @@ TEST_APP = "mysql-test-app"
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
-    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
-    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+    snap_revisions = pathlib.Path("src/snap_revisions.json")
+    with snap_revisions.open("r") as file:
+        old_revisions: dict = json.load(file)
+    new_revisions = old_revisions.copy()
+    # TODO: mark as amd64 only or support arm64
+    new_revisions["x86_64"] = "69"
+    with snap_revisions.open("w") as file:
+        json.dump(new_revisions, file)
     charm = await charm_local_build(ops_test)
 
-    src_patch(revert=True)
+    with snap_revisions.open("w") as file:
+        json.dump(old_revisions, file)
     config = {"profile": "testing"}
 
     async with ops_test.fast_forward("10s"):
@@ -124,9 +132,15 @@ async def test_upgrade_to_failling(
 async def test_rollback(ops_test, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
-    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
-    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
-    charm = await charm_local_build(ops_test, refresh=True)
+    snap_revisions = pathlib.Path("src/snap_revisions.json")
+    with snap_revisions.open("r") as file:
+        old_revisions: dict = json.load(file)
+    new_revisions = old_revisions.copy()
+    # TODO: mark as amd64 only or support arm64
+    new_revisions["x86_64"] = "69"
+    with snap_revisions.open("w") as file:
+        json.dump(new_revisions, file)
+    charm = await charm_local_build(ops_test)
 
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
@@ -177,7 +191,7 @@ async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
         # CI will get charm from common cache
         # make local copy and update charm zip
 
-        update_files = ["src/constants.py", "src/upgrade.py"]
+        update_files = ["src/snap_revisions.json", "src/upgrade.py"]
 
         charm = pathlib.Path(shutil.copy(charm, f"local-{charm.stem}.charm"))
 
