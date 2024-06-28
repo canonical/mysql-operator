@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Helper class to manage the MySQL InnoDB cluster lifecycle with MySQL Shell."""
+
 import json
 import logging
 import os
