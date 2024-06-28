@@ -458,7 +458,17 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib_exists, _pathlib_owner, _touch, _system):
+    def test_install_snap(
+        self,
+        _cache,
+        _path_exists,
+        _run,
+        _check_call,
+        _pathlib_exists,
+        _pathlib_owner,
+        _touch,
+        _system,
+    ):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
