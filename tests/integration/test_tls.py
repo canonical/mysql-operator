@@ -31,16 +31,16 @@ APP_NAME = METADATA["name"]
 if juju_.has_secrets:
     tls_app_name = "self-signed-certificates"
     if architecture.architecture == "arm64":
-        tls_channel = "legacy/edge"
+        tls_channel = "latest/edge"
     else:
-        tls_channel = "legacy/stable"
+        tls_channel = "latest/stable"
     tls_config = {"ca-common-name": "Test CA"}
 else:
     tls_app_name = "tls-certificates-operator"
     if architecture.architecture == "arm64":
-        tls_channel = "latest/edge"
+        tls_channel = "legacy/edge"
     else:
-        tls_channel = "latest/stable"
+        tls_channel = "legacy/stable"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 
 
