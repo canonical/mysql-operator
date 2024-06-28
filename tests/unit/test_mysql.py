@@ -964,8 +964,9 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.is_cluster_replica", return_value=False)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status", return_value=SHORT_CLUSTER_STATUS)
-    def test_get_cluster_endpoints(self, _):
+    def test_get_cluster_endpoints(self, _, _is_cluster_replica):
         """Test get_cluster_endpoints() method."""
         endpoints = self.mysql.get_cluster_endpoints(get_ips=False)
 
