@@ -872,7 +872,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError
 
         with self.assertRaises(MySQLDeleteUsersForRelationError):
-            self.mysql.delete_users_for_relation(40)
+            self.mysql.delete_users_for_relation("foouser")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_user(self, _run_mysqlsh_script):
