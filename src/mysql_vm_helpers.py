@@ -20,6 +20,7 @@ from charms.mysql.v0.mysql import (
     MySQLExecError,
     MySQLGetAutoTunningParametersError,
     MySQLGetAvailableMemoryError,
+    MySQLKillSessionError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
@@ -169,7 +170,7 @@ class MySQL(MySQLBase):
             logger.debug(
                 f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {CHARMED_MYSQL_SNAP_REVISION}"
             )
-            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            charmed_mysql.ensure(snap.SnapState.Present, revision=str(CHARMED_MYSQL_SNAP_REVISION))
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
                 charmed_mysql.hold()
@@ -460,9 +461,9 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             logger.exception("Failed to change data directory permissions before restoring")
-            raise MySQLRestoreBackupError(e)
+            raise MySQLRestoreBackupError
 
         stdout, stderr = super().restore_backup(
             backup_location,
@@ -495,11 +496,11 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             logger.exception(
                 "Failed to change data directory permissions or ownershp after restoring"
             )
-            raise MySQLRestoreBackupError(e)
+            raise MySQLRestoreBackupError
 
         return (stdout, stderr)
 
@@ -517,7 +518,8 @@ class MySQL(MySQLBase):
         bash: bool = False,
         user: str = None,
         group: str = None,
-        env_extra: Dict = None,
+        env_extra: Dict = {},
+        stream_output: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Execute commands on the server where mysql is running.
 
@@ -527,31 +529,54 @@ class MySQL(MySQLBase):
             user: the user with which to execute the commands
             group: the group with which to execute the commands
             env_extra: the environment variables to add to the current process’ environment
+            stream_output: whether to stream the output to stdout, stderr or None
 
         Returns: tuple of (stdout, stderr)
 
         Raises: MySQLExecError if there was an error executing the commands
         """
+        stdout = stderr = ""
         env = os.environ.copy()
         if env_extra:
             env.update(env_extra)
-        try:
-            if bash:
-                commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
+        if bash:
+            commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
 
-            process = subprocess.run(
-                commands,
-                user=user,
-                group=group,
-                env=env,
-                capture_output=True,
-                check=True,
-                encoding="utf-8",
+        process = subprocess.Popen(
+            commands,
+            user=user,
+            group=group,
+            env=env,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if stream_output == "stderr":
+            while process.stderr and (line := process.stderr.readline()):
+                logger.debug(line.strip())
+                stderr += line
+        elif stream_output == "stdout":
+            while process.stdout and (line := process.stdout.readline()):
+                logger.debug(line.strip())
+                stdout += line
+
+        return_code = process.wait()
+        if return_code != 0:
+            message = (
+                "Failed command: "
+                f"{' '.join(commands).replace(self.backups_password, 'xxxxxxx')};"
+                f" {user=}; {group=}"
             )
-            return (process.stdout.strip(), process.stderr.strip())
-        except subprocess.CalledProcessError as e:
-            logger.debug(f"Failed command: {commands}; user={user}; group={group}")
-            raise MySQLExecError(e.stderr)
+            logger.debug(message)
+            raise MySQLExecError(message)
+
+        if not stdout and process.stdout:
+            stdout = process.stdout.read()
+        if not stderr and process.stderr:
+            stderr = process.stderr.read()
+
+        return (stdout.strip(), stderr.strip())
 
     def is_mysqld_running(self) -> bool:
         """Returns whether mysqld is running."""
@@ -570,7 +595,7 @@ class MySQL(MySQLBase):
 
         try:
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-        except SnapServiceOperationError as e:
+        except (SnapServiceOperationError, MySQLKillSessionError) as e:
             raise MySQLStopMySQLDError(e.message)
 
     def start_mysqld(self) -> None:
@@ -685,8 +710,8 @@ class MySQL(MySQLBase):
                 return subprocess.check_output(
                     command, stderr=subprocess.PIPE, timeout=timeout
                 ).decode("utf-8")
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-                raise MySQLClientError(e.stderr)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                raise MySQLClientError
 
     def _run_mysqlcli_script(
         self, script: str, user: str = "root", password: str = None, timeout: Optional[int] = None
