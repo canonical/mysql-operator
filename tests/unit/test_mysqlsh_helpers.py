@@ -451,22 +451,32 @@ class TestMySQL(unittest.TestCase):
             self.mysql.start_mysqld()
 
     @patch("os.system")
-    @patch("pathlib.Path")
+    @patch("pathlib.Path.touch")
+    @patch("pathlib.Path.owner")
+    @patch("pathlib.Path.exists")
     @patch("subprocess.check_call")
     @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib, _system):
+    def test_install_snap(
+        self,
+        _cache,
+        _path_exists,
+        _run,
+        _check_call,
+        _pathlib_exists,
+        _pathlib_owner,
+        _touch,
+        _system,
+    ):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
 
-        common_path_mock = MagicMock()
-
         _mysql_snap.present = False
         _path_exists.return_value = False
-        _pathlib.return_value = common_path_mock
-        common_path_mock.exists.return_value = False
+        _pathlib_exists.return_value = False
+        _pathlib_owner.return_value = None
 
         self.mysql.install_and_configure_mysql_dependencies()
 

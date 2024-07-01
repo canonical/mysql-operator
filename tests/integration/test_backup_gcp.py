@@ -83,9 +83,9 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials):
 
 
 @pytest.mark.group(1)
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test)
 
     primary_mysql = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
@@ -114,11 +114,9 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
-) -> None:
+async def test_backup(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
     """Test to create a backup and list backups."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test)
 
     global backup_id, value_before_backup, value_after_backup
 
@@ -190,10 +188,10 @@ async def test_backup(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_same_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
+    ops_test: OpsTest, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup to the same mysql cluster."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test)
 
     logger.info("Scaling mysql application to 1 unit")
     async with ops_test.fast_forward():
@@ -281,15 +279,12 @@ async def test_restore_on_same_cluster(
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore_on_new_cluster(
-    ops_test: OpsTest, mysql_charm_series: str, cloud_configs, cloud_credentials
-) -> None:
+async def test_restore_on_new_cluster(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
 
     new_mysql_application_name = await deploy_and_scale_mysql(
         ops_test,
-        mysql_charm_series,
         check_for_existing_application=False,
         mysql_application_name="another-mysql",
         num_units=1,
