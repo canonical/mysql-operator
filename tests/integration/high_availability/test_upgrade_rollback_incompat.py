@@ -14,7 +14,7 @@ from zipfile import ZipFile
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_
+from .. import juju_, markers
 from ..helpers import get_leader_unit, get_relation_data, get_unit_by_index
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
@@ -29,6 +29,9 @@ TEST_APP = "mysql-test-app"
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -36,7 +39,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
     new_revisions = old_revisions.copy()
-    # TODO: mark as amd64 only or support arm64
+    # TODO: support arm64
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
@@ -71,6 +74,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -83,6 +89,9 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_failling(
     ops_test: OpsTest,
@@ -127,6 +136,9 @@ async def test_upgrade_to_failling(
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 @pytest.mark.unstable
 async def test_rollback(ops_test, continuous_writes) -> None:
