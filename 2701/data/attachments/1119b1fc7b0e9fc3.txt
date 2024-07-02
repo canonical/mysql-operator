@@ -1,0 +1,53 @@
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:369 Removing the cron file
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:372 Stopping any running logrotate jobs
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:375 Removing existing archive directories
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:383 Writing some data to the text log files
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:388 Ensuring only log files exist
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:401 Executing logrotate
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:407 Ensuring log files and archive directories exist
+[32mINFO    [0m integration.high_availability.test_replication:test_replication.py:420 Ensuring log files were rotated
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.3    unsupported  01:44:29Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.37-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   46  no       Last written value=37389
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.13.4.121                     Last written value=37389
+mysql/0*           active    idle   0        10.13.4.221     3306,33060/tcp  Primary
+mysql/2            active    idle   2        10.13.4.64      3306,33060/tcp  
+mysql/3            active    idle   4        10.13.4.49      3306,33060/tcp  
+
+Machine  State    Address      Inst id        Base          AZ  Message
+0        started  10.13.4.221  juju-f541ea-0  ubuntu@22.04      Running
+2        started  10.13.4.64   juju-f541ea-2  ubuntu@22.04      Running
+3        started  10.13.4.121  juju-f541ea-3  ubuntu@22.04      Running
+4        started  10.13.4.49   juju-f541ea-4  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-1: 01:32:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:26 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-1: 01:32:26 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:32:28 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:32:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:32:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:32 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-0: 01:32:32 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:35:40 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-3: 01:35:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:35:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:41:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:41:09 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-4: 01:41:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 01:41:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
