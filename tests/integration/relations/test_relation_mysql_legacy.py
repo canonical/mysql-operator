@@ -23,7 +23,7 @@ DB_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = DB_METADATA["name"]
 CLUSTER_NAME = "test_cluster"
 
-APPLICATION_APP_NAME = "test-foo-3209593825"
+APPLICATION_APP_NAME = "test-foo-sdfavnlsdf"
 
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "mysql"

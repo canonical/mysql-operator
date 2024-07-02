@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 20 * 60
 MYSQL_APP_NAME = "mysql"
-TEST_APP = "test-foo-3209593825"
+TEST_APP = "test-foo-sdfavnlsdf"
 
 
 @pytest.mark.group(1)
