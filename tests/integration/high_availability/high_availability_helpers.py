@@ -28,7 +28,7 @@ TABLE_NAME = "data"
 CLUSTER_NAME = "test_cluster"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 MYSQL_DEFAULT_APP_NAME = METADATA["name"]
-APPLICATION_DEFAULT_APP_NAME = "mysql-test-app"
+APPLICATION_DEFAULT_APP_NAME = "test-foo-3209593825"
 TIMEOUT = 20 * 60
 
 mysql_charm, application_charm = None, None
