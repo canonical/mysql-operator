@@ -26,7 +26,7 @@ async def test_ubuntu_pro(ops_test, github_secrets):
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
-            channel="latest/edge",
+            channel="latest/edge/testconnector",
         ),
         ops_test.model.deploy(
             UBUNTU_PRO_APP_NAME,

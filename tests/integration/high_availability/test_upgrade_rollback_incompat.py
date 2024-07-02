@@ -61,7 +61,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         await ops_test.model.deploy(
             TEST_APP,
             application_name=TEST_APP,
-            channel="latest/edge",
+            channel="latest/edge/testconnector",
             num_units=1,
         )
 

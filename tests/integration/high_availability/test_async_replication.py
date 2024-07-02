@@ -186,7 +186,7 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
         APPLICATION_APP_NAME,
         application_name=APPLICATION_APP_NAME,
         series="jammy",
-        channel="latest/edge",
+        channel="latest/edge/testconnector",
         num_units=1,
     )
 
