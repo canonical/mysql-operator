@@ -63,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             num_units=2,
-            channel="latest/edge/testconnector",
+            channel="latest/edge",
         ),
     )
 
