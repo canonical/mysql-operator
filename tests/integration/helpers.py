@@ -288,6 +288,7 @@ def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
     except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
+        logger.exception("FOOBAR")
         # Errors raised when the connection is not possible
         return False
 
