@@ -266,7 +266,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(16), wait=wait_fixed(15), reraise=True)
+@retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
 def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
     """Test a connection to a MySQL server.
 
