@@ -291,7 +291,6 @@ def is_connection_possible(
             cursor.execute("SELECT 1")
             return cursor.fetchone()[0] == 1
     except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
-        logger.exception("FOOBAR")
         # Errors raised when the connection is not possible
         if retry_if_not_possible:
             # Retry
