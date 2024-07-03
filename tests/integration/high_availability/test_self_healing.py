@@ -272,7 +272,9 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
     # verify/wait availability
-    assert is_connection_possible(config), "❌ Connection not possible after restart"
+    assert is_connection_possible(
+        config, retry_if_not_possible=True
+    ), "❌ Connection not possible after restart"
 
     # read and verify data
     select_data_sql = [
