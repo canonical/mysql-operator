@@ -3,9 +3,11 @@
 
 """Helper class to manage the MySQL InnoDB cluster lifecycle with MySQL Shell."""
 
+import json
 import logging
 import os
 import pathlib
+import platform
 import shutil
 import subprocess
 import tempfile
@@ -35,7 +37,6 @@ from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
-    CHARMED_MYSQL_SNAP_REVISION,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
@@ -167,10 +168,10 @@ class MySQL(MySQLBase):
 
         try:
             # install the charmed-mysql snap
-            logger.debug(
-                f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {CHARMED_MYSQL_SNAP_REVISION}"
-            )
-            charmed_mysql.ensure(snap.SnapState.Present, revision=str(CHARMED_MYSQL_SNAP_REVISION))
+            with pathlib.Path("snap_revisions.json").open("r") as file:
+                revision = json.load(file)[platform.machine()]
+            logger.debug(f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {revision}")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=revision)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
                 charmed_mysql.hold()
