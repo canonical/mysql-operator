@@ -206,7 +206,7 @@ class MySQLProvider(Object):
         """
         if legacy:
             return f"relation-{relation_id}"
-        return f"{self.model.uuid.replace('-', '')}_relation-{relation_id}"[-32:]
+        return f"relation-{relation_id}_{self.model.uuid.replace('-', '')}"[:32]
 
     def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Handle the `database-requested` event."""
