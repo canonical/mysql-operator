@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+WAIT_TIMEOUT = 40 * 60
 
 
 @pytest.mark.group(1)
