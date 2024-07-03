@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 MYSQL_APP1 = "db1"
 MYSQL_APP2 = "db2"
 MYSQL_ROUTER_APP_NAME = "mysql-router"
-APPLICATION_APP_NAME = "test-foo-sdfavnlsdf"
+APPLICATION_APP_NAME = "test-foo-3209593825"
 
 MYSQL_CONTAINER_NAME = "mysql"
 MYSQLD_PROCESS_NAME = "mysqld"
