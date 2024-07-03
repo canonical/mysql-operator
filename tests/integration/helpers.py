@@ -266,8 +266,8 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(16), wait=wait_fixed(15), reraise=True)
-def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+def is_connection_possible(credentials: Dict, *, expect_possible=False, **extra_opts) -> bool:
     """Test a connection to a MySQL server.
 
     Args:
@@ -290,6 +290,9 @@ def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
     except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
         logger.exception("FOOBAR")
         # Errors raised when the connection is not possible
+        if expect_possible:
+            # Retry
+            raise
         return False
 
 
