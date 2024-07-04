@@ -19,7 +19,7 @@ from charms.mysql.v0.async_replication import (
     MySQLAsyncReplicationConsumer,
     MySQLAsyncReplicationOffer,
 )
-from charms.mysql.v0.backups import MySQLBackups
+from charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME, MySQLBackups
 from charms.mysql.v0.mysql import (
     BYTES_1MB,
     Error,
@@ -83,7 +83,6 @@ from constants import (
     PASSWORD_LENGTH,
     PEER,
     ROOT_PASSWORD_KEY,
-    S3_INTEGRATOR_RELATION_NAME,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
     TRACING_PROTOCOL,
@@ -586,11 +585,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def _has_blocked_status(self) -> bool:
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
-
-    @property
-    def s3_integrator_relation_exists(self) -> bool:
-        """Returns whether a relation with the s3 integrator exists."""
-        return bool(self.model.get_relation(S3_INTEGRATOR_RELATION_NAME))
 
     @property
     def unit_fqdn(self) -> str:

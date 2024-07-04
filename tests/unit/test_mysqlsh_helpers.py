@@ -349,9 +349,12 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
             self.mysql.write_mysqld_config(profile="production", memory_limit=None)
 
-    @patch("subprocess.run")
-    def test_execute_commands(self, _run):
+    @patch("subprocess.Popen")
+    def test_execute_commands(self, _popen):
         """Test a successful execution of _execute_commands."""
+        process = MagicMock()
+        _popen.return_value = process
+        process.wait.return_value = 0
         self.mysql._execute_commands(
             ["ls", "-la", "|", "wc", "-l"],
             bash=True,
@@ -359,22 +362,24 @@ class TestMySQL(unittest.TestCase):
             group="test_group",
             env_extra={"envA": "valueA"},
         )
-        env = os.environ
+        env = os.environ.copy()
         env.update({"envA": "valueA"})
-        _run.assert_called_once_with(
+        _popen.assert_called_once_with(
             ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
             env=env,
-            capture_output=True,
-            check=True,
             encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
-    @patch("subprocess.run")
-    def test_execute_commands_exception(self, _run):
+    @patch("subprocess.Popen")
+    def test_execute_commands_exception(self, _popen):
         """Test a failure in execution of _execute_commands."""
-        _run.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        process = MagicMock()
+        _popen.return_value = process
+        process.wait.return_value = -1
 
         with self.assertRaises(MySQLExecError):
             self.mysql._execute_commands(
@@ -402,8 +407,9 @@ class TestMySQL(unittest.TestCase):
             CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop"
         )
 
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.snap_service_operation")
-    def test_stop_mysqld_failure(self, _snap_service_operation):
+    def test_stop_mysqld_failure(self, _snap_service_operation, _):
         """Test failure of stop_mysqld()."""
         _snap_service_operation.side_effect = SnapServiceOperationError("failure")
 
@@ -445,22 +451,32 @@ class TestMySQL(unittest.TestCase):
             self.mysql.start_mysqld()
 
     @patch("os.system")
-    @patch("pathlib.Path")
+    @patch("pathlib.Path.touch")
+    @patch("pathlib.Path.owner")
+    @patch("pathlib.Path.exists")
     @patch("subprocess.check_call")
     @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib, _system):
+    def test_install_snap(
+        self,
+        _cache,
+        _path_exists,
+        _run,
+        _check_call,
+        _pathlib_exists,
+        _pathlib_owner,
+        _touch,
+        _system,
+    ):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
 
-        common_path_mock = MagicMock()
-
         _mysql_snap.present = False
         _path_exists.return_value = False
-        _pathlib.return_value = common_path_mock
-        common_path_mock.exists.return_value = False
+        _pathlib_exists.return_value = False
+        _pathlib_owner.return_value = None
 
         self.mysql.install_and_configure_mysql_dependencies()
 
