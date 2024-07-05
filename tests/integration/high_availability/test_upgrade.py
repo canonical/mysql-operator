@@ -35,7 +35,7 @@ TEST_APP_NAME = "mysql-test-app"
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     await asyncio.gather(
         ops_test.model.deploy(
@@ -44,7 +44,7 @@ async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None
             num_units=3,
             channel="8.0/edge",
             config={"profile": "testing"},
-            series=mysql_charm_series,
+            series="jammy",
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,

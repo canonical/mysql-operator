@@ -110,7 +110,6 @@ async def ensure_n_online_mysql_members(
 
 async def deploy_and_scale_mysql(
     ops_test: OpsTest,
-    mysql_charm_series: str,
     check_for_existing_application: bool = True,
     mysql_application_name: str = MYSQL_DEFAULT_APP_NAME,
     num_units: int = 3,
@@ -119,7 +118,6 @@ async def deploy_and_scale_mysql(
 
     Args:
         ops_test: The ops test framework
-        mysql_charm_series: series to test on
         check_for_existing_application: Whether to check for existing mysql applications
             in the model
         mysql_application_name: The name of the mysql application if it is to be deployed
@@ -144,7 +142,7 @@ async def deploy_and_scale_mysql(
             application_name=mysql_application_name,
             config=config,
             num_units=num_units,
-            series=mysql_charm_series,
+            series="jammy",
         )
 
         await ops_test.model.wait_for_idle(
@@ -219,16 +217,13 @@ async def relate_mysql_and_application(
     )
 
 
-async def high_availability_test_setup(
-    ops_test: OpsTest, mysql_charm_series: str
-) -> Tuple[str, str]:
+async def high_availability_test_setup(ops_test: OpsTest) -> Tuple[str, str]:
     """Run the set up for high availability tests.
 
     Args:
         ops_test: The ops test framework
-        mysql_charm_series: Series to run mysql charm (defaults to focal)
     """
-    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test)
     application_name = await deploy_and_scale_application(ops_test)
 
     await relate_mysql_and_application(ops_test, mysql_application_name, application_name)

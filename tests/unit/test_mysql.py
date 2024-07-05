@@ -872,7 +872,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError
 
         with self.assertRaises(MySQLDeleteUsersForRelationError):
-            self.mysql.delete_users_for_relation(40)
+            self.mysql.delete_users_for_relation("foouser")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_delete_user(self, _run_mysqlsh_script):
@@ -964,8 +964,9 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.assert_called_with(expected_commands)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.is_cluster_replica", return_value=False)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status", return_value=SHORT_CLUSTER_STATUS)
-    def test_get_cluster_endpoints(self, _):
+    def test_get_cluster_endpoints(self, _, _is_cluster_replica):
         """Test get_cluster_endpoints() method."""
         endpoints = self.mysql.get_cluster_endpoints(get_ips=False)
 
