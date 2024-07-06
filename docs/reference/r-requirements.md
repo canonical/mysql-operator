@@ -1,13 +1,6 @@
 ## Juju version
 
-The charm supports both [Juju 2.9 LTS](https://github.com/juju/juju/releases) and [Juju 3.1](https://github.com/juju/juju/releases).
-
-Note: Juju 3.1 is supported from the charm revision 186+ only.
-
-The minimum supported Juju versions are:
-
-* 2.9.32+ (no tests made for older versions).
-* 3.1.6+ (due to issues with Juju secrets in previous versions, see [#1](https://bugs.launchpad.net/juju/+bug/2029285) and [#2](https://bugs.launchpad.net/juju/+bug/2029282))
+The charm supports both [Juju 2.9 LTS](https://github.com/juju/juju/releases) and [Juju 3.x](https://github.com/juju/juju/releases), however charm revisions may require different Juju versions. Always check the [charm release notes](/t/11881) to find the minimal Juju version for your deployment.
 
 ## Minimum requirements
 
@@ -20,7 +13,13 @@ Make sure your machine meets the following requirements:
 
 ## Supported architectures
 
-The charm is based on SNAP "[charmed-mysql](https://snapcraft.io/charmed-mysql)", which is currently available for `amd64` only! The architecture `arm64` support is planned. Please [contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you are interested in new architecture!
+The charm is based on SNAP "[charmed-mysql](https://snapcraft.io/charmed-mysql)", which is currently available for `amd64` only! The architecture `arm64` support is planned. Please [contact us](/t/11867) if you are interested in new architecture!
+
+## Networking
+
+At the moment IPv4 is supported only (see more [info](https://warthogs.atlassian.net/browse/DPE-4695)).
+
+[Contact us](/t/11867) if you are interested in IPv6!
 
 <a name="mysql-gr-limits"></a>
 ## MySQL Group Replication requirements

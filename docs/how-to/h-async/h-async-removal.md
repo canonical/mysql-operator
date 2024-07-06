@@ -1,5 +1,6 @@
 # Removal of Async replication
-> **WARNING**: it is an '8.0/candidate' article. Do NOT use it in production!<br/>Contact [Canonical Data Platform team](/t/11867) if you are interested in the topic.
+
+> **WARNING**: it is an '8.0/edge' article. Do NOT use it in production!<br/>Contact [Canonical Data Platform team](/t/11867) if you are interested in the topic.
 
 ## Pre-requisits
 
@@ -13,7 +14,7 @@ Assuming the `Lisbon` is a current `Primary` and we want to detach `Rome` (for r
 
 ```shell
 
-juju remove-relation async-primary db2:async-replica
+juju remove-relation replication-offer db2:replication
 
 ```
 
@@ -31,7 +32,11 @@ At this stage, the detached/blocked cluster `Rome` can re-join the previous Clus
 
 juju switch rome
 
-juju integrate async-primary db1:async-replica
+juju integrate replication-offer db1:replication
+
+juju switch lisbon
+
+juju run db2/leader create-replication
 
 ```
 

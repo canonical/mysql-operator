@@ -1,5 +1,5 @@
 # Deploy Async replication
-> **WARNING**: it is an '8.0/candidate' article. Do NOT use it in production!<br/>Contact [Canonical Data Platform team](/t/11867) if you are interested in the topic.
+> **WARNING**: it is an '8.0/edge' article. Do NOT use it in production!<br/>Contact [Canonical Data Platform team](/t/11867) if you are interested in the topic.
 
 ## Deploy
 
@@ -9,10 +9,10 @@ juju add-model rome    # 1st cluster location: Rome
 juju add-model lisbon  # 2nd cluster location: Lisbon
 
 juju switch rome
-juju deploy mysql-k8s db1 --channel=8.0/candidate --config profile=testing --config cluster-name=rome --base ubuntu@22.04
+juju deploy mysql db1 --channel=8.0/edge --config profile=testing --config cluster-name=rome --base ubuntu@22.04
 
 juju switch lisbon
-juju deploy mysql-k8s db2 --channel=8.0/candidate --config profile=testing --config cluster-name=lisbon --base ubuntu@22.04
+juju deploy mysql db2 --channel=8.0/edge --config profile=testing --config cluster-name=lisbon --base ubuntu@22.04
 ```
 
 [note type="caution"]
@@ -24,13 +24,13 @@ juju deploy mysql-k8s db2 --channel=8.0/candidate --config profile=testing --con
 Offer asynchronous replication on the Primary cluster (Rome):
 ```shell
 juju switch rome
-juju offer db1:async-primary async-primary
+juju offer db1:replication-offer replication-offer
 ```
 
 (Optional) Offer asynchronous replication on StandBy cluster (Lisbon), for the future:
 ```shell
 juju switch lisbon
-juju offer db2:async-primary async-primary
+juju offer db2:replication-offer replication-offer
 ``` 
 
 ## Consume
@@ -38,19 +38,27 @@ juju offer db2:async-primary async-primary
 Consume asynchronous replication on planned `StandBy` cluster (Lisbon):
 ```shell
 juju switch lisbon
-juju consume rome.async-primary
-juju integrate async-primary db2:async-replica
-``` 
+juju consume rome.replication-offer
+juju integrate replication-offer db2:replication
+```
+Once relations are established, cluster `Rome` will get into `Blocked` state, waiting for the replication to be created.
+
+To do so, run the action `create-replication` on rome's leader unit.
+
+```shell
+juju switch rome
+juju run db1/leader create-replication
+```
 
 (Optional) Consume asynchronous replication on the current `Primary` (Rome), for the future:
 ```shell
 juju switch rome
-juju consume lisbon.async-primary
+juju consume lisbon.replication-offer
 ``` 
 
 ## Status
 
-Run the `get-cluster-status` action with the `cluster-set=True`flag: 
+Run the `get-cluster-status` action with the `cluster-set=True` flag: 
 ```shell
 juju run -m rome db1/0 get-cluster-status cluster-set=True
 ```

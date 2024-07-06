@@ -66,8 +66,8 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 ## Technical notes:
 
 * Upgrade (`juju refresh`) from the old-stable revision 151 to the current-revision 196 is **NOT** supported!!! The [upgrade](/t/11745) functionality is new and supported for revision 196+ only!
-
-Please check additionally [the previously posted restrictions](/t/11882).
+* Please check additionally [the previously posted restrictions](/t/11882).
+* Ensure [the charm requirements](/t/11742) met.
 
 ## How to reach us:
 
