@@ -28,7 +28,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from constants import S3_INTEGRATOR_RELATION_NAME
+from lib.charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME
 
 from .helpers import patch_network_get
 
@@ -430,7 +430,7 @@ Juju Version: 0.0.0
         self.assertEqual(error_message, "Error setting instance option tag:_hidden")
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
+    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup(
         self,
@@ -451,7 +451,7 @@ Juju Version: 0.0.0
         _upload_logs_to_s3.assert_called_once_with("stdout", "", "/path.backup.log", s3_params)
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
+    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup_failure(
         self,
@@ -670,7 +670,6 @@ Juju Version: 0.0.0
 
         # test failure of recoverable _restore()
         _restore.return_value = (False, True, "restore error")
-        self.charm.unit.status = ActiveStatus()
 
         event = MagicMock()
         params_mock = {}
@@ -682,13 +681,11 @@ Juju Version: 0.0.0
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("restore error")
         _clean_data_dir_and_start_mysqld.assert_called_once()
-        self.assertTrue(isinstance(self.charm.unit.status, ActiveStatus))
 
         _clean_data_dir_and_start_mysqld.reset_mock()
 
         # test failure of unrecoverable _restore()
         _restore.return_value = (False, False, "restore error")
-        self.charm.unit.status = ActiveStatus()
 
         event = MagicMock()
         params_mock = {}
@@ -750,17 +747,31 @@ Juju Version: 0.0.0
         event.fail.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore(self, _stop_mysqld):
+    def test_pre_restore(
+        self, _stop_mysqld, _kill_client_sessions, _mysqld_running, _set_instance_offline_mode
+    ):
         """Test _pre_restore()."""
         success, error = self.mysql_backups._pre_restore()
 
         self.assertTrue(success)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
+        _mysqld_running.assert_called_once()
+        _stop_mysqld.assert_called_once()
+        _kill_client_sessions.assert_called_once()
+        _set_instance_offline_mode.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore_failure(self, _stop_mysqld):
+    def test_pre_restore_failure(
+        self, _stop_mysqld, _kill_client_sessions, _mysqld_running, _set_instance_offline_mode
+    ):
         """Test failure of _pre_restore()."""
         _stop_mysqld.side_effect = MySQLStopMySQLDError()
 
@@ -796,7 +807,7 @@ Juju Version: 0.0.0
 
         self.assertTrue(success)
         self.assertTrue(recoverable)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
@@ -863,7 +874,7 @@ Juju Version: 0.0.0
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
         self.assertTrue(success)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
@@ -901,37 +912,33 @@ Juju Version: 0.0.0
     )
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.rescan_cluster")
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore(
         self,
-        _get_member_state,
         _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
+        _create_cluster_set,
         _wait_until_mysql_connection,
         _configure_instance,
         _clean_data_dir_and_start_mysqld,
     ):
         """Test _post_restore()."""
-        self.charm.unit.status = MaintenanceStatus()
-
         success, error_message = self.mysql_backups._post_restore()
 
         self.assertTrue(success)
-        self.assertIsNone(error_message)
+        self.assertEqual(error_message, "")
 
         _clean_data_dir_and_start_mysqld.assert_called_once()
         _configure_instance.assert_called_once_with(create_cluster_admin=False)
         _wait_until_mysql_connection.assert_called_once()
         _create_cluster.assert_called_once()
+        _create_cluster_set.assert_called_once()
         _initialize_juju_units_operations_table.assert_called_once()
         _rescan_cluster.assert_called_once()
-        _get_member_state.assert_called_once()
-
-        self.assertTrue(isinstance(self.charm.unit.status, ActiveStatus))
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
@@ -940,30 +947,22 @@ Juju Version: 0.0.0
     )
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.rescan_cluster")
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore_failure(
         self,
-        _get_member_state,
         _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
+        _create_cluster_set,
         _wait_until_mysql_connection,
         _configure_instance,
         _clean_data_dir_and_start_mysqld,
     ):
         """Test failure of _post_restore()."""
         self.charm.unit.status = MaintenanceStatus()
-
-        # test failure of get_member_state()
-        _get_member_state.side_effect = MySQLGetMemberStateError()
-
-        success, error_message = self.mysql_backups._post_restore()
-        self.assertFalse(success)
-        self.assertEqual(error_message, "Failed to retrieve member state in restored instance")
-        self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of rescan_cluster()
         _rescan_cluster.side_effect = MySQLRescanClusterError()

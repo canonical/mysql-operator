@@ -4,6 +4,7 @@
 
 
 import logging
+import subprocess
 from asyncio import gather
 from pathlib import Path
 from time import sleep
@@ -14,13 +15,8 @@ import yaml
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_
-from ..helpers import (
-    execute_queries_on_unit,
-    get_cluster_status,
-    get_leader_unit,
-    get_relation_data,
-)
+from .. import architecture, juju_
+from ..helpers import execute_queries_on_unit, get_cluster_status, get_leader_unit
 from ..markers import juju3
 from .high_availability_helpers import DATABASE_NAME, TABLE_NAME
 
@@ -52,6 +48,11 @@ async def second_model(
     second_model_name = f"{first_model.info.name}-other"
     logger.info(f"Creating second model {second_model_name}")
     await ops_test._controller.add_model(second_model_name)
+    subprocess.run(["juju", "switch", second_model_name], check=True)
+    subprocess.run(
+        ["juju", "set-model-constraints", f"arch={architecture.architecture}"], check=True
+    )
+    subprocess.run(["juju", "switch", first_model.info.name], check=True)
     second_model = Model()
     await second_model.connect(model_name=second_model_name)
     yield second_model  # pyright: ignore [reportReturnType]
@@ -185,7 +186,7 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
         APPLICATION_APP_NAME,
         application_name=APPLICATION_APP_NAME,
         series="jammy",
-        channel="latest/stable",
+        channel="latest/edge",
         num_units=1,
     )
 
@@ -228,11 +229,10 @@ async def test_standby_promotion(
 
     assert leader_unit is not None, "No leader unit found on standby cluster"
 
-    relation_data = await get_relation_data(ops_test, MYSQL_APP1, "database-peers")
-    cluster_set_name = relation_data[0]["application-data"]["cluster-set-domain-name"]
     logger.info("Promoting standby cluster to primary")
     await juju_.run_action(
-        leader_unit, "promote-to-primary", **{"cluster-set-name": cluster_set_name}
+        leader_unit,
+        "promote-to-primary",
     )
 
     results = await get_max_written_value(first_model, second_model)
@@ -261,12 +261,10 @@ async def test_failover(ops_test: OpsTest, first_model: Model, second_model: Mod
     logger.info("Promoting standby cluster to primary with force flag")
     leader_unit = await get_leader_unit(None, MYSQL_APP1, first_model)
     assert leader_unit is not None, "No leader unit found"
-    relation_data = await get_relation_data(ops_test, MYSQL_APP1, "database-peers")
-    cluster_set_name = relation_data[0]["application-data"]["cluster-set-domain-name"]
     await juju_.run_action(
         leader_unit,
         "promote-to-primary",
-        **{"--wait": "5m", "cluster-set-name": cluster_set_name, "force": True},
+        **{"--wait": "5m", "force": True},
     )
 
     cluster_set_status = await get_cluster_status(leader_unit, cluster_set=True)
