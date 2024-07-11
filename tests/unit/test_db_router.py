@@ -30,6 +30,8 @@ class TestDBRouter(unittest.TestCase):
         self.charm = self.harness.charm
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("relations.db_router.DBRouterRelation._on_leader_elected")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
@@ -43,6 +45,8 @@ class TestDBRouter(unittest.TestCase):
         _get_cluster_primary_address,
         _generate_random_password,
         _,
+        _unit_initialized,
+        _on_leader_elected,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -120,6 +124,8 @@ class TestDBRouter(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("relations.db_router.DBRouterRelation._on_leader_elected")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
@@ -131,6 +137,8 @@ class TestDBRouter(unittest.TestCase):
         _does_mysql_user_exist,
         _generate_random_password,
         _,
+        _unit_initialized,
+        _on_leader_elected,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
