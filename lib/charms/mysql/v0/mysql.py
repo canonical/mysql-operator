@@ -130,7 +130,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 62
+LIBPATCH = 63
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -641,11 +641,6 @@ class MySQLCharmBase(CharmBase, ABC):
     def unit_initialized(self) -> bool:
         """Check if the unit is added to the cluster."""
         return self._mysql.cluster_metadata_exists(self.get_unit_address(self.unit))
-
-    # @property
-    # def unit_initialized(self) -> bool:
-    #     """Return True if the unit is initialized."""
-    #     return self.unit_peer_data.get("unit-initialized") == "True"
 
     @property
     def app_peer_data(self) -> Union[ops.RelationDataContent, dict]:

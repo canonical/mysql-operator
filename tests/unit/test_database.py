@@ -51,7 +51,6 @@ class TestDatabase(unittest.TestCase):
             self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
-
         # confirm that the relation databag is empty
         database_relation_databag = self.harness.get_relation_data(
             self.database_relation_id, self.harness.charm.app
