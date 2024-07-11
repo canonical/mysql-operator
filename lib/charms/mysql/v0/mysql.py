@@ -402,10 +402,6 @@ class MySQLRejoinClusterError(Error):
     """Exception raised when there is an issue trying to rejoin a cluster to the cluster set."""
 
 
-class MySQLGetClusterNameError(Error):
-    """Exception raised when there is an issue getting cluster name."""
-
-
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
