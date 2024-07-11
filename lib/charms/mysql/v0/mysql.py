@@ -402,6 +402,10 @@ class MySQLRejoinClusterError(Error):
     """Exception raised when there is an issue trying to rejoin a cluster to the cluster set."""
 
 
+class MySQLGetClusterNameError(Error):
+    """Exception raised when there is an issue getting cluster name."""
+
+
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
@@ -1840,7 +1844,10 @@ class MySQLBase(ABC):
             logger.debug(f"Checking existence of unit {unit_label} in cluster {self.cluster_name}")
 
             output = self._run_mysqlsh_script("\n".join(commands))
-            return MySQLMemberState.ONLINE in output.lower()
+            return (
+                MySQLMemberState.ONLINE in output.lower()
+                or MySQLMemberState.RECOVERING in output.lower()
+            )
         except MySQLClientError:
             # confirmation can fail if the clusteradmin user does not yet exist on the instance
             logger.debug(
@@ -1853,7 +1860,9 @@ class MySQLBase(ABC):
         stop=stop_after_attempt(3),
         retry=retry_if_exception_type(TimeoutError),
     )
-    def get_cluster_status(self, extended: Optional[bool] = False) -> Optional[dict]:
+    def get_cluster_status(
+        self, from_instance: Optional[str] = None, extended: Optional[bool] = False
+    ) -> Optional[dict]:
         """Get the cluster status.
 
         Executes script to retrieve cluster status.
@@ -1865,7 +1874,7 @@ class MySQLBase(ABC):
         """
         options = {"extended": extended}
         status_commands = (
-            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}')",
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{from_instance or self.instance_address}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"print(cluster.status({options}))",
         )
@@ -2308,6 +2317,34 @@ class MySQLBase(ABC):
             raise MySQLGetClusterPrimaryAddressError(e.message)
         matches = re.search(r"<PRIMARY_ADDRESS>(.+)</PRIMARY_ADDRESS>", output)
 
+        if not matches:
+            return None
+
+        return matches.group(1)
+
+    def get_cluster_name(self, connect_instance_address: Optional[str]) -> Optional[str]:
+        """Get the cluster name from instance.
+
+        Uses the mysql_innodb_cluster_metadata.clusters table in case instance connecting
+        to is offline and thus cannot use mysqlsh.dba.get_cluster().
+        """
+        if not connect_instance_address:
+            connect_instance_address = self.instance_address
+
+        logger.debug(f"Getting cluster name from {connect_instance_address}")
+        get_cluster_name_commands = (
+            f"shell.connect('{self.cluster_admin_user}:{self.cluster_admin_password}@{connect_instance_address}')",
+            'cluster_name = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata.clusters;")',
+            "print(f'<CLUSTER_NAME>{cluster_name.fetch_one()[0]}</CLUSTER_NAME>')",
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(get_cluster_name_commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get cluster name")
+            raise MySQLGetClusterNameError(e.message)
+
+        matches = re.search(r"<CLUSTER_NAME>(.+)</CLUSTER_NAME>", output)
         if not matches:
             return None
 
