@@ -980,21 +980,27 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_name(self, _run_mysqlsh_script):
-        """Test get_cluster_name() method."""
+    def test_cluster_metadata_exists(self, _run_mysqlsh_script):
+        """Test cluster_metadata_exists method."""
         commands = "\n".join(
             (
                 "shell.connect('clusteradmin:clusteradminpassword@1.2.3.4')",
-                'cluster_name = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata.clusters;")',
-                "print(f'<CLUSTER_NAME>{cluster_name.fetch_one()[0]}</CLUSTER_NAME>')",
+                (
+                    'result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
+                    f".clusters where cluster_name = '{self.mysql.cluster_name}';\")"
+                ),
+                "print(bool(result.fetch_one()))",
             )
         )
 
-        _run_mysqlsh_script.return_value = "<CLUSTER_NAME>test_cluster</CLUSTER_NAME>"
+        _run_mysqlsh_script.return_value = "True\n"
 
-        cluster_name = self.mysql.get_cluster_name("1.2.3.4")
-        self.assertEqual(cluster_name, "test_cluster")
+        self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
         _run_mysqlsh_script.assert_called_once_with(commands)
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.assertFalse(self.mysql.cluster_metadata_exists("1.2.3.4"))
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
