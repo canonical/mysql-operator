@@ -668,7 +668,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self._mysql.wait_until_mysql_connection()
 
-        self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
@@ -820,7 +819,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 logger.debug("Waiting to joing the cluster, failed to acquire lock.")
                 return
         # Update 'units-added-to-cluster' counter in the peer relation databag
-        self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)
         logger.debug(f"Instance {instance_label} is cluster member")

@@ -595,9 +595,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         state, role = self._mysql.get_member_state()
 
-        self.unit_peer_data.update(
-            {"member-state": state, "member-role": role, "unit-initialized": "True"}
-        )
+        self.unit_peer_data.update({"member-state": state, "member-role": role})
 
     @property
     def peers(self) -> Optional[ops.model.Relation]:
