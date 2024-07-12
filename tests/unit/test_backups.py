@@ -151,6 +151,7 @@ test stderr"""
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("datetime.datetime")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -174,6 +175,7 @@ test stderr"""
         _can_unit_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
+        _update_status,
     ):
         """Test _on_create_backup()."""
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
@@ -592,6 +594,7 @@ Juju Version: 0.0.0
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_restore_checks", return_value=True)
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -609,6 +612,7 @@ Juju Version: 0.0.0
         _fetch_and_check_existence_of_s3_path,
         _retrieve_s3_parameters,
         _pre_restore_checks,
+        _update_status,
     ):
         """Test _on_restore()."""
         event = MagicMock()
