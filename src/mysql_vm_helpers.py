@@ -36,6 +36,7 @@ from typing_extensions import override
 from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
+    CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
@@ -217,8 +218,9 @@ class MySQL(MySQLBase):
                 # uninstalls fail due to SNAP_DATA_DIR fails to umount
                 # try umount it, without check
                 subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
+                shutil.rmtree(f"{CHARMED_MYSQL_DATA_DIRECTORY}/etc", ignore_errors=True)
                 logger.exception(f"Failed to uninstall MySQL on {attempt=}")
-        raise MySQLUninstallError
+        raise MySQLUninstallError from None
 
     @override
     def get_available_memory(self) -> int:
