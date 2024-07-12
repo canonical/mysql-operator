@@ -980,6 +980,29 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_cluster_metadata_exists(self, _run_mysqlsh_script):
+        """Test cluster_metadata_exists method."""
+        commands = "\n".join(
+            (
+                "shell.connect('clusteradmin:clusteradminpassword@1.2.3.4')",
+                (
+                    'result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
+                    f".clusters where cluster_name = '{self.mysql.cluster_name}';\")"
+                ),
+                "print(bool(result.fetch_one()))",
+            )
+        )
+
+        _run_mysqlsh_script.return_value = "True\n"
+
+        self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
+        _run_mysqlsh_script.assert_called_once_with(commands)
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.assertFalse(self.mysql.cluster_metadata_exists("1.2.3.4"))
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
         """Test the offline_mode_and_hidden_instance_exists() method."""
         commands = (

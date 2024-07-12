@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 from ops.testing import Harness
 
@@ -24,6 +24,8 @@ class TestDatabase(unittest.TestCase):
         self.charm = self.harness.charm
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock)
+    @patch("charm.MySQLOperatorCharm.cluster_initialized", new_callable=PropertyMock)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
     @patch(
         "mysql_vm_helpers.MySQL.get_cluster_endpoints",
@@ -39,7 +41,11 @@ class TestDatabase(unittest.TestCase):
         _create_application_database_and_scoped_user,
         _get_cluster_endpoints,
         _get_mysql_version,
+        _cluster_initialized,
+        _unit_initialized,
     ):
+        _unit_initialized.return_value = False
+        _cluster_initialized.return_value = False
         # run start-up events to enable usage of the helper class
         with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks") as _:
             self.harness.set_leader(True)
@@ -52,15 +58,11 @@ class TestDatabase(unittest.TestCase):
         database_relation = self.charm.model.get_relation(DB_RELATION_NAME)
         app_unit = list(database_relation.units)[0]
 
-        # simulate cluster initialized by editing the flag
-        self.harness.update_relation_data(
-            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
-        )
-
         self.assertEqual(database_relation_databag, {})
         self.assertEqual(database_relation.data.get(app_unit), {})
         self.assertEqual(database_relation.data.get(self.charm.unit), {})
 
+        _cluster_initialized.return_value = True
         # update the app leader unit data to trigger database_requested event
         self.harness.update_relation_data(
             self.database_relation_id, "app", {"database": "test_db"}

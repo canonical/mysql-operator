@@ -294,11 +294,11 @@ class MySQLVMUpgrade(DataUpgrade):
         """
         if self.charm._mysql.get_primary_label() != self.charm.unit_label:
             # set the primary to the leader unit for switchover mitigation
-            self.charm._mysql.set_cluster_primary(self.charm.get_unit_ip(self.charm.unit))
+            self.charm._mysql.set_cluster_primary(self.charm.get_unit_address(self.charm.unit))
 
         # set slow shutdown on all instances
         for unit in self.app_units:
-            unit_address = self.charm.get_unit_ip(unit)
+            unit_address = self.charm.get_unit_address(unit)
             self.charm._mysql.set_dynamic_variable(
                 variable="innodb_fast_shutdown", value="0", instance_address=unit_address
             )
@@ -325,7 +325,7 @@ class MySQLVMUpgrade(DataUpgrade):
             leader_unit_ordinal = self.upgrade_stack[0]
             for unit in self.peer_relation.units:
                 if unit.name == f"{self.charm.app.name}/{leader_unit_ordinal}":
-                    return self.charm.get_unit_ip(unit)
+                    return self.charm.get_unit_address(unit)
             return ""
 
         try:

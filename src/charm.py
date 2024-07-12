@@ -372,7 +372,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # Only executes if the unit was initialised
-        if not self.unit_peer_data.get("unit-initialized"):
+        if not self.unit_initialized:
             return
 
         # No need to remove the instance from the cluster if it is not a member of the cluster
@@ -391,7 +391,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if leader_unit := _get_leader_unit():
                 try:
                     self._mysql.set_cluster_primary(
-                        new_primary_address=self.get_unit_ip(leader_unit)
+                        new_primary_address=self.get_unit_address(leader_unit)
                     )
                 except MySQLSetClusterPrimaryError:
                     logger.warning("Failed to switch primary to leader unit")
@@ -463,8 +463,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
-            and not self.unit_peer_data.get("unit-configured")
-            and not self.unit_peer_data.get("unit-initialized")
+            and not self.unit_configured
+            and not self.unit_initialized
             and not self.unit.is_leader()
         ):
             # avoid changing status while in initialising
@@ -610,7 +610,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     @property
     def unit_address(self) -> str:
         """Returns the unit's address."""
-        return self.get_unit_ip(self.unit)
+        return self.get_unit_address(self.unit)
 
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
@@ -668,12 +668,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self._mysql.wait_until_mysql_connection()
 
-        self.unit_peer_data["unit-configured"] = "True"
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
 
-    def get_unit_ip(self, unit: Unit) -> str:
+    def get_unit_address(self, unit: Unit) -> str:
         """Get the IP address of a specific unit."""
         if unit == self.unit:
             return str(self.model.get_binding(PEER).network.bind_address)
@@ -719,7 +718,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.unit.reboot(now=True)
 
         # Safeguard if receiving on start after unit initialization
-        if self.unit_peer_data.get("unit-initialized") == "True":
+        if self.unit_initialized:
             logger.debug("Delegate status update for start handler on initialized unit.")
             self._on_update_status(None)
             return False
@@ -732,9 +731,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # and have an empty performance_schema.replication_group_members table
         return (
             self.unit_peer_data.get("member-state") == "waiting"
-            and self.unit_peer_data.get("unit-configured") == "True"
-            and not self.unit_peer_data.get("unit-initialized")
-            and int(self.app_peer_data.get("units-added-to-cluster", 0)) > 0
+            and self.unit_configured
+            and not self.unit_initialized
+            and self.cluster_initialized
         )
 
     def _get_primary_from_online_peer(self) -> Optional[str]:
@@ -743,7 +742,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if self.peers.data[unit].get("member-state") == "online":
                 try:
                     return self._mysql.get_cluster_primary_address(
-                        connect_instance_address=self.get_unit_ip(unit)
+                        connect_instance_address=self.get_unit_address(unit)
                     )
                 except MySQLGetClusterPrimaryAddressError:
                     # try next unit
@@ -755,7 +754,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Try to join the unit from the primary unit.
         """
         instance_label = self.unit.name.replace("/", "-")
-        instance_address = self.get_unit_ip(self.unit)
+        instance_address = self.get_unit_address(self.unit)
 
         if not self._mysql.is_instance_in_cluster(instance_label):
             # Add new instance to the cluster
@@ -820,7 +819,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 logger.debug("Waiting to joing the cluster, failed to acquire lock.")
                 return
         # Update 'units-added-to-cluster' counter in the peer relation databag
-        self.unit_peer_data["unit-initialized"] = "True"
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)
         logger.debug(f"Instance {instance_label} is cluster member")

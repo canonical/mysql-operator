@@ -57,8 +57,12 @@ class TestAsyncRelation(unittest.TestCase):
         )
         del self.async_primary.role
 
+    @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_async_relation_broken_offer(self, _mysql, _):
+    def test_async_relation_broken_offer(self, _mysql, _, _cluster_initialized):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
         self.async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
@@ -79,8 +83,12 @@ class TestAsyncRelation(unittest.TestCase):
             self.charm.app_peer_data["cluster-name"], force=False
         )
 
+    @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_async_relation_broken_consumer(self, _mysql, _):
+    def test_async_relation_broken_consumer(self, _mysql, _, _cluster_initialized):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
         async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
@@ -129,8 +137,12 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertEqual(self.async_primary.state, States.RECOVERING)
 
     @pytest.mark.usefixtures("with_juju_secrets")
+    @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_create_replication(self, _mysql, _):
+    def test_create_replication(self, _mysql, _, _cluster_initialized):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
@@ -158,11 +170,15 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertEqual(relation_data["mysql-version"], "8.0.36-0ubuntu0.22.04.1")
 
     @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
+    @patch(
         "charms.mysql.v0.async_replication.MySQLAsyncReplicationOffer.state",
         new_callable=PropertyMock,
     )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_offer_relation_changed(self, _mysql, _state, _):
+    def test_offer_relation_changed(self, _mysql, _state, _, _cluster_initialized):
         self.harness.set_leader(True)
         async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
 
@@ -250,15 +266,15 @@ class TestAsyncRelation(unittest.TestCase):
         )
         self.assertEqual(self.async_replica.state, States.FAILED)
 
+    @patch(
+        "charm.MySQLOperatorCharm.unit_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_consumer_created(self, _mysql, _):
+    def test_consumer_created(self, _mysql, _, _unit_initialized):
         """Test replica creation."""
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-
-        self.harness.update_relation_data(
-            self.peers_relation_id, self.charm.unit.name, {"unit-initialized": "True"}
-        )
 
         _mysql.get_non_system_databases.return_value = set()
 
@@ -266,15 +282,15 @@ class TestAsyncRelation(unittest.TestCase):
 
         self.assertTrue(isinstance(self.charm.unit.status, WaitingStatus))
 
+    @patch(
+        "charm.MySQLOperatorCharm.unit_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_consumer_created_user_data(self, _mysql, _):
+    def test_consumer_created_user_data(self, _mysql, _, _unit_initialized):
         """Test replica creation."""
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-
-        self.harness.update_relation_data(
-            self.peers_relation_id, self.charm.unit.name, {"unit-initialized": "True"}
-        )
 
         _mysql.get_non_system_databases.return_value = set("a-database")
 
@@ -367,13 +383,17 @@ class TestAsyncRelation(unittest.TestCase):
         _mysql.update_user_password.assert_called()
         self.assertNotEqual(original_cluster_name, self.charm.app_peer_data["cluster-name"])
 
+    @patch(
+        "charm.MySQLOperatorCharm.unit_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
     @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch(
         "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.state",
         new_callable=PropertyMock,
     )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_consumer_changed_ready(self, _mysql, _state, _update_status, _):
+    def test_consumer_changed_ready(self, _mysql, _state, _update_status, _, _unit_initialized):
         """Test replica changed for ready state."""
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
@@ -441,8 +461,12 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
     # actions
+    @patch("charm.MySQLOperatorCharm._on_update_status")
+    @patch(
+        "charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock(return_value=True)
+    )
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_promote_to_primary(self, _mysql, _):
+    def test_promote_to_primary(self, _mysql, _, _unit_initialized, _on_update_status):
         self.harness.set_leader(True)
         self.harness.add_relation(RELATION_CONSUMER, "db1")
 

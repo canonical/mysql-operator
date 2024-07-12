@@ -25,6 +25,7 @@ class TestMariaDBRelation(unittest.TestCase):
 
     @pytest.mark.usefixtures("without_juju_secrets")
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch(
@@ -39,6 +40,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _get_cluster_primary_address,
         _does_mysql_user_exist,
         _,
+        _unit_initialized,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -81,6 +83,7 @@ class TestMariaDBRelation(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch(
@@ -95,6 +98,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _get_cluster_primary_address,
         _does_mysql_user_exist,
         _,
+        _unit_initialized,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
@@ -139,6 +143,7 @@ class TestMariaDBRelation(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
     @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
@@ -155,6 +160,7 @@ class TestMariaDBRelation(unittest.TestCase):
         _get_cluster_primary_address,
         _does_mysql_user_exist,
         _,
+        _unit_initialized,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
