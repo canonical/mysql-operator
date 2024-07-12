@@ -1,0 +1,128 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:675 Connecting to existing model localhost-localhost:test on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade UserSecretsDrain received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade UserSecretsManager received from the controller
+[32mINFO    [0m juju.model:model.py:2069 Deploying local:jammy/mysql-0
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Installing MySQL
+  mysql/1 [allocating] waiting: agent initialising
+  mysql/2 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: Setting up cluster node
+  mysql/1 [executing] waiting: Waiting to start MySQL
+  mysql/2 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] maintenance: joining the cluster
+  mysql/2 [executing] waiting: waiting to get cluster primary from peers
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2069 Deploying ch:amd64/jammy/mysql-test-app-46
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [idle] waiting: 
+[33mWARNING [0m juju.model:model.py:1558 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [executing] active: 
+  mysql-test-app/0 [idle] waiting: 
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+  mysql/3 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql/3 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+  mysql/3 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql/3 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.3    unsupported  01:51:53Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.37-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   46  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.182.36.124                   
+mysql/0*           active    idle   0        10.182.36.180   3306,33060/tcp  Primary
+mysql/1            active    idle   1        10.182.36.243   3306,33060/tcp  
+mysql/2            active    idle   2        10.182.36.29    3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.182.36.180  juju-78a3e5-0  ubuntu@22.04      Running
+1        started  10.182.36.243  juju-78a3e5-1  ubuntu@22.04      Running
+2        started  10.182.36.29   juju-78a3e5-2  ubuntu@22.04      Running
+3        started  10.182.36.124  juju-78a3e5-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:43:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:18 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:43:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:43:18 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:43:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:23 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:43:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:23 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:43:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:43:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 01:43:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:46:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:09 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+unit-mysql-test-app-0: 01:46:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:48:27 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-4: 01:48:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:48:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 01:48:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
