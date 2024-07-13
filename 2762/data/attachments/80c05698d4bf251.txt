@@ -1,0 +1,55 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:62 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.3    unsupported  01:53:49Z
+
+App  Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+db1  8.0.37-0ubun...  active      3  mysql             0  no       
+
+Unit    Workload  Agent  Machine  Public address  Ports           Message
+db1/0*  active    idle   0        10.147.48.148   3306,33060/tcp  Primary
+db1/1   active    idle   1        10.147.48.174                   
+db1/2   blocked   idle   2        10.147.48.14                    Failed to initialize MySQL users
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.147.48.148  juju-cfd101-0  ubuntu@22.04      Running
+1        started  10.147.48.174  juju-cfd101-1  ubuntu@22.04      Running
+2        started  10.147.48.14   juju-cfd101-2  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:45:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:45:54 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-0: 01:45:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 01:45:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:46:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:02 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-1: 01:46:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:46:04 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:46:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:05 ERROR juju.worker.dependency "broker-tracker" manifold worker returned unexpected error: no container types determined
+machine-2: 01:46:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:46:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-db1-2: 01:47:35 ERROR unit.db1/2.juju-log Failed to configure users for: juju-cfd101-2.lxd with error b"mysql: [Warning] Using a password on the command line interface can be insecure.\nERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock' (2)\n"
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-2/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlcli_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysql', '-u', 'root', '--protocol=SOCKET', '--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock', '-e', "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'gBIzpLLsKz9w1svRzjwUvnrk'; GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION; CREATE USER 'monitoring'@'%' IDENTIFIED BY 'EpF23O1zKgaAo1VilTJVHfHz' WITH MAX_USER_CONNECTIONS 3; GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'; CREATE USER 'backups'@'%' IDENTIFIED BY '8oeSJOgv1X1vNN9uVegHaRDG'; GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'; GRANT SELECT ON performance_schema.log_status TO 'backups'@'%'; GRANT SELECT ON performance_schema.keyring_component_status TO 'backups'@'%'; GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'; UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'; ALTER USER 'root'@'localhost' IDENTIFIED BY 'EBCHtNmFaIC6e5tB430ojOpm'; REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM 'root'@'localhost'; FLUSH PRIVILEGES", '--password=EBCHtNmFaIC6e5tB430ojOpm']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-2/charm/lib/charms/mysql/v0/mysql.py", line 991, in configure_mysql_users
+    self._run_mysqlcli_script(
+  File "/var/lib/juju/agents/unit-db1-2/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-db1-2/charm/src/mysql_vm_helpers.py", line 749, in _run_mysqlcli_script
+    raise MySQLClientError(e.stderr)
+charms.mysql.v0.mysql.MySQLClientError: b"mysql: [Warning] Using a password on the command line interface can be insecure.\nERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock' (2)\n"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
