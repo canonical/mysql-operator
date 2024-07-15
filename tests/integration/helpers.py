@@ -388,7 +388,7 @@ def cut_network_from_unit(machine_name: str) -> None:
         machine_name: lxc container hostname
     """
     # apply a mask (device type `none`)
-    cut_network_command = f"lxc config device add {machine_name} eth0 none"
+    cut_network_command = f"lxc config device add {machine_name} eth0 none --project default"
     subprocess.check_call(cut_network_command.split())
 
 
@@ -399,7 +399,7 @@ def restore_network_for_unit(machine_name: str) -> None:
         machine_name: lxc container hostname
     """
     # remove mask from eth0
-    restore_network_command = f"lxc config device remove {machine_name} eth0"
+    restore_network_command = f"lxc config device remove {machine_name} eth0 --project default"
     subprocess.check_call(restore_network_command.split())
 
 
