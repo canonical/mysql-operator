@@ -589,7 +589,6 @@ class MySQLCharmBase(CharmBase, ABC):
         # rescan cluster for cleanup of unused
         # recovery users
         self._mysql.rescan_cluster()
-        self.app_peer_data["units-added-to-cluster"] = "1"
 
         state, role = self._mysql.get_member_state()
 

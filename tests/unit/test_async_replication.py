@@ -100,8 +100,6 @@ class TestAsyncRelation(unittest.TestCase):
         self.harness.remove_relation(async_primary_relation_id)
 
         self.assertEqual(self.charm.app_peer_data["removed-from-cluster-set"], "true")
-        self.assertNotIn("unit-initialized", self.charm.unit_peer_data)
-        self.assertNotIn("units-added-to-cluster", self.charm.app_peer_data)
 
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_get_state(self, _mysql, _):
@@ -149,13 +147,6 @@ class TestAsyncRelation(unittest.TestCase):
         _mysql.is_cluster_replica.return_value = False
         _mysql.get_mysql_version.return_value = "8.0.36-0ubuntu0.22.04.1"
         _mysql.get_member_state.return_value = ("online", "primary")
-
-        self.harness.update_relation_data(
-            self.peers_relation_id, self.charm.unit.name, {"unit-initialized": "True"}
-        )
-        self.harness.update_relation_data(
-            self.peers_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
-        )
 
         async_primary_relation_id = self.harness.add_relation(
             RELATION_OFFER, "db2", app_data={"is-replica": "true"}
@@ -317,9 +308,6 @@ class TestAsyncRelation(unittest.TestCase):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
-        self.harness.update_relation_data(
-            self.peers_relation_id, self.charm.unit.name, {"unit-initialized": "True"}
-        )
         async_relation_id = self.harness.add_relation(RELATION_CONSUMER, "db1")
 
         # 1. returning cluster
@@ -409,7 +397,6 @@ class TestAsyncRelation(unittest.TestCase):
 
         _update_status.assert_called_once()
         self.assertEqual(self.charm.app_peer_data["cluster-set-domain-name"], "cluster-set-test")
-        self.assertEqual(self.charm.app_peer_data["units-added-to-cluster"], "1")
 
     @patch("ops.framework.EventBase.defer")
     @patch(
@@ -432,7 +419,6 @@ class TestAsyncRelation(unittest.TestCase):
             {"some": "data3"},
         )
 
-        self.assertEqual(self.charm.app_peer_data["units-added-to-cluster"], "2")
         _defer.assert_called_once()
 
     def test_consumer_created_non_leader(self, _):

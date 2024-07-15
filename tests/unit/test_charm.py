@@ -259,7 +259,6 @@ class TestCharm(unittest.TestCase):
         "charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock(return_value=True)
     )
     @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
-    @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
     @patch("charm.is_volume_mounted", return_value=True)
@@ -274,7 +273,6 @@ class TestCharm(unittest.TestCase):
         _is_volume_mounted,
         _get_cluster_primary_address,
         _get_member_state,
-        _get_cluster_node_count,
         _active_status_message,
         _unit_initialized,
         _cluster_initialized,
@@ -297,7 +295,6 @@ class TestCharm(unittest.TestCase):
         _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
         _is_volume_mounted.assert_called_once()
-        _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
