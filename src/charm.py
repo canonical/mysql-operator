@@ -508,9 +508,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._handle_non_online_instance_status(state)
 
         if self.unit.is_leader():
-            nodes = self._mysql.get_cluster_node_count()
-            if nodes > 0:
-                self.app_peer_data["units-added-to-cluster"] = str(nodes)
             try:
                 primary_address = self._mysql.get_cluster_primary_address()
             except MySQLGetClusterPrimaryAddressError:
@@ -818,7 +815,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 self.unit.status = WaitingStatus("waiting to join the cluster")
                 logger.debug("Waiting to joing the cluster, failed to acquire lock.")
                 return
-        # Update 'units-added-to-cluster' counter in the peer relation databag
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)
         logger.debug(f"Instance {instance_label} is cluster member")
