@@ -266,7 +266,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+@retry(stop=stop_after_attempt(30), wait=wait_fixed(5), reraise=True)
 def is_connection_possible(
     credentials: Dict, *, retry_if_not_possible=False, **extra_opts
 ) -> bool:

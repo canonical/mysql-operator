@@ -7,6 +7,7 @@ import bisect
 import json
 import logging
 import pathlib
+import subprocess
 from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.upgrade import (
@@ -53,6 +54,12 @@ def get_mysql_dependencies_model() -> MySQLVMDependenciesModel:
     with open("src/dependency.json") as dependency_file:
         _deps = json.load(dependency_file)
     return MySQLVMDependenciesModel(**_deps)
+
+
+def set_cron_daemon(action: str) -> None:
+    """Start/stop the cron daemon."""
+    logger.debug(f"{action}ing cron daemon")
+    subprocess.run(["systemctl", action, "cron"], check=True)
 
 
 class MySQLVMUpgrade(DataUpgrade):
@@ -189,6 +196,8 @@ class MySQLVMUpgrade(DataUpgrade):
                 memory_limit=self.charm.config.profile_limit_memory,
             )
             self.charm.unit.status = MaintenanceStatus("starting services...")
+            # stop cron daemon to be able to query `error.log`
+            set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
             self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
@@ -215,6 +224,8 @@ class MySQLVMUpgrade(DataUpgrade):
             logger.exception("Failed to stop MySQL server")
             self.set_unit_failed()
             return
+        finally:
+            set_cron_daemon("start")
 
         try:
             self.charm.unit.set_workload_version(self.charm._mysql.get_mysql_version() or "unset")

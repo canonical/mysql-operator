@@ -140,7 +140,6 @@ async def test_upgrade_to_failling(
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
 @markers.amd64_only
 @pytest.mark.abort_on_fail
-@pytest.mark.unstable
 async def test_rollback(ops_test, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
@@ -152,7 +151,7 @@ async def test_rollback(ops_test, continuous_writes) -> None:
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    charm = await charm_local_build(ops_test)
+    charm = await charm_local_build(ops_test, refresh=True)
 
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)

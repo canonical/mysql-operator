@@ -198,10 +198,8 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
     logger.info("Relate router and db")
     await first_model.integrate(MYSQL_ROUTER_APP_NAME, MYSQL_APP1)
 
-    await first_model.wait_for_idle(
-        apps=[MYSQL_ROUTER_APP_NAME, APPLICATION_APP_NAME],
-        timeout=10 * MINUTE,
-        raise_on_error=False,
+    await first_model.block_until(
+        lambda: first_model.applications[APPLICATION_APP_NAME].units[0].workload_status == "active"
     )
 
 

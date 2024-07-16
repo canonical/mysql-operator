@@ -21,7 +21,7 @@ async def continuous_writes(ops_test: OpsTest):
     application_unit = ops_test.model.applications[application_name].units[0]
 
     logger.info("Clearing continuous writes")
-    await juju_.run_action(application_unit, "clear-continuous-writes")
+    await juju_.run_action(application_unit, "clear-continuous-writes", **{"timeout": 120})
 
     logger.info("Starting continuous writes")
     await juju_.run_action(application_unit, "start-continuous-writes")
