@@ -1,0 +1,164 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:156 Get leader unit
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:162 Run pre-upgrade-check action
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:166 Refresh with previous charm
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:169 Wait for upgrade to start
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] blocked: upgrade failed. Check logs for rollback instruction
+  mysql/2 [idle] blocked: ready to rollback application
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: upgrading snap...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: joining the cluster
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: starting services...
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/1 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:176 Ensure continuous_writes after rollback procedure
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:356 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  01:52:57Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.34-0ubun...  active      3  mysql                          2  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   46  no       Last written value=34539
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.229.166.124                  Last written value=34539
+mysql/0            active    idle   0        10.229.166.95   3306,33060/tcp  Primary
+mysql/1            active    idle   1        10.229.166.201  3306,33060/tcp  
+mysql/2*           active    idle   2        10.229.166.142  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.229.166.95   juju-de46d8-0  ubuntu@22.04      Running
+1        started  10.229.166.201  juju-de46d8-1  ubuntu@22.04      Running
+2        started  10.229.166.142  juju-de46d8-2  ubuntu@22.04      Running
+3        started  10.229.166.124  juju-de46d8-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-2: 01:37:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:37:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:37:07 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:37:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:37:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:37:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:37:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:37:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:37:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:37:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:37:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:37:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:44:30 CRITICAL unit.mysql/1.juju-log upgrade:0: Upgrade failed, follow the instructions below to rollback:
+    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state
+    2. Run `juju refresh` to the previously deployed charm revision or local charm file
+unit-mysql-1: 01:47:52 ERROR unit.mysql/1.juju-log upgrade:0: Failed to start mysqld
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 612, in start_mysqld
+    self.wait_until_mysql_connection()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 289, in wrapped_f
+    return self(f, *args, **kw)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 379, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 325, in iter
+    raise retry_exc.reraise()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 158, in reraise
+    raise self.last_attempt.result()
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 451, in result
+    return self.__get_result()
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 382, in __call__
+    result = fn(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 379, in wait_until_mysql_connection
+    raise MySQLServiceNotRunningError("MySQL socket file not found")
+charms.mysql.v0.mysql.MySQLServiceNotRunningError: MySQL socket file not found
+unit-mysql-1: 01:48:02 ERROR unit.mysql/1.juju-log upgrade:0: Failed to uninstall MySQL on attempt=1
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 612, in start_mysqld
+    self.wait_until_mysql_connection()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 289, in wrapped_f
+    return self(f, *args, **kw)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 379, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 325, in iter
+    raise retry_exc.reraise()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 158, in reraise
+    raise self.last_attempt.result()
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 451, in result
+    return self.__get_result()
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/tenacity/__init__.py", line 382, in __call__
+    result = fn(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 379, in wait_until_mysql_connection
+    raise MySQLServiceNotRunningError("MySQL socket file not found")
+charms.mysql.v0.mysql.MySQLServiceNotRunningError: MySQL socket file not found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/upgrade.py", line 201, in _on_upgrade_granted
+    self.charm._mysql.start_mysqld()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 620, in start_mysqld
+    raise MySQLStartMySQLDError(e.message)
+charms.mysql.v0.mysql.MySQLStartMySQLDError: MySQL socket file not found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 215, in uninstall_mysql
+    subprocess.run(["snap", "remove", "charmed-mysql"], check=True)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['snap', 'remove', 'charmed-mysql']' returned non-zero exit status 1.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
