@@ -19,6 +19,7 @@ from charms.data_platform_libs.v0.upgrade import (
 )
 from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
+    MySQLPluginInstallError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
@@ -199,6 +200,7 @@ class MySQLVMUpgrade(DataUpgrade):
             # stop cron daemon to be able to query `error.log`
             set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
+            self.charm._mysql.install_plugins()
             self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
@@ -222,6 +224,10 @@ class MySQLVMUpgrade(DataUpgrade):
             self._reset_on_unsupported_downgrade()
         except MySQLStopMySQLDError:
             logger.exception("Failed to stop MySQL server")
+            self.set_unit_failed()
+            return
+        except MySQLPluginInstallError:
+            logger.exception("Failed to install MySQL plugins")
             self.set_unit_failed()
             return
         finally:
@@ -404,13 +410,3 @@ class MySQLVMUpgrade(DataUpgrade):
         )
         if not installed_by_mysql_server_file.exists():
             installed_by_mysql_server_file.touch()
-
-    def _post_upgrade(self) -> None:
-        """Post upgrade adjustments from charm without upgrade support.
-
-        Assumes run on leader unit only.
-        """
-        # call leader elected handler to populate missing user data
-        self.charm._on_leader_elected(None)
-        # TODO: create backup user, delete root user
-        # TODO: add `add-unit` row on juju-units-operations table

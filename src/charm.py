@@ -817,7 +817,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 return
             except MySQLLockAcquisitionError:
                 self.unit.status = WaitingStatus("waiting to join the cluster")
-                logger.debug("Waiting to joing the cluster, failed to acquire lock.")
+                logger.debug("Waiting to join the cluster, failed to acquire lock.")
                 return
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)

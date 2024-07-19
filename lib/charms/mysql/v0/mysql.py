@@ -297,7 +297,7 @@ class MySQLOfflineModeAndHiddenInstanceExistsError(Error):
     """
 
 
-class MySQLGetAutoTunningParametersError(Error):
+class MySQLGetAutoTuningParametersError(Error):
     """Exception raised when there is an error computing the innodb buffer pool parameters."""
 
 
@@ -1010,14 +1010,17 @@ class MySQLBase(ABC):
 
     def install_plugins(self) -> None:
         """Install extra plugins."""
-        # install the audit plugin
         install_plugins_commands = {
             "audit_log": "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
             "audit_log_filter": "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';",
         }
 
         try:
+            installed_plugins = self._get_installed_plugins()
             for plugin, command in install_plugins_commands.items():
+                if plugin in installed_plugins:
+                    # skip if the plugin is already installed
+                    continue
                 logger.debug(f"Installing plugin {plugin}")
                 self._run_mysqlcli_script(command, password=self.root_password)
         except MySQLClientError:
@@ -1025,6 +1028,24 @@ class MySQLBase(ABC):
                 f"Failed to install {plugin=}",  # type: ignore
             )
             raise MySQLPluginInstallError
+
+    def _get_installed_plugins(self) -> set[str]:
+        """Return a set of explicitly installed plugins."""
+        try:
+            output = self._run_mysqlcli_script(
+                "select name from mysql.plugin",
+                password=self.root_password,
+            )
+            return {
+                plugin
+                for plugin in output.splitlines()
+                if plugin not in ["clone", "group_replication"]
+            }
+        except MySQLClientError:
+            logger.exception(
+                "Failed to get installed plugins",
+            )
+            raise
 
     def does_mysql_user_exist(self, username: str, hostname: str) -> bool:
         """Checks if a mysql user already exists."""
@@ -2379,7 +2400,7 @@ class MySQLBase(ABC):
             return (pool_size, innodb_buffer_pool_chunk_size, group_replication_message_cache)
         except Exception:
             logger.exception("Failed to compute innodb buffer pool parameters")
-            raise MySQLGetAutoTunningParametersError("Error computing buffer pool parameters")
+            raise MySQLGetAutoTuningParametersError("Error computing buffer pool parameters")
 
     def get_max_connections(self, available_memory: int) -> int:
         """Calculate max_connections parameter for the instance."""
@@ -2390,7 +2411,7 @@ class MySQLBase(ABC):
 
         if available_memory < bytes_per_connection:
             logger.error(f"Not enough memory for running MySQL: {available_memory=}")
-            raise MySQLGetAutoTunningParametersError("Not enough memory for running MySQL")
+            raise MySQLGetAutoTuningParametersError("Not enough memory for running MySQL")
 
         return available_memory // bytes_per_connection
 
@@ -2592,7 +2613,7 @@ class MySQLBase(ABC):
             innodb_buffer_pool_size, _, _ = self.get_innodb_buffer_pool_parameters(
                 self.get_available_memory()
             )
-        except MySQLGetAutoTunningParametersError as e:
+        except MySQLGetAutoTuningParametersError as e:
             raise MySQLPrepareBackupForRestoreError(e.message)
 
         prepare_backup_command = [

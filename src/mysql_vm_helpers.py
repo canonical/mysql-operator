@@ -20,7 +20,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
     MySQLKillSessionError,
     MySQLRestoreBackupError,
@@ -264,7 +264,7 @@ class MySQL(MySQLBase):
                 memory_limit=memory_limit,
                 experimental_max_connections=experimental_max_connections,
             )
-        except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
+        except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
 

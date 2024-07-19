@@ -27,7 +27,7 @@ from charms.mysql.v0.mysql import (
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
@@ -1066,16 +1066,16 @@ class TestMySQLBase(unittest.TestCase):
 
     def test_get_innodb_buffer_pool_parameters_exception(self):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_innodb_buffer_pool_parameters("wrong type")
 
     def test_get_max_connections(self):
         self.assertEqual(1310, self.mysql.get_max_connections(16484458496))
 
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_max_connections(12582910)
 
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_max_connections(125)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
@@ -1465,7 +1465,7 @@ xtrabackup/location --prepare
                 group="test-group",
             )
 
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError()
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError()
         with self.assertRaises(MySQLPrepareBackupForRestoreError):
             self.mysql.prepare_backup_for_restore(
                 "backup/location",
