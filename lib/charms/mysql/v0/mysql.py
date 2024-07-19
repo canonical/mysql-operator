@@ -1780,6 +1780,7 @@ class MySQLBase(ABC):
 
     def execute_remove_instance(self, connect_instance: Optional[str] = None) -> None:
         """Execute the remove_instance() script with mysqlsh.
+
         Args:
             connect_instance: (optional) The instance from where to run the remove_instance()
         """
