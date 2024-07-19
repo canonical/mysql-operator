@@ -717,7 +717,11 @@ class MySQL(MySQLBase):
                 raise MySQLClientError
 
     def _run_mysqlcli_script(
-        self, script: str, user: str = "root", password: str = None, timeout: Optional[int] = None
+        self,
+        script: str,
+        user: str = "root",
+        password: Optional[str] = None,
+        timeout: Optional[int] = None,
     ) -> str:
         """Execute a MySQL CLI script.
 

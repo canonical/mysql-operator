@@ -128,7 +128,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 63
+LIBPATCH = 64
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -398,6 +398,10 @@ class MySQLFencingWritesError(Error):
 
 class MySQLRejoinClusterError(Error):
     """Exception raised when there is an issue trying to rejoin a cluster to the cluster set."""
+
+
+class MySQLPluginInstallError(Error):
+    """Exception raised when there is an issue installing a MySQL plugin."""
 
 
 @dataclasses.dataclass
@@ -824,6 +828,7 @@ class MySQLTextLogs(str, enum.Enum):
     ERROR = "ERROR LOGS"
     GENERAL = "GENERAL LOGS"
     SLOW = "SLOW LOGS"
+    AUDIT = "AUDIT LOGS"
 
 
 class MySQLBase(ABC):
@@ -933,6 +938,9 @@ class MySQLBase(ABC):
             "general_log": "ON",
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slowquery.log",
+            "loose-audit_log_format": "JSON",
+            "loose-audit_log_policy": "LOGINS",
+            "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
         }
 
         if innodb_buffer_pool_chunk_size:
@@ -999,6 +1007,24 @@ class MySQLBase(ABC):
                 exc_info=e,
             )
             raise MySQLConfigureMySQLUsersError(e.message)
+
+    def install_plugins(self) -> None:
+        """Install extra plugins."""
+        # install the audit plugin
+        install_plugins_commands = {
+            "audit_log": "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
+            "audit_log_filter": "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';",
+        }
+
+        try:
+            for plugin, command in install_plugins_commands.items():
+                logger.debug(f"Installing plugin {plugin}")
+                self._run_mysqlcli_script(command, password=self.root_password)
+        except MySQLClientError:
+            logger.exception(
+                f"Failed to install {plugin=}",  # type: ignore
+            )
+            raise MySQLPluginInstallError
 
     def does_mysql_user_exist(self, username: str, hostname: str) -> bool:
         """Checks if a mysql user already exists."""
@@ -2808,15 +2834,22 @@ class MySQLBase(ABC):
 
         if isinstance(logs_type, list):
             flush_logs_commands.extend(
-                [f"session.run_sql('FLUSH {log.value}')" for log in logs_type]
+                [
+                    f"session.run_sql('FLUSH {log.value}')"
+                    for log in logs_type
+                    if logs_type != MySQLTextLogs.AUDIT
+                ]
             )
-        else:
+            flush_logs_commands.append("session.run_sql(\"set global audit_log_flush='ON'\")")
+        elif logs_type != MySQLTextLogs.AUDIT:
             flush_logs_commands.append(f'session.run_sql("FLUSH {logs_type.value}")')  # type: ignore
+        else:
+            flush_logs_commands.append("session.run_sql(\"set global audit_log_flush='ON'\")")
 
         try:
             self._run_mysqlsh_script("\n".join(flush_logs_commands), timeout=50)
         except MySQLClientError:
-            logger.exception(f"Failed to flush {logs_type} logs.")
+            logger.warning(f"Failed to flush {logs_type} logs.")
 
     def get_databases(self) -> set[str]:
         """Return a set with all databases on the server."""

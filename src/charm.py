@@ -34,6 +34,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
+    MySQLPluginInstallError,
     MySQLRebootFromCompleteOutageError,
     MySQLSetClusterPrimaryError,
 )
@@ -141,7 +142,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     config_type = CharmConfig
     # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
     # (which runs juju-run/juju-exec to dispatch a custom event from cron)
-    on = FlushMySQLLogsCharmEvents()  # pyright: ignore [reportAssignmentType]
+    on = FlushMySQLLogsCharmEvents()  # type: ignore
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -203,7 +204,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     #  Charm Lifecycle Hooks
     # =======================
 
-    def _on_install(self, event: InstallEvent) -> None:
+    def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
@@ -258,7 +259,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, event: EventBase) -> None:
+    def _on_config_changed(self, _: EventBase) -> None:
         """Handle the config changed event."""
         if not self._is_peer_data_set:
             # skip when not initialized
@@ -330,6 +331,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         except MySQLDNotRestartedError:
             self.unit.status = BlockedStatus("Failed to restart mysqld after configuring instance")
             return
+        except MySQLPluginInstallError:
+            logger.warning("Failed to install MySQL plugins")
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
 
@@ -533,7 +536,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self._mysql.connect_mysql_exporter()
 
-    def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent) -> None:
+    def _on_cos_agent_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle the cos_agent relation broken event.
 
         Disable the mysqld-exporter snap service.
@@ -647,6 +650,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
+        self._mysql.install_plugins()
 
         # ensure hostname can be resolved
         self.hostname_resolution.update_etc_hosts(None)
