@@ -259,23 +259,21 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.write_mysqld_config(profile="production", memory_limit=None)
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 111",
-                "innodb_buffer_pool_size = 1234",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "innodb_buffer_pool_chunk_size = 5678",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "report_host = 127.0.0.1",
+            "max_connections = 111",
+            "innodb_buffer_pool_size = 1234",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "innodb_buffer_pool_chunk_size = 5678",
+            "\n",
+        ))
 
         _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
@@ -285,50 +283,44 @@ class TestMySQL(unittest.TestCase):
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
         # Test `testing` profile
         _open_mock.reset_mock()
         self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 100",
-                "innodb_buffer_pool_size = 20971520",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "innodb_buffer_pool_chunk_size = 1048576",
-                "performance-schema-instrument = 'memory/%=OFF'",
-                "loose-group_replication_message_cache_size = 134217728",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "report_host = 127.0.0.1",
+            "max_connections = 100",
+            "innodb_buffer_pool_size = 20971520",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "innodb_buffer_pool_chunk_size = 1048576",
+            "performance-schema-instrument = 'memory/%=OFF'",
+            "loose-group_replication_message_cache_size = 134217728",
+            "\n",
+        ))
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
     @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))

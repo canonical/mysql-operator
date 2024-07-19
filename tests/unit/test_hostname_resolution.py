@@ -29,20 +29,21 @@ class TestHostnameResolution(unittest.TestCase):
         self.assertEqual(host_entries, [])
 
         # Add relation
-        id = self.harness.add_relation(PEER, APP_NAME)
+        peer_relation_id = self.harness.add_relation(PEER, APP_NAME)
 
         host_entries = self.hostname_resolution._get_host_details()
         self.assertEqual(host_entries, [])
 
         # Add unit
-        self.harness.add_relation_unit(id, f"{APP_NAME}/0")
+        self.harness.add_relation_unit(peer_relation_id, f"{APP_NAME}/0")
         self.harness.update_relation_data(
-            id,
+            peer_relation_id,
             f"{APP_NAME}/0",
             {
-                HOSTNAME_DETAILS: json.dumps(
-                    {"address": "1.1.1.1", "names": ["name1", "name2", "name3"]}
-                )
+                HOSTNAME_DETAILS: json.dumps({
+                    "address": "1.1.1.1",
+                    "names": ["name1", "name2", "name3"],
+                })
             },
         )
 

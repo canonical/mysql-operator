@@ -396,7 +396,7 @@ async def ensure_all_units_continuous_writes_incrementing(
                             select_all_continuous_writes_sql,
                         )
                     )
-                    numbers = {n for n in range(1, max_written_value)}
+                    numbers = set(range(1, max_written_value))
                     assert (
                         numbers <= all_written_values
                     ), f"Missing numbers in database for unit {unit.name}"

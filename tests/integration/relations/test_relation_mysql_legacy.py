@@ -104,9 +104,10 @@ async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     # Configure a user and database to be used for the relation
     # as required for this relation
-    await ops_test.model.applications[DATABASE_APP_NAME].set_config(
-        {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
-    )
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+        "mysql-interface-user": TEST_USER,
+        "mysql-interface-database": TEST_DATABASE,
+    })
 
     logger.info(f"Relating {DATABASE_APP_NAME}:{ENDPOINT} with {APPLICATION_APP_NAME}:{ENDPOINT}")
 
