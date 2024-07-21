@@ -1,0 +1,15 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:356 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:249 Stopping server on unit mysql/1
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:259 Get new primary
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:264 Write to new primary
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:268 Re starting server on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:356 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:481 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
