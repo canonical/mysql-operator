@@ -271,7 +271,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
 
         # restart not required if mysqld is not running
-        restart = self._mysql.is_mysqld_running()
+        mysqld_running = self._mysql.is_mysqld_running()
 
         previous_config = self.mysql_config.custom_config
         if not previous_config:
@@ -296,7 +296,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self._mysql.write_content_to_file(
                 path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
             )
-            if restart:
+            if mysqld_running:
                 logger.info("Configuration change requires restart")
                 self.on[f"{self.restart.name}"].acquire_lock.emit()
                 return
@@ -306,6 +306,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
                 self._mysql.set_dynamic_variable(config, new_config_dict[config])
+
+        if mysqld_running:
+            # plugins are installed running daemon
+            if self.config.audit_plugin_enabled:
+                self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+            else:
+                self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -650,7 +657,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
-        self._mysql.install_plugins()
+
+        if self.config.audit_plugin_enabled:
+            self._mysql.install_plugins(["audit_log", "audit_log_filter"])
 
         # ensure hostname can be resolved
         self.hostname_resolution.update_etc_hosts(None)

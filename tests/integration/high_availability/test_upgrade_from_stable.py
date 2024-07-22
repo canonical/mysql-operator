@@ -34,7 +34,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="8.0/stable",
             series="jammy",
-            config={"profile": "testing"},
+            config={"profile": "testing", "audit-plugin-enabled": "false"},
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,

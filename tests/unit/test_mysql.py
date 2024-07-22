@@ -35,6 +35,7 @@ from charms.mysql.v0.mysql import (
     MySQLInitializeJujuOperationsTableError,
     MySQLMemberState,
     MySQLOfflineModeAndHiddenInstanceExistsError,
+    MySQLPluginInstallError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
@@ -2035,6 +2036,79 @@ xtrabackup/location --defaults-file=defaults/config/file
         _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
 
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_install_plugin(self, _run_mysqlcli_script, _get_installed_plugins):
+        """Test install_plugin."""
+        # ensure not installed if already installed
+        _get_installed_plugins.return_value = {"plugin1"}
+        self.mysql.install_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure not installed if unsupported
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure installed
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure raise exception
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["audit_log"])
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLPluginInstallError):
+            self.mysql.install_plugins(["audit_log"])
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_uninstall_plugin(self, _run_mysqlcli_script, _get_installed_plugins):
+        """Test uninstall_plugin."""
+        # ensure not uninstalled if not installed
+        _get_installed_plugins.return_value = set()
+        self.mysql.uninstall_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure uninstalled
+        _get_installed_plugins.return_value = {"audit_log"}
+        self.mysql.uninstall_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            "UNINSTALL PLUGIN audit_log",
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure raise exception
+        _get_installed_plugins.return_value = {"audit_log"}
+        self.mysql.uninstall_plugins(["audit_log"])
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLPluginInstallError):
+            self.mysql.uninstall_plugins(["audit_log"])
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_get_installed_plugins(self, _run_mysqlcli_script):
+        """Test get_installed_plugins."""
+        _run_mysqlcli_script.return_value = "audit_log\nclone\ngroup_replication\n"
+        self.mysql._run_mysqlcli_script = _run_mysqlcli_script
+
+        plugins = self.mysql._get_installed_plugins()
+        self.assertEqual(plugins, {"audit_log"})
+
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLClientError):
+            self.mysql._get_installed_plugins()
 
     def test_abstract_methods(self):
         """Test abstract methods."""

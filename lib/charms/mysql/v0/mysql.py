@@ -1008,24 +1008,51 @@ class MySQLBase(ABC):
             )
             raise MySQLConfigureMySQLUsersError(e.message)
 
-    def install_plugins(self) -> None:
+    def install_plugins(self, plugins: list[str]) -> None:
         """Install extra plugins."""
-        install_plugins_commands = {
+        supported_plugins = {
             "audit_log": "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
             "audit_log_filter": "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';",
         }
 
         try:
             installed_plugins = self._get_installed_plugins()
-            for plugin, command in install_plugins_commands.items():
+            for plugin in plugins:
                 if plugin in installed_plugins:
                     # skip if the plugin is already installed
                     continue
+                if plugin not in supported_plugins:
+                    logger.warning(f"Plugin {plugin} is not supported")
+                    continue
                 logger.debug(f"Installing plugin {plugin}")
-                self._run_mysqlcli_script(command, password=self.root_password)
+                self._run_mysqlcli_script(
+                    supported_plugins[plugin],
+                    user=self.server_config_user,
+                    password=self.server_config_password,
+                )
         except MySQLClientError:
             logger.exception(
                 f"Failed to install {plugin=}",  # type: ignore
+            )
+            raise MySQLPluginInstallError
+
+    def uninstall_plugins(self, plugins: list[str]) -> None:
+        """Uninstall plugins."""
+        try:
+            installed_plugins = self._get_installed_plugins()
+            for plugin in plugins:
+                if plugin not in installed_plugins:
+                    # skip if the plugin is not installed
+                    continue
+                logger.debug(f"Uninstalling plugin {plugin}")
+                self._run_mysqlcli_script(
+                    f"UNINSTALL PLUGIN {plugin}",
+                    user=self.server_config_user,
+                    password=self.server_config_password,
+                )
+        except MySQLClientError:
+            logger.exception(
+                f"Failed to uninstall {plugin=}",  # type: ignore
             )
             raise MySQLPluginInstallError
 
