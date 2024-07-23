@@ -200,7 +200,8 @@ class MySQLVMUpgrade(DataUpgrade):
             # stop cron daemon to be able to query `error.log`
             set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
-            self.charm._mysql.install_plugins()
+            if self.charm.config.audit_plugin_enabled:
+                self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
             self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
