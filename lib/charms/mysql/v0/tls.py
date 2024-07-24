@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 LIBID = "eb73947deedd4380a3a90d527e0878eb"
 LIBAPI = 0
-LIBPATCH = 6
+LIBPATCH = 7
 
 SCOPE = "unit"
 
