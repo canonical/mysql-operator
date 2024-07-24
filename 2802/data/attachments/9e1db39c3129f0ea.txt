@@ -1,0 +1,92 @@
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/4 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql-test-app/0 [executing] active: 
+  mysql-test-app/1 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  01:58:46Z
+
+App             Version          Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.37-0ubun...  active       2  mysql                          0  no       
+mysql-test-app  0.0.2            waiting      2  mysql-test-app  latest/edge   46  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  waiting   idle   0        10.69.47.227                    
+mysql-test-app/1   waiting   idle   1        10.69.47.77                     
+mysql/0*           active    idle   2        10.69.47.46     3306,33060/tcp  
+mysql/4            active    idle   6        10.69.47.254    3306,33060/tcp  
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.69.47.227  juju-163414-0  ubuntu@22.04      Running
+1        started  10.69.47.77   juju-163414-1  ubuntu@22.04      Running
+2        started  10.69.47.46   juju-163414-2  ubuntu@22.04      Running
+6        started  10.69.47.254  juju-163414-6  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:42:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:42:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:42:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:42:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-1: 01:42:20 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:42:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:42:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:42:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:42:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:42:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:42:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:42:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:42:37 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 01:45:02 ERROR unit.mysql/2.juju-log Failed to flush ERROR LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 713, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmp6sxsn69r']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 2828, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands), timeout=50)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 717, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+unit-mysql-0: 01:45:03 ERROR unit.mysql/0.juju-log Failed to flush ERROR LOGS logs.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 713, in _run_mysqlsh_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--no-wizard', '--python', '-f', '/var/snap/charmed-mysql/common/tmpoji56abk']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2828, in flush_mysql_logs
+    self._run_mysqlsh_script("\n".join(flush_logs_commands), timeout=50)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 717, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+machine-5: 01:48:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:48:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 01:48:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 01:54:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:54:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-4: 01:54:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
