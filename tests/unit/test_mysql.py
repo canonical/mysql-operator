@@ -478,6 +478,19 @@ class TestMySQLBase(unittest.TestCase):
         )
         self.assertFalse(is_instance_configured)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_execute_remove_instance(self, _run_mysqlsh_script):
+        expected_remove_instance_commands = (
+            "shell.connect('clusteradmin:clusteradminpassword@1.2.3.4')\n"
+            "cluster = dba.get_cluster('test_cluster')\n"
+            "cluster.remove_instance('clusteradmin@127.0.0.1', "
+            "{'password': 'clusteradminpassword', 'force': 'false'})"
+        )
+
+        self.mysql.execute_remove_instance(connect_instance="1.2.3.4", force=False)
+
+        _run_mysqlsh_script.assert_called_once_with(expected_remove_instance_commands)
+
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
