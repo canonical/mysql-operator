@@ -304,7 +304,7 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
         )
 
     # retrieve connection data for each cluster
-    connection_data = dict()
+    connection_data = {}
     for application in apps:
         random_unit = ops_test.model.applications[application].units[0]
         server_config_credentials = await get_server_config_credentials(random_unit)
@@ -335,7 +335,7 @@ async def test_cluster_isolation(ops_test: OpsTest) -> None:
             commit=True,
         )
 
-    result = list()
+    result = []
     # read single record from each cluster
     for application in apps:
         read_records_sql = ["SELECT id FROM test.cluster_isolation_table"]

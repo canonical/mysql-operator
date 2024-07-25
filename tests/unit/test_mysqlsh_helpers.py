@@ -100,7 +100,9 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script("script")
 
-    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
+    @patch(
+        "mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1
+    )
     @patch("os.path.exists", return_value=False)
     def test_wait_until_mysql_connection(self, _exists, _stop):
         """Test a failed execution of wait_until_mysql_connection."""
@@ -200,7 +202,9 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.reset_mock()
         _charmed_mysql_mock.reset_mock()
 
-        snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart")
+        snap_service_operation(
+            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
+        )
 
         _snap_cache.assert_called_once()
         _charmed_mysql_mock.start.assert_not_called()
@@ -226,7 +230,9 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
 
         with self.assertRaises(SnapServiceOperationError):
-            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense")
+            snap_service_operation(
+                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense"
+            )
 
         _snap_cache.assert_not_called()
 
@@ -234,7 +240,8 @@ class TestMySQL(unittest.TestCase):
     @patch("os.chmod")
     @patch("mysql_vm_helpers.MySQL.get_available_memory", return_value=16475447296)
     @patch(
-        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678, None)
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678, None),
     )
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
@@ -282,7 +289,9 @@ class TestMySQL(unittest.TestCase):
 
         _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
-        _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
+        _path_mock.mkdir.assert_called_once_with(
+            mode=0o755, parents=True, exist_ok=True
+        )
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
@@ -329,7 +338,11 @@ class TestMySQL(unittest.TestCase):
             sorted(_open_mock.mock_calls),
             sorted(
                 [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
+                    call(
+                        f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                        "w",
+                        encoding="utf-8",
+                    ),
                     call().__enter__(),
                     call().write(config),
                     call().__exit__(None, None, None),
@@ -337,14 +350,19 @@ class TestMySQL(unittest.TestCase):
             ),
         )
 
-    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch(
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678),
+    )
     @patch("pathlib.Path")
     @patch("builtins.open")
     def test_create_custom_mysqld_config_exception(
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError
+        _get_innodb_buffer_pool_parameters.side_effect = (
+            MySQLGetAutoTuningParametersError
+        )
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
@@ -486,8 +504,12 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.install_and_configure_mysql_dependencies()
 
-        _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
-        _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+        _check_call.assert_called_once_with(
+            ["charmed-mysql.mysqlsh", "--help"], stderr=-1
+        )
+        _run.assert_called_once_with(
+            ["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True
+        )
 
     def test_get_available_memory(self):
         meminfo = (

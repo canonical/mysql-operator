@@ -124,9 +124,11 @@ class TestCharmBase(unittest.TestCase):
         self.harness.charm.set_secret(scope, "somekey", "")
         assert self.harness.charm.get_secret(scope, "somekey") is None
 
-    @parameterized.expand(
-        [("app", True, "root-password"), ("unit", True, "key"), ("unit", False, "key")]
-    )
+    @parameterized.expand([
+        ("app", True, "root-password"),
+        ("unit", True, "key"),
+        ("unit", False, "key"),
+    ])
     @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_migration_from_databag(self, scope, is_leader, password_key):

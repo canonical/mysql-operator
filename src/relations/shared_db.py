@@ -202,9 +202,9 @@ class SharedDBRelation(Object):
         current_allowed_units = local_unit_data.get("allowed_units", "")
 
         logger.debug(f"Removing unit {departing_unit} from allowed_units")
-        local_app_data["allowed_units"] = local_unit_data["allowed_units"] = " ".join(
-            {unit for unit in current_allowed_units.split() if unit != departing_unit}
-        )
+        local_app_data["allowed_units"] = local_unit_data["allowed_units"] = " ".join({
+            unit for unit in current_allowed_units.split() if unit != departing_unit
+        })
 
         # remove unit users
         logger.debug(f"Removing user for unit {departing_unit}")

@@ -41,9 +41,7 @@ def first_model(ops_test: OpsTest) -> Optional[Model]:
 
 
 @pytest.fixture(scope="module")
-async def second_model(
-    ops_test: OpsTest, first_model, request
-) -> Model:  # pyright: ignore [reportInvalidTypeForm]
+async def second_model(ops_test: OpsTest, first_model, request) -> Model:  # pyright: ignore [reportInvalidTypeForm]
     """Create and return the second model."""
     second_model_name = f"{first_model.info.name}-other"
     logger.info(f"Creating second model {second_model_name}")
@@ -406,7 +404,7 @@ async def get_max_written_value(first_model: Model, second_model: Model) -> list
     await juju_.run_action(application_unit, "stop-continuous-writes")
 
     sleep(5)
-    results = list()
+    results = []
 
     logger.info("Querying max value on all units")
     for unit in first_model_units + second_model_units:

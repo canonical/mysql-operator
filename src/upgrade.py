@@ -295,13 +295,11 @@ class MySQLVMUpgrade(DataUpgrade):
     def log_rollback_instructions(self) -> None:
         """Log rollback instructions."""
         logger.critical(
-            "\n".join(
-                (
-                    "Upgrade failed, follow the instructions below to rollback:",
-                    "    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state",
-                    "    2. Run `juju refresh` to the previously deployed charm revision or local charm file",
-                )
-            )
+            "\n".join((
+                "Upgrade failed, follow the instructions below to rollback:",
+                "    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state",
+                "    2. Run `juju refresh` to the previously deployed charm revision or local charm file",
+            ))
         )
 
     def _pre_upgrade_prepare(self) -> None:
@@ -399,9 +397,9 @@ class MySQLVMUpgrade(DataUpgrade):
         logger.debug(f"Upgrade stack: {upgrade_stack}")
         self.upgrade_stack = upgrade_stack
         logger.debug("Persisting dependencies to upgrade relation data...")
-        self.peer_relation.data[self.charm.app].update(
-            {"dependencies": json.dumps(self.dependency_model.dict())}
-        )
+        self.peer_relation.data[self.charm.app].update({
+            "dependencies": json.dumps(self.dependency_model.dict())
+        })
 
     @staticmethod
     def _ensure_for_installed_by_file() -> None:
