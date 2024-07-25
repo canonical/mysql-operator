@@ -100,9 +100,7 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script("script")
 
-    @patch(
-        "mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1
-    )
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
     @patch("os.path.exists", return_value=False)
     def test_wait_until_mysql_connection(self, _exists, _stop):
         """Test a failed execution of wait_until_mysql_connection."""
@@ -202,9 +200,7 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.reset_mock()
         _charmed_mysql_mock.reset_mock()
 
-        snap_service_operation(
-            CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
-        )
+        snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart")
 
         _snap_cache.assert_called_once()
         _charmed_mysql_mock.start.assert_not_called()
@@ -230,9 +226,7 @@ class TestMySQL(unittest.TestCase):
         _snap_cache.return_value.__getitem__.side_effect = _cache.__getitem__
 
         with self.assertRaises(SnapServiceOperationError):
-            snap_service_operation(
-                CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense"
-            )
+            snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "nonsense")
 
         _snap_cache.assert_not_called()
 
@@ -266,88 +260,78 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.write_mysqld_config(profile="production", memory_limit=None)
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 111",
-                "innodb_buffer_pool_size = 1234",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "loose-audit_log_format = JSON",
-                "loose-audit_log_policy = LOGINS",
-                "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
-                "innodb_buffer_pool_chunk_size = 5678",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "report_host = 127.0.0.1",
+            "max_connections = 111",
+            "innodb_buffer_pool_size = 1234",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "innodb_buffer_pool_chunk_size = 5678",
+            "\n",
+        ))
 
         _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
-        _path_mock.mkdir.assert_called_once_with(
-            mode=0o755, parents=True, exist_ok=True
-        )
+        _path_mock.mkdir.assert_called_once_with(mode=0o755, parents=True, exist_ok=True)
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
         # Test `testing` profile
         _open_mock.reset_mock()
         self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 100",
-                "innodb_buffer_pool_size = 20971520",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "loose-audit_log_format = JSON",
-                "loose-audit_log_policy = LOGINS",
-                "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
-                "innodb_buffer_pool_chunk_size = 1048576",
-                "performance-schema-instrument = 'memory/%=OFF'",
-                "loose-group_replication_message_cache_size = 134217728",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "report_host = 127.0.0.1",
+            "max_connections = 100",
+            "innodb_buffer_pool_size = 20971520",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "innodb_buffer_pool_chunk_size = 1048576",
+            "performance-schema-instrument = 'memory/%=OFF'",
+            "loose-group_replication_message_cache_size = 134217728",
+            "\n",
+        ))
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(
-                        f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
-                        "w",
-                        encoding="utf-8",
-                    ),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(
+                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                    "w",
+                    encoding="utf-8",
+                ),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
     @patch(
@@ -360,9 +344,7 @@ class TestMySQL(unittest.TestCase):
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = (
-            MySQLGetAutoTuningParametersError
-        )
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
@@ -504,12 +486,8 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.install_and_configure_mysql_dependencies()
 
-        _check_call.assert_called_once_with(
-            ["charmed-mysql.mysqlsh", "--help"], stderr=-1
-        )
-        _run.assert_called_once_with(
-            ["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True
-        )
+        _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
+        _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
 
     def test_get_available_memory(self):
         meminfo = (
