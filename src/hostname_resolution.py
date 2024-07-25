@@ -64,7 +64,7 @@ class MySQLMachineHostnameResolution(Object):
         self.charm.unit_peer_data[HOSTNAME_DETAILS] = json.dumps(host_details)
 
     def _get_host_details(self) -> list[HostsEntry]:
-        host_details = list()
+        host_details = []
 
         if not self.charm.peers:
             return []

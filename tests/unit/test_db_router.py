@@ -80,12 +80,10 @@ class TestDBRouter(unittest.TestCase):
         self.assertEqual(_does_mysql_user_exist.call_count, 2)
         self.assertEqual(
             sorted(_does_mysql_user_exist.mock_calls),
-            sorted(
-                [
-                    call("mysqlrouteruser", "1.1.1.3"),
-                    call("keystone_user", "1.1.1.2"),
-                ]
-            ),
+            sorted([
+                call("mysqlrouteruser", "1.1.1.3"),
+                call("keystone_user", "1.1.1.2"),
+            ]),
         )
 
         _configure_mysqlrouter_user.assert_called_once_with(

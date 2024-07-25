@@ -325,15 +325,13 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     Returns:
         The (str) mysql cluster name
     """
-    output = subprocess.check_output(
-        [
-            "juju",
-            "show-unit",
-            unit.name,
-            "--format=json",
-            f"--model={model_name}",
-        ]
-    )
+    output = subprocess.check_output([
+        "juju",
+        "show-unit",
+        unit.name,
+        "--format=json",
+        f"--model={model_name}",
+    ])
     output = json.loads(output.decode("utf-8"))
 
     for relation in output[unit.name]["relation-info"]:

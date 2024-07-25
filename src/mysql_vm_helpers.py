@@ -146,7 +146,7 @@ class MySQL(MySQLBase):
     def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
 
-        Raises
+        Raises:
             subprocess.CalledProcessError: if issue creating mysqlsh common dir
             snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
@@ -324,14 +324,12 @@ class MySQL(MySQLBase):
                 _sql_file.flush()
 
                 try:
-                    subprocess.check_output(
-                        [
-                            "sudo",
-                            "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                            _sql_file.name,
-                        ]
-                    )
+                    subprocess.check_output([
+                        "sudo",
+                        "chown",
+                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                        _sql_file.name,
+                    ])
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for temp SQL file"
@@ -341,14 +339,12 @@ class MySQL(MySQLBase):
                 _custom_config_file.flush()
 
                 try:
-                    subprocess.check_output(
-                        [
-                            "sudo",
-                            "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                            _custom_config_file.name,
-                        ]
-                    )
+                    subprocess.check_output([
+                        "sudo",
+                        "chown",
+                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                        _custom_config_file.name,
+                    ])
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for custom mysql config"
@@ -645,7 +641,7 @@ class MySQL(MySQLBase):
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
 
-        Raises
+        Raises:
             snap.SnapError: if an issue occurs during config setting or restart
         """
         cache = snap.SnapCache()
@@ -653,12 +649,10 @@ class MySQL(MySQLBase):
 
         try:
             # Set up exporter credentials
-            mysqld_snap.set(
-                {
-                    "exporter.user": self.monitoring_user,
-                    "exporter.password": self.monitoring_password,
-                }
-            )
+            mysqld_snap.set({
+                "exporter.user": self.monitoring_user,
+                "exporter.password": self.monitoring_password,
+            })
             snap_service_operation(
                 CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start"
             )
@@ -688,6 +682,7 @@ class MySQL(MySQLBase):
 
         Args:
             script: Mysqlsh script string
+            timeout: (optional) Timeout for the script
 
         Returns:
             String representing the output of the mysqlsh command

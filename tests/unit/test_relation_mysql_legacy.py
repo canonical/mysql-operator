@@ -45,9 +45,10 @@ class TestMariaDBRelation(unittest.TestCase):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-        self.harness.update_config(
-            {"mysql-interface-user": "mysql", "mysql-interface-database": "default_database"}
-        )
+        self.harness.update_config({
+            "mysql-interface-user": "mysql",
+            "mysql-interface-database": "default_database",
+        })
 
         # Relate to emit relation created event
         self.maria_db_relation_id = self.harness.add_relation(LEGACY_MYSQL, "other-app")
@@ -102,9 +103,10 @@ class TestMariaDBRelation(unittest.TestCase):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-        self.harness.update_config(
-            {"mysql-interface-user": "mysql", "mysql-interface-database": "default_database"}
-        )
+        self.harness.update_config({
+            "mysql-interface-user": "mysql",
+            "mysql-interface-database": "default_database",
+        })
 
         # Relate to emit relation created event
         self.maria_db_relation_id = self.harness.add_relation(LEGACY_MYSQL, "other-app")
