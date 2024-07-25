@@ -32,6 +32,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
+    MySQLGetVariableError,
     MySQLInitializeJujuOperationsTableError,
     MySQLMemberState,
     MySQLOfflineModeAndHiddenInstanceExistsError,
@@ -1746,6 +1747,19 @@ xtrabackup/location --defaults-file=defaults/config/file
             self.mysql.set_dynamic_variable(variable="variable", value="value")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_variable_value(self, _run_mysqlsh_script):
+        """Test get_variable_value."""
+        _run_mysqlsh_script.return_value = '[["super_read_only", "OFF"]]'
+
+        self.assertEqual(self.mysql.get_variable_value("super_read_only"), "OFF")
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLGetVariableError):
+            self.mysql.get_variable_value("variable")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_set_cluster_primary(self, _run_mysqlsh_script):
         """Test set_cluster_primary."""
         commands = (
@@ -2037,21 +2051,33 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
+    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_install_plugin(self, _run_mysqlcli_script, _get_installed_plugins):
+    def test_install_plugin(
+        self,
+        _run_mysqlcli_script,
+        _get_installed_plugins,
+        _set_dynamic_variable,
+        _get_variable_value,
+    ):
         """Test install_plugin."""
-        # ensure not installed if already installed
+        _get_variable_value.return_value = "ON"
+
+        # ensure no install if already installed
         _get_installed_plugins.return_value = {"plugin1"}
         self.mysql.install_plugins(["plugin1"])
         _run_mysqlcli_script.assert_not_called()
         _run_mysqlcli_script.reset_mock()
+        _set_dynamic_variable.assert_not_called()
 
         # ensure not installed if unsupported
         _get_installed_plugins.return_value = set()
         self.mysql.install_plugins(["plugin1"])
         _run_mysqlcli_script.assert_not_called()
         _run_mysqlcli_script.reset_mock()
+        _set_dynamic_variable.assert_not_called()
 
         # ensure installed
         _get_installed_plugins.return_value = set()
@@ -2061,6 +2087,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             user=self.mysql.server_config_user,
             password=self.mysql.server_config_password,
         )
+        _set_dynamic_variable.assert_called()
         _run_mysqlcli_script.reset_mock()
 
         # ensure raise exception

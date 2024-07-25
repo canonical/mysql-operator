@@ -368,6 +368,10 @@ class MySQLSetVariableError(Error):
     """Exception raised when there is an issue setting a variable."""
 
 
+class MySQLGetVariableError(Error):
+    """Exception raised when there is an issue getting a variable."""
+
+
 class MySQLServerNotUpgradableError(Error):
     """Exception raised when there is an issue checking for upgradeability."""
 
@@ -1015,6 +1019,8 @@ class MySQLBase(ABC):
             "audit_log_filter": "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';",
         }
 
+        super_read_only = self.get_variable_value("super_read_only") == "ON"
+
         try:
             installed_plugins = self._get_installed_plugins()
             for plugin in plugins:
@@ -1024,6 +1030,10 @@ class MySQLBase(ABC):
                 if plugin not in supported_plugins:
                     logger.warning(f"Plugin {plugin} is not supported")
                     continue
+
+                if self.get_variable_value("super_read_only") == "ON":
+                    # disable super_read_only to install plugins
+                    self.set_dynamic_variable("super_read_only", "OFF")
                 logger.debug(f"Installing plugin {plugin}")
                 self._run_mysqlcli_script(
                     supported_plugins[plugin],
@@ -1035,6 +1045,10 @@ class MySQLBase(ABC):
                 f"Failed to install {plugin=}",  # type: ignore
             )
             raise MySQLPluginInstallError
+        finally:
+            # restore original super_read_only value
+            if super_read_only and self.get_variable_value("super_read_only") == "OFF":
+                self.set_dynamic_variable("super_read_only", "ON")
 
     def uninstall_plugins(self, plugins: list[str]) -> None:
         """Uninstall plugins."""
@@ -1292,6 +1306,23 @@ class MySQLBase(ABC):
         except MySQLClientError:
             logger.exception(f"Failed to set variable {variable} to {value}")
             raise MySQLSetVariableError
+
+    def get_variable_value(self, variable: str) -> str:
+        """Get the value of a variable."""
+        get_var_command = [
+            f"shell.connect('{self.server_config_user}:{self.server_config_password}@{self.instance_address}')",
+            f"result = session.run_sql(\"SHOW VARIABLES LIKE '{variable}'\")",
+            "print(result.fetch_all())",
+        ]
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(get_var_command))
+        except MySQLClientError:
+            logger.exception(f"Failed to get variable {variable}")
+            raise MySQLGetVariableError
+
+        rows = json.loads(output)
+        return rows[0][1]
 
     def configure_instance(self, create_cluster_admin: bool = True) -> None:
         """Configure the instance to be used in an InnoDB cluster."""
