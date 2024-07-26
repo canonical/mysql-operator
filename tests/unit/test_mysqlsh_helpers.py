@@ -22,6 +22,7 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_CUSTOM_CONFIG_FILE,
+    MYSQLD_SOCK_FILE,
 )
 from mysql_vm_helpers import (
     MySQL,
@@ -37,6 +38,7 @@ class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
             "127.0.0.1",
+            MYSQLD_SOCK_FILE,
             "test_cluster",
             "test_cluster_set",
             "password",

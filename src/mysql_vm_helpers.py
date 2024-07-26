@@ -95,6 +95,7 @@ class MySQL(MySQLBase):
     def __init__(
         self,
         instance_address: str,
+        socket_path: str,
         cluster_name: str,
         cluster_set_name: str,
         root_password: str,
@@ -112,6 +113,7 @@ class MySQL(MySQLBase):
 
         Args:
             instance_address: address of the targeted instance
+            socket_path: path to the MySQL socket
             cluster_name: cluster name
             cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
@@ -127,6 +129,7 @@ class MySQL(MySQLBase):
         """
         super().__init__(
             instance_address=instance_address,
+            socket_path=socket_path,
             cluster_name=cluster_name,
             cluster_set_name=cluster_set_name,
             root_password=root_password,

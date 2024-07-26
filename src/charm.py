@@ -81,6 +81,7 @@ from constants import (
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
     MYSQLD_CUSTOM_CONFIG_FILE,
+    MYSQLD_SOCK_FILE,
     PASSWORD_LENGTH,
     PEER,
     ROOT_PASSWORD_KEY,
@@ -568,6 +569,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Returns an instance of the MySQL object."""
         return MySQL(
             self.unit_fqdn,
+            MYSQLD_SOCK_FILE,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),  # pyright: ignore [reportArgumentType]
