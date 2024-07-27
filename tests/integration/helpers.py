@@ -499,18 +499,11 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
     Returns:
         The (str) ip of the unit
     """
-    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "route")
-
-    assert return_code == 0
-
-    # Example output line of ip route:
-    # default via 10.0.143.1 dev eth0 proto dhcp src 10.0.143.225 metric 100
-    for line in stdout.split("\n"):
-        items = line.split()
-        if items[0] == "default":
-            return items[8]
-
-    raise Exception("Unable to find the default entry in output of 'ip route'")
+    app_name = unit_name.split("/")[0]
+    unit_num = unit_name.split("/")[1]
+    status = await ops_test.model.get_status()  # noqa: F821
+    address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
+    return address
 
 
 async def get_relation_data(

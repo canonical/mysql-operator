@@ -2022,14 +2022,12 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.mysql.install_plugins(["plugin1"])
         _run_mysqlcli_script.assert_not_called()
         _run_mysqlcli_script.reset_mock()
-        _set_dynamic_variable.assert_not_called()
 
         # ensure not installed if unsupported
         _get_installed_plugins.return_value = set()
         self.mysql.install_plugins(["plugin1"])
         _run_mysqlcli_script.assert_not_called()
         _run_mysqlcli_script.reset_mock()
-        _set_dynamic_variable.assert_not_called()
 
         # ensure installed
         _get_installed_plugins.return_value = set()

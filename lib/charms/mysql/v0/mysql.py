@@ -1022,22 +1022,22 @@ class MySQLBase(ABC):
             "audit_log_filter": "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';",
         }
 
-        super_read_only = self.get_variable_value("super_read_only") == "ON"
+        super_read_only = self.get_variable_value("super_read_only").lower() == "on"
 
         try:
             installed_plugins = self._get_installed_plugins()
+            # disable super_read_only to install plugins
+            self.set_dynamic_variable("super_read_only", "OFF")
             for plugin in plugins:
                 if plugin in installed_plugins:
                     # skip if the plugin is already installed
+                    logger.info(f"{plugin=} already installed")
                     continue
                 if plugin not in supported_plugins:
-                    logger.warning(f"Plugin {plugin} is not supported")
+                    logger.warning(f"{plugin=} is not supported")
                     continue
 
-                if self.get_variable_value("super_read_only") == "ON":
-                    # disable super_read_only to install plugins
-                    self.set_dynamic_variable("super_read_only", "OFF")
-                logger.debug(f"Installing plugin {plugin}")
+                logger.info(f"Installing {plugin=}")
                 self._run_mysqlcli_script(
                     supported_plugins[plugin],
                     user=self.server_config_user,
@@ -1050,7 +1050,7 @@ class MySQLBase(ABC):
             raise MySQLPluginInstallError
         finally:
             # restore original super_read_only value
-            if super_read_only and self.get_variable_value("super_read_only") == "OFF":
+            if super_read_only:
                 self.set_dynamic_variable("super_read_only", "ON")
 
     def uninstall_plugins(self, plugins: list[str]) -> None:
@@ -1295,7 +1295,7 @@ class MySQLBase(ABC):
         if not re.match(r"^[0-9,a-z,A-Z$_]+$", value):
             value = f"`{value}`"
 
-        logger.debug(f"Setting {variable} to {value} on {instance_address}")
+        logger.debug(f"Setting {variable=} to {value=}")
         set_var_command = [
             f"shell.connect('{self.server_config_user}:{self.server_config_password}@{instance_address}')",
             f"session.run_sql(\"SET {'PERSIST' if persist else 'GLOBAL'} {variable}={value}\")",
@@ -1304,7 +1304,7 @@ class MySQLBase(ABC):
         try:
             self._run_mysqlsh_script("\n".join(set_var_command))
         except MySQLClientError:
-            logger.exception(f"Failed to set variable {variable} to {value}")
+            logger.exception(f"Failed to set {variable=} to {value=}")
             raise MySQLSetVariableError
 
     def get_variable_value(self, variable: str) -> str:
