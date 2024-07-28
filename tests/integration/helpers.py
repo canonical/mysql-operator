@@ -423,7 +423,9 @@ async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -
         unit_name: The name of the unit
         old_ip: old registered IP address
     """
-    await ops_test.juju("ssh", unit_name, "ip")
+    return_code, _, _ = await ops_test.juju("ssh", unit_name, "ip")
+    if return_code != 0:
+        raise Exception
 
 
 async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
