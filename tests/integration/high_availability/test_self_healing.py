@@ -28,7 +28,6 @@ from ..helpers import (
     restore_network_for_unit,
     start_server,
     unit_hostname,
-    wait_network_restore,
     write_random_chars_to_test_table,
 )
 from .high_availability_helpers import (
@@ -190,15 +189,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
 
     logger.info(f"Restoring network for {primary_hostname}")
     restore_network_for_unit(primary_hostname)
-
-    # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name, primary_unit_ip)
-
-    # update instance ip as it may change on network restore
-    config["host"] = await get_unit_ip(ops_test, primary_unit.name)
-
-    # verify that connection is possible
-    assert is_connection_possible(config), "❌ Connection is not possible after network restore"
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():

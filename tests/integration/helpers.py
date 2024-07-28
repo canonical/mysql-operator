@@ -414,20 +414,6 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     return raw_hostname.strip()
 
 
-@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -> None:
-    """Wait until network is restored.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit
-        old_ip: old registered IP address
-    """
-    return_code, _, _ = await ops_test.juju("ssh", unit_name, "ip")
-    if return_code != 0:
-        raise Exception
-
-
 async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
     """Gracefully stop server.
 
