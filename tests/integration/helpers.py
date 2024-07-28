@@ -423,8 +423,13 @@ async def wait_network_restore(ops_test: OpsTest, unit_name: str) -> None:
         unit_name: The name of the unit
         old_ip: old registered IP address
     """
-    return_code, _, _ = await ops_test.juju("ssh", unit_name, "ip")
+    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "a")
     if return_code != 0:
+        raise Exception
+
+    juju_unit_ip = await get_unit_ip(ops_test, unit_name)
+
+    if juju_unit_ip in stdout:
         raise Exception
 
 
