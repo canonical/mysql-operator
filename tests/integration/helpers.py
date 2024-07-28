@@ -484,16 +484,16 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
     """
     logger.info("Retrieving primary unit")
     units = ops_test.model.applications[app_name].units
-    if unit_excluded:
-        # if defined, exclude unit from available unit to run command on
-        # useful when the workload is stopped on unit
-        unit = ({unit for unit in units if unit.name != unit_excluded.name}).pop()
-    else:
-        unit = units[0]
 
-    primary_unit = await get_primary_unit(ops_test, unit, app_name)
-
-    return primary_unit
+    for unit in units:
+        if unit == unit_excluded:
+            continue
+        try:
+            primary_unit = await get_primary_unit(ops_test, unit, app_name)
+            return primary_unit
+        except DatabaseError:
+            continue
+    raise ValueError("Primary unit found cannot be retrieved")
 
 
 async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
