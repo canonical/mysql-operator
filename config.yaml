@@ -30,7 +30,7 @@ options:
   mysql-interface-database:
     description: "The database name for the legacy 'mysql' relation"
     type: "string"
-  audit-plugin-enabled:
+  plugin-audit-enabled:
     description: "Enable the audit plugin"
     type: "boolean"
     default: true

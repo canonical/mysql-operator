@@ -310,7 +310,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if mysqld_running:
             # plugins are installed running daemon
-            if self.config.audit_plugin_enabled:
+            if self.config.plugin_audit_enabled:
                 self._mysql.install_plugins(["audit_log", "audit_log_filter"])
             else:
                 self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
@@ -654,7 +654,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
-        if self.config.audit_plugin_enabled:
+        if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log", "audit_log_filter"])
 
         # ensure hostname can be resolved

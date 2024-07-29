@@ -54,7 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             application_name=MYSQL_APP_NAME,
             num_units=3,
             series="jammy",
-            config={"profile": "testing", "audit-plugin-enabled": "false"},
+            config={"profile": "testing", "plugin-audit-enabled": "false"},
         )
 
         await ops_test.model.deploy(
