@@ -1,0 +1,319 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:23 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:26 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:313 Stopping continuous writes after 5s
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:321 Remove async relation
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:327 waiting for units to be blocked
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:333 Waiting for the applications to settle
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] blocked: Standalone read-only unit.
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [executing] blocked: Standalone read-only unit.
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [executing] maintenance: Removing replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] blocked: Standalone read-only unit.
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [idle] blocked: Standalone read-only unit.
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:347 Re relating the two mysql clusters
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:350 Waiting for the applications to settle
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:359 Running create replication action
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:369 Waiting for the applications to settle
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] blocked: Standalone read-only unit.
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [executing] blocked: Wait until unit is initialized before running create-replication on offer side
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [executing] maintenance: Sharing credentials with replica cluster
+  db1/1 [executing] active: 
+  db1/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] maintenance: joining the cluster
+  db2/1 [idle] active: 
+  db2/2 [idle] waiting: Waiting other units join the cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [idle] maintenance: Sharing credentials with replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [idle] active: 
+  db2/1 [idle] active: 
+  db2/2 [idle] waiting: Waiting for primary cluster
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db1/0 [executing] maintenance: Adding replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [executing] maintenance: joining the cluster
+  db2/1 [idle] waiting: waiting to join the cluster
+  db2/2 [idle] waiting: Waiting for recovery to complete on other units
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  db2/0 [idle] active: 
+  db2/1 [idle] active: 
+  db2/2 [idle] active: Standby
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:395 Testing data replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:402 Stopping continuous writes and wait (5s) for replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:409 Querying max value on all units
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:31 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:60 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  01:57:40Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+db1             8.0.37-0ubun...  active      3  mysql                          0  no       
+mysql-router    8.0.37-0ubun...  active      1  mysql-router    dpe/edge     217  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   46  no       
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+db1/0*             active    executing  0        10.98.159.180   3306,33060/tcp  Primary
+db1/1              active    executing  1        10.98.159.69    3306,33060/tcp  
+db1/2              active    executing  2        10.98.159.219   3306,33060/tcp  
+mysql-test-app/0*  active    idle       3        10.98.159.53                    
+  mysql-router/0*  active    idle                10.98.159.53                    
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.98.159.180  juju-7ebcfb-0  ubuntu@22.04      Running
+1        started  10.98.159.69   juju-7ebcfb-1  ubuntu@22.04      Running
+2        started  10.98.159.219  juju-7ebcfb-2  ubuntu@22.04      Running
+3        started  10.98.159.53   juju-7ebcfb-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:38:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:38:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 01:38:08 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:38:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:38:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:38:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:38:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:38:17 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:46:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:46:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:46:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:46:26 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 127
+unit-mysql-router-0: 01:51:22 ERROR unit.mysql-router/0.juju-log Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    shell.connect("relation-10_cc3f354bd89445:***@10.98.159.180:3306")
+    session.run_sql("DROP USER `mysql_router1_yd7x7h85fzxn`")
+
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+MySQL client error 1290
+MySQL Shell traceback:
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+mysqlsh.DBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:22 ERROR unit.mysql-router/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/./src/machine_charm.py", line 202, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 516, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 337, in reconcile
+    workload_.reconcile(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 399, in reconcile
+    self._enable_router(event=event, tls=tls, unit_name=unit_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 331, in _enable_router
+    self._cleanup_after_upgrade_or_potential_container_restart()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 230, in _cleanup_after_upgrade_or_potential_container_restart
+    self.shell.delete_user(user_info.username)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 214, in delete_user
+    self._run_sql([statement])
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 119, in _run_sql
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:22 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:51:28 ERROR unit.mysql-router/0.juju-log Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    shell.connect("relation-10_cc3f354bd89445:***@10.98.159.180:3306")
+    session.run_sql("DROP USER `mysql_router1_yd7x7h85fzxn`")
+
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+MySQL client error 1290
+MySQL Shell traceback:
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+mysqlsh.DBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:29 ERROR unit.mysql-router/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/./src/machine_charm.py", line 202, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 516, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 337, in reconcile
+    workload_.reconcile(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 399, in reconcile
+    self._enable_router(event=event, tls=tls, unit_name=unit_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 331, in _enable_router
+    self._cleanup_after_upgrade_or_potential_container_restart()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 230, in _cleanup_after_upgrade_or_potential_container_restart
+    self.shell.delete_user(user_info.username)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 214, in delete_user
+    self._run_sql([statement])
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 119, in _run_sql
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:29 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:51:40 ERROR unit.mysql-router/0.juju-log Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    shell.connect("relation-10_cc3f354bd89445:***@10.98.159.180:3306")
+    session.run_sql("DROP USER `mysql_router1_yd7x7h85fzxn`")
+
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+MySQL client error 1290
+MySQL Shell traceback:
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+mysqlsh.DBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:40 ERROR unit.mysql-router/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/./src/machine_charm.py", line 202, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 516, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 337, in reconcile
+    workload_.reconcile(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 399, in reconcile
+    self._enable_router(event=event, tls=tls, unit_name=unit_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 331, in _enable_router
+    self._cleanup_after_upgrade_or_potential_container_restart()
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 647, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/workload.py", line 230, in _cleanup_after_upgrade_or_potential_container_restart
+    self.shell.delete_user(user_info.username)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 214, in delete_user
+    self._run_sql([statement])
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 119, in _run_sql
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/mysql_shell/__init__.py", line 105, in _run_code
+    raise ShellDBError(**exception)
+mysql_shell.ShellDBError: MySQL Error (1290): ClassicSession.run_sql: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+unit-mysql-router-0: 01:51:41 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-db1-0: 01:54:17 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cc3f354b-d894-45e7-857b-8e7f957ebcfb:r#3#remote-47fd42c3d94b4b6383ae96ed2260db18": settings cc3f354b-d894-45e7-857b-8e7f957ebcfb:r#3#remote-47fd42c3d94b4b6383ae96ed2260db18 not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
