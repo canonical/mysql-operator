@@ -199,7 +199,7 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
         # wait for the unit to be ready
         logger.info(f"Waiting for {primary_unit.name} to enter maintenance")
         await ops_test.model.block_until(
-            lambda: primary_unit.workload_status in ["maintenance", "active"], timeout=30 * 60
+            lambda: primary_unit.workload_status in ["maintenance"], timeout=30 * 60
         )
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
