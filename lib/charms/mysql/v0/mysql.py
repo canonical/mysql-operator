@@ -2926,7 +2926,7 @@ class MySQLBase(ABC):
             flush_logs_commands.extend([
                 f"session.run_sql('FLUSH {log.value}')"
                 for log in logs_type
-                if logs_type != MySQLTextLogs.AUDIT
+                if log != MySQLTextLogs.AUDIT
             ])
             flush_logs_commands.append("session.run_sql(\"set global audit_log_flush='ON'\")")
         elif logs_type != MySQLTextLogs.AUDIT:
