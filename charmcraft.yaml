@@ -11,6 +11,7 @@ bases:
     architectures: [arm64]
 parts:
   files:
+    plugin: nil
     prime:
       - snap_revisions.json
   charm:
