@@ -1819,11 +1819,15 @@ xtrabackup/location --defaults-file=defaults/config/file
             "slow_query_log_file": "/var/log/mysql/slowquery.log",
             "loose-audit_log_format": "JSON",
             "loose-audit_log_policy": "LOGINS",
+            "loose-audit_log_strategy": "ASYNCHRONOUS",
             "loose-audit_log_file": "/var/log/mysql/audit.log",
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
+        self.maxDiff = None
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="production")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", audit_log_enabled=True, audit_log_strategy="async"
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # < 2GB of memory, production profile
@@ -1835,7 +1839,10 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["max_connections"] = "127"
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            memory_limit=memory_limit,
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -1845,21 +1852,31 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["loose-group_replication_message_cache_size"] = "134217728"
         expected_config["max_connections"] = "100"
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="testing")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="testing", audit_log_enabled=True, audit_log_strategy="async"
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # 10GB, max connections set by value
         memory_limit = 10106700800
         # max_connections set
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=500, memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            experimental_max_connections=500,
+            memory_limit=memory_limit,
         )
 
         self.assertEqual(rendered_config["max_connections"], "500")
 
         # max_connections set,constrained by memory, but enforced
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=800, memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            experimental_max_connections=800,
+            memory_limit=memory_limit,
         )
 
         self.assertEqual(rendered_config["max_connections"], "800")
@@ -2047,9 +2064,17 @@ xtrabackup/location --defaults-file=defaults/config/file
         with self.assertRaises(MySQLPluginInstallError):
             self.mysql.install_plugins(["audit_log"])
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
+    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_uninstall_plugin(self, _run_mysqlcli_script, _get_installed_plugins):
+    def test_uninstall_plugin(
+        self,
+        _run_mysqlcli_script,
+        _get_installed_plugins,
+        _set_dynamic_variable,
+        _get_dynamic_variable,
+    ):
         """Test uninstall_plugin."""
         # ensure not uninstalled if not installed
         _get_installed_plugins.return_value = set()

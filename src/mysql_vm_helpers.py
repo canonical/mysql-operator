@@ -11,6 +11,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import typing
 from typing import Dict, List, Optional, Tuple
 
 import jinja2
@@ -29,7 +30,6 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v2 import snap
-from ops.charm import CharmBase
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
@@ -55,6 +55,9 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
@@ -107,7 +110,7 @@ class MySQL(MySQLBase):
         monitoring_password: str,
         backups_user: str,
         backups_password: str,
-        charm: CharmBase,
+        charm: "MySQLOperatorCharm",
     ):
         """Initialize the MySQL class.
 
@@ -242,30 +245,25 @@ class MySQL(MySQLBase):
 
     def write_mysqld_config(
         self,
-        profile: str,
-        memory_limit: Optional[int],
-        experimental_max_connections: Optional[int] = None,
     ) -> None:
         """Create custom mysql config file.
-
-        Args:
-            profile: profile to use for the mysql config
-            memory_limit: memory limit to use for the mysql config in MB
-            experimental_max_connections: experimental max connections to use for the mysql config
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
         logger.debug("Writing mysql configuration file")
-        if memory_limit:
+        memory_limit = None
+        if self.charm.config.profile_limit_memory:
             # Convert from config value in MB to bytes
-            memory_limit = memory_limit * BYTES_1MB
+            memory_limit = self.charm.config.profile_limit_memory * BYTES_1MB
         try:
             content_str, _ = self.render_mysqld_configuration(
-                profile=profile,
+                profile=self.charm.config.profile,
+                audit_log_enabled=self.charm.config.plugin_audit_enabled,
+                audit_log_strategy=self.charm.config.plugin_audit_strategy,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
-                experimental_max_connections=experimental_max_connections,
+                experimental_max_connections=self.charm.config.experimental_max_connections,
             )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")

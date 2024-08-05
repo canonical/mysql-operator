@@ -34,6 +34,20 @@ from mysql_vm_helpers import (
 )
 
 
+class StubConfig:
+    def __init__(self):
+        self.plugin_audit_enabled = True
+        self.profile = "production"
+        self.profile_limit_memory = None
+        self.experimental_max_connections = None
+        self.plugin_audit_strategy = "async"
+
+
+class StubCharm:
+    def __init__(self):
+        self.config = StubConfig()
+
+
 class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
@@ -50,7 +64,7 @@ class TestMySQL(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
-            None,
+            StubCharm(),  # type: ignore
         )
 
     @patch("tempfile.NamedTemporaryFile")
@@ -260,7 +274,7 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
         config = "\n".join((
             "[mysqld]",
@@ -274,9 +288,10 @@ class TestMySQL(unittest.TestCase):
             "general_log = ON",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-            "loose-audit_log_format = JSON",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 5678",
             "\n",
         ))
@@ -287,6 +302,7 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
+        self.maxDiff = None
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted([
@@ -298,8 +314,9 @@ class TestMySQL(unittest.TestCase):
         )
 
         # Test `testing` profile
+        self.mysql.charm.config.profile = "testing"
         _open_mock.reset_mock()
-        self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
         config = "\n".join((
             "[mysqld]",
@@ -313,9 +330,10 @@ class TestMySQL(unittest.TestCase):
             "general_log = ON",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-            "loose-audit_log_format = JSON",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 1048576",
             "performance-schema-instrument = 'memory/%=OFF'",
             "loose-group_replication_message_cache_size = 134217728",
@@ -354,8 +372,10 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
+        self.mysql.charm.config = MagicMock()  # type: ignore
+
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+            self.mysql.write_mysqld_config()
 
     @patch("subprocess.Popen")
     def test_execute_commands(self, _popen):

@@ -283,6 +283,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
         new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
             profile=self.config.profile,
+            audit_log_enabled=self.config.plugin_audit_enabled,
+            audit_log_strategy=self.config.plugin_audit_strategy,
             snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
             memory_limit=memory_limit_bytes,
             experimental_max_connections=self.config.experimental_max_connections,
@@ -299,6 +301,14 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             )
             if mysqld_running:
                 logger.info("Configuration change requires restart")
+
+                if "loose-audit_log_format" in changed_config:
+                    # plugins are manipulated running daemon
+                    if self.config.plugin_audit_enabled:
+                        self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                    else:
+                        self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+
                 self.on[f"{self.restart.name}"].acquire_lock.emit()
                 return
 
@@ -307,13 +317,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
                 self._mysql.set_dynamic_variable(config, new_config_dict[config])
-
-        if mysqld_running:
-            # plugins are installed running daemon
-            if self.config.plugin_audit_enabled:
-                self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-            else:
-                self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -645,11 +648,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.write_mysqld_config(
-            profile=self.config.profile,
-            memory_limit=self.config.profile_limit_memory,
-            experimental_max_connections=self.config.experimental_max_connections,
-        )
+        self._mysql.write_mysqld_config()
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()

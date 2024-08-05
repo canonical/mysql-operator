@@ -26,6 +26,8 @@ class MySQLConfig:
         "innodb_buffer_pool_chunk_size",
         "group_replication_message_cache_size",
         "log_error",
+        "loose-audit_log_strategy",
+        "loose-audit_log_format",
     }
 
     def __init__(self, config_file_path: str):
@@ -65,6 +67,7 @@ class CharmConfig(BaseConfigModel):
     mysql_interface_database: Optional[str]
     experimental_max_connections: Optional[int]
     plugin_audit_enabled: bool
+    plugin_audit_strategy: str
 
     @validator("profile")
     @classmethod
@@ -116,5 +119,14 @@ class CharmConfig(BaseConfigModel):
             raise ValueError(
                 f"experimental-max-connections must be greater than {MAX_CONNECTIONS_FLOOR}"
             )
+
+        return value
+
+    @validator("plugin_audit_strategy")
+    @classmethod
+    def plugin_audit_strategy_validator(cls, value: str) -> Optional[str]:
+        """Check profile config option is one of `testing` or `production`."""
+        if value not in ["async", "semi-async"]:
+            raise ValueError("Value not one of 'async' or 'semi-async'")
 
         return value
