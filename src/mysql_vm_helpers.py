@@ -159,6 +159,7 @@ class MySQL(MySQLBase):
         installed_by_mysql_server_file = pathlib.Path(
             CHARMED_MYSQL_COMMON_DIRECTORY, "installed_by_mysql_server_charm"
         )
+        installed_by_mysql_server_file.touch()
         if charmed_mysql.present and not installed_by_mysql_server_file.exists():
             logger.error(
                 f"{CHARMED_MYSQL_SNAP_NAME} snap already installed on machine. Installation aborted"
