@@ -49,6 +49,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
   1. [Set up](how-to/h-setup)
     1. [Deploy on LXD](how-to/h-setup/h-deploy-lxd.md)
     1. [Deploy on MAAS](how-to/h-setup/h-deploy-maas.md)
+    1. [Deploy via Terraform](how-to/h-setup/h-deploy-terraform.md)
     1. [Manage units](how-to/h-setup/h-manage-units.md)
     1. [Enable encryption](how-to/h-setup/h-enable-encryption.md)
     1. [Manage applications](how-to/h-setup/h-manage-app.md)
