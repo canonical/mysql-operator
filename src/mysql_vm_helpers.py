@@ -564,11 +564,11 @@ class MySQL(MySQLBase):
         if return_code != 0:
             message = (
                 "Failed command: "
-                f"{' '.join(commands).replace(self.backups_password, 'xxxxxxx')};"
+                f"{self.strip_off_passwords(' '.join(commands))};"
                 f" {user=}; {group=}"
             )
-            logger.debug(message)
-            raise MySQLExecError(message)
+            logger.error(message)
+            raise MySQLExecError from None
 
         if not stdout and process.stdout:
             stdout = process.stdout.read()
