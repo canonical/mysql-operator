@@ -2850,9 +2850,9 @@ class MySQLBase(ABC):
             "sys",
         }
 
-    def strip_off_passwords(self, input: str) -> str:
-        """Strips off passwords from the input string"""
-        stripped_input = input
+    def strip_off_passwords(self, input_string: str) -> str:
+        """Strips off passwords from the input string."""
+        stripped_input = input_string
         for password in self.passwords:
             stripped_input = stripped_input.replace(password, "xxxxxxxxxxxx")
         return stripped_input
