@@ -23,14 +23,14 @@ jobs:
       cache: true
 
   integration-test-3-6:
-    name: Integration | 3.6 | ${{ matrix.architecture }}
+    name: Integration | 3.6
     needs:
       - lint
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v18.0.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      architecture: ${{ matrix.architecture }}
+      architecture: amd64
       cloud: lxd
       juju-agent-version: 3.6-beta2
       libjuju-version-constraint: 3.5.2.0
