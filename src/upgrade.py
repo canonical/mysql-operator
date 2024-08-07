@@ -192,10 +192,7 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
             # override config, avoid restart
-            self.charm._mysql.write_mysqld_config(
-                profile=self.charm.config.profile,
-                memory_limit=self.charm.config.profile_limit_memory,
-            )
+            self.charm._mysql.write_mysqld_config()
             self.charm.unit.status = MaintenanceStatus("starting services...")
             # stop cron daemon to be able to query `error.log`
             set_cron_daemon("stop")
