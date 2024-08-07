@@ -1817,6 +1817,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "general_log": "ON",
             "general_log_file": "/var/log/mysql/general.log",
             "slow_query_log_file": "/var/log/mysql/slowquery.log",
+            "binlog_expire_logs_seconds": "604800",
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
 
