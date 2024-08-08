@@ -743,7 +743,7 @@ class MySQL(MySQLBase):
                 command, stderr=subprocess.PIPE, timeout=timeout
             ).decode("utf-8")
         except subprocess.CalledProcessError as e:
-            raise MySQLClientError(self.strip_off_passwords(e.stderr))
+            raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
 
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.
