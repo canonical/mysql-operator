@@ -569,11 +569,11 @@ class MySQL(MySQLBase):
         if return_code != 0:
             message = (
                 "Failed command: "
-                f"{' '.join(commands).replace(self.backups_password, 'xxxxxxx')};"
+                f"{self.strip_off_passwords(' '.join(commands))};"
                 f" {user=}; {group=}"
             )
-            logger.debug(message)
-            raise MySQLExecError(message)
+            logger.error(message)
+            raise MySQLExecError from None
 
         if not stdout and process.stdout:
             stdout = process.stdout.read()
@@ -748,7 +748,7 @@ class MySQL(MySQLBase):
                 command, stderr=subprocess.PIPE, timeout=timeout
             ).decode("utf-8")
         except subprocess.CalledProcessError as e:
-            raise MySQLClientError(e.stderr)
+            raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
 
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.
