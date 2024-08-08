@@ -30,6 +30,10 @@ options:
   mysql-interface-database:
     description: "The database name for the legacy 'mysql' relation"
     type: "string"
+  binlog_retention_days:
+    description: Number of days for binary logs retention
+    type: int
+    default: 7
 # Experimental features
   experimental-max-connections:
     type: int

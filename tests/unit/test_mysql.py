@@ -1821,7 +1821,9 @@ xtrabackup/location --defaults-file=defaults/config/file
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="production")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", binlog_retention_days=7
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # < 2GB of memory, production profile
@@ -1833,7 +1835,7 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["max_connections"] = "127"
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", memory_limit=memory_limit
+            profile="production", memory_limit=memory_limit, binlog_retention_days=7
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -1843,21 +1845,29 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["loose-group_replication_message_cache_size"] = "134217728"
         expected_config["max_connections"] = "100"
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="testing")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="testing", binlog_retention_days=7
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # 10GB, max connections set by value
         memory_limit = 10106700800
         # max_connections set
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=500, memory_limit=memory_limit
+            profile="production",
+            experimental_max_connections=500,
+            memory_limit=memory_limit,
+            binlog_retention_days=7,
         )
 
         self.assertEqual(rendered_config["max_connections"], "500")
 
         # max_connections set,constrained by memory, but enforced
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=800, memory_limit=memory_limit
+            profile="production",
+            experimental_max_connections=800,
+            memory_limit=memory_limit,
+            binlog_retention_days=7,
         )
 
         self.assertEqual(rendered_config["max_connections"], "800")

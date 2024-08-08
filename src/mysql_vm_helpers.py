@@ -11,6 +11,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import typing
 from typing import Dict, List, Optional, Tuple
 
 import jinja2
@@ -29,7 +30,6 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v2 import snap
-from ops.charm import CharmBase
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
@@ -55,6 +55,10 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
@@ -106,7 +110,7 @@ class MySQL(MySQLBase):
         monitoring_password: str,
         backups_user: str,
         backups_password: str,
-        charm: CharmBase,
+        charm: "MySQLOperatorCharm",
     ):
         """Initialize the MySQL class.
 
@@ -263,6 +267,7 @@ class MySQL(MySQLBase):
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
                 experimental_max_connections=experimental_max_connections,
+                binlog_retention_days=self.charm.config.binlog_retention_days,
             )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")

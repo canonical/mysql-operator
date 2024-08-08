@@ -33,6 +33,21 @@ from mysql_vm_helpers import (
 )
 
 
+class StubConfig:
+    def __init__(self):
+        self.plugin_audit_enabled = True
+        self.profile = "production"
+        self.profile_limit_memory = None
+        self.experimental_max_connections = None
+        self.plugin_audit_strategy = "async"
+        self.binlog_retention_days = 7
+
+
+class StubCharm:
+    def __init__(self):
+        self.config = StubConfig()
+
+
 class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
@@ -48,7 +63,7 @@ class TestMySQL(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
-            None,
+            StubCharm(),  # type: ignore
         )
 
     @patch("tempfile.NamedTemporaryFile")

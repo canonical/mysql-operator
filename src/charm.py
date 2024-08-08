@@ -258,7 +258,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, event: EventBase) -> None:
+    def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
         if not self._is_peer_data_set:
             # skip when not initialized
@@ -284,6 +284,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
             memory_limit=memory_limit_bytes,
             experimental_max_connections=self.config.experimental_max_connections,
+            binlog_retention_days=self.config.binlog_retention_days,
         )
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)

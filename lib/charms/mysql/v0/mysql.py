@@ -864,6 +864,7 @@ class MySQLBase(ABC):
         profile: str,
         memory_limit: Optional[int] = None,
         experimental_max_connections: Optional[int] = None,
+        binlog_retention_days: int,
         snap_common: str = "",
     ) -> tuple[str, dict]:
         """Render mysqld ini configuration file."""
@@ -912,6 +913,7 @@ class MySQLBase(ABC):
                 # disable memory instruments if we have less than 2GiB of RAM
                 performance_schema_instrument = "'memory/%=OFF'"
 
+        binlog_retention_seconds = binlog_retention_days * 24 * 60 * 60
         config = configparser.ConfigParser(interpolation=None)
 
         # do not enable slow query logs, but specify a log file path in case
@@ -927,7 +929,7 @@ class MySQLBase(ABC):
             "general_log": "ON",
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slowquery.log",
-            "binlog_expire_logs_seconds": "604800",
+            "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
         }
 
         if innodb_buffer_pool_chunk_size:
