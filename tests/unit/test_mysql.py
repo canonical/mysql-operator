@@ -1817,6 +1817,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "general_log": "ON",
             "general_log_file": "/var/log/mysql/general.log",
             "slow_query_log_file": "/var/log/mysql/slowquery.log",
+            "binlog_expire_logs_seconds": "604800",
             "loose-audit_log_format": "JSON",
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_strategy": "ASYNCHRONOUS",
@@ -1826,7 +1827,10 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.maxDiff = None
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", audit_log_enabled=True, audit_log_strategy="async"
+            profile="production",
+            binlog_retention_days=7,
+            audit_log_enabled=True,
+            audit_log_strategy="async",
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -1840,6 +1844,7 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
             profile="production",
+            binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
             memory_limit=memory_limit,
@@ -1853,7 +1858,10 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["max_connections"] = "100"
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="testing", audit_log_enabled=True, audit_log_strategy="async"
+            profile="testing",
+            binlog_retention_days=7,
+            audit_log_enabled=True,
+            audit_log_strategy="async",
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -1862,6 +1870,7 @@ xtrabackup/location --defaults-file=defaults/config/file
         # max_connections set
         _, rendered_config = self.mysql.render_mysqld_configuration(
             profile="production",
+            binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
             experimental_max_connections=500,
@@ -1873,6 +1882,7 @@ xtrabackup/location --defaults-file=defaults/config/file
         # max_connections set,constrained by memory, but enforced
         _, rendered_config = self.mysql.render_mysqld_configuration(
             profile="production",
+            binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
             experimental_max_connections=800,

@@ -41,6 +41,7 @@ class StubConfig:
         self.profile_limit_memory = None
         self.experimental_max_connections = None
         self.plugin_audit_strategy = "async"
+        self.binlog_retention_days = 7
 
 
 class StubCharm:
@@ -290,6 +291,7 @@ class TestMySQL(unittest.TestCase):
             "general_log = ON",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
@@ -304,7 +306,6 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
-        self.maxDiff = None
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted([
@@ -332,6 +333,7 @@ class TestMySQL(unittest.TestCase):
             "general_log = ON",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
