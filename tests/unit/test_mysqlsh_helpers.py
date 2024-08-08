@@ -111,7 +111,9 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
-        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        _check_output.side_effect = subprocess.CalledProcessError(
+            cmd="", returncode=-1, stderr=b"Test error message"
+        )
 
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script("script")
