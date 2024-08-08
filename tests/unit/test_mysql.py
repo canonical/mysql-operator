@@ -27,14 +27,16 @@ from charms.mysql.v0.mysql import (
     MySQLEmptyDataDirectoryError,
     MySQLExecError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
+    MySQLGetVariableError,
     MySQLInitializeJujuOperationsTableError,
     MySQLMemberState,
     MySQLOfflineModeAndHiddenInstanceExistsError,
+    MySQLPluginInstallError,
     MySQLPrepareBackupForRestoreError,
     MySQLRemoveInstanceError,
     MySQLRemoveInstanceRetryError,
@@ -48,6 +50,8 @@ from charms.mysql.v0.mysql import (
     MySQLSetInstanceOptionError,
     MySQLSetVariableError,
 )
+
+from constants import MYSQLD_SOCK_FILE
 
 SHORT_CLUSTER_STATUS = {
     "defaultreplicaset": {
@@ -102,6 +106,7 @@ class TestMySQLBase(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQLBase(
             "127.0.0.1",
+            MYSQLD_SOCK_FILE,
             "test_cluster",
             "test_cluster_set",
             "password",
@@ -273,7 +278,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of configure_instance."""
         # Test with create_cluster_admin=False
         configure_instance_commands = [
-            "dba.configure_instance('serverconfig:serverconfigpassword@127.0.0.1', ",
+            f"dba.configure_instance('serverconfig:serverconfigpassword@{self.mysql.socket_uri}', ",
             '{"restart": "true"})',
         ]
 
@@ -653,7 +658,7 @@ class TestMySQLBase(unittest.TestCase):
         self.assertTrue(valid)
 
         expected_commands = "\n".join([
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            f"shell.connect('clusteradmin:clusteradminpassword@{self.mysql.socket_uri}')",
             "cluster = dba.get_cluster('test_cluster')",
             "member_addresses = ','.join([member['address'] for label, member in cluster.status()['defaultReplicaSet']['topology'].items() if label not in ['mysql-0']])",
             "print(f'<MEMBER_ADDRESSES>{member_addresses}</MEMBER_ADDRESSES>')",
@@ -729,7 +734,7 @@ class TestMySQLBase(unittest.TestCase):
         self.assertTrue(result)
 
         expected_commands = "\n".join([
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            f"shell.connect('clusteradmin:clusteradminpassword@{self.mysql.socket_uri}')",
             "cluster = dba.get_cluster('test_cluster')",
             "print(cluster.status()['defaultReplicaSet']['topology'].get('mysql-0', {}).get('status', 'NOT_A_MEMBER'))",
         ])
@@ -755,7 +760,7 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mysql.get_cluster_status()
         expected_commands = "\n".join((
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            f"shell.connect('clusteradmin:clusteradminpassword@{self.mysql.socket_uri}')",
             "cluster = dba.get_cluster('test_cluster')",
             "print(cluster.status({'extended': False}))",
         ))
@@ -775,7 +780,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of rescan_cluster()."""
         self.mysql.rescan_cluster()
         expected_commands = "\n".join((
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            f"shell.connect('clusteradmin:clusteradminpassword@{self.mysql.socket_uri}')",
             "cluster = dba.get_cluster('test_cluster')",
             "cluster.rescan({})",
         ))
@@ -785,7 +790,7 @@ class TestMySQLBase(unittest.TestCase):
     def test_set_instance_option(self, _run_mysqlsh_script):
         """Test execution of set_instance_option()."""
         expected_commands = "\n".join((
-            f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@{self.mysql.instance_address}')",
+            f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}@{self.mysql.socket_uri}')",
             f"cluster = dba.get_cluster('{self.mysql.cluster_name}')",
             f"cluster.set_instance_option('{self.mysql.instance_address}', 'label', 'label-0')",
         ))
@@ -877,31 +882,13 @@ class TestMySQLBase(unittest.TestCase):
             self.mysql.delete_user("testuser")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_members_addresses(self, _run_mysqlsh_script):
-        """Test get_cluster_members_addresses() method."""
-        _run_mysqlsh_script.return_value = "<MEMBERS>member1,member2,member4</MEMBERS>"
-
-        output = self.mysql.get_cluster_members_addresses()
-
-        expected_commands = "\n".join((
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
-            "cluster = dba.get_cluster('test_cluster')",
-            "members = ','.join((member['address'] for member in cluster.describe()['defaultReplicaSet']['topology']))",
-            "print(f'<MEMBERS>{members}</MEMBERS>')",
-        ))
-
-        _run_mysqlsh_script.assert_called_once_with(expected_commands)
-
-        self.assertEqual(output, {"member1", "member2", "member4"})
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_mysql_version(self, _run_mysqlsh_script):
         """Test get_mysql_version() method."""
         _run_mysqlsh_script.return_value = "<VERSION>8.0.29-0ubuntu0.20.04.3</VERSION>"
 
         version = self.mysql.get_mysql_version()
         expected_commands = "\n".join((
-            "shell.connect('clusteradmin:clusteradminpassword@127.0.0.1')",
+            f"shell.connect('clusteradmin:clusteradminpassword@{self.mysql.socket_uri}')",
             'result = session.run_sql("SELECT version()")',
             'print(f"<VERSION>{result.fetch_one()[0]}</VERSION>")',
         ))
@@ -1039,16 +1026,16 @@ class TestMySQLBase(unittest.TestCase):
 
     def test_get_innodb_buffer_pool_parameters_exception(self):
         """Test a failure in execution of get_innodb_buffer_pool_parameters()."""
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_innodb_buffer_pool_parameters("wrong type")
 
     def test_get_max_connections(self):
         self.assertEqual(1310, self.mysql.get_max_connections(16484458496))
 
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_max_connections(12582910)
 
-        with self.assertRaises(MySQLGetAutoTunningParametersError):
+        with self.assertRaises(MySQLGetAutoTuningParametersError):
             self.mysql.get_max_connections(125)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
@@ -1434,7 +1421,7 @@ xtrabackup/location --prepare
                 group="test-group",
             )
 
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError()
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError()
         with self.assertRaises(MySQLPrepareBackupForRestoreError):
             self.mysql.prepare_backup_for_restore(
                 "backup/location",
@@ -1618,7 +1605,7 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_kill_unencrypted_sessions(self, _run_mysqlsh_script):
         """Test kill non TLS connections."""
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             (
                 'processes = session.run_sql("'
                 "SELECT processlist_id FROM performance_schema.threads WHERE "
@@ -1637,7 +1624,7 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_are_locks_acquired(self, _run_mysqlsh_script):
         """Test are_locks_acquired."""
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
             "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
         )
@@ -1649,7 +1636,7 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_get_mysql_user_for_unit(self, _run_mysqlsh_script):
         """Test get_mysql_user_for_unit."""
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "
             "INFORMATION_SCHEMA.USER_ATTRIBUTES WHERE ATTRIBUTE->'$.created_by_user'='relation-1' AND"
             " ATTRIBUTE->'$.created_by_juju_unit'='mysql-router-k8s/0'\")",
@@ -1694,14 +1681,14 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_set_dynamic_variables(self, _run_mysqlsh_script):
         """Test dynamic_variables."""
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             'session.run_sql("SET GLOBAL variable=value")',
         )
         self.mysql.set_dynamic_variable(variable="variable", value="value")
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
 
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             'session.run_sql("SET GLOBAL variable=`/a/path/value`")',
         )
         self.mysql.set_dynamic_variable(variable="variable", value="/a/path/value")
@@ -1712,6 +1699,19 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         with self.assertRaises(MySQLSetVariableError):
             self.mysql.set_dynamic_variable(variable="variable", value="value")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_get_variable_value(self, _run_mysqlsh_script):
+        """Test get_variable_value."""
+        _run_mysqlsh_script.return_value = '[["super_read_only", "OFF"]]'
+
+        self.assertEqual(self.mysql.get_variable_value("super_read_only"), "OFF")
+
+        _run_mysqlsh_script.reset_mock()
+        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        with self.assertRaises(MySQLGetVariableError):
+            self.mysql.get_variable_value("variable")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_set_cluster_primary(self, _run_mysqlsh_script):
@@ -1733,7 +1733,7 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_verify_server_upgradable(self, _run_mysqlsh_script):
         """Test is_server_upgradable."""
         commands = (
-            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@127.0.0.1')",
+            f"shell.connect('{self.mysql.server_config_user}:{self.mysql.server_config_password}@{self.mysql.socket_uri}')",
             "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",
             "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] == shell.version.split()[1]:",
@@ -1817,10 +1817,17 @@ xtrabackup/location --defaults-file=defaults/config/file
             "general_log": "ON",
             "general_log_file": "/var/log/mysql/general.log",
             "slow_query_log_file": "/var/log/mysql/slowquery.log",
+            "loose-audit_log_format": "JSON",
+            "loose-audit_log_policy": "LOGINS",
+            "loose-audit_log_strategy": "ASYNCHRONOUS",
+            "loose-audit_log_file": "/var/log/mysql/audit.log",
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
+        self.maxDiff = None
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="production")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="production", audit_log_enabled=True, audit_log_strategy="async"
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # < 2GB of memory, production profile
@@ -1832,7 +1839,10 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["max_connections"] = "127"
 
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            memory_limit=memory_limit,
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -1842,21 +1852,31 @@ xtrabackup/location --defaults-file=defaults/config/file
         expected_config["loose-group_replication_message_cache_size"] = "134217728"
         expected_config["max_connections"] = "100"
 
-        _, rendered_config = self.mysql.render_mysqld_configuration(profile="testing")
+        _, rendered_config = self.mysql.render_mysqld_configuration(
+            profile="testing", audit_log_enabled=True, audit_log_strategy="async"
+        )
         self.assertEqual(rendered_config, expected_config)
 
         # 10GB, max connections set by value
         memory_limit = 10106700800
         # max_connections set
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=500, memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            experimental_max_connections=500,
+            memory_limit=memory_limit,
         )
 
         self.assertEqual(rendered_config["max_connections"], "500")
 
         # max_connections set,constrained by memory, but enforced
         _, rendered_config = self.mysql.render_mysqld_configuration(
-            profile="production", experimental_max_connections=800, memory_limit=memory_limit
+            profile="production",
+            audit_log_enabled=True,
+            audit_log_strategy="async",
+            experimental_max_connections=800,
+            memory_limit=memory_limit,
         )
 
         self.assertEqual(rendered_config["max_connections"], "800")
@@ -1961,7 +1981,7 @@ xtrabackup/location --defaults-file=defaults/config/file
         )
         commands = (
             f"shell.connect('{self.mysql.cluster_admin_user}:{self.mysql.cluster_admin_password}"
-            f"@{self.mysql.instance_address}')",
+            f"@{self.mysql.socket_uri}')",
             f'result = session.run_sql("{query}")',
             'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
         )
@@ -1999,6 +2019,98 @@ xtrabackup/location --defaults-file=defaults/config/file
         _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
 
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
+    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_install_plugin(
+        self,
+        _run_mysqlcli_script,
+        _get_installed_plugins,
+        _set_dynamic_variable,
+        _get_variable_value,
+    ):
+        """Test install_plugin."""
+        _get_variable_value.return_value = "ON"
+
+        # ensure no install if already installed
+        _get_installed_plugins.return_value = {"plugin1"}
+        self.mysql.install_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure not installed if unsupported
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure installed
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+        _set_dynamic_variable.assert_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure raise exception
+        _get_installed_plugins.return_value = set()
+        self.mysql.install_plugins(["audit_log"])
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLPluginInstallError):
+            self.mysql.install_plugins(["audit_log"])
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
+    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_uninstall_plugin(
+        self,
+        _run_mysqlcli_script,
+        _get_installed_plugins,
+        _set_dynamic_variable,
+        _get_dynamic_variable,
+    ):
+        """Test uninstall_plugin."""
+        # ensure not uninstalled if not installed
+        _get_installed_plugins.return_value = set()
+        self.mysql.uninstall_plugins(["plugin1"])
+        _run_mysqlcli_script.assert_not_called()
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure uninstalled
+        _get_installed_plugins.return_value = {"audit_log"}
+        self.mysql.uninstall_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            "UNINSTALL PLUGIN audit_log",
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
+        _run_mysqlcli_script.reset_mock()
+
+        # ensure raise exception
+        _get_installed_plugins.return_value = {"audit_log"}
+        self.mysql.uninstall_plugins(["audit_log"])
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLPluginInstallError):
+            self.mysql.uninstall_plugins(["audit_log"])
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_get_installed_plugins(self, _run_mysqlcli_script):
+        """Test get_installed_plugins."""
+        _run_mysqlcli_script.return_value = "audit_log\nclone\ngroup_replication\n"
+        self.mysql._run_mysqlcli_script = _run_mysqlcli_script
+
+        plugins = self.mysql._get_installed_plugins()
+        self.assertEqual(plugins, {"audit_log"})
+
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLClientError):
+            self.mysql._get_installed_plugins()
 
     def test_abstract_methods(self):
         """Test abstract methods."""

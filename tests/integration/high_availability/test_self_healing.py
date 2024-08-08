@@ -192,20 +192,14 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     restore_network_for_unit(primary_hostname)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name, primary_unit_ip)
-
-    # update instance ip as it may change on network restore
-    config["host"] = await get_unit_ip(ops_test, primary_unit.name)
-
-    # verify that connection is possible
-    assert is_connection_possible(config), "❌ Connection is not possible after network restore"
+    await wait_network_restore(ops_test, primary_unit.name)
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
         # wait for the unit to be ready
         logger.info(f"Waiting for {primary_unit.name} to enter maintenance")
         await ops_test.model.block_until(
-            lambda: primary_unit.workload_status in ["maintenance", "active"], timeout=30 * 60
+            lambda: primary_unit.workload_status in ["maintenance"], timeout=30 * 60
         )
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
