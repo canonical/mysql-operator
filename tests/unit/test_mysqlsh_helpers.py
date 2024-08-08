@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, call, mock_open, patch
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
@@ -22,6 +22,7 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_CUSTOM_CONFIG_FILE,
+    MYSQLD_SOCK_FILE,
 )
 from mysql_vm_helpers import (
     MySQL,
@@ -52,6 +53,7 @@ class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
             "127.0.0.1",
+            MYSQLD_SOCK_FILE,
             "test_cluster",
             "test_cluster_set",
             "password",
@@ -251,7 +253,8 @@ class TestMySQL(unittest.TestCase):
     @patch("os.chmod")
     @patch("mysql_vm_helpers.MySQL.get_available_memory", return_value=16475447296)
     @patch(
-        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678, None)
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678, None),
     )
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
@@ -274,7 +277,7 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
         config = "\n".join((
             "[mysqld]",
@@ -289,6 +292,10 @@ class TestMySQL(unittest.TestCase):
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
             "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 5678",
             "\n",
         ))
@@ -310,8 +317,9 @@ class TestMySQL(unittest.TestCase):
         )
 
         # Test `testing` profile
+        self.mysql.charm.config.profile = "testing"
         _open_mock.reset_mock()
-        self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
         config = "\n".join((
             "[mysqld]",
@@ -326,6 +334,10 @@ class TestMySQL(unittest.TestCase):
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
             "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 1048576",
             "performance-schema-instrument = 'memory/%=OFF'",
             "loose-group_replication_message_cache_size = 134217728",
@@ -335,21 +347,28 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(
             sorted(_open_mock.mock_calls),
             sorted([
-                call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
+                call(
+                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                    "w",
+                    encoding="utf-8",
+                ),
                 call().__enter__(),
                 call().write(config),
                 call().__exit__(None, None, None),
             ]),
         )
 
-    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch(
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678),
+    )
     @patch("pathlib.Path")
     @patch("builtins.open")
     def test_create_custom_mysqld_config_exception(
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
@@ -357,8 +376,10 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
+        self.mysql.charm.config = MagicMock()  # type: ignore
+
         with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+            self.mysql.write_mysqld_config()
 
     @patch("subprocess.Popen")
     def test_execute_commands(self, _popen):

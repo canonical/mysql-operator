@@ -362,9 +362,14 @@ async def test_log_rotation(ops_test: OpsTest) -> None:
     unit = ops_test.model.applications[app].units[0]
 
     # Exclude slowquery log files as slowquery logs are not enabled by default
-    log_types = ["error", "general"]
-    log_files = ["error.log", "general.log"]
-    archive_directories = ["archive_error", "archive_general", "archive_slowquery"]
+    log_types = ["error", "general", "audit"]
+    log_files = ["error.log", "general.log", "audit.log"]
+    archive_directories = [
+        "archive_error",
+        "archive_general",
+        "archive_slowquery",
+        "archive_audit",
+    ]
 
     logger.info("Removing the cron file")
     await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")

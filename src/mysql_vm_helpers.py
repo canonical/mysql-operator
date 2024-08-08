@@ -21,7 +21,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
     MySQLKillSessionError,
     MySQLRestoreBackupError,
@@ -55,6 +55,9 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 if typing.TYPE_CHECKING:
@@ -99,6 +102,7 @@ class MySQL(MySQLBase):
     def __init__(
         self,
         instance_address: str,
+        socket_path: str,
         cluster_name: str,
         cluster_set_name: str,
         root_password: str,
@@ -116,6 +120,7 @@ class MySQL(MySQLBase):
 
         Args:
             instance_address: address of the targeted instance
+            socket_path: path to the MySQL socket
             cluster_name: cluster name
             cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
@@ -131,6 +136,7 @@ class MySQL(MySQLBase):
         """
         super().__init__(
             instance_address=instance_address,
+            socket_path=socket_path,
             cluster_name=cluster_name,
             cluster_set_name=cluster_set_name,
             root_password=root_password,
@@ -241,35 +247,28 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(
-        self,
-        profile: str,
-        memory_limit: Optional[int],
-        experimental_max_connections: Optional[int] = None,
-    ) -> None:
+    def write_mysqld_config(self) -> None:
         """Create custom mysql config file.
-
-        Args:
-            profile: profile to use for the mysql config
-            memory_limit: memory limit to use for the mysql config in MB
-            experimental_max_connections: experimental max connections to use for the mysql config
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
         logger.debug("Writing mysql configuration file")
-        if memory_limit:
+        memory_limit = None
+        if self.charm.config.profile_limit_memory:
             # Convert from config value in MB to bytes
-            memory_limit = memory_limit * BYTES_1MB
+            memory_limit = self.charm.config.profile_limit_memory * BYTES_1MB
         try:
             content_str, _ = self.render_mysqld_configuration(
-                profile=profile,
+                profile=self.charm.config.profile,
+                audit_log_enabled=self.charm.config.plugin_audit_enabled,
+                audit_log_strategy=self.charm.config.plugin_audit_strategy,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
-                experimental_max_connections=experimental_max_connections,
                 binlog_retention_days=self.charm.config.binlog_retention_days,
+                experimental_max_connections=self.charm.config.experimental_max_connections,
             )
-        except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
+        except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
 
@@ -717,7 +716,11 @@ class MySQL(MySQLBase):
                 raise MySQLClientError
 
     def _run_mysqlcli_script(
-        self, script: str, user: str = "root", password: str = None, timeout: Optional[int] = None
+        self,
+        script: str,
+        user: str = "root",
+        password: Optional[str] = None,
+        timeout: Optional[int] = None,
     ) -> str:
         """Execute a MySQL CLI script.
 
