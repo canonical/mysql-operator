@@ -1,0 +1,259 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:86 Build charm locally
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:89 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:92 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:98 Wait for upgrade to complete
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: stopping services..
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: starting services...
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: upgrading snap...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: recovering unit after upgrade
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: stopping services..
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [executing] maintenance: starting services...
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2759 Waiting for model:
+  mysql/0 [idle] blocked: 
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.4.4    unsupported  02:08:11Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.37-0ubun...  active      3  mysql           8.0/stable     0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   46  no       
+
+Unit               Workload     Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active       idle       3        10.70.218.166                   
+mysql/0*           blocked      executing  0        10.70.218.84    3306,33060/tcp  
+mysql/1            maintenance  executing  1        10.70.218.192   3306,33060/tcp  upgrade completed
+mysql/2            maintenance  executing  2        10.70.218.174   3306,33060/tcp  upgrade completed
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.70.218.84   juju-92d8ec-0  ubuntu@22.04      Running
+1        started  10.70.218.192  juju-92d8ec-1  ubuntu@22.04      Running
+2        started  10.70.218.174  juju-92d8ec-2  ubuntu@22.04      Running
+3        started  10.70.218.166  juju-92d8ec-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:44:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:44:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:44:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:44:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:44:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:44:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:44:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:44:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:44:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:44:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:50:51 ERROR unit.mysql/0.juju-log upgrade:2: Failed to install plugin='audit_log_filter'
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 747, in _run_mysqlcli_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysql', '-u', 'serverconfig', '--protocol=SOCKET', '--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock', '-e', "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';", '--password=WO6BzJWZOerLF6tMS8YqV0SS']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1058, in install_plugins
+    self._run_mysqlcli_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 697, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 751, in _run_mysqlcli_script
+    raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
+charms.mysql.v0.mysql.MySQLClientError: mysql: [Warning] Using a password on the command line interface can be insecure.
+ERROR 1290 (HY000) at line 1: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+unit-mysql-0: 01:50:51 ERROR unit.mysql/0.juju-log upgrade:2: Failed to install MySQL plugins
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 747, in _run_mysqlcli_script
+    return subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysql', '-u', 'serverconfig', '--protocol=SOCKET', '--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock', '-e', "INSTALL PLUGIN audit_log_filter SONAME 'audit_log_filter.so';", '--password=WO6BzJWZOerLF6tMS8YqV0SS']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1058, in install_plugins
+    self._run_mysqlcli_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 697, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 751, in _run_mysqlcli_script
+    raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
+charms.mysql.v0.mysql.MySQLClientError: mysql: [Warning] Using a password on the command line interface can be insecure.
+ERROR 1290 (HY000) at line 1: The MySQL server is running with the --super-read-only option so it cannot execute this statement
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/upgrade.py", line 201, in _on_upgrade_granted
+    self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 697, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1067, in install_plugins
+    raise MySQLPluginInstallError
+charms.mysql.v0.mysql.MySQLPluginInstallError
+unit-mysql-0: 01:50:51 CRITICAL unit.mysql/0.juju-log upgrade:2: Upgrade failed, follow the instructions below to rollback:
+    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state
+    2. Run `juju refresh` to the previously deployed charm revision or local charm file
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
