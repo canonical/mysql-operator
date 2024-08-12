@@ -3,7 +3,7 @@
 
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import yaml
 from juju.unit import Unit
@@ -215,20 +215,6 @@ async def relate_mysql_and_application(
         raise_on_blocked=True,
         timeout=TIMEOUT,
     )
-
-
-async def high_availability_test_setup(ops_test: OpsTest) -> Tuple[str, str]:
-    """Run the set up for high availability tests.
-
-    Args:
-        ops_test: The ops test framework
-    """
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
-    application_name = await deploy_and_scale_application(ops_test)
-
-    await relate_mysql_and_application(ops_test, mysql_application_name, application_name)
-
-    return mysql_application_name, application_name
 
 
 async def get_process_stat(ops_test: OpsTest, unit_name: str, process: str) -> str:
