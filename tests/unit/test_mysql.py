@@ -2031,14 +2031,12 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
-    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_install_plugin(
         self,
         _run_mysqlcli_script,
         _get_installed_plugins,
-        _set_dynamic_variable,
         _get_variable_value,
     ):
         """Test install_plugin."""
@@ -2060,12 +2058,24 @@ xtrabackup/location --defaults-file=defaults/config/file
         _get_installed_plugins.return_value = set()
         self.mysql.install_plugins(["audit_log"])
         _run_mysqlcli_script.assert_called_once_with(
-            "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
+            (
+                "SET GLOBAL super_read_only=OFF; "
+                "INSTALL PLUGIN audit_log SONAME 'audit_log.so';"
+                "SET GLOBAL super_read_only=ON;"
+            ),
             user=self.mysql.server_config_user,
             password=self.mysql.server_config_password,
         )
-        _set_dynamic_variable.assert_called()
         _run_mysqlcli_script.reset_mock()
+
+        # ensure installed with super_read_only already off
+        _get_variable_value.return_value = "OFF"
+        self.mysql.install_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            ("INSTALL PLUGIN audit_log SONAME 'audit_log.so';"),
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
 
         # ensure raise exception
         _get_installed_plugins.return_value = set()
@@ -2075,15 +2085,13 @@ xtrabackup/location --defaults-file=defaults/config/file
             self.mysql.install_plugins(["audit_log"])
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
-    @patch("charms.mysql.v0.mysql.MySQLBase.set_dynamic_variable")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_uninstall_plugin(
         self,
         _run_mysqlcli_script,
         _get_installed_plugins,
-        _set_dynamic_variable,
-        _get_dynamic_variable,
+        _get_variable_value,
     ):
         """Test uninstall_plugin."""
         # ensure not uninstalled if not installed
@@ -2093,14 +2101,29 @@ xtrabackup/location --defaults-file=defaults/config/file
         _run_mysqlcli_script.reset_mock()
 
         # ensure uninstalled
+        _get_variable_value.return_value = "ON"
         _get_installed_plugins.return_value = {"audit_log"}
         self.mysql.uninstall_plugins(["audit_log"])
         _run_mysqlcli_script.assert_called_once_with(
-            "UNINSTALL PLUGIN audit_log",
+            (
+                "SET GLOBAL super_read_only=OFF; "
+                "UNINSTALL PLUGIN audit_log;"
+                "SET GLOBAL super_read_only=ON;"
+            ),
             user=self.mysql.server_config_user,
             password=self.mysql.server_config_password,
         )
         _run_mysqlcli_script.reset_mock()
+
+        # ensure uninstalled with super_read_only already off
+        _get_variable_value.return_value = "OFF"
+        _get_installed_plugins.return_value = {"audit_log"}
+        self.mysql.uninstall_plugins(["audit_log"])
+        _run_mysqlcli_script.assert_called_once_with(
+            ("UNINSTALL PLUGIN audit_log;"),
+            user=self.mysql.server_config_user,
+            password=self.mysql.server_config_password,
+        )
 
         # ensure raise exception
         _get_installed_plugins.return_value = {"audit_log"}
