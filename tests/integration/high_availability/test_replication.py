@@ -20,7 +20,6 @@ from ..helpers import (
     execute_queries_on_unit,
     fetch_credentials,
     generate_random_string,
-    get_application_name,
     get_primary_unit,
     get_primary_unit_wrapper,
     get_server_config_credentials,
@@ -35,6 +34,7 @@ from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,
+    get_application_name,
     insert_data_into_mysql_and_validate_replication,
 )
 

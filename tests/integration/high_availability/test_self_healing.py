@@ -16,7 +16,6 @@ from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 from ..helpers import (
     cut_network_from_unit,
     execute_queries_on_unit,
-    get_application_name,
     get_controller_machine,
     get_primary_unit_wrapper,
     get_process_pid,
@@ -36,6 +35,7 @@ from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,
+    get_application_name,
     insert_data_into_mysql_and_validate_replication,
 )
 
