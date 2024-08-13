@@ -134,7 +134,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 68
+LIBPATCH = 69
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -890,6 +890,7 @@ class MySQLBase(ABC):
         audit_log_strategy: str,
         memory_limit: Optional[int] = None,
         experimental_max_connections: Optional[int] = None,
+        binlog_retention_days: int,
         snap_common: str = "",
     ) -> tuple[str, dict]:
         """Render mysqld ini configuration file."""
@@ -939,6 +940,7 @@ class MySQLBase(ABC):
                 # disable memory instruments if we have less than 2GiB of RAM
                 performance_schema_instrument = "'memory/%=OFF'"
 
+        binlog_retention_seconds = binlog_retention_days * 24 * 60 * 60
         config = configparser.ConfigParser(interpolation=None)
 
         # do not enable slow query logs, but specify a log file path in case
@@ -954,6 +956,7 @@ class MySQLBase(ABC):
             "general_log": "ON",
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slowquery.log",
+            "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
         }

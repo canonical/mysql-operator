@@ -60,6 +60,10 @@ if typing.TYPE_CHECKING:
     from charm import MySQLOperatorCharm
 
 
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
+
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
     """Exception raised when there's an error resetting root password and starting mysqld."""
 
@@ -243,9 +247,7 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(
-        self,
-    ) -> None:
+    def write_mysqld_config(self) -> None:
         """Create custom mysql config file.
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
@@ -263,6 +265,7 @@ class MySQL(MySQLBase):
                 audit_log_strategy=self.charm.config.plugin_audit_strategy,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
+                binlog_retention_days=self.charm.config.binlog_retention_days,
                 experimental_max_connections=self.charm.config.experimental_max_connections,
             )
         except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):

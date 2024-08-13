@@ -40,6 +40,10 @@ options:
       Ref. at https://docs.percona.com/percona-server/8.0/audit-log-plugin.html#audit_log_strategy
     type: string
     default: async
+  binlog_retention_days:
+    description: Number of days for binary logs retention
+    type: int
+    default: 7
   # Experimental features
   experimental-max-connections:
     type: int
