@@ -10,6 +10,10 @@ bases:
     channel: "22.04"
     architectures: [arm64]
 parts:
+  files:
+    plugin: nil
+    prime:
+      - snap_revisions.json
   charm:
     override-pull: |
       craftctl default
@@ -19,8 +23,6 @@ parts:
           exit 1
       fi
     charm-strict-dependencies: true
-    prime:
-      - snap_revisions.json
     build-packages:
       - libffi-dev
       - libssl-dev
