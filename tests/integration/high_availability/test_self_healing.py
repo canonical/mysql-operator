@@ -35,7 +35,7 @@ from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,
-    high_availability_test_setup,
+    get_application_name,
     insert_data_into_mysql_and_validate_replication,
 )
 
@@ -49,16 +49,11 @@ WAIT_TIMEOUT = 30 * 60
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
-    """Build and deploy."""
-    await high_availability_test_setup(ops_test)
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
+async def test_kill_db_process(
+    ops_test: OpsTest, highly_available_cluster, continuous_writes
+) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -93,11 +88,12 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
+async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Freeze and unfreeze process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
+
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -140,11 +136,11 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(3)
 @pytest.mark.abort_on_fail
-async def test_network_cut(ops_test: OpsTest, continuous_writes):
+async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Completely cut and restore network."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     all_units = ops_test.model.applications[mysql_application_name].units
 
@@ -214,11 +210,13 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(4)
 @pytest.mark.abort_on_fail
-async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
+async def test_replicate_data_on_restart(
+    ops_test: OpsTest, highly_available_cluster, continuous_writes
+):
     """Stop server, write data, start and validate replication."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
 
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -299,15 +297,15 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(5)
 @pytest.mark.abort_on_fail
-async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
+async def test_cluster_pause(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Pause test.
 
     A graceful simultaneous restart of all instances,
     check primary election after the start, write and read data
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     all_units = ops_test.model.applications[mysql_application_name].units
 
     config = {
@@ -364,14 +362,14 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(6)
 @pytest.mark.abort_on_fail
-async def test_sst_test(ops_test: OpsTest, continuous_writes):
+async def test_sst_test(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """The SST test.
 
     A forceful restart instance with deleted data and without transaction logs (forced clone).
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     all_units = ops_test.model.applications[mysql_application_name].units
