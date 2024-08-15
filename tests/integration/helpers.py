@@ -486,7 +486,7 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
     units = ops_test.model.applications[app_name].units
 
     for unit in units:
-        if unit == unit_excluded:
+        if unit.name == unit_excluded.name:
             continue
         try:
             primary_unit = await get_primary_unit(ops_test, unit, app_name)
