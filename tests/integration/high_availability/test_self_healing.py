@@ -153,10 +153,11 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     logger.info(f"Unit {primary_unit.name} it's on machine {primary_hostname} ✅")
 
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    cluster_admin_password = await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME)
 
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
+        "password": cluster_admin_password,
         "host": primary_unit_ip,
     }
 
@@ -193,10 +194,22 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
         # wait for the unit to be ready
-        logger.info(f"Waiting for {primary_unit.name} to enter maintenance")
-        await ops_test.model.block_until(
-            lambda: primary_unit.workload_status in ["maintenance"], timeout=30 * 60
-        )
+        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(10)):
+            with attempt:
+                new_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+                new_unit_config = {
+                    "username": CLUSTER_ADMIN_USERNAME,
+                    "password": cluster_admin_password,
+                    "host": new_unit_ip,
+                }
+
+                logger.debug(
+                    f"Waiting until connection possible after network restore on {new_unit_ip}"
+                )
+                assert is_connection_possible(
+                    new_unit_config
+                ), "❌ Connection is not possible after network restore"
+
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
             lambda: primary_unit.workload_status == "active", timeout=40 * 60
