@@ -203,8 +203,12 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
                     "host": new_unit_ip,
                 }
 
-                logger.debug(f"Waiting until connection possible after network restore on {new_unit_ip}")
-                assert is_connection_possible(new_unit_config), "❌ Connection is not possible after network restore"
+                logger.debug(
+                    f"Waiting until connection possible after network restore on {new_unit_ip}"
+                )
+                assert is_connection_possible(
+                    new_unit_config
+                ), "❌ Connection is not possible after network restore"
 
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
