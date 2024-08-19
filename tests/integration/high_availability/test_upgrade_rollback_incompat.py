@@ -47,15 +47,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
-    config = {"profile": "testing"}
 
     async with ops_test.fast_forward("10s"):
         await ops_test.model.deploy(
             charm,
             application_name=MYSQL_APP_NAME,
-            config=config,
             num_units=3,
             series="jammy",
+            config={"profile": "testing", "plugin-audit-enabled": "false"},
         )
 
         await ops_test.model.deploy(

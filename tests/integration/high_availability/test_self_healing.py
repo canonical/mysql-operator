@@ -35,7 +35,7 @@ from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,
-    high_availability_test_setup,
+    get_application_name,
     insert_data_into_mysql_and_validate_replication,
 )
 
@@ -49,16 +49,11 @@ WAIT_TIMEOUT = 30 * 60
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
-    """Build and deploy."""
-    await high_availability_test_setup(ops_test)
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
+async def test_kill_db_process(
+    ops_test: OpsTest, highly_available_cluster, continuous_writes
+) -> None:
     """Kill mysqld process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -93,11 +88,12 @@ async def test_kill_db_process(ops_test: OpsTest, continuous_writes) -> None:
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
+async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Freeze and unfreeze process and check for auto cluster recovery."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
+
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
@@ -140,11 +136,11 @@ async def test_freeze_db_process(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(3)
 @pytest.mark.abort_on_fail
-async def test_network_cut(ops_test: OpsTest, continuous_writes):
+async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Completely cut and restore network."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     all_units = ops_test.model.applications[mysql_application_name].units
 
@@ -157,10 +153,11 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     logger.info(f"Unit {primary_unit.name} it's on machine {primary_hostname} ✅")
 
     primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    cluster_admin_password = await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME)
 
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
+        "password": cluster_admin_password,
         "host": primary_unit_ip,
     }
 
@@ -192,21 +189,27 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     restore_network_for_unit(primary_hostname)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name, primary_unit_ip)
-
-    # update instance ip as it may change on network restore
-    config["host"] = await get_unit_ip(ops_test, primary_unit.name)
-
-    # verify that connection is possible
-    assert is_connection_possible(config), "❌ Connection is not possible after network restore"
+    await wait_network_restore(ops_test, primary_unit.name)
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
         # wait for the unit to be ready
-        logger.info(f"Waiting for {primary_unit.name} to enter maintenance")
-        await ops_test.model.block_until(
-            lambda: primary_unit.workload_status in ["maintenance", "active"], timeout=30 * 60
-        )
+        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(10)):
+            with attempt:
+                new_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+                new_unit_config = {
+                    "username": CLUSTER_ADMIN_USERNAME,
+                    "password": cluster_admin_password,
+                    "host": new_unit_ip,
+                }
+
+                logger.debug(
+                    f"Waiting until connection possible after network restore on {new_unit_ip}"
+                )
+                assert is_connection_possible(
+                    new_unit_config
+                ), "❌ Connection is not possible after network restore"
+
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(
             lambda: primary_unit.workload_status == "active", timeout=40 * 60
@@ -220,11 +223,13 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(4)
 @pytest.mark.abort_on_fail
-async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
+async def test_replicate_data_on_restart(
+    ops_test: OpsTest, highly_available_cluster, continuous_writes
+):
     """Stop server, write data, start and validate replication."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
 
     # ensure continuous writes still incrementing for all units
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -305,15 +310,15 @@ async def test_replicate_data_on_restart(ops_test: OpsTest, continuous_writes):
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(5)
 @pytest.mark.abort_on_fail
-async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
+async def test_cluster_pause(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """Pause test.
 
     A graceful simultaneous restart of all instances,
     check primary election after the start, write and read data
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     all_units = ops_test.model.applications[mysql_application_name].units
 
     config = {
@@ -370,14 +375,14 @@ async def test_cluster_pause(ops_test: OpsTest, continuous_writes):
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(6)
 @pytest.mark.abort_on_fail
-async def test_sst_test(ops_test: OpsTest, continuous_writes):
+async def test_sst_test(ops_test: OpsTest, highly_available_cluster, continuous_writes):
     """The SST test.
 
     A forceful restart instance with deleted data and without transaction logs (forced clone).
     """
-    mysql_application_name, _ = await high_availability_test_setup(ops_test)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
     all_units = ops_test.model.applications[mysql_application_name].units

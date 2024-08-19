@@ -10,8 +10,9 @@ import socket
 import subprocess
 import sys
 import time
+import typing
 
-from ops.charm import CharmBase, CharmEvents
+from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ActiveStatus
 
@@ -19,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 # File path for the spawned ip address observer process to write logs.
 LOG_FILE_PATH = "/var/log/ip_address_observer.log"
+
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class IPAddressChangeEvent(EventBase):
@@ -40,21 +45,25 @@ class IPAddressObserver(Object):
     Observed IP address changes cause :class:`IPAddressChangeEvent` to be emitted.
     """
 
-    def __init__(self, charm: CharmBase):
+    def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "ip-address-observer")
 
         self.charm = charm
 
     def start_observer(self):
         """Start the IP address observer running in a new process."""
-        if (
-            not isinstance(self.charm.unit.status, ActiveStatus)
-            or self.charm.peers is None
-            or "observer-pid" in self.charm.unit_peer_data
-        ):
+        if not isinstance(self.charm.unit.status, ActiveStatus) or self.charm.peers is None:
             return
 
+        if pid := self.charm.unit_peer_data.get("observer-pid"):
+            if check_pid(int(pid)):
+                return
+
         logger.info("Starting IP address observer process")
+
+        juju_command = (
+            os.path.exists("/usr/bin/juju-run") and "/usr/bin/juju-run" or "/usr/bin/juju-exec"
+        )
 
         # We need to trick Juju into thinking that we are not running
         # in a hook context, as Juju will disallow use of juju-run.
@@ -66,7 +75,7 @@ class IPAddressObserver(Object):
             [
                 "/usr/bin/python3",
                 "src/ip_address_observer.py",
-                "/usr/bin/juju-run",
+                juju_command,
                 self.charm.unit.name,
                 self.charm.charm_dir,
             ],
@@ -91,6 +100,16 @@ class IPAddressObserver(Object):
             del self.charm.unit_peer_data["observer-pid"]
         except OSError:
             pass
+
+
+def check_pid(pid: int) -> bool:
+    """Check if pid exists."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
 
 
 def dispatch(run_command, unit, charm_directory):

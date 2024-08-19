@@ -34,6 +34,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
+    MySQLPluginInstallError,
     MySQLRebootFromCompleteOutageError,
     MySQLSetClusterPrimaryError,
 )
@@ -80,6 +81,7 @@ from constants import (
     MONITORING_USERNAME,
     MYSQL_EXPORTER_PORT,
     MYSQLD_CUSTOM_CONFIG_FILE,
+    MYSQLD_SOCK_FILE,
     PASSWORD_LENGTH,
     PEER,
     ROOT_PASSWORD_KEY,
@@ -141,7 +143,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     config_type = CharmConfig
     # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
     # (which runs juju-run/juju-exec to dispatch a custom event from cron)
-    on = FlushMySQLLogsCharmEvents()  # pyright: ignore [reportAssignmentType]
+    on = FlushMySQLLogsCharmEvents()  # type: ignore
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -203,7 +205,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     #  Charm Lifecycle Hooks
     # =======================
 
-    def _on_install(self, event: InstallEvent) -> None:
+    def _on_install(self, _: InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
@@ -258,7 +260,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, event: EventBase) -> None:
+    def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
         if not self._is_peer_data_set:
             # skip when not initialized
@@ -270,7 +272,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
 
         # restart not required if mysqld is not running
-        restart = self._mysql.is_mysqld_running()
+        mysqld_running = self._mysql.is_mysqld_running()
 
         previous_config = self.mysql_config.custom_config
         if not previous_config:
@@ -281,9 +283,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
         new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
             profile=self.config.profile,
+            audit_log_enabled=self.config.plugin_audit_enabled,
+            audit_log_strategy=self.config.plugin_audit_strategy,
             snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
             memory_limit=memory_limit_bytes,
             experimental_max_connections=self.config.experimental_max_connections,
+            binlog_retention_days=self.config.binlog_retention_days,
         )
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
@@ -295,8 +300,16 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self._mysql.write_content_to_file(
                 path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
             )
-            if restart:
+            if mysqld_running:
                 logger.info("Configuration change requires restart")
+
+                if "loose-audit_log_format" in changed_config:
+                    # plugins are manipulated running daemon
+                    if self.config.plugin_audit_enabled:
+                        self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                    else:
+                        self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+
                 self.on[f"{self.restart.name}"].acquire_lock.emit()
                 return
 
@@ -330,6 +343,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         except MySQLDNotRestartedError:
             self.unit.status = BlockedStatus("Failed to restart mysqld after configuring instance")
             return
+        except MySQLPluginInstallError:
+            logger.warning("Failed to install MySQL plugins")
         except MySQLGetMySQLVersionError:
             logger.debug("Fail to get MySQL version")
 
@@ -533,7 +548,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self._mysql.connect_mysql_exporter()
 
-    def _on_cos_agent_relation_broken(self, event: RelationBrokenEvent) -> None:
+    def _on_cos_agent_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle the cos_agent relation broken event.
 
         Disable the mysqld-exporter snap service.
@@ -558,6 +573,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Returns an instance of the MySQL object."""
         return MySQL(
             self.unit_fqdn,
+            MYSQLD_SOCK_FILE,
             self.app_peer_data["cluster-name"],
             self.app_peer_data["cluster-set-domain-name"],
             self.get_secret("app", ROOT_PASSWORD_KEY),  # pyright: ignore [reportArgumentType]
@@ -633,14 +649,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
-        self._mysql.write_mysqld_config(
-            profile=self.config.profile,
-            memory_limit=self.config.profile_limit_memory,
-            experimental_max_connections=self.config.experimental_max_connections,
-        )
+        self._mysql.write_mysqld_config()
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
+
+        if self.config.plugin_audit_enabled:
+            self._mysql.install_plugins(["audit_log", "audit_log_filter"])
 
         # ensure hostname can be resolved
         self.hostname_resolution.update_etc_hosts(None)
@@ -807,7 +822,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 return
             except MySQLLockAcquisitionError:
                 self.unit.status = WaitingStatus("waiting to join the cluster")
-                logger.debug("Waiting to joing the cluster, failed to acquire lock.")
+                logger.debug("Waiting to join the cluster, failed to acquire lock.")
                 return
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)

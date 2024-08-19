@@ -131,6 +131,7 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label.assert_called_once()
         assert mock_set_dynamic_variable.call_count == 2
 
+    @patch("mysql_vm_helpers.MySQL.install_plugins")
     @patch("upgrade.set_cron_daemon")
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     @patch("upgrade.MySQLVMUpgrade._check_server_unsupported_downgrade")
@@ -162,6 +163,7 @@ class TestUpgrade(unittest.TestCase):
         mock_check_server_unsupported_downgrade,
         mock_write_mysqld_config,
         mock_set_cron_daemon,
+        mock_install_plugins,
     ):
         """Test upgrade-granted hook."""
         self.charm.on.config_changed.emit()
