@@ -161,7 +161,7 @@ async def test_keystone_bundle_shared_db(ops_test: OpsTest) -> None:
         application_name=APP_NAME,
         config=config,
         num_units=3,
-        series="jammy",
+        base="ubuntu@22.04",
     )
 
     # Reduce the update_status frequency for the duration of the test

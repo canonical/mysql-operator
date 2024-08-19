@@ -101,7 +101,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     logger.info("Deploying s3 integrator")
 
-    await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL)
+    await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL, base="ubuntu@22.04")
     await ops_test.model.relate(mysql_application_name, S3_INTEGRATOR)
 
     await ops_test.model.wait_for_idle(

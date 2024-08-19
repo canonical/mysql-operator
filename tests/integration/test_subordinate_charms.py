@@ -21,12 +21,13 @@ async def test_ubuntu_pro(ops_test, github_secrets):
             db_charm,
             application_name=DATABASE_APP_NAME,
             config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
-            series="jammy",
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             UBUNTU_PRO_APP_NAME,

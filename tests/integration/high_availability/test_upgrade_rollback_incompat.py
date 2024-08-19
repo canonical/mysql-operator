@@ -53,7 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             charm,
             application_name=MYSQL_APP_NAME,
             num_units=3,
-            series="jammy",
+            base="ubuntu@22.04",
             config={"profile": "testing", "plugin-audit-enabled": "false"},
         )
 
@@ -62,6 +62,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             application_name=TEST_APP,
             channel="latest/edge",
             num_units=1,
+            base="ubuntu@22.04",
         )
 
         await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP)

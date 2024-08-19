@@ -79,6 +79,7 @@ async def test_build_and_deploy(
         application_name=MYSQL_APP1,
         num_units=3,
         config=config,
+        base="ubuntu@22.04",
     )
     config["cluster-name"] = "cuzco"
     await second_model.deploy(
@@ -86,6 +87,7 @@ async def test_build_and_deploy(
         application_name=MYSQL_APP2,
         num_units=3,
         config=config,
+        base="ubuntu@22.04",
     )
 
     logger.info("Waiting for the applications to settle")
@@ -175,7 +177,7 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
     await first_model.deploy(
         MYSQL_ROUTER_APP_NAME,
         application_name=MYSQL_ROUTER_APP_NAME,
-        series="jammy",
+        base="ubuntu@22.04",
         channel="dpe/edge",
         num_units=1,
         trust=True,
@@ -183,7 +185,7 @@ async def test_deploy_router_and_app(first_model: Model) -> None:
     await first_model.deploy(
         APPLICATION_APP_NAME,
         application_name=APPLICATION_APP_NAME,
-        series="jammy",
+        base="ubuntu@22.04",
         channel="latest/edge",
         num_units=1,
     )
