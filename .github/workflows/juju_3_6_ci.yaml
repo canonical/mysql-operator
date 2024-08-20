@@ -7,7 +7,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  pull_request: # TODO: remove once PR is approved and confirmed tests passing on 3.6
   schedule:
     - cron: '53 1 * * *' # Daily at 01:53 UTC
 
