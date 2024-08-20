@@ -7,6 +7,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  pull_request:
   schedule:
     - cron: '53 1 * * *' # Daily at 01:53 UTC
 
@@ -22,14 +23,20 @@ jobs:
       cache: true
 
   integration-test-3-6:
-    name: Integration | 3.6
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture:
+          - amd64
+          - arm64
+    name: Integration | 3.6 | ${{ matrix.architecture }}
     needs:
       - lint
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v18.0.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      architecture: amd64
+      architecture: ${{ matrix.architecture }}
       cloud: lxd
       juju-snap-channel: 3.6/beta
       libjuju-version-constraint: 3.5.2.0
