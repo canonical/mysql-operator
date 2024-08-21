@@ -837,25 +837,26 @@ referencing = ">=0.28.0"
 
 [[package]]
 name = "juju"
-version = "3.2.2"
+version = "3.5.2.0"
 description = "Python library for Juju"
 optional = false
 python-versions = "*"
 files = [
-    {file = "juju-3.2.2.tar.gz", hash = "sha256:b6f51c62b605bc8bd56842892d31cdb91d26879e49641380cd67c423f69fb1bb"},
+    {file = "juju-3.5.2.0.tar.gz", hash = "sha256:dd9a36330e63acd8f62bf478fd7e385e51f44dc3918e7a67d0593fd054e1e80a"},
 ]
 
 [package.dependencies]
 hvac = "*"
 kubernetes = ">=12.0.1"
 macaroonbakery = ">=1.1,<2.0"
-paramiko = ">=2.4.0,<3.0.0"
+packaging = "*"
+paramiko = ">=2.4.0"
 pyasn1 = ">=0.4.4"
 pyRFC3339 = ">=1.0,<2.0"
 pyyaml = ">=5.1.2"
 toposort = ">=1.5,<2"
 typing_inspect = ">=0.6.0"
-websockets = {version = ">=10.0", markers = "python_version > \"3.9\""}
+websockets = ">=8.1"
 
 [[package]]
 name = "kubernetes"
@@ -2337,4 +2338,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cfc9b449b7f9d9584b6d7195251e5e3a3a5567b11fe7a02f6fe4ba82d841b424"
+content-hash = "4c0c0224019c57547ff769ba601d219952c6c4d1f5ad4173499e42d21aaa8118"
