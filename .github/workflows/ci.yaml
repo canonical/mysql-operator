@@ -72,14 +72,16 @@ jobs:
             allure_on_amd64: true
           - snap_channel: 3.6/beta
             allure_on_amd64: false
-          - snap_channel: 3.6/beta
-            allure_on_amd64: false
         architecture:
           - amd64
         include:
           - juju:
               agent: 3.4.4  # renovate: juju-agent-pin-minor
               allure_on_amd64: true
+            architecture: arm64
+          - juju:
+              snap_channel: 3.6/beta
+              allure_on_amd64: false
             architecture: arm64
     name: Integration | ${{ matrix.juju.agent || matrix.juju.snap_channel }} | ${{ matrix.architecture }}
     needs:
