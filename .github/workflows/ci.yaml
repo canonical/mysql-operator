@@ -86,7 +86,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@3.6-nightly  # TODO: change back to a semver
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v21.0.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
