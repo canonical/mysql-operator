@@ -96,7 +96,6 @@ jobs:
       juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-      lxd-snap-channel: 6.1/stable
       _beta_allure_report: ${{ matrix.juju.allure_on_amd64 && matrix.architecture == 'amd64' }}
     secrets:
       # GitHub appears to redact each line of a multi-line secret
