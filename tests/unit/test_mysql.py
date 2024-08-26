@@ -956,7 +956,7 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.return_value = "True\n"
 
         self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
-        _run_mysqlsh_script.assert_called_once_with(commands)
+        _run_mysqlsh_script.assert_called_once_with(commands, timeout=10)
 
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError
