@@ -52,13 +52,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
-            series="jammy",
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             num_units=1,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
     )
 

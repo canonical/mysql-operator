@@ -285,7 +285,7 @@ async def test_cluster_isolation(ops_test: OpsTest, highly_available_cluster) ->
         charm,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
-        series="jammy",
+        base="ubuntu@22.04",
     )
     async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(

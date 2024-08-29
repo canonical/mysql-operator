@@ -118,7 +118,7 @@ async def test_keystone_bundle_db_router(ops_test: OpsTest) -> None:
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     mysql_app = await ops_test.model.deploy(
-        charm, application_name=APP_NAME, config=config, num_units=1, series="jammy"
+        charm, application_name=APP_NAME, config=config, num_units=1, base="ubuntu@22.04"
     )
 
     # Deploy keystone
