@@ -383,7 +383,7 @@ class MySQL(MySQLBase):
 
         logger.debug("MySQL connection possible")
 
-    def execute_backup_commands(
+    def execute_backup_commands(  # type: ignore
         self,
         s3_directory: str,
         s3_parameters: Dict[str, str],
@@ -402,7 +402,7 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(
+    def delete_temp_backup_directory(  # type: ignore
         self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
     ) -> None:
         """Delete the temp backup directory."""
@@ -412,7 +412,7 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def retrieve_backup_with_xbcloud(
+    def retrieve_backup_with_xbcloudo(  # type: ignore
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
