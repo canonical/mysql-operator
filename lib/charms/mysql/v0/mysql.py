@@ -2099,10 +2099,16 @@ class MySQLBase(ABC):
 
         release_lock_commands = (
             f"shell.connect('{self.instance_def(self.server_config_user, host=primary_address)}')",
-            "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"
+            "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"
             f" WHERE task='{lock_name}' AND executor='{unit_label}';\")",
+            "print(r.get_affected_items_count())",
         )
-        self._run_mysqlsh_script("\n".join(release_lock_commands))
+        affected_rows = self._run_mysqlsh_script("\n".join(release_lock_commands))
+        if affected_rows:
+            if int(affected_rows) == 0:
+                logger.warning("No lock to release")
+            else:
+                logger.debug(f"{lock_name=} released for {unit_label=}")
 
     def _get_cluster_member_addresses(self, exclude_unit_labels: List = []) -> Tuple[List, bool]:
         """Get the addresses of the cluster's members."""
@@ -2178,7 +2184,12 @@ class MySQLBase(ABC):
         if not matches:
             return None
 
-        return matches.group(1)
+        address = matches.group(1)
+        if ":" in address:
+            # strip port from address
+            address = address.split(":")[0]
+
+        return address
 
     def get_primary_label(self) -> Optional[str]:
         """Get the label of the cluster's primary."""
@@ -2305,8 +2316,6 @@ class MySQLBase(ABC):
 
     def update_user_password(self, username: str, new_password: str, host: str = "%") -> None:
         """Updates user password in MySQL database."""
-        logger.debug(f"Updating password for {username}.")
-
         # password is set on the global primary
         if not (instance_address := self.get_cluster_set_global_primary_address()):
             raise MySQLCheckUserExistenceError("No primary found")
@@ -2317,14 +2326,12 @@ class MySQLBase(ABC):
             'session.run_sql("FLUSH PRIVILEGES;")',
         )
 
+        logger.debug(f"Updating password for {username}.")
         try:
             self._run_mysqlsh_script("\n".join(update_user_password_commands))
-        except MySQLClientError as e:
-            logger.exception(
-                f"Failed to update user password for user {username}",
-                exc_info=e,
-            )
-            raise MySQLCheckUserExistenceError(e.message)
+        except MySQLClientError:
+            logger.exception(f"Failed to update user password for user {username}")
+            raise MySQLCheckUserExistenceError
 
     @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(GET_MEMBER_STATE_TIME))
     def get_member_state(self) -> Tuple[str, str]:

@@ -641,7 +641,8 @@ class TestMySQLBase(unittest.TestCase):
 
         expected_release_lock_commands = "\n".join([
             "shell.connect('serverconfig:serverconfigpassword@2.2.2.2:33062')",
-            "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='mysql-0';\")",
+            "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='mysql-0';\")",
+            "print(r.get_affected_items_count())",
         ])
         _run_mysqlsh_script.assert_called_once_with(expected_release_lock_commands)
 
