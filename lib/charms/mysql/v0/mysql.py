@@ -896,6 +896,9 @@ class MySQLBase(ABC):
             "root": self.root_password,
             self.backups_user: self.backups_password,
         }
+        if host and ":" in host:
+            # strip port from address
+            host = host.split(":")[0]
 
         if user in (self.server_config_user, self.backups_user):
             # critical operator users use admin address
