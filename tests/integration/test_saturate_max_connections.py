@@ -46,7 +46,6 @@ async def test_deploy_and_relate_test_app(ops_test: OpsTest) -> None:
         base="ubuntu@22.04",
         config=config,
         channel="latest/edge",
-        revision=55,  # test branch
     )
 
     logger.info("Relating test app to mysql")
