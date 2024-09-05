@@ -70,22 +70,23 @@ async def test_saturate_max_connections(ops_test: OpsTest) -> None:
     logger.info("Running action to get app connection data")
     credentials = await run_action(app_unit, "get-client-connection-data")
     del credentials["return-code"]
+    credentials["host"] = host_ip
 
-    logger.info(f"Creating {CONNECTIONS - 1} connections")
-    connections = create_db_connections(9, host=host_ip, **credentials)
+    logger.info(f"Creating {CONNECTIONS} connections")
+    connections = create_db_connections(CONNECTIONS, **credentials)
     assert isinstance(connections, list), "Connections not created"
 
     logger.info("Ensure all connections are established")
     for conn in connections:
         assert conn.is_connected(), "Connection failed to establish"
 
-    assert len(connections) == 9, "Not all connections were established"
+    assert len(connections) == CONNECTIONS, "Not all connections were established"
 
     logger.info("Ensure no more client connections are possible")
 
     with pytest.raises(OperationalError):
         # exception raised when too many connections are attempted
-        create_db_connections(1, host=host_ip, **credentials)
+        create_db_connections(1, **credentials)
 
     logger.info("Get cluster status while connections are saturated")
     _ = await run_action(mysql_unit, "get-cluster-status")
