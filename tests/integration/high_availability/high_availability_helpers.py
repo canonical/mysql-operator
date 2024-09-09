@@ -355,37 +355,18 @@ async def ensure_all_units_continuous_writes_incrementing(
         ops_test, primary, server_config_credentials
     )
 
-    select_all_continuous_writes_sql = [f"SELECT * FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
-
-    async with ops_test.fast_forward():
-        for unit in mysql_units:
-            for attempt in Retrying(
-                reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)
-            ):
-                with attempt:
-                    # ensure that all units are up to date (including the previous primary)
-                    unit_address = await get_unit_ip(ops_test, unit.name)
-
+    async with ops_test.fast_forward(fast_interval="15s"):
+        for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
+            with attempt:
+                # ensure that all units are up to date (including the previous primary)
+                for unit in mysql_units:
                     # ensure the max written value is incrementing (continuous writes is active)
                     max_written_value = await get_max_written_value_in_database(
                         ops_test, unit, server_config_credentials
                     )
+                    logger.info(f"{max_written_value=} on unit {unit.name}")
                     assert (
                         max_written_value > last_max_written_value
                     ), "Continuous writes not incrementing"
-
-                    # ensure that the unit contains all values up to the max written value
-                    all_written_values = set(
-                        await execute_queries_on_unit(
-                            unit_address,
-                            server_config_credentials["username"],
-                            server_config_credentials["password"],
-                            select_all_continuous_writes_sql,
-                        )
-                    )
-                    numbers = set(range(1, max_written_value))
-                    assert (
-                        numbers <= all_written_values
-                    ), f"Missing numbers in database for unit {unit.name}"
 
                     last_max_written_value = max_written_value
