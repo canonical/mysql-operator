@@ -68,8 +68,8 @@ async def test_saturate_max_connections(ops_test: OpsTest) -> None:
     host_ip = await get_unit_ip(ops_test, mysql_unit.name)
     logger.info("Running action to get app connection data")
     credentials = await run_action(app_unit, "get-client-connection-data")
-    if credentials.get("return-code"):
-        # juju 2.9 dot have the return-code key
+    if "return-code" in credentials:
+        # juju 2.9 dont have the return-code key
         del credentials["return-code"]
     credentials["host"] = host_ip
 
