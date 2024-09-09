@@ -215,7 +215,7 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
             lambda: primary_unit.workload_status == "active", timeout=40 * 60
         )
 
-        await ensure_all_units_continuous_writes_incrementing(ops_test)
+    await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     # ensure that we are able to insert data into the primary and have it replicated to all units
     database_name, table_name = "test-network-cut", "data"
