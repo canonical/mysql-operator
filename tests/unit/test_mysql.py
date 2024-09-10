@@ -29,12 +29,12 @@ from charms.mysql.v0.mysql import (
     MySQLExecuteBackupCommandsError,
     MySQLGetAutoTuningParametersError,
     MySQLGetClusterPrimaryAddressError,
-    MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
     MySQLGetVariableError,
     MySQLInitializeJujuOperationsTableError,
     MySQLMemberState,
+    MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPluginInstallError,
     MySQLPrepareBackupForRestoreError,
@@ -834,7 +834,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlcli_script.return_value = "MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\n"
 
-        with self.assertRaises(MySQLGetMemberStateError):
+        with self.assertRaises(MySQLNoMemberStateError):
             self.mysql.get_member_state()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")

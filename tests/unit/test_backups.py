@@ -11,8 +11,8 @@ from charms.mysql.v0.mysql import (
     MySQLDeleteTempRestoreDirectoryError,
     MySQLEmptyDataDirectoryError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetMemberStateError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRescanClusterError,
@@ -356,7 +356,7 @@ Juju Version: 0.0.0
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
 
         # test error getting member state
-        _get_member_state.side_effect = MySQLGetMemberStateError
+        _get_member_state.side_effect = MySQLNoMemberStateError
 
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertFalse(success)
