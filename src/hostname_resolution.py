@@ -39,7 +39,7 @@ class MySQLMachineHostnameResolution(Object):
         self.ip_address_observer = IPAddressObserver(charm)
 
         self.framework.observe(self.charm.on.config_changed, self._update_host_details_in_databag)
-        self.framework.observe(self.on.ip_address_change, self._update_host_details_in_databag)
+        self.framework.observe(self.charm.on.ip_address_change, self._on_ip_address_change)
 
         self.framework.observe(self.charm.on[PEER].relation_changed, self.update_etc_hosts)
         self.framework.observe(self.charm.on[PEER].relation_departed, self.update_etc_hosts)
@@ -62,6 +62,14 @@ class MySQLMachineHostnameResolution(Object):
         host_details = {"names": [hostname, fqdn], "address": ip}
 
         self.charm.unit_peer_data[HOSTNAME_DETAILS] = json.dumps(host_details)
+
+    def _on_ip_address_change(self, _) -> None:
+        """Handle ip address changed.
+
+        admin_address is bound to previous IP, requiring mysqld restart.
+        """
+        self._update_host_details_in_databag(None)
+        self.charm._mysql.restart_mysqld()
 
     def _get_host_details(self) -> list[HostsEntry]:
         host_details = []
