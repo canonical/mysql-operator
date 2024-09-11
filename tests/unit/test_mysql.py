@@ -1728,7 +1728,7 @@ xtrabackup/location --defaults-file=defaults/config/file
     def test_verify_server_upgradable(self, _run_mysqlsh_script):
         """Test is_server_upgradable."""
         commands = (
-            "shell.connect('serverconfig:serverconfigpassword@127.0.0.1:33062')",
+            "shell.connect('clusteradmin:clusteradminpassword@2.3.4.5:3306')",
             "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",
             "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] == shell.version.split()[1]:",
@@ -1752,7 +1752,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             '"detectedProblems": [] }],'
             '"manualChecks": []}'
         )
-        self.mysql.verify_server_upgradable()
+        self.mysql.verify_server_upgradable("2.3.4.5")
         _run_mysqlsh_script.assert_called_with("\n".join(commands))
         _run_mysqlsh_script.return_value = (
             '{"serverAddress": "10.1.148.145:33060",'
