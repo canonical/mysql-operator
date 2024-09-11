@@ -23,8 +23,6 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
 )
 
-from .helpers import patch_network_get
-
 
 @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestAsyncRelation(unittest.TestCase):
@@ -292,7 +290,6 @@ class TestAsyncRelation(unittest.TestCase):
             self.harness.get_relation_data(async_relation_id, self.charm.app.name),
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("ops.framework.EventBase.defer")
     @patch(
         "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.returning_cluster",

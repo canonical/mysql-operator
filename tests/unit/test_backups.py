@@ -30,8 +30,6 @@ from ops.testing import Harness
 from charm import MySQLOperatorCharm
 from lib.charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME
 
-from .helpers import patch_network_get
-
 
 class TestMySQLBackups(unittest.TestCase):
     def setUp(self):
@@ -150,7 +148,6 @@ test stderr"""
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("datetime.datetime")
     @patch(
@@ -205,7 +202,6 @@ Juju Version: 0.0.0
         event.set_results.assert_called_once_with({"backup-id": "2023-03-07%13:43:15Z"})
         event.fail.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("datetime.datetime")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -313,7 +309,6 @@ Juju Version: 0.0.0
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
     def test_can_unit_perform_backup(
@@ -326,7 +321,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("python_hosts.Hosts.write")
@@ -378,7 +372,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Unit is waiting to start or restart")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("python_hosts.Hosts.write")
@@ -403,7 +396,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     def test_pre_backup_failure(
@@ -431,7 +423,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Error setting instance option tag:_hidden")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup(
@@ -452,7 +443,6 @@ Juju Version: 0.0.0
         self.assertIsNone(error_message)
         _upload_logs_to_s3.assert_called_once_with("stdout", "", "/path.backup.log", s3_params)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup_failure(
@@ -486,7 +476,6 @@ Juju Version: 0.0.0
             "", "failure backup", "/path.backup.log", s3_params
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
@@ -501,7 +490,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
@@ -535,7 +523,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Error deleting temp backup directory")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
     def test_pre_restore_checks(
@@ -548,7 +535,6 @@ Juju Version: 0.0.0
 
         self.assertTrue(self.mysql_backups._pre_restore_checks(event))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
     @patch("python_hosts.Hosts.write")
@@ -593,7 +579,6 @@ Juju Version: 0.0.0
 
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_restore_checks", return_value=True)
     @patch(
@@ -637,7 +622,6 @@ Juju Version: 0.0.0
         self.assertEqual(event.set_results.call_count, 1)
         self.assertEqual(event.fail.call_count, 0)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_restore_checks", return_value=True)
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -750,7 +734,6 @@ Juju Version: 0.0.0
         event.set_results.assert_not_called()
         event.fail.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
     @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
@@ -768,7 +751,6 @@ Juju Version: 0.0.0
         _kill_client_sessions.assert_called_once()
         _set_instance_offline_mode.assert_called_once()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
     @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
@@ -784,7 +766,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error, "Failed to stop mysqld")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "mysql_vm_helpers.MySQL.retrieve_backup_with_xbcloud",
         return_value=("", "", "test/backup/location"),
@@ -813,7 +794,6 @@ Juju Version: 0.0.0
         self.assertTrue(recoverable)
         self.assertEqual(error, "")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "mysql_vm_helpers.MySQL.retrieve_backup_with_xbcloud",
         return_value=("", "", "test/backup/location"),
@@ -869,7 +849,6 @@ Juju Version: 0.0.0
         self.assertTrue(recoverable)
         self.assertEqual(error, "Failed to retrieve backup test-backup-id")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
@@ -880,7 +859,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertEqual(error, "")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
@@ -909,7 +887,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error, "Failed to delete the temp restore directory")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._clean_data_dir_and_start_mysqld",
         return_value=(True, None),
@@ -944,7 +921,6 @@ Juju Version: 0.0.0
         _initialize_juju_units_operations_table.assert_called_once()
         _rescan_cluster.assert_called_once()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._clean_data_dir_and_start_mysqld",
         return_value=(True, None),

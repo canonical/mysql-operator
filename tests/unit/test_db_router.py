@@ -14,8 +14,6 @@ from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
 
-from .helpers import patch_network_get
-
 
 @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestDBRouter(unittest.TestCase):
@@ -29,7 +27,6 @@ class TestDBRouter(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("relations.db_router.DBRouterRelation._on_leader_elected")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
@@ -120,7 +117,6 @@ class TestDBRouter(unittest.TestCase):
             },
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("relations.db_router.DBRouterRelation._on_leader_elected")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")

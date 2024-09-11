@@ -10,8 +10,6 @@ from charms.mysql.v0.mysql import MySQLCharmBase, MySQLSecretError
 from ops.testing import Harness
 from parameterized import parameterized
 
-from .helpers import patch_network_get
-
 
 class TestCharmBase(unittest.TestCase):
     @patch.multiple(MySQLCharmBase, __abstractmethods__=set())
@@ -27,7 +25,6 @@ class TestCharmBase(unittest.TestCase):
         self.peer_relation_id = self.harness.add_relation("database-peers", "mysql")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_get_secret_databag(self):
         self.harness.set_leader()
 
@@ -46,7 +43,6 @@ class TestCharmBase(unittest.TestCase):
         assert self.charm.get_secret("unit", "password") == "test-password"
 
     @pytest.mark.usefixtures("without_juju_secrets")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._on_leader_elected")
     def test_set_secret_databag(self, _):
         self.harness.set_leader()
@@ -72,7 +68,6 @@ class TestCharmBase(unittest.TestCase):
         )
 
     @parameterized.expand([("app"), ("unit")])
-    @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_set_secret(self, scope):
         self.harness.set_leader()
@@ -93,7 +88,6 @@ class TestCharmBase(unittest.TestCase):
             self.charm.set_secret("not-a-scope", "password", "test")  # type: ignore
 
     @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
-    @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_set_reset_new_secret(self, scope, is_leader):
         """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
@@ -112,7 +106,6 @@ class TestCharmBase(unittest.TestCase):
         assert self.harness.charm.get_secret(scope, "new-secret2") == "blablabla"
 
     @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
-    @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_invalid_secret(self, scope, is_leader):
         # App has to be leader, unit can be either
@@ -129,7 +122,6 @@ class TestCharmBase(unittest.TestCase):
         ("unit", True, "key"),
         ("unit", False, "key"),
     ])
-    @patch_network_get(private_address="1.1.1.1")
     @pytest.mark.usefixtures("with_juju_secrets")
     def test_migration_from_databag(self, scope, is_leader, password_key):
         """Check if we're moving on to use secrets when live upgrade from databag to Secrets."""
