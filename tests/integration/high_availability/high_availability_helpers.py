@@ -178,6 +178,7 @@ async def deploy_and_scale_application(ops_test: OpsTest) -> str:
             num_units=1,
             channel="latest/edge",
             base="ubuntu@22.04",
+            revision=60,
         )
 
         await ops_test.model.wait_for_idle(
