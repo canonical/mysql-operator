@@ -30,13 +30,14 @@ from charms.mysql.v0.mysql import (
     MySQLCreateClusterError,
     MySQLCreateClusterSetError,
     MySQLGetClusterPrimaryAddressError,
-    MySQLGetMemberStateError,
     MySQLGetMySQLVersionError,
     MySQLInitializeJujuOperationsTableError,
     MySQLLockAcquisitionError,
+    MySQLNoMemberStateError,
     MySQLPluginInstallError,
     MySQLRebootFromCompleteOutageError,
     MySQLSetClusterPrimaryError,
+    MySQLUnableToGetMemberStateError,
 )
 from charms.mysql.v0.tls import MySQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
@@ -511,7 +512,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             state, role = self._mysql.get_member_state()
             self.unit_peer_data["member-role"] = role
             self.unit_peer_data["member-state"] = state
-        except MySQLGetMemberStateError:
+        except (MySQLNoMemberStateError, MySQLUnableToGetMemberStateError):
             role = self.unit_peer_data["member-role"] = "unknown"
             state = self.unit_peer_data["member-state"] = "unreachable"
         logger.info(f"Unit workload member-state is {state} with member-role {role}")
