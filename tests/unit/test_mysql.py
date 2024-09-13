@@ -464,7 +464,7 @@ class TestMySQLBase(unittest.TestCase):
         self.assertFalse(is_instance_configured)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_drop_group_replicatoin_metadata_schema(self, _run_mysqlsh_script):
+    def test_drop_group_replication_metadata_schema(self, _run_mysqlsh_script):
         """Test with no exceptions while calling the drop_group_replication_metadata_schema method."""
         # test successfully configured instance
         drop_group_replication_metadata_schema_commands = (
