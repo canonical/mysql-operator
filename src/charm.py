@@ -93,6 +93,7 @@ from constants import (
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
+from ip_address_observer import IPAddressChangeCharmEvents
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -115,6 +116,10 @@ logger = logging.getLogger(__name__)
 
 class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
+
+
+class MySQLCustomCharmEvents(FlushMySQLLogsCharmEvents, IPAddressChangeCharmEvents):
+    """Custom event sources for the charm."""
 
 
 @trace_charm(
@@ -142,9 +147,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     """Operator framework charm for MySQL."""
 
     config_type = CharmConfig
-    # FlushMySQLLogsCharmEvents needs to be defined on the charm object for logrotate
-    # (which runs juju-run/juju-exec to dispatch a custom event from cron)
-    on = FlushMySQLLogsCharmEvents()  # type: ignore
+    on = MySQLCustomCharmEvents()  # type: ignore
 
     def __init__(self, *args):
         super().__init__(*args)

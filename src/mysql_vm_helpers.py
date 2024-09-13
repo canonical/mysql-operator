@@ -383,7 +383,7 @@ class MySQL(MySQLBase):
 
         logger.debug("MySQL connection possible")
 
-    def execute_backup_commands(
+    def execute_backup_commands(  # type: ignore
         self,
         s3_directory: str,
         s3_parameters: Dict[str, str],
@@ -402,7 +402,7 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(
+    def delete_temp_backup_directory(  # type: ignore
         self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
     ) -> None:
         """Delete the temp backup directory."""
@@ -412,20 +412,25 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def retrieve_backup_with_xbcloud(
+    def retrieve_backup_with_xbcloud(  # type: ignore
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
+        temp_restore_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY,
+        xbcloud_location: str = CHARMED_MYSQL_XBCLOUD_LOCATION,
+        xbstream_location: str = CHARMED_MYSQL_XBSTREAM_LOCATION,
+        user=ROOT_SYSTEM_USER,
+        group=ROOT_SYSTEM_USER,
     ) -> Tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
         return super().retrieve_backup_with_xbcloud(
             backup_id,
             s3_parameters,
-            CHARMED_MYSQL_COMMON_DIRECTORY,
-            CHARMED_MYSQL_XBCLOUD_LOCATION,
-            CHARMED_MYSQL_XBSTREAM_LOCATION,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            temp_restore_directory,
+            xbcloud_location,
+            xbstream_location,
+            user,
+            group,
         )
 
     def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
