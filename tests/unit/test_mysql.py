@@ -464,6 +464,21 @@ class TestMySQLBase(unittest.TestCase):
         self.assertFalse(is_instance_configured)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_drop_group_replicatoin_metadata_schema(self, _run_mysqlsh_script):
+        """Test with no exceptions while calling the drop_group_replication_metadata_schema method."""
+        # test successfully configured instance
+        drop_group_replication_metadata_schema_commands = (
+            "shell.connect('serverconfig:serverconfigpassword@127.0.0.1:33062')",
+            "dba.drop_metadata_schema()",
+        )
+
+        self.mysql.drop_group_replication_metadata_schema()
+
+        _run_mysqlsh_script.assert_called_once_with(
+            "\n".join(drop_group_replication_metadata_schema_commands)
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_is_instance_configured_for_innodb_exceptions(self, _run_mysqlsh_script):
         """Test an exception while calling the is_instance_configured_for_innodb method."""
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
