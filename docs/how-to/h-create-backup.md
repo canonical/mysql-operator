@@ -11,6 +11,12 @@ Once Charmed MySQL is `active` and `idle` (check `juju status`), you can create 
 juju run mysql/leader create-backup
 ```
 
+[note]
+If you have a cluster of one unit, you can run the `create-backup` action on `mysql-k8s/leader` (which will also be the primary unit). 
+
+Otherwise, you must run the `create-backup` action on a non-primary unit (see `juju status` or run `juju run-action mysql-k8s/leader get-cluster-status` to find the primary unit).
+[/note]
+
 You can list your available, failed, and in progress backups by running the `list-backups` command:
 ```shell
 juju run mysql/leader list-backups

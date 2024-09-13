@@ -1,5 +1,4 @@
 # Deploy Async replication
-> **WARNING**: it is an '8.0/edge' article. Do NOT use it in production!<br/>Contact [Canonical Data Platform team](/t/11867) if you are interested in the topic.
 
 ## Deploy
 
