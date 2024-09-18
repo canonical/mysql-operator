@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 LIBID = "eb73947deedd4380a3a90d527e0878eb"
 LIBAPI = 0
-LIBPATCH = 7
+LIBPATCH = 8
 
 SCOPE = "unit"
 
@@ -174,6 +174,9 @@ class MySQLTLS(Object):
         except KeyError:
             # ignore key error for unit teardown
             pass
+        if self.charm.removing_unit:
+            logger.debug("Unit is being removed, skipping TLS cleanup.")
+            return
         try:
             self.charm._mysql.tls_setup()
             self.charm.unit_peer_data.pop("tls")
