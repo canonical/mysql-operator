@@ -22,8 +22,6 @@ from mysql_vm_helpers import (
     MySQLResetRootPasswordAndStartMySQLDError,
 )
 
-from .helpers import patch_network_get
-
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
@@ -39,7 +37,6 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.add_relation("restart", "restart")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")
     @patch("socket.getfqdn", return_value="test-hostname")
     @patch("socket.gethostbyname", return_value="")
@@ -130,7 +127,6 @@ class TestCharm(unittest.TestCase):
         for key in expected_peer_relation_databag_keys:
             self.assertTrue(self.harness.charm.get_secret("app", key).isalnum())
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -149,7 +145,6 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(peer_relation_databag["cluster-name"], "test-cluster")
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_random_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -194,7 +189,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm._can_start", return_value=True)
     @patch("charm.MySQLOperatorCharm.create_cluster")
     @patch("charm.MySQLOperatorCharm.workload_initialise")
@@ -250,7 +244,6 @@ class TestCharm(unittest.TestCase):
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charm.MySQLOperatorCharm.cluster_initialized",
         new_callable=PropertyMock(return_value=True),

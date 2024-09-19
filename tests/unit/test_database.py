@@ -9,8 +9,6 @@ from ops.testing import Harness
 from charm import MySQLOperatorCharm
 from constants import DB_RELATION_NAME
 
-from .helpers import patch_network_get
-
 
 class TestDatabase(unittest.TestCase):
     def setUp(self):
@@ -23,7 +21,6 @@ class TestDatabase(unittest.TestCase):
         self.harness.add_relation_unit(self.database_relation_id, "app/0")
         self.charm = self.harness.charm
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock)
     @patch("charm.MySQLOperatorCharm.cluster_initialized", new_callable=PropertyMock)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")

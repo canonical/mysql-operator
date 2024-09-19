@@ -11,8 +11,6 @@ from ops.testing import Harness
 from charm import MySQLOperatorCharm
 from constants import LEGACY_DB_SHARED
 
-from .helpers import patch_network_get
-
 
 @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestSharedDBRelation(unittest.TestCase):
@@ -26,9 +24,8 @@ class TestSharedDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.shared_db_relation_id, "other-app/0")
         self.charm = self.harness.charm
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     def test_shared_db_relation_changed(
@@ -80,7 +77,7 @@ class TestSharedDBRelation(unittest.TestCase):
         self.assertEqual(
             shared_db_relation.data.get(self.charm.unit),
             {
-                "db_host": "1.1.1.1",
+                "db_host": "192.0.2.0",
                 "db_port": "3306",
                 "wait_timeout": "28800",
                 "password": "super_secure_password",
@@ -88,7 +85,6 @@ class TestSharedDBRelation(unittest.TestCase):
             },
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.shared_db.SharedDBRelation._on_leader_elected")
     @patch("utils.generate_random_password", return_value="super_secure_password")
@@ -121,9 +117,8 @@ class TestSharedDBRelation(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="1.1.1.1:3306")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0:3306")
     @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
