@@ -166,6 +166,9 @@ class MySQLTLS(Object):
 
     def _on_tls_relation_broken(self, _) -> None:
         """Disable TLS when TLS relation broken."""
+        if self.charm.removing_unit:
+            logger.debug("Unit is being removed, skipping TLS cleanup.")
+            return
         try:
             if not ops.jujuversion.JujuVersion.from_environ().has_secrets:
                 self.charm.set_secret(SCOPE, "certificate-authority", None)
@@ -174,9 +177,6 @@ class MySQLTLS(Object):
         except KeyError:
             # ignore key error for unit teardown
             pass
-        if self.charm.removing_unit:
-            logger.debug("Unit is being removed, skipping TLS cleanup.")
-            return
         try:
             self.charm._mysql.tls_setup()
             self.charm.unit_peer_data.pop("tls")
