@@ -2040,6 +2040,7 @@ xtrabackup/location --defaults-file=defaults/config/file
 
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._file_exists", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
     @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
@@ -2048,6 +2049,7 @@ xtrabackup/location --defaults-file=defaults/config/file
         _run_mysqlcli_script,
         _get_installed_plugins,
         _get_variable_value,
+        _file_exists,
     ):
         """Test install_plugin."""
         _get_variable_value.return_value = "ON"
