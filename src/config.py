@@ -28,6 +28,7 @@ class MySQLConfig:
         "log_error",
         "loose-audit_log_strategy",
         "loose-audit_log_format",
+        "admin_address",
     }
 
     def __init__(self, config_file_path: str):
