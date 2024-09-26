@@ -1833,6 +1833,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_strategy": "ASYNCHRONOUS",
             "loose-audit_log_file": "/var/log/mysql/audit.log",
+            "loose-group_replication_paxos_single_leader": "ON",
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
         self.maxDiff = None
