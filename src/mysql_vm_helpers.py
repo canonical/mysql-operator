@@ -793,6 +793,10 @@ class MySQL(MySQLBase):
         except FileNotFoundError:
             return False
 
+    def _file_exists(self, path: str) -> bool:
+        """Check if file exists."""
+        return os.path.exists(path)
+
     @staticmethod
     def write_content_to_file(
         path: str,
