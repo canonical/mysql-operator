@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, call, mock_open, patch
 from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLExecError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
@@ -22,6 +22,7 @@ from constants import (
     CHARMED_MYSQLD_SERVICE,
     MYSQLD_CONFIG_DIRECTORY,
     MYSQLD_CUSTOM_CONFIG_FILE,
+    MYSQLD_SOCK_FILE,
 )
 from mysql_vm_helpers import (
     MySQL,
@@ -33,10 +34,26 @@ from mysql_vm_helpers import (
 )
 
 
+class StubConfig:
+    def __init__(self):
+        self.plugin_audit_enabled = True
+        self.profile = "production"
+        self.profile_limit_memory = None
+        self.experimental_max_connections = None
+        self.plugin_audit_strategy = "async"
+        self.binlog_retention_days = 7
+
+
+class StubCharm:
+    def __init__(self):
+        self.config = StubConfig()
+
+
 class TestMySQL(unittest.TestCase):
     def setUp(self):
         self.mysql = MySQL(
             "127.0.0.1",
+            MYSQLD_SOCK_FILE,
             "test_cluster",
             "test_cluster_set",
             "password",
@@ -48,7 +65,7 @@ class TestMySQL(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
-            None,
+            StubCharm(),  # type: ignore
         )
 
     @patch("tempfile.NamedTemporaryFile")
@@ -95,7 +112,9 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
-        _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        _check_output.side_effect = subprocess.CalledProcessError(
+            cmd="", returncode=-1, stderr=b"Test error message"
+        )
 
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script("script")
@@ -234,7 +253,8 @@ class TestMySQL(unittest.TestCase):
     @patch("os.chmod")
     @patch("mysql_vm_helpers.MySQL.get_available_memory", return_value=16475447296)
     @patch(
-        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678, None)
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678, None),
     )
     @patch("mysql_vm_helpers.MySQL.get_max_connections", return_value=111)
     @patch("pathlib.Path")
@@ -257,26 +277,30 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 111",
-                "innodb_buffer_pool_size = 1234",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "loose-group_replication_paxos_single_leader = ON",
-                "innodb_buffer_pool_chunk_size = 5678",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "admin_address = 127.0.0.1",
+            "report_host = 127.0.0.1",
+            "max_connections = 111",
+            "innodb_buffer_pool_size = 1234",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "loose-group_replication_paxos_single_leader = ON",
+            "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
+            "innodb_buffer_pool_chunk_size = 5678",
+            "\n",
+        ))
 
         _get_max_connections.assert_called_once()
         _get_innodb_buffer_pool_parameters.assert_called_once()
@@ -286,61 +310,69 @@ class TestMySQL(unittest.TestCase):
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
         # Test `testing` profile
+        self.mysql.charm.config.profile = "testing"
         _open_mock.reset_mock()
-        self.mysql.write_mysqld_config(profile="testing", memory_limit=None)
+        self.mysql.write_mysqld_config()
 
-        config = "\n".join(
-            (
-                "[mysqld]",
-                "bind-address = 0.0.0.0",
-                "mysqlx-bind-address = 0.0.0.0",
-                "report_host = 127.0.0.1",
-                "max_connections = 100",
-                "innodb_buffer_pool_size = 20971520",
-                "log_error_services = log_filter_internal;log_sink_internal",
-                "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-                "general_log = ON",
-                "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-                "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
-                "loose-group_replication_paxos_single_leader = ON",
-                "innodb_buffer_pool_chunk_size = 1048576",
-                "performance-schema-instrument = 'memory/%=OFF'",
-                "loose-group_replication_message_cache_size = 134217728",
-                "\n",
-            )
-        )
+        config = "\n".join((
+            "[mysqld]",
+            "bind-address = 0.0.0.0",
+            "mysqlx-bind-address = 0.0.0.0",
+            "admin_address = 127.0.0.1",
+            "report_host = 127.0.0.1",
+            "max_connections = 100",
+            "innodb_buffer_pool_size = 20971520",
+            "log_error_services = log_filter_internal;log_sink_internal",
+            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
+            "general_log = ON",
+            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
+            "loose-group_replication_paxos_single_leader = ON",
+            "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_policy = LOGINS",
+            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "loose-audit_log_format = JSON",
+            "loose-audit_log_strategy = ASYNCHRONOUS",
+            "innodb_buffer_pool_chunk_size = 1048576",
+            "performance-schema-instrument = 'memory/%=OFF'",
+            "loose-group_replication_message_cache_size = 134217728",
+            "\n",
+        ))
 
         self.assertEqual(
             sorted(_open_mock.mock_calls),
-            sorted(
-                [
-                    call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8"),
-                    call().__enter__(),
-                    call().write(config),
-                    call().__exit__(None, None, None),
-                ]
-            ),
+            sorted([
+                call(
+                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                    "w",
+                    encoding="utf-8",
+                ),
+                call().__enter__(),
+                call().write(config),
+                call().__exit__(None, None, None),
+            ]),
         )
 
-    @patch("mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters", return_value=(1234, 5678))
+    @patch(
+        "mysql_vm_helpers.MySQL.get_innodb_buffer_pool_parameters",
+        return_value=(1234, 5678),
+    )
     @patch("pathlib.Path")
     @patch("builtins.open")
     def test_create_custom_mysqld_config_exception(
         self, _open, _path, _get_innodb_buffer_pool_parameters
     ):
         """Test failure in execution of create_custom_mysqld_config."""
-        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTunningParametersError
+        _get_innodb_buffer_pool_parameters.side_effect = MySQLGetAutoTuningParametersError
 
         _path_mock = MagicMock()
         _path.return_value = _path_mock
@@ -348,12 +380,17 @@ class TestMySQL(unittest.TestCase):
         _open_mock = unittest.mock.mock_open()
         _open.side_effect = _open_mock
 
-        with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
-            self.mysql.write_mysqld_config(profile="production", memory_limit=None)
+        self.mysql.charm.config = MagicMock()  # type: ignore
 
-    @patch("subprocess.run")
-    def test_execute_commands(self, _run):
+        with self.assertRaises(MySQLCreateCustomMySQLDConfigError):
+            self.mysql.write_mysqld_config()
+
+    @patch("subprocess.Popen")
+    def test_execute_commands(self, _popen):
         """Test a successful execution of _execute_commands."""
+        process = MagicMock()
+        _popen.return_value = process
+        process.wait.return_value = 0
         self.mysql._execute_commands(
             ["ls", "-la", "|", "wc", "-l"],
             bash=True,
@@ -361,22 +398,24 @@ class TestMySQL(unittest.TestCase):
             group="test_group",
             env_extra={"envA": "valueA"},
         )
-        env = os.environ
+        env = os.environ.copy()
         env.update({"envA": "valueA"})
-        _run.assert_called_once_with(
+        _popen.assert_called_once_with(
             ["bash", "-c", "set -o pipefail; ls -la | wc -l"],
             user="test_user",
             group="test_group",
             env=env,
-            capture_output=True,
-            check=True,
             encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
-    @patch("subprocess.run")
-    def test_execute_commands_exception(self, _run):
+    @patch("subprocess.Popen")
+    def test_execute_commands_exception(self, _popen):
         """Test a failure in execution of _execute_commands."""
-        _run.side_effect = subprocess.CalledProcessError(cmd="", returncode=-1)
+        process = MagicMock()
+        _popen.return_value = process
+        process.wait.return_value = -1
 
         with self.assertRaises(MySQLExecError):
             self.mysql._execute_commands(
@@ -404,8 +443,9 @@ class TestMySQL(unittest.TestCase):
             CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop"
         )
 
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.snap_service_operation")
-    def test_stop_mysqld_failure(self, _snap_service_operation):
+    def test_stop_mysqld_failure(self, _snap_service_operation, _):
         """Test failure of stop_mysqld()."""
         _snap_service_operation.side_effect = SnapServiceOperationError("failure")
 
@@ -447,22 +487,32 @@ class TestMySQL(unittest.TestCase):
             self.mysql.start_mysqld()
 
     @patch("os.system")
-    @patch("pathlib.Path")
+    @patch("pathlib.Path.touch")
+    @patch("pathlib.Path.owner")
+    @patch("pathlib.Path.exists")
     @patch("subprocess.check_call")
     @patch("subprocess.run")
     @patch("os.path.exists", return_value=True)
     @patch("mysql_vm_helpers.snap.SnapCache")
-    def test_install_snap(self, _cache, _path_exists, _run, _check_call, _pathlib, _system):
+    def test_install_snap(
+        self,
+        _cache,
+        _path_exists,
+        _run,
+        _check_call,
+        _pathlib_exists,
+        _pathlib_owner,
+        _touch,
+        _system,
+    ):
         """Test execution of install_snap()."""
         _mysql_snap = MagicMock()
         _cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
 
-        common_path_mock = MagicMock()
-
         _mysql_snap.present = False
         _path_exists.return_value = False
-        _pathlib.return_value = common_path_mock
-        common_path_mock.exists.return_value = False
+        _pathlib_exists.return_value = False
+        _pathlib_owner.return_value = None
 
         self.mysql.install_and_configure_mysql_dependencies()
 

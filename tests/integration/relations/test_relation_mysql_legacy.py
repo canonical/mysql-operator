@@ -36,7 +36,7 @@ TIMEOUT = 15 * 60
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
 
@@ -52,13 +52,14 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             num_units=1,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
     )
 
@@ -104,9 +105,10 @@ async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
     # Configure a user and database to be used for the relation
     # as required for this relation
-    await ops_test.model.applications[DATABASE_APP_NAME].set_config(
-        {"mysql-interface-user": TEST_USER, "mysql-interface-database": TEST_DATABASE}
-    )
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+        "mysql-interface-user": TEST_USER,
+        "mysql-interface-database": TEST_DATABASE,
+    })
 
     logger.info(f"Relating {DATABASE_APP_NAME}:{ENDPOINT} with {APPLICATION_APP_NAME}:{ENDPOINT}")
 

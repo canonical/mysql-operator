@@ -60,11 +60,12 @@ class TestUpgrade(unittest.TestCase):
         self.assertTrue(len(us) == 3)
         self.assertEqual(us, [0, 1, 2])
 
-    @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
+    @patch("charm.MySQLOperatorCharm.get_unit_address", return_value="10.0.1.1")
     @patch("upgrade.MySQLVMUpgrade._pre_upgrade_prepare")
     @patch("mysql_vm_helpers.MySQL.get_cluster_status", return_value=MOCK_STATUS_ONLINE)
     def test_pre_upgrade_check(
-        self, mock_get_cluster_status, mock_pre_upgrade_prepare, mock_get_unit_ip
+        self, mock_get_cluster_status, mock_pre_upgrade_prepare, mock_get_unit_address, _
     ):
         """Test the pre upgrade check."""
         self.harness.set_leader(True)
@@ -107,7 +108,8 @@ class TestUpgrade(unittest.TestCase):
         ]
         mock_logging.assert_has_calls(calls)
 
-    @patch("charm.MySQLOperatorCharm.get_unit_ip", return_value="10.0.1.1")
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
+    @patch("charm.MySQLOperatorCharm.get_unit_address", return_value="10.0.1.1")
     @patch("mysql_vm_helpers.MySQL.set_dynamic_variable")
     @patch("mysql_vm_helpers.MySQL.get_primary_label", return_value="mysql-1")
     @patch("mysql_vm_helpers.MySQL.set_cluster_primary")
@@ -116,7 +118,8 @@ class TestUpgrade(unittest.TestCase):
         mock_set_cluster_primary,
         mock_get_primary_label,
         mock_set_dynamic_variable,
-        mock_get_unit_ip,
+        mock_get_unit_address,
+        _,
     ):
         """Test the pre upgrade prepare."""
         self.harness.set_leader(True)
@@ -128,6 +131,9 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label.assert_called_once()
         assert mock_set_dynamic_variable.call_count == 2
 
+    @patch("mysql_vm_helpers.MySQL.install_plugins")
+    @patch("upgrade.set_cron_daemon")
+    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     @patch("upgrade.MySQLVMUpgrade._check_server_unsupported_downgrade")
     @patch("upgrade.MySQLVMUpgrade._reset_on_unsupported_downgrade")
     @patch("mysql_vm_helpers.MySQL.hold_if_recovering")
@@ -155,6 +161,9 @@ class TestUpgrade(unittest.TestCase):
         mock_hold_if_recovering,
         mock_reset_on_unsupported_downgrade,
         mock_check_server_unsupported_downgrade,
+        mock_write_mysqld_config,
+        mock_set_cron_daemon,
+        mock_install_plugins,
     ):
         """Test upgrade-granted hook."""
         self.charm.on.config_changed.emit()
@@ -173,6 +182,7 @@ class TestUpgrade(unittest.TestCase):
         mock_install_workload.assert_called_once()
         mock_get_mysql_version.assert_called_once()
         mock_setup_logrotate_and_cron.assert_called_once()
+        mock_write_mysqld_config.assert_called_once()
 
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
@@ -261,8 +271,9 @@ class TestUpgrade(unittest.TestCase):
         self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
         self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
 
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
     @patch("upgrade.MySQLVMUpgrade._prepare_upgrade_from_legacy")
-    def test_upgrade_charm_legacy(self, mock_prepare_upgrade_from_legacy):
+    def test_upgrade_charm_legacy(self, mock_prepare_upgrade_from_legacy, _):
         self.harness.update_relation_data(self.upgrade_relation_id, "mysql/0", {"state": ""})
 
         # non leader

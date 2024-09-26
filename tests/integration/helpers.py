@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
+from juju.model import Model
 from juju.unit import Unit
 from mysql.connector.errors import (
     DatabaseError,
@@ -122,7 +123,7 @@ async def get_primary_unit(
 
     primary_unit = None
     for k, v in results["status"]["defaultreplicaset"]["topology"].items():
-        if v["memberrole"] == "primary":
+        if v["memberrole"] == "primary" and v["status"] == "online":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
             primary_unit = [unit for unit in units if unit.name == unit_name][0]
             break
@@ -265,12 +266,15 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
-def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
+@retry(stop=stop_after_attempt(30), wait=wait_fixed(5), reraise=True)
+def is_connection_possible(
+    credentials: Dict, *, retry_if_not_possible=False, **extra_opts
+) -> bool:
     """Test a connection to a MySQL server.
 
     Args:
         credentials: A dictionary with the credentials to test
+        retry_if_not_possible: Retry if connection not possible
         extra_opts: extra options for mysql connection
     """
     config = {
@@ -288,6 +292,9 @@ def is_connection_possible(credentials: Dict, **extra_opts) -> bool:
             return cursor.fetchone()[0] == 1
     except (DatabaseError, InterfaceError, OperationalError, ProgrammingError):
         # Errors raised when the connection is not possible
+        if retry_if_not_possible:
+            # Retry
+            raise
         return False
 
 
@@ -318,15 +325,13 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     Returns:
         The (str) mysql cluster name
     """
-    output = subprocess.check_output(
-        [
-            "juju",
-            "show-unit",
-            unit.name,
-            "--format=json",
-            f"--model={model_name}",
-        ]
-    )
+    output = subprocess.check_output([
+        "juju",
+        "show-unit",
+        unit.name,
+        "--format=json",
+        f"--model={model_name}",
+    ])
     output = json.loads(output.decode("utf-8"))
 
     for relation in output[unit.name]["relation-info"]:
@@ -410,7 +415,7 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -> None:
+async def wait_network_restore(ops_test: OpsTest, unit_name: str) -> None:
     """Wait until network is restored.
 
     Args:
@@ -418,7 +423,13 @@ async def wait_network_restore(ops_test: OpsTest, unit_name: str, old_ip: str) -
         unit_name: The name of the unit
         old_ip: old registered IP address
     """
-    if await get_unit_ip(ops_test, unit_name) == old_ip:
+    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "a")
+    if return_code != 0:
+        raise Exception
+
+    juju_unit_ip = await get_unit_ip(ops_test, unit_name)
+
+    if juju_unit_ip in stdout:
         raise Exception
 
 
@@ -473,16 +484,16 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
     """
     logger.info("Retrieving primary unit")
     units = ops_test.model.applications[app_name].units
-    if unit_excluded:
-        # if defined, exclude unit from available unit to run command on
-        # useful when the workload is stopped on unit
-        unit = ({unit for unit in units if unit.name != unit_excluded.name}).pop()
-    else:
-        unit = units[0]
 
-    primary_unit = await get_primary_unit(ops_test, unit, app_name)
-
-    return primary_unit
+    for unit in units:
+        if unit_excluded and unit.name == unit_excluded.name:
+            continue
+        try:
+            primary_unit = await get_primary_unit(ops_test, unit, app_name)
+            return primary_unit
+        except DatabaseError:
+            continue
+    raise ValueError("Primary unit found cannot be retrieved")
 
 
 async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
@@ -494,18 +505,11 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
     Returns:
         The (str) ip of the unit
     """
-    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "route")
-
-    assert return_code == 0
-
-    # Example output line of ip route:
-    # default via 10.0.143.1 dev eth0 proto dhcp src 10.0.143.225 metric 100
-    for line in stdout.split("\n"):
-        items = line.split()
-        if items[0] == "default":
-            return items[8]
-
-    raise Exception("Unable to find the default entry in output of 'ip route'")
+    app_name = unit_name.split("/")[0]
+    unit_num = unit_name.split("/")[1]
+    status = await ops_test.model.get_status()  # noqa: F821
+    address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
+    return address
 
 
 async def get_relation_data(
@@ -571,9 +575,20 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
     return read_only_endpoints
 
 
-async def get_leader_unit(ops_test: OpsTest, app_name: str) -> Optional[Unit]:
+async def get_leader_unit(
+    ops_test: Optional[OpsTest], app_name: str, model: Optional[Model] = None
+) -> Optional[Unit]:
+    """Get the leader unit of a given application.
+
+    Args:
+        ops_test: The ops test framework instance
+        app_name: The name of the application
+        model: The model to use (overrides ops_test.model)
+    """
     leader_unit = None
-    for unit in ops_test.model.applications[app_name].units:
+    if not model:
+        model = ops_test.model
+    for unit in model.applications[app_name].units:
         if await unit.is_leader_from_status():
             leader_unit = unit
             break
@@ -711,7 +726,7 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
         "CREATE TABLE test.data_replication_table (id varchar(40), primary key(id))",
         (
             "INSERT INTO test.data_replication_table"
-            f" VALUES ('{(random_chars:=generate_random_string(40))}')"
+            f" VALUES ('{(random_chars := generate_random_string(40))}')"
         ),
     ]
 
@@ -798,7 +813,7 @@ async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> st
         return None
 
 
-async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
+async def get_cluster_status(unit: Unit, cluster_set: Optional[bool] = False) -> Dict:
     """Get the cluster status by running the get-cluster-status action.
 
     Args:
@@ -808,7 +823,13 @@ async def get_cluster_status(ops_test: OpsTest, unit: Unit) -> Dict:
     Returns:
         A dictionary representing the cluster status
     """
-    return await juju_.run_action(unit, "get-cluster-status")
+    if cluster_set:
+        result = await juju_.run_action(
+            unit, "get-cluster-status", **{"--wait": "5m", "cluster-set": True}
+        )
+    else:
+        result = await juju_.run_action(unit, "get-cluster-status")
+    return result.get("status", {})
 
 
 async def delete_file_or_directory_in_unit(ops_test: OpsTest, unit_name: str, path: str) -> bool:

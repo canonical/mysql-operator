@@ -25,7 +25,6 @@ TLS_SSL_KEY_FILE = "custom-server-key.pem"
 TLS_SSL_CERT_FILE = "custom-server-cert.pem"
 MYSQL_EXPORTER_PORT = 9104
 CHARMED_MYSQL_SNAP_NAME = "charmed-mysql"
-CHARMED_MYSQL_SNAP_REVISION = 98  # MySQL v8.0.36
 CHARMED_MYSQLD_EXPORTER_SERVICE = "mysqld-exporter"
 CHARMED_MYSQLD_SERVICE = "mysqld"
 CHARMED_MYSQL = "charmed-mysql.mysql"
@@ -38,7 +37,6 @@ MYSQLD_DEFAULTS_CONFIG_FILE = f"{CHARMED_MYSQL_DATA_DIRECTORY}/etc/mysql/mysql.c
 MYSQLD_CUSTOM_CONFIG_FILE = f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf"
 MYSQL_SYSTEM_USER = "snap_daemon"
 MYSQL_DATA_DIR = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/lib/mysql"
-S3_INTEGRATOR_RELATION_NAME = "s3-parameters"
 CHARMED_MYSQL_XTRABACKUP_LOCATION = "/snap/bin/charmed-mysql.xtrabackup"
 CHARMED_MYSQL_XBCLOUD_LOCATION = "/snap/bin/charmed-mysql.xbcloud"
 CHARMED_MYSQL_XBSTREAM_LOCATION = "/snap/bin/charmed-mysql.xbstream"
@@ -56,3 +54,5 @@ SECRET_KEY_FALLBACKS = {
     "certificate": "cert",
     "certificate-authority": "ca",
 }
+TRACING_RELATION_NAME = "tracing"
+TRACING_PROTOCOL = "otlp_http"

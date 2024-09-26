@@ -45,7 +45,7 @@ TIMEOUT = 15 * 60
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     db_charm = await ops_test.build_charm(".")
 
@@ -57,13 +57,14 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             num_units=2,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
     )
 
@@ -215,7 +216,7 @@ async def test_relation_creation_databag(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
     relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
-    assert set(["password", "username"]) <= set(relation_data[0]["application-data"])
+    assert {"password", "username"} <= set(relation_data[0]["application-data"])
 
 
 @pytest.mark.group(1)
@@ -235,7 +236,7 @@ async def test_relation_creation(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APPS, status="active")
 
     relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
-    assert not set(["password", "username"]) <= set(relation_data[0]["application-data"])
+    assert not {"password", "username"} <= set(relation_data[0]["application-data"])
     assert "secret-user" in relation_data[0]["application-data"]
 
 

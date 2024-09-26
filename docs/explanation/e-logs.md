@@ -1,43 +1,81 @@
-# Log rotation
+# Logs
 
-## Overview
+This explanation goes over the types of logging in MySQL and the configuration parameters for log rotation.
 
-The charm stores its logs in `/var/snap/charmed-mysql/common/var/log/mysql`. It is recommended to set up a [COS integration](/t/9900) so that these log files can be streamed to Loki. This leads to better persistence and security of the logs.
+The charm currently has audit, error and general logs enabled by default, while slow query logs are disabled by default. All of these files are rotated if present into a separate dedicated archive folder under the logs directory.
+
+We do not yet support the rotation of binary logs (binlog, relay log, undo log, redo log, etc).
+
+## Summary
+* [Log types](#log-types)
+  * [Audit logs](#audit-logs)
+  * [Error logs](#error-logs)
+  * [General logs](#general-logs)
+  * [Slowquery logs](#slowquery-logs)
+* [Log rotation configuration](#log-rotation-configuration)
+* [High Level Design](#high-level-design)
+
+---
+
+## Log types
+
+The charm stores its logs in `/var/snap/charmed-mysql/common/var/log/mysql`. 
 
 ```shell
-root@mysql-k8s-0:/# ls -lahR /var/snap/charmed-mysql/common/var/log/mysql
+$ ls -lahR /var/snap/charmed-mysql/common/var/log/mysql
+
 /var/log/mysql:
-total 28K
-drwxr-xr-x 1 mysql mysql 4.0K Oct 23 20:46 .
-drwxr-xr-x 1 root root 4.0K Sep 27 20:55 ..
+drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:46 archive_audit
 drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:46 archive_error
 drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:46 archive_general
 drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:45 archive_slowquery
+-rw-r----- 1 mysql mysql 1.1K Oct 23 20:46 audit.log
 -rw-r----- 1 mysql mysql 1.1K Oct 23 20:46 error.log
 -rw-r----- 1 mysql mysql 1.7K Oct 23 20:46 general.log
 
+/var/snap/charmed-mysql/common/var/log/mysql/archive_audit:
+-rw-r----- 1 snap_daemon root         43K Sep  3 01:24 audit.log-20240903_0124
+-rw-r----- 1 snap_daemon root        109K Sep  3 01:25 audit.log-20240903_0125
+
 /var/snap/charmed-mysql/common/var/log/mysql/archive_error:
-total 20K
-drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:46 .
-drwxr-xr-x 1 mysql mysql 4.0K Oct 23 20:46 ..
 -rw-r----- 1 mysql mysql 8.7K Oct 23 20:44 error.log-43_2045
 -rw-r----- 1 mysql mysql 2.3K Oct 23 20:45 error.log-43_2046
 
 /var/snap/charmed-mysql/common/var/log/mysql/archive_general:
-total 8.0M
-drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:46 .
-drwxr-xr-x 1 mysql mysql 4.0K Oct 23 20:46 ..
 -rw-r----- 1 mysql mysql 8.0M Oct 23 20:45 general.log-43_2045
 -rw-r----- 1 mysql mysql 4.6K Oct 23 20:46 general.log-43_2046
 
 /var/snap/charmed-mysql/common/var/log/mysql/archive_slowquery:
-total 8.0K
-drwxrwx--- 2 mysql mysql 4.0K Oct 23 20:45 .
-drwxr-xr-x 1 mysql mysql 4.0K Oct 23 20:46 ..
 ```
 
-The following is a sample of the error logs, with format `time thread [label] [err_code] [subsystem] msg`:
+It is recommended to set up a [COS integration] so that these log files can be streamed to Loki. This leads to better persistence and security of the logs.
 
+### Audit logs
+The Audit Log plugin allows all login/logout records to be stored in a log file.
+
+<details>
+<summary>Example of audit logs in JSON format with login/logout records</summary>
+
+```json
+{"audit_record":{"name":"Connect","record":"17_2024-09-03T01:52:14","timestamp":"2024-09-03T01:53:14Z","connection_id":"988","status":1156,"user":"","priv_user":"","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Connect","record":"18_2024-09-03T01:52:14","timestamp":"2024-09-03T01:53:14Z","connection_id":"989","status":0,"user":"serverconfig","priv_user":"serverconfig","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Quit","record":"1_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:14Z","connection_id":"989","status":0,"user":"serverconfig","priv_user":"serverconfig","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Connect","record":"2_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"990","status":1156,"user":"","priv_user":"","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Connect","record":"3_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"991","status":0,"user":"serverconfig","priv_user":"serverconfig","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Quit","record":"4_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"991","status":0,"user":"serverconfig","priv_user":"serverconfig","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Connect","record":"5_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"992","status":0,"user":"clusteradmin","priv_user":"clusteradmin","os_login":"","proxy_user":"","host":"localhost","ip":"","db":""}}
+{"audit_record":{"name":"Quit","record":"6_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"992","status":0,"user":"clusteradmin","priv_user":"clusteradmin","os_login":"","proxy_user":"","host":"localhost","ip":"","db":""}}
+{"audit_record":{"name":"Connect","record":"7_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"993","status":1156,"user":"","priv_user":"","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+{"audit_record":{"name":"Connect","record":"8_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"994","status":0,"user":"serverconfig","priv_user":"serverconfig","os_login":"","proxy_user":"","host":"juju-da2225-8","ip":"10.207.85.214","db":""}}
+```
+</details>
+
+For more details, see the [Audit Logs explanation].
+
+### Error logs
+
+<details>
+<summary>Example of error logs with format <code>time thread [label] [err_code] [subsystem] msg</code></summary>
 ```shell
 2023-10-24T23:28:07.048728Z mysqld_safe Number of processes running now: 0
 2023-10-24T23:28:07.063027Z mysqld_safe mysqld restarted
@@ -72,9 +110,12 @@ The following is a sample of the error logs, with format `time thread [label] [e
 2023-10-24T23:28:19.179600Z 31 [System] [MY-011510] [Repl] Plugin group_replication reported: 'This server is working as primary member.'
 2023-10-24T23:28:19.875216Z 12 [System] [MY-014010] [Repl] Plugin group_replication reported: 'Plugin 'group_replication' has been started.'                            
 ```
+</details>
 
-The following is a sample of the general logs, with format `time thread_id command_type query_body`:
+### General logs
 
+<details>
+<summary>Example of general logs, with format <code>time thread_id command_type query_body</code></summary>
 ```shell
 Time                 Id Command    Argument                                                          
 2023-10-23T20:50:02.023329Z        94 Quit                                                        
@@ -90,9 +131,12 @@ mode_and_not_super_user`, `ssl_type`, `ssl_cipher`, `x509_issuer`, `x509_subject
 2023-10-23T20:50:02.670389Z        95 Query     FLUSH SLOW LOGS                              
 2023-10-23T20:50:02.670924Z        95 Quit  
 ```
+</details>
 
-The following is a sample of the slowquery log:
+### Slowquery logs
 
+<details>
+<summary>Example of a slowquery log</summary>
 ```shell
 Time                 Id Command    Argument
 # Time: 2023-10-23T22:22:47.564327Z
@@ -101,43 +145,46 @@ Time                 Id Command    Argument
 SET timestamp=1698099752;
 do sleep(15);
 ```
+</details>
 
-The charm currenly has error and general logs enabled by default, while slow query logs are disabled by default. All of these files are rotated if present into a separate dedicated archive folder under the logs directory.
+## Log rotation configuration
 
-We do not yet support the rotation of binary logs (binlog, relay log, undo log, redo log, etc).
-
-## Log Rotation Configurations
-
-For each log (error, general and slow query):
+For each log (audit, error, general and slow query):
 
 - The log file is rotated every minute (even if the log files are empty)
 - The rotated log file is formatted with a date suffix of `-%V-%H%M` (-weeknumber-hourminute)
 - The rotated log files are not compressed or mailed
 - The rotated log files are owned by the `snap_daemon` user and group
-- The rotated log files are retained for a maximux of 7 days before being deleted
+- The rotated log files are retained for a maximum of 7 days before being deleted
 - The most recent 10080 rotated log files are retained before older rotated log files are deleted
 
 The following are logrotate config values used for log rotation:
 
 | Option | Value |
 | --- | --- |
-| su | snap_daemon snap_daemon |
-| createoldddir | 770 snap_daemon snap_daemon |
-| hourly | true |
-| maxage | 7 |
-| rotate | 10080 |
-| dateext | true |
-| dateformat | -%V-%H%M |
-| ifempty | true |
-| missingok | true |
-| nocompress | true |
-| nomail | true |
-| nosharedscripts | true |
-| nocopytruncate | true |
-| olddir | archive_error / archive_general / archive_slowquery |
+| `su` | snap_daemon snap_daemon |
+| `createoldddir` | 770 snap_daemon snap_daemon |
+| `hourly` | true |
+| `maxage` | 7 |
+| `rotate` | 10080 |
+| `dateext` | true |
+| `dateformat` | -%V-%H%M |
+| `ifempty` | true |
+| `missingok` | true |
+| `nocompress` | true |
+| `nomail` | true |
+| `nosharedscripts` | true |
+| `nocopytruncate` | true |
+| `olddir` | archive_error / archive_general / archive_slowquery |
 
-## HLD (High Level Design)
+## High Level Design
 
 There is a cron job on the machine where the charm exists that is triggered every minute and runs `logrotate`. The logrotate utility does *not* use `copytruncate`. Instead, the existing log file is moved into the archive directory by logrotate, and then the logrotate's postrotate script invokes `juju-run` (or `juju-exec` depending on the juju version) to dispatch a custom event. This custom event's handler flushes the MySQL log with the [FLUSH](https://dev.mysql.com/doc/refman/8.0/en/flush.html) statement that will result in a new and empty log file being created under `/var/snap/charmed-mysql/common/var/log/mysql` and the rotated file's descriptor being closed.
 
 We use a custom event in juju to execute the FLUSH statement in order to avoid storing any credentials on the disk. The charm code has a mechanism that will retrieve credentials from the peer relation databag or juju secrets backend, if available, and keep these credentials in memory for the duration of the event handler.
+
+
+<!-- LINKS -->
+
+[COS integration]: /t/9900
+[Audit Logs explanation]: /t/15424

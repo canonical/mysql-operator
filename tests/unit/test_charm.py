@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from charms.mysql.v0.mysql import (
@@ -22,8 +22,6 @@ from mysql_vm_helpers import (
     MySQLResetRootPasswordAndStartMySQLDError,
 )
 
-from .helpers import patch_network_get
-
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
@@ -37,11 +35,8 @@ class TestCharm(unittest.TestCase):
             upgrade_relation_id, self.charm.unit.name, {"state": "idle"}
         )
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
-        self.db_router_relation_id = self.harness.add_relation("db-router", "app")
-        self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.harness.add_relation("restart", "restart")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("upgrade.MySQLVMUpgrade.cluster_state", return_value="idle")
     @patch("socket.getfqdn", return_value="test-hostname")
     @patch("socket.gethostbyname", return_value="")
@@ -132,7 +127,6 @@ class TestCharm(unittest.TestCase):
         for key in expected_peer_relation_databag_keys:
             self.assertTrue(self.harness.charm.get_secret("app", key).isalnum())
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_on_leader_elected_sets_config_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -151,7 +145,6 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(peer_relation_databag["cluster-name"], "test-cluster")
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_on_config_changed_sets_random_cluster_name_in_peer_databag(self):
         # ensure that the peer relation databag is empty
         peer_relation_databag = self.harness.get_relation_data(
@@ -170,113 +163,68 @@ class TestCharm(unittest.TestCase):
 
         self.assertIsNotNone(peer_relation_databag["cluster-name"])
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
-    @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.0")
-    @patch("mysql_vm_helpers.MySQL.connect_mysql_exporter")
-    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
-    @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
-    @patch("mysql_vm_helpers.MySQL.configure_instance")
-    @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
-    @patch("mysql_vm_helpers.MySQL.create_cluster")
-    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306", side_effect=["1234", "5678"])
-    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
-    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
+    @patch("charm.MySQLOperatorCharm._can_start", return_value=True)
+    @patch("charm.MySQLOperatorCharm.create_cluster")
+    @patch("charm.MySQLOperatorCharm.workload_initialise")
     def test_on_start(
         self,
-        _setup_logrotate_and_cron,
-        _write_mysqld_config,
-        _get_pid_of_port_3306,
-        _reset_root_password_and_start_mysqld,
+        _workload_initialise,
         _create_cluster,
-        _initialize_juju_units_operations_table,
-        _configure_instance,
-        _configure_mysql_users,
-        _wait_until_mysql_connection,
-        _connect_mysql_exporter,
-        _get_mysql_version,
-        _is_volume_mounted,
-        _check_call,
-        _stop_mysqld,
-        _create_cluster_set,
+        _can_start,
     ):
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         self.charm.on.start.emit()
+        _workload_initialise.assert_called_once()
+        _create_cluster.assert_called_once()
+        _can_start.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    @patch("subprocess.check_call")
-    @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.configure_mysql_users")
-    @patch("mysql_vm_helpers.MySQL.configure_instance")
-    @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
-    @patch("mysql_vm_helpers.MySQL.create_cluster")
-    @patch("mysql_vm_helpers.MySQL.reset_root_password_and_start_mysqld")
-    @patch("mysql_vm_helpers.MySQL.get_pid_of_port_3306")
-    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
-    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
+        self.harness.set_leader(False)
+        self.charm.on.start.emit()
+        self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+        self.assertEqual(self.charm.unit_peer_data["member-role"], "secondary")
+        self.assertEqual(self.charm.unit_peer_data["member-state"], "waiting")
+
+    @patch("charm.MySQLOperatorCharm._can_start", return_value=True)
+    @patch("charm.MySQLOperatorCharm.create_cluster")
+    @patch("charm.MySQLOperatorCharm.workload_initialise")
     def test_on_start_exceptions(
         self,
-        _setup_logrotate_and_cron,
-        _write_mysqld_config,
-        _get_pid_of_port_3306,
-        _reset_root_password_and_start_mysqld,
+        _workload_initialise,
         _create_cluster,
-        _initialize_juju_units_operations_table,
-        _configure_instance,
-        _configure_mysql_users,
-        _is_volume_mounted,
-        _check_call,
-        _stop_mysqld,
+        _can_start,
     ):
-        patch("tenacity.BaseRetrying.wait", side_effect=lambda *args, **kwargs: 0)
-
         # execute on_leader_elected and config_changed to populate the peer databag
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
         # test an exception while configuring mysql users
-        _configure_mysql_users.side_effect = MySQLConfigureMySQLUsersError
+        _workload_initialise.side_effect = MySQLConfigureMySQLUsersError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-        _configure_mysql_users.reset_mock()
+        _workload_initialise.reset_mock()
 
         # test an exception while configuring the instance
-        _configure_instance.side_effect = MySQLConfigureInstanceError
+        _workload_initialise.side_effect = MySQLConfigureInstanceError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-        _configure_instance.reset_mock()
-
-        # test mysqld not restarting after configure instance
-        _get_pid_of_port_3306.side_effect = ["1234", "1234"]
-
-        self.charm.on.start.emit()
-        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
-
-        _get_pid_of_port_3306.reset_mock()
+        _workload_initialise.reset_mock()
 
         # test an exception initializing the mysql.juju_units_operations table
-        _initialize_juju_units_operations_table.side_effect = (
-            MySQLInitializeJujuOperationsTableError
-        )
+        _create_cluster.side_effect = MySQLInitializeJujuOperationsTableError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-        _initialize_juju_units_operations_table.reset_mock()
+        _create_cluster.reset_mock()
 
         # test an exception with creating a cluster
         _create_cluster.side_effect = MySQLCreateClusterError
@@ -285,60 +233,61 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         # test an exception with resetting the root password and starting mysqld
-        _reset_root_password_and_start_mysqld.side_effect = (
-            MySQLResetRootPasswordAndStartMySQLDError
-        )
+        _create_cluster.side_effect = MySQLResetRootPasswordAndStartMySQLDError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         # test an exception creating a custom mysqld config
-        _write_mysqld_config.side_effect = MySQLCreateCustomMySQLDConfigError
+        _workload_initialise.side_effect = MySQLCreateCustomMySQLDConfigError
 
         self.charm.on.start.emit()
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.get_cluster_node_count", return_value=1)
+    @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
+    @patch(
+        "charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock(return_value=True)
+    )
+    @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_on_update(
         self,
         _,
         _snap_service_operation,
-        __reboot_from_complete_outage,
+        _reboot_from_complete_outage,
         _is_volume_mounted,
         _get_cluster_primary_address,
         _get_member_state,
-        _get_cluster_node_count,
+        _active_status_message,
+        _unit_initialized,
+        _cluster_initialized,
     ):
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
         self.charm.on.config_changed.emit()
-        self.harness.update_relation_data(
-            self.peer_relation_id, self.charm.app.name, {"units-added-to-cluster": "1"}
-        )
         self.harness.update_relation_data(
             self.peer_relation_id,
             self.charm.unit.name,
             {
                 "member-role": "primary",
                 "member-state": "online",
-                "unit-initialized": "true",
             },
         )
         _get_member_state.return_value = ("online", "primary")
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_not_called()
+        _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
         _is_volume_mounted.assert_called_once()
-        _get_cluster_node_count.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
@@ -358,7 +307,7 @@ class TestCharm(unittest.TestCase):
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_called_once()
+        _reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_not_called()
         _get_cluster_primary_address.assert_called_once()
 
@@ -367,13 +316,13 @@ class TestCharm(unittest.TestCase):
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
 
-        __reboot_from_complete_outage.reset_mock()
+        _reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
         _get_member_state.return_value = ("unreachable", "primary")
 
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
-        __reboot_from_complete_outage.assert_not_called()
+        _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
         _get_cluster_primary_address.assert_called_once()
 

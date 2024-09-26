@@ -14,25 +14,27 @@ LANDSCAPE_CLIENT_APP_NAME = "landscape-client"
 
 
 @pytest.mark.group(1)
-async def test_ubuntu_pro(ops_test, mysql_charm_series, github_secrets):
+async def test_ubuntu_pro(ops_test, github_secrets):
     db_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
             db_charm,
             application_name=DATABASE_APP_NAME,
             config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             APPLICATION_APP_NAME,
             application_name=APPLICATION_APP_NAME,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             UBUNTU_PRO_APP_NAME,
             application_name=UBUNTU_PRO_APP_NAME,
             channel="latest/edge",
             config={"token": github_secrets["UBUNTU_PRO_TOKEN"]},
+            base="ubuntu@22.04",
         ),
     )
     await ops_test.model.relate(
@@ -59,6 +61,7 @@ async def test_landscape_client(ops_test, github_secrets):
             "registration-key": github_secrets["LANDSCAPE_REGISTRATION_KEY"],
             "ppa": "ppa:landscape/self-hosted-beta",
         },
+        base="ubuntu@22.04",
     )
     await ops_test.model.relate(DATABASE_APP_NAME, LANDSCAPE_CLIENT_APP_NAME)
     async with ops_test.fast_forward("60s"):

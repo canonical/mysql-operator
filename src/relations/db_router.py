@@ -83,13 +83,11 @@ class DBRouterRelation(Object):
 
         # Retrieve application names in the relation databag (which correspond to usernames)
         # Keys that include an _ are generally the ones set by the mysqlrouter legacy charm
-        application_names = set(
-            [
-                key.split("_")[0]
-                for key in db_router_databag
-                if "_" in key and "username" == key.split("_")[1]
-            ]
-        )
+        application_names = {
+            key.split("_")[0]
+            for key in db_router_databag
+            if "_" in key and "username" == key.split("_")[1]
+        }
 
         for application_name in application_names:
             username = db_router_databag.get(f"{application_name}_username")
@@ -173,7 +171,7 @@ class DBRouterRelation(Object):
             # Bypass run if no relation
             return
 
-        if not self.charm.unit_peer_data.get("unit-initialized"):
+        if not self.charm.unit_initialized:
             # Defer run if the unit has not been initialized
             event.defer()
             return
@@ -208,7 +206,7 @@ class DBRouterRelation(Object):
             return
 
         # wait until the unit is initialized
-        if not self.charm.unit_peer_data.get("unit-initialized"):
+        if not self.charm.unit_initialized:
             event.defer()
             return
 

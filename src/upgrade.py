@@ -7,6 +7,7 @@ import bisect
 import json
 import logging
 import pathlib
+import subprocess
 from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.upgrade import (
@@ -18,6 +19,7 @@ from charms.data_platform_libs.v0.upgrade import (
 )
 from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
+    MySQLPluginInstallError,
     MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
@@ -53,6 +55,12 @@ def get_mysql_dependencies_model() -> MySQLVMDependenciesModel:
     with open("src/dependency.json") as dependency_file:
         _deps = json.load(dependency_file)
     return MySQLVMDependenciesModel(**_deps)
+
+
+def set_cron_daemon(action: str) -> None:
+    """Start/stop the cron daemon."""
+    logger.debug(f"{action}ing cron daemon")
+    subprocess.run(["systemctl", action, "cron"], check=True)
 
 
 class MySQLVMUpgrade(DataUpgrade):
@@ -183,8 +191,14 @@ class MySQLVMUpgrade(DataUpgrade):
                 return
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
+            # override config, avoid restart
+            self.charm._mysql.write_mysqld_config()
             self.charm.unit.status = MaintenanceStatus("starting services...")
+            # stop cron daemon to be able to query `error.log`
+            set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
+            if self.charm.config.plugin_audit_enabled:
+                self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
             self.charm._mysql.setup_logrotate_and_cron()
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
@@ -210,6 +224,12 @@ class MySQLVMUpgrade(DataUpgrade):
             logger.exception("Failed to stop MySQL server")
             self.set_unit_failed()
             return
+        except MySQLPluginInstallError:
+            logger.exception("Failed to install MySQL plugins")
+            self.set_unit_failed()
+            return
+        finally:
+            set_cron_daemon("start")
 
         try:
             self.charm.unit.set_workload_version(self.charm._mysql.get_mysql_version() or "unset")
@@ -272,13 +292,11 @@ class MySQLVMUpgrade(DataUpgrade):
     def log_rollback_instructions(self) -> None:
         """Log rollback instructions."""
         logger.critical(
-            "\n".join(
-                (
-                    "Upgrade failed, follow the instructions below to rollback:",
-                    "    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state",
-                    "    2. Run `juju refresh` to the previously deployed charm revision or local charm file",
-                )
-            )
+            "\n".join((
+                "Upgrade failed, follow the instructions below to rollback:",
+                "    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state",
+                "    2. Run `juju refresh` to the previously deployed charm revision or local charm file",
+            ))
         )
 
     def _pre_upgrade_prepare(self) -> None:
@@ -289,11 +307,11 @@ class MySQLVMUpgrade(DataUpgrade):
         """
         if self.charm._mysql.get_primary_label() != self.charm.unit_label:
             # set the primary to the leader unit for switchover mitigation
-            self.charm._mysql.set_cluster_primary(self.charm.get_unit_ip(self.charm.unit))
+            self.charm._mysql.set_cluster_primary(self.charm.get_unit_address(self.charm.unit))
 
         # set slow shutdown on all instances
         for unit in self.app_units:
-            unit_address = self.charm.get_unit_ip(unit)
+            unit_address = self.charm.get_unit_address(unit)
             self.charm._mysql.set_dynamic_variable(
                 variable="innodb_fast_shutdown", value="0", instance_address=unit_address
             )
@@ -320,7 +338,7 @@ class MySQLVMUpgrade(DataUpgrade):
             leader_unit_ordinal = self.upgrade_stack[0]
             for unit in self.peer_relation.units:
                 if unit.name == f"{self.charm.app.name}/{leader_unit_ordinal}":
-                    return self.charm.get_unit_ip(unit)
+                    return self.charm.get_unit_address(unit)
             return ""
 
         try:
@@ -376,9 +394,9 @@ class MySQLVMUpgrade(DataUpgrade):
         logger.debug(f"Upgrade stack: {upgrade_stack}")
         self.upgrade_stack = upgrade_stack
         logger.debug("Persisting dependencies to upgrade relation data...")
-        self.peer_relation.data[self.charm.app].update(
-            {"dependencies": json.dumps(self.dependency_model.dict())}
-        )
+        self.peer_relation.data[self.charm.app].update({
+            "dependencies": json.dumps(self.dependency_model.dict())
+        })
 
     @staticmethod
     def _ensure_for_installed_by_file() -> None:
@@ -388,13 +406,3 @@ class MySQLVMUpgrade(DataUpgrade):
         )
         if not installed_by_mysql_server_file.exists():
             installed_by_mysql_server_file.touch()
-
-    def _post_upgrade(self) -> None:
-        """Post upgrade adjustments from charm without upgrade support.
-
-        Assumes run on leader unit only.
-        """
-        # call leader elected handler to populate missing user data
-        self.charm._on_leader_elected(None)
-        # TODO: create backup user, delete root user
-        # TODO: add `add-unit` row on juju-units-operations table

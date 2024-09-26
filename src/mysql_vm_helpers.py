@@ -3,12 +3,15 @@
 
 """Helper class to manage the MySQL InnoDB cluster lifecycle with MySQL Shell."""
 
+import json
 import logging
 import os
 import pathlib
+import platform
 import shutil
 import subprocess
 import tempfile
+import typing
 from typing import Dict, List, Optional, Tuple
 
 import jinja2
@@ -18,23 +21,23 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLClientError,
     MySQLExecError,
-    MySQLGetAutoTunningParametersError,
+    MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
+    MySQLKillSessionError,
     MySQLRestoreBackupError,
     MySQLServiceNotRunningError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v2 import snap
-from ops.charm import CharmBase
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
 from constants import (
     CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
+    CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
-    CHARMED_MYSQL_SNAP_REVISION,
     CHARMED_MYSQL_XBCLOUD_LOCATION,
     CHARMED_MYSQL_XBSTREAM_LOCATION,
     CHARMED_MYSQL_XTRABACKUP_LOCATION,
@@ -52,6 +55,13 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
+
+
+if typing.TYPE_CHECKING:
+    from charm import MySQLOperatorCharm
 
 
 class MySQLResetRootPasswordAndStartMySQLDError(Error):
@@ -92,6 +102,7 @@ class MySQL(MySQLBase):
     def __init__(
         self,
         instance_address: str,
+        socket_path: str,
         cluster_name: str,
         cluster_set_name: str,
         root_password: str,
@@ -103,12 +114,13 @@ class MySQL(MySQLBase):
         monitoring_password: str,
         backups_user: str,
         backups_password: str,
-        charm: CharmBase,
+        charm: "MySQLOperatorCharm",
     ):
         """Initialize the MySQL class.
 
         Args:
             instance_address: address of the targeted instance
+            socket_path: path to the MySQL socket
             cluster_name: cluster name
             cluster_set_name: cluster set domain name
             root_password: password for the 'root' user
@@ -124,6 +136,7 @@ class MySQL(MySQLBase):
         """
         super().__init__(
             instance_address=instance_address,
+            socket_path=socket_path,
             cluster_name=cluster_name,
             cluster_set_name=cluster_set_name,
             root_password=root_password,
@@ -143,7 +156,7 @@ class MySQL(MySQLBase):
     def install_and_configure_mysql_dependencies() -> None:
         """Install and configure MySQL dependencies.
 
-        Raises
+        Raises:
             subprocess.CalledProcessError: if issue creating mysqlsh common dir
             snap.SnapNotFoundError, snap.SnapError: if issue installing charmed-mysql snap
         """
@@ -166,10 +179,10 @@ class MySQL(MySQLBase):
 
         try:
             # install the charmed-mysql snap
-            logger.debug(
-                f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {CHARMED_MYSQL_SNAP_REVISION}"
-            )
-            charmed_mysql.ensure(snap.SnapState.Present, revision=CHARMED_MYSQL_SNAP_REVISION)
+            with pathlib.Path("snap_revisions.json").open("r") as file:
+                revision = json.load(file)[platform.machine()]
+            logger.debug(f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {revision}")
+            charmed_mysql.ensure(snap.SnapState.Present, revision=revision)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
                 charmed_mysql.hold()
@@ -215,8 +228,9 @@ class MySQL(MySQLBase):
                 # uninstalls fail due to SNAP_DATA_DIR fails to umount
                 # try umount it, without check
                 subprocess.run(["umount", CHARMED_MYSQL_COMMON_DIRECTORY])
+                shutil.rmtree(f"{CHARMED_MYSQL_DATA_DIRECTORY}/etc", ignore_errors=True)
                 logger.exception(f"Failed to uninstall MySQL on {attempt=}")
-        raise MySQLUninstallError
+        raise MySQLUninstallError from None
 
     @override
     def get_available_memory(self) -> int:
@@ -233,27 +247,28 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(self, profile: str, memory_limit: Optional[int]) -> None:
+    def write_mysqld_config(self) -> None:
         """Create custom mysql config file.
-
-        Args:
-            profile: profile to use for the mysql config
-            memory_limit: memory limit to use for the mysql config in MB
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
         logger.debug("Writing mysql configuration file")
-        if memory_limit:
+        memory_limit = None
+        if self.charm.config.profile_limit_memory:
             # Convert from config value in MB to bytes
-            memory_limit = memory_limit * BYTES_1MB
+            memory_limit = self.charm.config.profile_limit_memory * BYTES_1MB
         try:
             content_str, _ = self.render_mysqld_configuration(
-                profile=profile,
+                profile=self.charm.config.profile,
+                audit_log_enabled=self.charm.config.plugin_audit_enabled,
+                audit_log_strategy=self.charm.config.plugin_audit_strategy,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
+                binlog_retention_days=self.charm.config.binlog_retention_days,
+                experimental_max_connections=self.charm.config.experimental_max_connections,
             )
-        except (MySQLGetAvailableMemoryError, MySQLGetAutoTunningParametersError):
+        except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):
             logger.exception("Failed to get available memory or auto tuning parameters")
             raise MySQLCreateCustomMySQLDConfigError
 
@@ -313,14 +328,12 @@ class MySQL(MySQLBase):
                 _sql_file.flush()
 
                 try:
-                    subprocess.check_output(
-                        [
-                            "sudo",
-                            "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                            _sql_file.name,
-                        ]
-                    )
+                    subprocess.check_output([
+                        "sudo",
+                        "chown",
+                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                        _sql_file.name,
+                    ])
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for temp SQL file"
@@ -330,14 +343,12 @@ class MySQL(MySQLBase):
                 _custom_config_file.flush()
 
                 try:
-                    subprocess.check_output(
-                        [
-                            "sudo",
-                            "chown",
-                            f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                            _custom_config_file.name,
-                        ]
-                    )
+                    subprocess.check_output([
+                        "sudo",
+                        "chown",
+                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                        _custom_config_file.name,
+                    ])
                 except subprocess.CalledProcessError:
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for custom mysql config"
@@ -372,7 +383,7 @@ class MySQL(MySQLBase):
 
         logger.debug("MySQL connection possible")
 
-    def execute_backup_commands(
+    def execute_backup_commands(  # type: ignore
         self,
         s3_directory: str,
         s3_parameters: Dict[str, str],
@@ -391,7 +402,7 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def delete_temp_backup_directory(
+    def delete_temp_backup_directory(  # type: ignore
         self, from_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY
     ) -> None:
         """Delete the temp backup directory."""
@@ -401,20 +412,25 @@ class MySQL(MySQLBase):
             group=ROOT_SYSTEM_USER,
         )
 
-    def retrieve_backup_with_xbcloud(
+    def retrieve_backup_with_xbcloud(  # type: ignore
         self,
         backup_id: str,
         s3_parameters: Dict[str, str],
+        temp_restore_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY,
+        xbcloud_location: str = CHARMED_MYSQL_XBCLOUD_LOCATION,
+        xbstream_location: str = CHARMED_MYSQL_XBSTREAM_LOCATION,
+        user=ROOT_SYSTEM_USER,
+        group=ROOT_SYSTEM_USER,
     ) -> Tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
         return super().retrieve_backup_with_xbcloud(
             backup_id,
             s3_parameters,
-            CHARMED_MYSQL_COMMON_DIRECTORY,
-            CHARMED_MYSQL_XBCLOUD_LOCATION,
-            CHARMED_MYSQL_XBSTREAM_LOCATION,
-            user=ROOT_SYSTEM_USER,
-            group=ROOT_SYSTEM_USER,
+            temp_restore_directory,
+            xbcloud_location,
+            xbstream_location,
+            user,
+            group,
         )
 
     def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
@@ -453,9 +469,9 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             logger.exception("Failed to change data directory permissions before restoring")
-            raise MySQLRestoreBackupError(e)
+            raise MySQLRestoreBackupError
 
         stdout, stderr = super().restore_backup(
             backup_location,
@@ -488,11 +504,11 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             logger.exception(
                 "Failed to change data directory permissions or ownershp after restoring"
             )
-            raise MySQLRestoreBackupError(e)
+            raise MySQLRestoreBackupError
 
         return (stdout, stderr)
 
@@ -510,7 +526,8 @@ class MySQL(MySQLBase):
         bash: bool = False,
         user: str = None,
         group: str = None,
-        env_extra: Dict = None,
+        env_extra: Dict = {},
+        stream_output: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Execute commands on the server where mysql is running.
 
@@ -520,31 +537,54 @@ class MySQL(MySQLBase):
             user: the user with which to execute the commands
             group: the group with which to execute the commands
             env_extra: the environment variables to add to the current process’ environment
+            stream_output: whether to stream the output to stdout, stderr or None
 
         Returns: tuple of (stdout, stderr)
 
         Raises: MySQLExecError if there was an error executing the commands
         """
+        stdout = stderr = ""
         env = os.environ.copy()
         if env_extra:
             env.update(env_extra)
-        try:
-            if bash:
-                commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
+        if bash:
+            commands = ["bash", "-c", "set -o pipefail; " + " ".join(commands)]
 
-            process = subprocess.run(
-                commands,
-                user=user,
-                group=group,
-                env=env,
-                capture_output=True,
-                check=True,
-                encoding="utf-8",
+        process = subprocess.Popen(
+            commands,
+            user=user,
+            group=group,
+            env=env,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if stream_output == "stderr":
+            while process.stderr and (line := process.stderr.readline()):
+                logger.debug(line.strip())
+                stderr += line
+        elif stream_output == "stdout":
+            while process.stdout and (line := process.stdout.readline()):
+                logger.debug(line.strip())
+                stdout += line
+
+        return_code = process.wait()
+        if return_code != 0:
+            message = (
+                "Failed command: "
+                f"{self.strip_off_passwords(' '.join(commands))};"
+                f" {user=}; {group=}"
             )
-            return (process.stdout.strip(), process.stderr.strip())
-        except subprocess.CalledProcessError as e:
-            logger.debug(f"Failed command: {commands}; user={user}; group={group}")
-            raise MySQLExecError(e.stderr)
+            logger.error(message)
+            raise MySQLExecError from None
+
+        if not stdout and process.stdout:
+            stdout = process.stdout.read()
+        if not stderr and process.stderr:
+            stderr = process.stderr.read()
+
+        return (stdout.strip(), stderr.strip())
 
     def is_mysqld_running(self) -> bool:
         """Returns whether mysqld is running."""
@@ -563,7 +603,7 @@ class MySQL(MySQLBase):
 
         try:
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
-        except SnapServiceOperationError as e:
+        except (SnapServiceOperationError, MySQLKillSessionError) as e:
             raise MySQLStopMySQLDError(e.message)
 
     def start_mysqld(self) -> None:
@@ -610,7 +650,7 @@ class MySQL(MySQLBase):
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
 
-        Raises
+        Raises:
             snap.SnapError: if an issue occurs during config setting or restart
         """
         cache = snap.SnapCache()
@@ -618,12 +658,10 @@ class MySQL(MySQLBase):
 
         try:
             # Set up exporter credentials
-            mysqld_snap.set(
-                {
-                    "exporter.user": self.monitoring_user,
-                    "exporter.password": self.monitoring_password,
-                }
-            )
+            mysqld_snap.set({
+                "exporter.user": self.monitoring_user,
+                "exporter.password": self.monitoring_password,
+            })
             snap_service_operation(
                 CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start"
             )
@@ -653,6 +691,7 @@ class MySQL(MySQLBase):
 
         Args:
             script: Mysqlsh script string
+            timeout: (optional) Timeout for the script
 
         Returns:
             String representing the output of the mysqlsh command
@@ -678,11 +717,15 @@ class MySQL(MySQLBase):
                 return subprocess.check_output(
                     command, stderr=subprocess.PIPE, timeout=timeout
                 ).decode("utf-8")
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-                raise MySQLClientError(e.stderr)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                raise MySQLClientError
 
     def _run_mysqlcli_script(
-        self, script: str, user: str = "root", password: str = None, timeout: Optional[int] = None
+        self,
+        script: str,
+        user: str = "root",
+        password: Optional[str] = None,
+        timeout: Optional[int] = None,
     ) -> str:
         """Execute a MySQL CLI script.
 
@@ -713,7 +756,7 @@ class MySQL(MySQLBase):
                 command, stderr=subprocess.PIPE, timeout=timeout
             ).decode("utf-8")
         except subprocess.CalledProcessError as e:
-            raise MySQLClientError(e.stderr)
+            raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
 
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.

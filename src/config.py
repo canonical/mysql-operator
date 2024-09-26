@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Structured configuration for the MySQL charm."""
+
 import configparser
 import logging
 import os
@@ -10,6 +11,7 @@ import re
 from typing import Optional
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
+from charms.mysql.v0.mysql import MAX_CONNECTIONS_FLOOR
 from pydantic import validator
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,8 @@ class MySQLConfig:
         "innodb_buffer_pool_chunk_size",
         "group_replication_message_cache_size",
         "log_error",
+        "loose-audit_log_strategy",
+        "loose-audit_log_format",
     }
 
     def __init__(self, config_file_path: str):
@@ -57,9 +61,14 @@ class CharmConfig(BaseConfigModel):
 
     profile: str
     cluster_name: Optional[str]
+    cluster_set_name: Optional[str]
     profile_limit_memory: Optional[int]
     mysql_interface_user: Optional[str]
     mysql_interface_database: Optional[str]
+    experimental_max_connections: Optional[int]
+    binlog_retention_days: int
+    plugin_audit_enabled: bool
+    plugin_audit_strategy: str
 
     @validator("profile")
     @classmethod
@@ -70,23 +79,23 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("cluster_name")
+    @validator("cluster_name", "cluster_set_name")
     @classmethod
     def cluster_name_validator(cls, value: str) -> Optional[str]:
-        """Check for valid cluster name.
+        """Check for valid cluster, cluster-set name.
 
         Limited to 63 characters, and must start with a letter and
         contain only alphanumeric characters, `-`, `_` and `.`
         """
         if len(value) > 63:
-            raise ValueError("Cluster name must be less than 63 characters")
+            raise ValueError("cluster, cluster-set name must be less than 63 characters")
 
         if not value[0].isalpha():
-            raise ValueError("Cluster name must start with a letter")
+            raise ValueError("cluster, cluster-set name must start with a letter")
 
         if not re.match(r"^[a-zA-Z0-9-_.]*$", value):
             raise ValueError(
-                "Cluster name must contain only alphanumeric characters, "
+                "cluster, cluster-set name must contain only alphanumeric characters, "
                 "hyphens, underscores and periods"
             )
 
@@ -100,5 +109,35 @@ class CharmConfig(BaseConfigModel):
             raise ValueError("MySQL Charm requires at least 600MB for bootstrapping")
         if value > 9999999:
             raise ValueError("`profile-limit-memory` limited to 7 digits (9999999MB)")
+
+        return value
+
+    @validator("experimental_max_connections")
+    @classmethod
+    def experimental_max_connections_validator(cls, value: int) -> Optional[int]:
+        """Check experimental max connections."""
+        if value < MAX_CONNECTIONS_FLOOR:
+            raise ValueError(
+                f"experimental-max-connections ({value=}) must be equal or greater "
+                + f" than {MAX_CONNECTIONS_FLOOR}"
+            )
+
+        return value
+
+    @validator("binlog_retention_days")
+    @classmethod
+    def binlog_retention_days_validator(cls, value: int) -> int:
+        """Check binlog retention days."""
+        if value < 1:
+            raise ValueError("binlog-retention-days must be greater than 0")
+
+        return value
+
+    @validator("plugin_audit_strategy")
+    @classmethod
+    def plugin_audit_strategy_validator(cls, value: str) -> Optional[str]:
+        """Check profile config option is one of `testing` or `production`."""
+        if value not in ["async", "semi-async"]:
+            raise ValueError("Value not one of 'async' or 'semi-async'")
 
         return value

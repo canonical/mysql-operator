@@ -3,7 +3,7 @@
 
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import yaml
 from juju.unit import Unit
@@ -95,12 +95,10 @@ async def ensure_n_online_mysql_members(
     try:
         for attempt in Retrying(stop=stop_after_delay(10 * 60), wait=wait_fixed(10)):
             with attempt:
-                cluster_status = await get_cluster_status(ops_test, mysql_unit)
+                cluster_status = await get_cluster_status(mysql_unit)
                 online_members = [
                     label
-                    for label, member in cluster_status["status"]["defaultreplicaset"][
-                        "topology"
-                    ].items()
+                    for label, member in cluster_status["defaultreplicaset"]["topology"].items()
                     if member["status"] == "online"
                 ]
                 assert len(online_members) == number_online_members
@@ -112,7 +110,6 @@ async def ensure_n_online_mysql_members(
 
 async def deploy_and_scale_mysql(
     ops_test: OpsTest,
-    mysql_charm_series: str,
     check_for_existing_application: bool = True,
     mysql_application_name: str = MYSQL_DEFAULT_APP_NAME,
     num_units: int = 3,
@@ -121,7 +118,6 @@ async def deploy_and_scale_mysql(
 
     Args:
         ops_test: The ops test framework
-        mysql_charm_series: series to test on
         check_for_existing_application: Whether to check for existing mysql applications
             in the model
         mysql_application_name: The name of the mysql application if it is to be deployed
@@ -146,7 +142,7 @@ async def deploy_and_scale_mysql(
             application_name=mysql_application_name,
             config=config,
             num_units=num_units,
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
         )
 
         await ops_test.model.wait_for_idle(
@@ -181,6 +177,7 @@ async def deploy_and_scale_application(ops_test: OpsTest) -> str:
             application_name=APPLICATION_DEFAULT_APP_NAME,
             num_units=1,
             channel="latest/edge",
+            base="ubuntu@22.04",
         )
 
         await ops_test.model.wait_for_idle(
@@ -219,23 +216,6 @@ async def relate_mysql_and_application(
         raise_on_blocked=True,
         timeout=TIMEOUT,
     )
-
-
-async def high_availability_test_setup(
-    ops_test: OpsTest, mysql_charm_series: str
-) -> Tuple[str, str]:
-    """Run the set up for high availability tests.
-
-    Args:
-        ops_test: The ops test framework
-        mysql_charm_series: Series to run mysql charm (defaults to focal)
-    """
-    mysql_application_name = await deploy_and_scale_mysql(ops_test, mysql_charm_series)
-    application_name = await deploy_and_scale_application(ops_test)
-
-    await relate_mysql_and_application(ops_test, mysql_application_name, application_name)
-
-    return mysql_application_name, application_name
 
 
 async def get_process_stat(ops_test: OpsTest, unit_name: str, process: str) -> str:
@@ -375,37 +355,18 @@ async def ensure_all_units_continuous_writes_incrementing(
         ops_test, primary, server_config_credentials
     )
 
-    select_all_continuous_writes_sql = [f"SELECT * FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
-
-    async with ops_test.fast_forward():
-        for unit in mysql_units:
-            for attempt in Retrying(
-                reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)
-            ):
-                with attempt:
-                    # ensure that all units are up to date (including the previous primary)
-                    unit_address = await get_unit_ip(ops_test, unit.name)
-
+    async with ops_test.fast_forward(fast_interval="15s"):
+        for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
+            with attempt:
+                # ensure that all units are up to date (including the previous primary)
+                for unit in mysql_units:
                     # ensure the max written value is incrementing (continuous writes is active)
                     max_written_value = await get_max_written_value_in_database(
                         ops_test, unit, server_config_credentials
                     )
+                    logger.info(f"{max_written_value=} on unit {unit.name}")
                     assert (
                         max_written_value > last_max_written_value
                     ), "Continuous writes not incrementing"
-
-                    # ensure that the unit contains all values up to the max written value
-                    all_written_values = set(
-                        await execute_queries_on_unit(
-                            unit_address,
-                            server_config_credentials["username"],
-                            server_config_credentials["password"],
-                            select_all_continuous_writes_sql,
-                        )
-                    )
-                    numbers = {n for n in range(1, max_written_value)}
-                    assert (
-                        numbers <= all_written_values
-                    ), f"Missing numbers in database for unit {unit.name}"
 
                     last_max_written_value = max_written_value

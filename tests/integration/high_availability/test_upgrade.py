@@ -35,7 +35,7 @@ TEST_APP_NAME = "mysql-test-app"
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     await asyncio.gather(
         ops_test.model.deploy(
@@ -44,13 +44,14 @@ async def test_deploy_latest(ops_test: OpsTest, mysql_charm_series: str) -> None
             num_units=3,
             channel="8.0/edge",
             config={"profile": "testing"},
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
         ),
         ops_test.model.deploy(
             TEST_APP_NAME,
             application_name=TEST_APP_NAME,
             num_units=1,
             channel="latest/edge",
+            base="ubuntu@22.04",
         ),
     )
     await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP_NAME)
@@ -183,7 +184,7 @@ async def inject_dependency_fault(
 
     loaded_dependency_dict = json.loads(relation_data[0]["application-data"]["dependencies"])
     loaded_dependency_dict["charm"]["upgrade_supported"] = f">{current_charm_version}"
-    loaded_dependency_dict["charm"]["version"] = f"{int(current_charm_version)+1}"
+    loaded_dependency_dict["charm"]["version"] = f"{int(current_charm_version) + 1}"
 
     # Overwrite dependency.json with incompatible version
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:

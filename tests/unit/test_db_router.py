@@ -14,9 +14,8 @@ from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
 
-from .helpers import patch_network_get
 
-
+@patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
 class TestDBRouter(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(MySQLOperatorCharm)
@@ -28,7 +27,8 @@ class TestDBRouter(unittest.TestCase):
         self.harness.add_relation_unit(self.db_router_relation_id, "app/0")
         self.charm = self.harness.charm
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("relations.db_router.DBRouterRelation._on_leader_elected")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
@@ -41,11 +41,13 @@ class TestDBRouter(unittest.TestCase):
         _does_mysql_user_exist,
         _get_cluster_primary_address,
         _generate_random_password,
+        _,
+        _unit_initialized,
+        _on_leader_elected,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-        self.charm.unit_peer_data["unit-initialized"] = "True"
 
         # confirm that the relation databag is empty
         db_router_relation_databag = self.harness.get_relation_data(
@@ -75,12 +77,10 @@ class TestDBRouter(unittest.TestCase):
         self.assertEqual(_does_mysql_user_exist.call_count, 2)
         self.assertEqual(
             sorted(_does_mysql_user_exist.mock_calls),
-            sorted(
-                [
-                    call("mysqlrouteruser", "1.1.1.3"),
-                    call("keystone_user", "1.1.1.2"),
-                ]
-            ),
+            sorted([
+                call("mysqlrouteruser", "1.1.1.3"),
+                call("keystone_user", "1.1.1.2"),
+            ]),
         )
 
         _configure_mysqlrouter_user.assert_called_once_with(
@@ -117,7 +117,8 @@ class TestDBRouter(unittest.TestCase):
             },
         )
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("relations.db_router.DBRouterRelation._on_leader_elected")
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
@@ -128,11 +129,13 @@ class TestDBRouter(unittest.TestCase):
         _configure_mysqlrouter_user,
         _does_mysql_user_exist,
         _generate_random_password,
+        _,
+        _unit_initialized,
+        _on_leader_elected,
     ):
         # run start-up events to enable usage of the helper class
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
-        self.charm.unit_peer_data["unit-initialized"] = "True"
 
         # confirm that the relation databag is empty
         db_router_relation_databag = self.harness.get_relation_data(

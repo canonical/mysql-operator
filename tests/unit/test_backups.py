@@ -11,8 +11,8 @@ from charms.mysql.v0.mysql import (
     MySQLDeleteTempRestoreDirectoryError,
     MySQLEmptyDataDirectoryError,
     MySQLExecuteBackupCommandsError,
-    MySQLGetMemberStateError,
     MySQLInitializeJujuOperationsTableError,
+    MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRescanClusterError,
@@ -28,9 +28,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
-from constants import S3_INTEGRATOR_RELATION_NAME
-
-from .helpers import patch_network_get
+from lib.charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME
 
 
 class TestMySQLBackups(unittest.TestCase):
@@ -39,7 +37,8 @@ class TestMySQLBackups(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.peer_relation_id = self.harness.add_relation("database-peers", "database-peers")
-        self.harness.set_leader(True)
+        with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks") as _:
+            self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
         self.charm = self.harness.charm
         self.s3_integrator_id = self.harness.add_relation(
@@ -149,7 +148,7 @@ test stderr"""
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("datetime.datetime")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -173,6 +172,7 @@ test stderr"""
         _can_unit_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
+        _update_status,
     ):
         """Test _on_create_backup()."""
         _datetime.now.return_value.strftime.return_value = "2023-03-07%13:43:15Z"
@@ -202,7 +202,6 @@ Juju Version: 0.0.0
         event.set_results.assert_called_once_with({"backup-id": "2023-03-07%13:43:15Z"})
         event.fail.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("datetime.datetime")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -310,7 +309,6 @@ Juju Version: 0.0.0
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
     def test_can_unit_perform_backup(
@@ -319,17 +317,13 @@ Juju Version: 0.0.0
         _offline_mode_and_hidden_instance_exists,
     ):
         """Test _can_unit_perform_backup()."""
-        self.harness.set_leader(True)
-        self.charm.on.config_changed.emit()
-
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_can_unit_perform_backup_failure(
         self,
         _,
@@ -356,7 +350,7 @@ Juju Version: 0.0.0
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
 
         # test error getting member state
-        _get_member_state.side_effect = MySQLGetMemberStateError
+        _get_member_state.side_effect = MySQLNoMemberStateError
 
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertFalse(success)
@@ -378,10 +372,9 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Unit is waiting to start or restart")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_backup(
         self,
         _,
@@ -403,7 +396,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     def test_pre_backup_failure(
@@ -431,8 +423,7 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Error setting instance option tag:_hidden")
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
+    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup(
         self,
@@ -452,8 +443,7 @@ Juju Version: 0.0.0
         self.assertIsNone(error_message)
         _upload_logs_to_s3.assert_called_once_with("stdout", "", "/path.backup.log", s3_params)
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value="stdout")
+    @patch("mysql_vm_helpers.MySQL.execute_backup_commands", return_value=("stdout", "stderr"))
     @patch("charms.mysql.v0.backups.MySQLBackups._upload_logs_to_s3")
     def test_backup_failure(
         self,
@@ -486,7 +476,6 @@ Juju Version: 0.0.0
             "", "failure backup", "/path.backup.log", s3_params
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
@@ -501,7 +490,6 @@ Juju Version: 0.0.0
         self.assertTrue(success)
         self.assertIsNone(error_message)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
     @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
     @patch("mysql_vm_helpers.MySQL.set_instance_option")
@@ -535,7 +523,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error_message, "Error deleting temp backup directory")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
     def test_pre_restore_checks(
@@ -548,10 +535,9 @@ Juju Version: 0.0.0
 
         self.assertTrue(self.mysql_backups._pre_restore_checks(event))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
     @patch("charm.MySQLOperatorCharm.is_unit_busy", return_value=False)
-    @patch("hostname_resolution.MySQLMachineHostnameResolution._remove_host_from_etc_hosts")
+    @patch("python_hosts.Hosts.write")
     def test_pre_restore_checks_failure(
         self,
         _,
@@ -593,7 +579,7 @@ Juju Version: 0.0.0
 
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_restore_checks", return_value=True)
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -611,6 +597,7 @@ Juju Version: 0.0.0
         _fetch_and_check_existence_of_s3_path,
         _retrieve_s3_parameters,
         _pre_restore_checks,
+        _update_status,
     ):
         """Test _on_restore()."""
         event = MagicMock()
@@ -635,7 +622,6 @@ Juju Version: 0.0.0
         self.assertEqual(event.set_results.call_count, 1)
         self.assertEqual(event.fail.call_count, 0)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_restore_checks", return_value=True)
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._retrieve_s3_parameters",
@@ -672,7 +658,6 @@ Juju Version: 0.0.0
 
         # test failure of recoverable _restore()
         _restore.return_value = (False, True, "restore error")
-        self.charm.unit.status = ActiveStatus()
 
         event = MagicMock()
         params_mock = {}
@@ -684,13 +669,11 @@ Juju Version: 0.0.0
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("restore error")
         _clean_data_dir_and_start_mysqld.assert_called_once()
-        self.assertTrue(isinstance(self.charm.unit.status, ActiveStatus))
 
         _clean_data_dir_and_start_mysqld.reset_mock()
 
         # test failure of unrecoverable _restore()
         _restore.return_value = (False, False, "restore error")
-        self.charm.unit.status = ActiveStatus()
 
         event = MagicMock()
         params_mock = {}
@@ -751,18 +734,30 @@ Juju Version: 0.0.0
         event.set_results.assert_not_called()
         event.fail.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore(self, _stop_mysqld):
+    def test_pre_restore(
+        self, _stop_mysqld, _kill_client_sessions, _mysqld_running, _set_instance_offline_mode
+    ):
         """Test _pre_restore()."""
         success, error = self.mysql_backups._pre_restore()
 
         self.assertTrue(success)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
+        _mysqld_running.assert_called_once()
+        _stop_mysqld.assert_called_once()
+        _kill_client_sessions.assert_called_once()
+        _set_instance_offline_mode.assert_called_once()
 
-    @patch_network_get(private_address="1.1.1.1")
+    @patch("mysql_vm_helpers.MySQL.set_instance_offline_mode")
+    @patch("mysql_vm_helpers.MySQL.is_mysqld_running", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.kill_client_sessions")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
-    def test_pre_restore_failure(self, _stop_mysqld):
+    def test_pre_restore_failure(
+        self, _stop_mysqld, _kill_client_sessions, _mysqld_running, _set_instance_offline_mode
+    ):
         """Test failure of _pre_restore()."""
         _stop_mysqld.side_effect = MySQLStopMySQLDError()
 
@@ -771,7 +766,6 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error, "Failed to stop mysqld")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "mysql_vm_helpers.MySQL.retrieve_backup_with_xbcloud",
         return_value=("", "", "test/backup/location"),
@@ -798,9 +792,8 @@ Juju Version: 0.0.0
 
         self.assertTrue(success)
         self.assertTrue(recoverable)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "mysql_vm_helpers.MySQL.retrieve_backup_with_xbcloud",
         return_value=("", "", "test/backup/location"),
@@ -856,7 +849,6 @@ Juju Version: 0.0.0
         self.assertTrue(recoverable)
         self.assertEqual(error, "Failed to retrieve backup test-backup-id")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
@@ -865,9 +857,8 @@ Juju Version: 0.0.0
         success, error = self.mysql_backups._clean_data_dir_and_start_mysqld()
 
         self.assertTrue(success)
-        self.assertIsNone(error)
+        self.assertEqual(error, "")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("mysql_vm_helpers.MySQL.delete_temp_restore_directory")
     @patch("mysql_vm_helpers.MySQL.delete_temp_backup_directory")
@@ -896,76 +887,62 @@ Juju Version: 0.0.0
         self.assertFalse(success)
         self.assertEqual(error, "Failed to delete the temp restore directory")
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._clean_data_dir_and_start_mysqld",
         return_value=(True, None),
     )
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.rescan_cluster")
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore(
         self,
-        _get_member_state,
         _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
+        _create_cluster_set,
         _wait_until_mysql_connection,
         _configure_instance,
         _clean_data_dir_and_start_mysqld,
     ):
         """Test _post_restore()."""
-        self.charm.unit.status = MaintenanceStatus()
-
         success, error_message = self.mysql_backups._post_restore()
 
         self.assertTrue(success)
-        self.assertIsNone(error_message)
+        self.assertEqual(error_message, "")
 
         _clean_data_dir_and_start_mysqld.assert_called_once()
         _configure_instance.assert_called_once_with(create_cluster_admin=False)
         _wait_until_mysql_connection.assert_called_once()
         _create_cluster.assert_called_once()
+        _create_cluster_set.assert_called_once()
         _initialize_juju_units_operations_table.assert_called_once()
         _rescan_cluster.assert_called_once()
-        _get_member_state.assert_called_once()
 
-        self.assertTrue(isinstance(self.charm.unit.status, ActiveStatus))
-
-    @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charms.mysql.v0.backups.MySQLBackups._clean_data_dir_and_start_mysqld",
         return_value=(True, None),
     )
     @patch("mysql_vm_helpers.MySQL.configure_instance")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch("mysql_vm_helpers.MySQL.create_cluster_set")
     @patch("mysql_vm_helpers.MySQL.create_cluster")
     @patch("mysql_vm_helpers.MySQL.initialize_juju_units_operations_table")
     @patch("mysql_vm_helpers.MySQL.rescan_cluster")
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "primary"))
     def test_post_restore_failure(
         self,
-        _get_member_state,
         _rescan_cluster,
         _initialize_juju_units_operations_table,
         _create_cluster,
+        _create_cluster_set,
         _wait_until_mysql_connection,
         _configure_instance,
         _clean_data_dir_and_start_mysqld,
     ):
         """Test failure of _post_restore()."""
         self.charm.unit.status = MaintenanceStatus()
-
-        # test failure of get_member_state()
-        _get_member_state.side_effect = MySQLGetMemberStateError()
-
-        success, error_message = self.mysql_backups._post_restore()
-        self.assertFalse(success)
-        self.assertEqual(error_message, "Failed to retrieve member state in restored instance")
-        self.assertTrue(isinstance(self.charm.unit.status, MaintenanceStatus))
 
         # test failure of rescan_cluster()
         _rescan_cluster.side_effect = MySQLRescanClusterError()

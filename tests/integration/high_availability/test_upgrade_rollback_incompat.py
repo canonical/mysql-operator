@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import ast
+import json
 import logging
 import os
 import pathlib
@@ -13,7 +14,7 @@ from zipfile import ZipFile
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_
+from .. import juju_, markers
 from ..helpers import get_leader_unit, get_relation_data, get_unit_by_index
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
@@ -28,23 +29,32 @@ TEST_APP = "mysql-test-app"
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
-    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
-    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+    snap_revisions = pathlib.Path("snap_revisions.json")
+    with snap_revisions.open("r") as file:
+        old_revisions: dict = json.load(file)
+    new_revisions = old_revisions.copy()
+    # TODO: support arm64
+    new_revisions["x86_64"] = "69"
+    with snap_revisions.open("w") as file:
+        json.dump(new_revisions, file)
     charm = await charm_local_build(ops_test)
 
-    src_patch(revert=True)
-    config = {"profile": "testing"}
+    with snap_revisions.open("w") as file:
+        json.dump(old_revisions, file)
 
     async with ops_test.fast_forward("10s"):
         await ops_test.model.deploy(
             charm,
             application_name=MYSQL_APP_NAME,
-            config=config,
             num_units=3,
-            series=mysql_charm_series,
+            base="ubuntu@22.04",
+            config={"profile": "testing", "plugin-audit-enabled": "false"},
         )
 
         await ops_test.model.deploy(
@@ -52,6 +62,7 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
             application_name=TEST_APP,
             channel="latest/edge",
             num_units=1,
+            base="ubuntu@22.04",
         )
 
         await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP)
@@ -63,6 +74,9 @@ async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> N
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -75,6 +89,9 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_failling(
     ops_test: OpsTest,
@@ -119,12 +136,21 @@ async def test_upgrade_to_failling(
 
 
 @pytest.mark.group(1)
+# TODO: remove after next incompatible MySQL server version released in our snap
+# (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_rollback(ops_test, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
-    sub_regex_older_snap = "s/CHARMED_MYSQL_SNAP_REVISION.*/CHARMED_MYSQL_SNAP_REVISION = 69/"
-    src_patch(sub_regex=sub_regex_older_snap, file_name="src/constants.py")
+    snap_revisions = pathlib.Path("snap_revisions.json")
+    with snap_revisions.open("r") as file:
+        old_revisions: dict = json.load(file)
+    new_revisions = old_revisions.copy()
+    # TODO: mark as amd64 only or support arm64
+    new_revisions["x86_64"] = "69"
+    with snap_revisions.open("w") as file:
+        json.dump(new_revisions, file)
     charm = await charm_local_build(ops_test, refresh=True)
 
     logger.info("Get leader unit")
@@ -176,7 +202,7 @@ async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
         # CI will get charm from common cache
         # make local copy and update charm zip
 
-        update_files = ["src/constants.py", "src/upgrade.py"]
+        update_files = ["snap_revisions.json", "src/upgrade.py"]
 
         charm = pathlib.Path(shutil.copy(charm, f"local-{charm.stem}.charm"))
 

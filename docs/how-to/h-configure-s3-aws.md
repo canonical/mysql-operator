@@ -11,6 +11,11 @@ juju config s3-integrator \
     path="/mysql-test" \
     region="us-west-2"
 ```
+[note] 
+The amazon S3 endpoint must be specified as `s3.<region>.amazonaws.com ` within the first 24 hours of creating the bucket. For older buckets, the endpoint `s3.amazonaws.com` can be used.
+
+See [this post](https://repost.aws/knowledge-center/s3-http-307-response) for more information. 
+[/note]
 
 To pass these configurations to Charmed MySQL, relate the two applications:
 ```shell

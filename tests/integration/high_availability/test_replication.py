@@ -34,7 +34,7 @@ from .high_availability_helpers import (
     clean_up_database_and_table,
     ensure_all_units_continuous_writes_incrementing,
     ensure_n_online_mysql_members,
-    high_availability_test_setup,
+    get_application_name,
     insert_data_into_mysql_and_validate_replication,
 )
 
@@ -48,16 +48,9 @@ TIMEOUT = 17 * 60
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, mysql_charm_series: str) -> None:
-    """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    await high_availability_test_setup(ops_test, mysql_charm_series)
-
-
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_exporter_endpoints(ops_test: OpsTest, highly_available_cluster) -> None:
     """Test that endpoints are running."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     application = ops_test.model.applications[mysql_application_name]
     http = urllib3.PoolManager()
 
@@ -114,11 +107,11 @@ async def test_exporter_endpoints(ops_test: OpsTest, mysql_charm_series: str) ->
         assert jmx_resp.status == 200
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 @pytest.mark.abort_on_fail
-async def test_custom_variables(ops_test: OpsTest, mysql_charm_series) -> None:
+async def test_custom_variables(ops_test: OpsTest, highly_available_cluster) -> None:
     """Query database for custom variables."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     application = ops_test.model.applications[mysql_application_name]
 
     for unit in application.units:
@@ -130,13 +123,13 @@ async def test_custom_variables(ops_test: OpsTest, mysql_charm_series) -> None:
             assert value == v, f"Variable {k} is not set to {v}"
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(3)
 @pytest.mark.abort_on_fail
 async def test_consistent_data_replication_across_cluster(
-    ops_test: OpsTest, mysql_charm_series: str
+    ops_test: OpsTest, highly_available_cluster
 ) -> None:
     """Confirm that data is replicated from the primary node to all the replicas."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    mysql_application_name = get_application_name(ops_test, "mysql")
 
     # assert that there are 3 units in the mysql cluster
     assert len(ops_test.model.applications[mysql_application_name].units) == 3
@@ -148,11 +141,11 @@ async def test_consistent_data_replication_across_cluster(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(4)
 @pytest.mark.abort_on_fail
-async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_kill_primary_check_reelection(ops_test: OpsTest, highly_available_cluster) -> None:
     """Confirm that a new primary is elected when the current primary is torn down."""
-    mysql_application_name, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    mysql_application_name = get_application_name(ops_test, "mysql")
     application = ops_test.model.applications[mysql_application_name]
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -196,12 +189,12 @@ async def test_kill_primary_check_reelection(ops_test: OpsTest, mysql_charm_seri
     await clean_up_database_and_table(ops_test, database_name, table_name)
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(5)
 @pytest.mark.abort_on_fail
-async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_scaling_without_data_loss(ops_test: OpsTest, highly_available_cluster) -> None:
     """Test that data is preserved during scale up and scale down."""
     # Insert values into test table from the primary unit
-    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    app = get_application_name(ops_test, "mysql")
     application = ops_test.model.applications[app]
 
     random_unit = application.units[0]
@@ -274,15 +267,15 @@ async def test_scaling_without_data_loss(ops_test: OpsTest, mysql_charm_series: 
         assert random_chars in output
 
 
-@pytest.mark.group(3)
-async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> None:
+@pytest.mark.group(6)
+async def test_cluster_isolation(ops_test: OpsTest, highly_available_cluster) -> None:
     """Test for cluster data isolation.
 
     This test creates a new cluster, create a new table on both cluster, write a single record with
     the application name for each cluster, retrieve and compare these records, asserting they are
     not the same.
     """
-    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    app = get_application_name(ops_test, "mysql")
     apps = [app, ANOTHER_APP_NAME]
 
     # Build and deploy secondary charm
@@ -292,7 +285,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
         charm,
         application_name=ANOTHER_APP_NAME,
         num_units=1,
-        series=mysql_charm_series,
+        base="ubuntu@22.04",
     )
     async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
@@ -306,7 +299,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
         )
 
     # retrieve connection data for each cluster
-    connection_data = dict()
+    connection_data = {}
     for application in apps:
         random_unit = ops_test.model.applications[application].units[0]
         server_config_credentials = await get_server_config_credentials(random_unit)
@@ -337,7 +330,7 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
             commit=True,
         )
 
-    result = list()
+    result = []
     # read single record from each cluster
     for application in apps:
         read_records_sql = ["SELECT id FROM test.cluster_isolation_table"]
@@ -356,17 +349,22 @@ async def test_cluster_isolation(ops_test: OpsTest, mysql_charm_series: str) -> 
     assert result[0] != result[1], "Writes from one cluster are replicated to another cluster."
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(7)
 @pytest.mark.abort_on_fail
-async def test_log_rotation(ops_test: OpsTest, mysql_charm_series: str) -> None:
+async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None:
     """Test the log rotation of text files."""
-    app, _ = await high_availability_test_setup(ops_test, mysql_charm_series)
+    app = get_application_name(ops_test, "mysql")
     unit = ops_test.model.applications[app].units[0]
 
     # Exclude slowquery log files as slowquery logs are not enabled by default
-    log_types = ["error", "general"]
-    log_files = ["error.log", "general.log"]
-    archive_directories = ["archive_error", "archive_general", "archive_slowquery"]
+    log_types = ["error", "general", "audit"]
+    log_files = ["error.log", "general.log", "audit.log"]
+    archive_directories = [
+        "archive_error",
+        "archive_general",
+        "archive_slowquery",
+        "archive_audit",
+    ]
 
     logger.info("Removing the cron file")
     await delete_file_or_directory_in_unit(ops_test, unit.name, "/etc/cron.d/flush_mysql_logs")
