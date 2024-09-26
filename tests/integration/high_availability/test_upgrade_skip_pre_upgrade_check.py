@@ -8,8 +8,7 @@ from time import sleep
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_, markers
-from ..helpers import get_leader_unit, get_primary_unit_wrapper, retrieve_database_variable_value
+from .. import markers
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
