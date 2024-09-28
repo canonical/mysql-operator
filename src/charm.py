@@ -244,6 +244,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             BACKUPS_PASSWORD_KEY,
         ]
 
+        logger.info("Generating internal user credentials")
         for required_password in required_passwords:
             if not self.get_secret("app", required_password):
                 self.set_secret(
@@ -448,7 +449,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if all_states == {"offline"} and self.unit.is_leader():
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
-                logger.debug("Attempting reboot from complete outage.")
+                logger.info("Attempting reboot from complete outage.")
                 try:
                     # reboot from outage forcing it when it a single unit
                     self._mysql.reboot_from_complete_outage()
@@ -478,7 +479,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
-            logger.debug("skip status update when not initialized")
+            logger.info("skip status update when not initialized")
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
@@ -487,7 +488,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             and not self.unit.is_leader()
         ):
             # avoid changing status while in initialising
-            logger.debug("skip status update while initialising")
+            logger.info("skip status update while initialising")
             return
 
         if not self.upgrade.idle:
@@ -772,9 +773,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 cluster_primary = self._get_primary_from_online_peer()
                 if not cluster_primary:
                     self.unit.status = WaitingStatus("waiting to get cluster primary from peers")
-                    logger.debug(
-                        "waiting: unable to retrieve the cluster primary from online peer"
-                    )
+                    logger.info("waiting: unable to retrieve the cluster primary from online peer")
                     return
 
                 if (
@@ -803,7 +802,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
                 if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):
                     self.unit.status = WaitingStatus("waiting to join the cluster.")
-                    logger.debug("waiting: cluster lock is held")
+                    logger.info("waiting: cluster lock is held")
                     return
 
                 self.unit.status = MaintenanceStatus("joining the cluster")
@@ -820,17 +819,16 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     from_instance=cluster_primary,
                     lock_instance=lock_instance,
                 )
-                logger.debug(f"Added instance {instance_address} to cluster")
             except MySQLAddInstanceToClusterError:
-                logger.debug(f"Unable to add instance {instance_address} to cluster.")
+                logger.info(f"Unable to add instance {instance_address} to cluster.")
                 return
             except MySQLLockAcquisitionError:
                 self.unit.status = WaitingStatus("waiting to join the cluster")
-                logger.debug("Waiting to join the cluster, failed to acquire lock.")
+                logger.info("Waiting to join the cluster, failed to acquire lock.")
                 return
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)
-        logger.debug(f"Instance {instance_label} is cluster member")
+        logger.info(f"Instance {instance_label} added to cluster")
 
     def _restart(self, event: EventBase) -> None:
         """Restart the MySQL service."""
