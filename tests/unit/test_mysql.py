@@ -2006,7 +2006,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
         )
         self.mysql.get_cluster_node_count(node_status=MySQLMemberState.ONLINE)
-        _run_mysqlsh_script.assert_called_with("\n".join(commands))
+        _run_mysqlsh_script.assert_called_with("\n".join(commands), timeout=30)
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_get_cluster_set_global_primary(self, _run_mysqlsh_script):
