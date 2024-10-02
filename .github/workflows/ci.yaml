@@ -76,7 +76,7 @@ jobs:
           - amd64
         include:
           - juju:
-              agent: 3.4.5  # renovate: juju-agent-pin-minor
+              agent: 3.5.4  # renovate: juju-agent-pin-minor
               allure_on_amd64: true
             architecture: arm64
           - juju:
