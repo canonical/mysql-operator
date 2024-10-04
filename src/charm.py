@@ -276,9 +276,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # the upgrade already restart the daemon
             return
 
-        # restart not required if mysqld is not running
-        mysqld_running = self._mysql.is_mysqld_running()
-
         previous_config = self.mysql_config.custom_config
         if not previous_config:
             # empty config means not initialized, skipping
@@ -298,27 +295,27 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        if self.mysql_config.keys_requires_restart(changed_config):
-            # there are static configurations in changed keys
-            logger.info("Persisting configuration changes to file")
-            # persist config to file
-            self._mysql.write_content_to_file(
-                path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
-            )
-            if mysqld_running:
-                logger.info("Configuration change requires restart")
+        logger.info("Persisting configuration changes to file")
+        # always persist config to file
+        self._mysql.write_content_to_file(
+            path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
+        )
 
-                if "loose-audit_log_format" in changed_config:
-                    # plugins are manipulated running daemon
-                    if self.config.plugin_audit_enabled:
-                        self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-                    else:
-                        self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+        if (
+            self.mysql_config.keys_requires_restart(changed_config)
+            and self._mysql.is_mysqld_running()
+        ):
+            logger.info("Configuration change requires restart")
+            if "loose-audit_log_format" in changed_config:
+                # plugins are manipulated on running daemon
+                if self.config.plugin_audit_enabled:
+                    self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                else:
+                    self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
 
-                self.on[f"{self.restart.name}"].acquire_lock.emit()
-                return
+            self.on[f"{self.restart.name}"].acquire_lock.emit()
 
-        if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
+        elif dynamic_config := self.mysql_config.filter_static_keys(changed_config):
             # if only dynamic config changed, apply it
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
