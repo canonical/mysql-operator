@@ -322,6 +322,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # if only dynamic config changed, apply it
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
+                if config not in new_config_dict:
+                    # skip removed configs
+                    continue
                 self._mysql.set_dynamic_variable(config, new_config_dict[config])
 
     def _on_start(self, event: StartEvent) -> None:
