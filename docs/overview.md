@@ -41,18 +41,20 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | Level | Path | Navlink |
 |---------|---------|-------------|
 | 1 | tutorial | [Tutorial]() |
-| 2 | t-overview | [1. Introduction](/t/9922) |
-| 2 | t-set-up | [2. Set up the environment](/t/9924) |
-| 2 | t-deploy | [3. Deploy MySQL](/t/9912) |
-| 2 | t-scale | [4. Scale replicas](/t/9920) |
-| 2 | t-manage-passwords | [5. Manage passwords](/t/9918) |
-| 2 | t-integrate | [6. Integrate applications](/t/9916) |
-| 2 | t-enable-tls | [7. Enable TLS encryption](/t/9914) |
-| 2 | t-clean-up | [8. Clean up the environment](/t/9910) |
+| 2 | t-overview | [Overview](/t/9922) |
+| 2 | t-set-up | [1. Set up the environment](/t/9924) |
+| 2 | t-deploy | [2. Deploy MySQL](/t/9912) |
+| 2 | t-scale | [3. Scale replicas](/t/9920) |
+| 2 | t-manage-passwords | [4. Manage passwords](/t/9918) |
+| 2 | t-integrate | [5. Integrate applications](/t/9916) |
+| 2 | t-enable-tls | [6. Enable TLS encryption](/t/9914) |
+| 2 | t-clean-up | [7. Clean up the environment](/t/9910) |
 | 1 | how-to | [How To]() |
 | 2 | h-setup | [Set up]() |
 | 3 | h-deploy-lxd | [Deploy on LXD](/t/11870) |
 | 3 | h-deploy-maas | [Deploy on MAAS](/t/13900) |
+| 3 | h-deploy-ec2 | [Deploy on AWS EC2](/t/15718) |
+| 3 | h-deploy-gce | [Deploy on GCE](/t/15723) |
 | 3 | h-deploy-terraform | [Deploy via Terraform](/t/14925) |
 | 3 | h-scale | [Scale replicas](/t/9904) |
 | 3 | h-enable-tls | [Enable TLS encryption](/t/9898) |
