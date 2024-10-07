@@ -545,23 +545,15 @@ name = "data-platform-helpers"
 version = "0.1.4"
 description = ""
 optional = false
-python-versions = "^3.10"
+python-versions = "*"
 files = []
 develop = false
-
-[package.dependencies]
-ops = "^2.15.0"
-tenacity = "^9.0.0"
-
-[package.extras]
-all = ["pytest_operator (==0.36.0)"]
-tests = ["pytest_operator (==0.36.0)"]
 
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-helpers.git"
-reference = "add-network-cut-restore-vm"
-resolved_reference = "4065e7e0f275e50ec9494bbfb064a49fe142b589"
+reference = "test/add-network-cut-restore-vm-2"
+resolved_reference = "3c5124089fd86121fc62fda337ffd2010412431a"
 
 [[package]]
 name = "decorator"
@@ -2062,18 +2054,17 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "tenacity"
-version = "9.0.0"
+version = "8.2.2"
 description = "Retry code until it succeeds"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.6"
 files = [
-    {file = "tenacity-9.0.0-py3-none-any.whl", hash = "sha256:93de0c98785b27fcf659856aa9f54bfbd399e29969b0621bc7f762bd441b4539"},
-    {file = "tenacity-9.0.0.tar.gz", hash = "sha256:807f37ca97d62aa361264d497b0e31e92b8027044942bfa756160d908320d73b"},
+    {file = "tenacity-8.2.2-py3-none-any.whl", hash = "sha256:2f277afb21b851637e8f52e6a613ff08734c347dc19ade928e519d7d2d8569b0"},
+    {file = "tenacity-8.2.2.tar.gz", hash = "sha256:43af037822bd0029025877f3b2d97cc4d7bb0c2991000a3d59d71517c5c969e0"},
 ]
 
 [package.extras]
-doc = ["reno", "sphinx"]
-test = ["pytest", "tornado (>=4.5)", "typeguard"]
+doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "tomli"
@@ -2357,4 +2348,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d38a8cf900fba5b767ca4fff06db92fff062be85cc95d0519ef4f3d302a1dfb6"
+content-hash = "becea7e0b87db7bf6d1be79355f74855ddedf1be7bc23e1360479ce5a7b9ecc7"
