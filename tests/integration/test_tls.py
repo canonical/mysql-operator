@@ -7,7 +7,7 @@ from time import sleep
 
 import pytest
 import yaml
-from data_platform_helpers import get_unit_ip
+from data_platform_helpers.tests_helpers.vms.ha_helpers import get_unit_ip
 from pytest_operator.plugin import OpsTest
 
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import boto3
 import pytest
-from data_platform_helpers import get_unit_ip
+from data_platform_helpers.tests_helpers.vms.ha_helpers import get_unit_ip
 from pytest_operator.plugin import OpsTest
 
 from . import juju_

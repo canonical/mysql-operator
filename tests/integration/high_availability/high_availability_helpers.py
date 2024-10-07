@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
-from data_platform_helpers import get_unit_ip
+from data_platform_helpers.tests_helpers.vms.ha_helpers import get_unit_ip
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed

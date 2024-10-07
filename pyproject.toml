@@ -7,7 +7,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.10"
 ops = "^2.8.0"
-tenacity = "8.2.2"
+tenacity = "^8.2.2"
 boto3 = "^1.28.23"
 # TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
 pyopenssl = "^24.0.0"
@@ -61,7 +61,7 @@ pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workf
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v22.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 juju = "^3.5.2.0"
 mysql-connector-python = "~8.0.33"
-tenacity = "8.2.2"
+tenacity = "^8.2.2"
 boto3 = "^1.28.11"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"

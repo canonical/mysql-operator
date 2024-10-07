@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from data_platform_helpers import (
+from data_platform_helpers.tests_helpers.vms.ha_helpers import (
     cut_network_from_unit_with_ip_change,
     get_controller_machine,
     get_unit_ip,

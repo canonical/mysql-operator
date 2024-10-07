@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
-from data_platform_helpers import get_unit_ip
+from data_platform_helpers.tests_helpers.vms.ha_helpers import get_unit_ip
 from juju.model import Model
 from juju.unit import Unit
 from mysql.connector.errors import (

@@ -4,7 +4,7 @@
 import logging
 
 import pytest
-from data_platform_helpers import get_unit_ip
+from data_platform_helpers.tests_helpers.vms.ha_helpers import get_unit_ip
 from mysql.connector.errors import OperationalError
 from pytest_operator.plugin import OpsTest
 
