@@ -8,27 +8,29 @@ from pathlib import Path
 
 import pytest
 import yaml
+from data_platform_helpers import (
+    cut_network_from_unit_with_ip_change,
+    get_controller_machine,
+    get_unit_ip,
+    is_machine_reachable_from,
+    restore_network_for_unit_with_ip_change,
+    wait_network_restore_with_ip_change,
+)
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 
 from ..helpers import (
-    cut_network_from_unit,
     execute_queries_on_unit,
-    get_controller_machine,
     get_primary_unit_wrapper,
     get_process_pid,
     get_system_user_password,
-    get_unit_ip,
     graceful_stop_server,
     is_connection_possible,
-    is_machine_reachable_from,
     is_unit_in_cluster,
-    restore_network_for_unit,
     start_server,
     unit_hostname,
-    wait_network_restore,
     write_random_chars_to_test_table,
 )
 from .high_availability_helpers import (
@@ -167,7 +169,8 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     ), f"❌ Connection to host {primary_unit_ip} is not possible"
 
     logger.info(f"Cutting network for {primary_hostname}")
-    cut_network_from_unit(primary_hostname)
+    # TODO: remove the await after the helper is made synchronous
+    await cut_network_from_unit_with_ip_change(primary_hostname)
 
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {primary_unit}:
@@ -186,10 +189,11 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     assert not is_connection_possible(config), "❌ Connection is possible after network cut"
 
     logger.info(f"Restoring network for {primary_hostname}")
-    restore_network_for_unit(primary_hostname)
+    # TODO: remove the await after the helper is made synchronous
+    await restore_network_for_unit_with_ip_change(primary_hostname)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name)
+    await wait_network_restore_with_ip_change(ops_test, primary_unit.name)
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():

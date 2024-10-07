@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
+from data_platform_helpers import get_unit_ip
 from juju.model import Model
 from juju.unit import Unit
 from mysql.connector.errors import (
@@ -379,28 +380,6 @@ async def is_unit_in_cluster(unit_name: str, action_unit: juju.unit.Unit) -> boo
     raise TimeoutError
 
 
-def cut_network_from_unit(machine_name: str) -> None:
-    """Cut network from a lxc container.
-
-    Args:
-        machine_name: lxc container hostname
-    """
-    # apply a mask (device type `none`)
-    cut_network_command = f"lxc config device add {machine_name} eth0 none"
-    subprocess.check_call(cut_network_command.split())
-
-
-def restore_network_for_unit(machine_name: str) -> None:
-    """Restore network from a lxc container.
-
-    Args:
-        machine_name: lxc container hostname
-    """
-    # remove mask from eth0
-    restore_network_command = f"lxc config device remove {machine_name} eth0"
-    subprocess.check_call(restore_network_command.split())
-
-
 async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     """Get hostname for a unit.
 
@@ -412,25 +391,6 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     """
     _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
     return raw_hostname.strip()
-
-
-@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: OpsTest, unit_name: str) -> None:
-    """Wait until network is restored.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit
-        old_ip: old registered IP address
-    """
-    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "a")
-    if return_code != 0:
-        raise Exception
-
-    juju_unit_ip = await get_unit_ip(ops_test, unit_name)
-
-    if juju_unit_ip in stdout:
-        raise Exception
 
 
 async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
@@ -494,22 +454,6 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
         except DatabaseError:
             continue
     raise ValueError("Primary unit found cannot be retrieved")
-
-
-async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
-    """Wrapper for getting unit ip.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to get the address
-    Returns:
-        The (str) ip of the unit
-    """
-    app_name = unit_name.split("/")[0]
-    unit_num = unit_name.split("/")[1]
-    status = await ops_test.model.get_status()  # noqa: F821
-    address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
-    return address
 
 
 async def get_relation_data(
@@ -677,38 +621,6 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
     # check that endpoints are the one of the application
     for read_endpoint_ip in read_only_endpoint_ips:
         assert read_endpoint_ip in app_ips
-
-
-async def get_controller_machine(ops_test: OpsTest) -> str:
-    """Return controller machine hostname.
-
-    Args:
-        ops_test: The ops test framework instance
-    Returns:
-        Controller hostname (str)
-    """
-    _, raw_controller, _ = await ops_test.juju("show-controller")
-
-    controller = yaml.safe_load(raw_controller.strip())
-
-    return [
-        machine.get("instance-id")
-        for machine in controller[ops_test.controller_name]["controller-machines"].values()
-    ][0]
-
-
-def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
-    """Test network reachability between hosts.
-
-    Args:
-        origin_machine: hostname of the machine to test connection from
-        target_machine: hostname of the machine to test connection to
-    """
-    try:
-        subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
-        return True
-    except subprocess.CalledProcessError:
-        return False
 
 
 async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit) -> str:

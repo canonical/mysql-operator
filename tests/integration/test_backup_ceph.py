@@ -9,6 +9,7 @@ from pathlib import Path
 import boto3
 import pytest
 import pytest_microceph
+from data_platform_helpers import get_unit_ip
 from pytest_operator.plugin import OpsTest
 
 from . import juju_
@@ -16,7 +17,6 @@ from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
     get_server_config_credentials,
-    get_unit_ip,
     rotate_credentials,
     scale_application,
 )

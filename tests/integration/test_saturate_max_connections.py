@@ -4,11 +4,11 @@
 import logging
 
 import pytest
+from data_platform_helpers import get_unit_ip
 from mysql.connector.errors import OperationalError
 from pytest_operator.plugin import OpsTest
 
 from .connector import create_db_connections
-from .helpers import get_unit_ip
 from .juju_ import run_action
 
 logger = logging.getLogger(__name__)
