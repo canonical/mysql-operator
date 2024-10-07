@@ -169,8 +169,7 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     ), f"❌ Connection to host {primary_unit_ip} is not possible"
 
     logger.info(f"Cutting network for {primary_hostname}")
-    # TODO: remove the await after the helper is made synchronous
-    await cut_network_from_unit_with_ip_change(primary_hostname)
+    cut_network_from_unit_with_ip_change(primary_hostname)
 
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {primary_unit}:
@@ -189,11 +188,10 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     assert not is_connection_possible(config), "❌ Connection is possible after network cut"
 
     logger.info(f"Restoring network for {primary_hostname}")
-    # TODO: remove the await after the helper is made synchronous
-    await restore_network_for_unit_with_ip_change(primary_hostname)
+    restore_network_for_unit_with_ip_change(primary_hostname)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore_with_ip_change(ops_test, primary_unit.name)
+    await wait_network_restore_with_ip_change(ops_test, primary_unit.name, primary_unit_ip)
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
