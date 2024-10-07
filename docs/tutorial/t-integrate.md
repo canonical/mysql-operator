@@ -1,24 +1,40 @@
-# Integrating your Charmed MySQL
-> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` and `juju integrate` with `juju relate` for Juju 2.9.
+> [Charmed MySQL Tutorial](/t/9922) > 5. Integrate with other applications
 
-This is part of the [Charmed MySQL Tutorial](/t/9922). Please refer to this page for more information and the overview of the content.
+# Integrate with other applications
 
-## Integrations (Relations for Juju 2.9)
-Relations, or what Juju 3.0+ documentation [describes as an Integration](https://juju.is/docs/sdk/integration), are the easiest way to create a user for MySQL in Charmed MySQL. Relations automatically create a username, password, and database for the desired user/application. As mentioned earlier in the [Access MySQL section](#access-mysql) it is a better practice to connect to MySQL via a specific user rather than the admin user.
+[Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for a Charmed MySQL application. 
 
-### Data Integrator Charm
-Before relating to a charmed application, we must first deploy our charmed application. In this tutorial we will relate to the [Data Integrator Charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users, providing support for different kinds of data platforms (e.g. MySQL, PostgreSQL, MongoDB, Kafka, etc) with a consistent, opinionated and robust user experience. In order to deploy the Data Integrator Charm we can use the command `juju deploy` we have learned above:
+Integrations automatically create a username, password, and database for the desired user/application. As mentioned in the [earlier section about accessing MySQL](/t/9912#access-mysql-via-the-mysql-client), it is better practice to connect to MySQL via a specific user instead of the `root` user.
+
+In this section, you will learn how to integrate your Charmed MySQL with another application (charmed or not) via the Data Integrator charm. 
+
+## Summary
+* [Deploy `data-integrator`](#deploy-data-integrator)
+* [Integrate with MySQL](#integrate-with-mysql)
+* [Access the integrated database](#access-the-integrated-database)
+* [Remove the user](#remove-the-user)
+
+---
+
+## Deploy `data-integrator`
+
+In this tutorial, we will relate to the [Data Integrator charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users. It automatically provides credentials and endpoints that are needed to connect with a charmed database application.
+
+ In order to deploy the Data Integrator charm we can use the command `juju deploy` we have learned above:
+
+To deploy `data-integrator`, run
 
 ```shell
 juju deploy data-integrator --config database-name=test-database
 ```
-The expected output:
+
+Example output:
 ```shell
 Located charm "data-integrator" in charm-hub, revision 13
 Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 in channel edge on jammy
 ```
 
-Checking the deployment progress using `juju status` will show you the `blocked` state for newly deployed charm:
+Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications.
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.1.6    unsupported  00:07:00+01:00
@@ -37,13 +53,16 @@ Machine  State    Address         Inst id        Series  AZ  Message
 1        started  10.234.188.214  juju-ff9064-1  jammy       Running
 4        started  10.234.188.85   juju-ff9064-4  jammy       Running
 ```
-The `blocked` state is expected due to not-yet established relation (integration) between applications.
 
-### Relate to MySQL
-Now that the Database Integrator Charm has been set up, we can relate it to MySQL. This will automatically create a username, password, and database for the Database Integrator Charm. Relate the two applications with:
+## Integrate with MySQL
+
+Now that the `data-integrator` charm has been set up, we can relate it to MySQL. This will automatically create a username, password, and database for `data-integrator`.
+
+Relate the two applications with:
 ```shell
 juju integrate data-integrator mysql
 ```
+
 Wait for `juju status --watch 1s` to show all applications/units as `active`:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
@@ -64,12 +83,12 @@ Machine  State    Address         Inst id        Series  AZ  Message
 4        started  10.234.188.85   juju-ff9064-4  jammy       Running
 ```
 
-To retrieve information such as the username, password, and database. Enter:
+To retrieve the username, password and database name, run the command
 ```shell
 juju run data-integrator/leader get-credentials
 ```
-This should output something like:
-```shell
+Example output:
+```yaml
 mysql:
   database: test-database
   endpoints: 10.234.188.135:3306
@@ -79,9 +98,10 @@ mysql:
   version: 8.0.32-0ubuntu0.22.04.2
 ok: "True"
 ```
-*Note: your hostnames, usernames, and passwords will likely be different.*
+> Note that your hostnames, usernames, and passwords will be different.
 
-### Access the related database
+## Access the integrated database
+
 Use `endpoints`, `username`, `password` from above to connect newly created database `test-database` on MySQL server:
 ```shell
 > mysql -h 10.234.188.135 -P 3306 -urelation-4 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
@@ -102,34 +122,37 @@ The newly created database `test-database` is also available on all other MySQL 
 +--------------------+
 ```
 
-When you relate two applications Charmed MySQL automatically sets up a new user and database for you.
-Please note the database name we specified when we first deployed the `data-integrator` charm: `--config database-name=test-database`.
+When you integrate two applications, Charmed MySQL automatically sets up a new user and database for you. Note the database name we specified when we first deployed the `data-integrator` charm: `--config database-name=test-database`.
 
-### Remove the user
-To remove the user, remove the relation. Removing the relation automatically removes the user that was created when the relation was created. Enter the following to remove the relation:
+## Remove the user
+To remove the user, remove the integration. Removing the integration automatically removes the user that was created when the integration was created. 
+
+To remove the integration, run the following command:
 ```shell
 juju remove-relation mysql data-integrator
 ```
 
-Now try again to connect to the same MySQL you just used in [Access the related database](#access-the-related-database):
+Try to connect to the same MySQL you just used in the previous section ([Access the related database](#access-the-related-database)):
 ```shell
 mysql -h 10.234.188.135 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
 ```
 
-This will output an error message:
+This will output an error message, since the user no longer exists.
 ```shell
 ERROR 1045 (28000): Access denied for user 'relation-5'@'_gateway.lxd' (using password: YES)
 ```
-As this user no longer exists. This is expected as `juju remove-relation mysql data-integrator` also removes the user.
-Note: data stay remain on the server at this stage!
+This is expected, as `juju remove-relation mysql-k8s data-integrator` also removes the user.
 
-Relate the the two applications again if you wanted to recreate the user:
+> **Note**: Data remains on the server at this stage.
+
+To create a user again, re-integrate the applications:
 ```shell
 juju integrate data-integrator mysql
 ```
-Re-relating generates a new user and password:
+Re-integrating generates a new user and password. Obtain these credentials as before, with the `get-credentials` action:
 ```shell
 juju run data-integrator/leader get-credentials
 ```
-You can connect to the database with this new credentials.
-From here you will see all of your data is still present in the database.
+You can connect to the database with this new credentials. From here you will see all of your data is still present in the database.
+
+> Next step: [6. Enable TLS encryption](/t/9914)
