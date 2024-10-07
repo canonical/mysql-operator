@@ -1,21 +1,38 @@
-# Scale your Charmed MySQL
+> [Charmed MySQL Tutorial](/t/9922) > 3. Scale your replicas
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
+# Scale your replicas
 
-## Adding and Removing units
+In this section, you will learn to scale your Charmed MySQL by adding or removing juju units.
 
-Charmed MySQL operator uses [MySQL InnoDB Cluster](https://dev.mysql.com/doc/refman/8.0/en/mysql-innodb-cluster-introduction.html) for scaling. Being built on MySQL [Group Replication](https://dev.mysql.com/doc/refman/8.0/en/group-replication.html), provides features such as automatic membership management, fault tolerance, automatic failover, and so on. An InnoDB Cluster usually runs in a single-primary mode, with one primary instance (read-write) and multiple secondary instances (read-only). The future versions on Charmed MySQL will take advantage of a multi-primary mode, where multiple instances are primaries. Users can even change the topology of the cluster while InnoDB Cluster is online, to ensure the highest possible availability.
+The Charmed MySQL operator uses [MySQL InnoDB Cluster](https://dev.mysql.com/doc/refman/8.0/en/mysql-innodb-cluster-introduction.html) for scaling. It is built on MySQL [Group Replication](https://dev.mysql.com/doc/refman/8.0/en/group-replication.html), providing features such as automatic membership management, fault tolerance, and automatic failover. 
 
-> **!** *Disclaimer: this tutorial hosts replicas all on the same machine, this should not be done in a production environment. To enable high availability in a production environment, replicas should be hosted on different servers to [maintain isolation](https://canonical.com/blog/database-high-availability).*
+An InnoDB Cluster usually runs in a single-primary mode, with one primary instance (read-write) and multiple secondary instances (read-only). 
 
+<!-- TODO: clarify "future" Future versions on Charmed MySQL will take advantage of a multi-primary mode, where multiple instances are primaries. Users can even change the topology of the cluster while InnoDB Cluster is online, to ensure the highest possible availability. -->
 
-### Add cluster members (replicas)
+[note type="caution"]
+**Disclaimer:** This tutorial hosts replicas all on the same machine. **This should not be done in a production environment.** 
+
+To enable high availability in a production environment, replicas should be hosted on different servers to [maintain isolation](https://canonical.com/blog/database-high-availability).
+[/note]
+
+## Summary
+* [Add replicas](#add-replicas)
+* [Remove replicas](#remove-replicas)
+
+---
+
+Currently, your deployment has only one [juju unit](https://juju.is/docs/juju/unit), known in juju as the leader unit.  For each MySQL replica, a new juju unit (non-leader) is created. All units are members of the same database cluster.
+
+## Add replicas
 You can add two replicas to your deployed MySQL application with:
 ```shell
 juju add-unit mysql -n 2
 ```
 
-You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
+You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. 
+
+You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.1.6    unsupported  23:33:55+01:00
@@ -33,9 +50,16 @@ Machine  State    Address         Inst id        Series  AZ  Message
 1        started  10.234.188.214  juju-ff9064-1  jammy       Running
 2        started  10.234.188.6    juju-ff9064-2  jammy       Running
 ```
+[note]
+The maximum number of Charmed MySQL units in a single Juju application is 9. This is a limitation of MySQL Group replication. Read more about all limitations in the [official MySQL documentation](https://dev.mysql.com/doc/refman/8.0/en/group-replication-limitations.html).
+[/note]
 
-### Remove cluster members (replicas)
-Removing a unit from the application, scales the replicas down. Before we scale down the replicas, list all the units with `juju status`, here you will see three units `mysql/0`, `mysql/1`, and `mysql/2`. Each of these units hosts a MySQL replica. To remove the replica hosted on the unit `mysql/2` enter:
+## Remove replicas
+Removing a unit from the application scales down the replicas. 
+
+Before we scale down, list all the units with `juju status`. You will see three units: `mysql/0`, `mysql/1`, and `mysql/2`. Each of these units hosts a MySQL replica. 
+
+To remove the replica hosted on the unit `mysql/2` enter:
 ```shell
 juju remove-unit mysql/2
 ```
@@ -56,6 +80,6 @@ Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
 1        started  10.234.188.214  juju-ff9064-1  jammy       Running
 ```
+<!--TODO: What about generic scaling down (without specifying which unit)?-->
 
-### Scaling limitations
-**Note**: the maximum number of Charmed MySQL units in a single Juju application is 9. It is a limitation of MySQL Group replication, read more about all limitations [here](https://dev.mysql.com/doc/refman/8.0/en/group-replication-limitations.html).
+> Next step: [4. Manage passwords](/t/9918)
