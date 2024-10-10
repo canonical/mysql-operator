@@ -50,15 +50,16 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | t-enable-tls | [6. Enable TLS encryption](/t/9914) |
 | 2 | t-clean-up | [7. Clean up the environment](/t/9910) |
 | 1 | how-to | [How To]() |
-| 2 | h-setup | [Set up]() |
-| 3 | h-deploy-lxd | [Deploy on LXD](/t/11870) |
-| 3 | h-deploy-maas | [Deploy on MAAS](/t/13900) |
-| 3 | h-deploy-ec2 | [Deploy on AWS EC2](/t/15718) |
-| 3 | h-deploy-gce | [Deploy on GCE](/t/15723) |
-| 3 | h-deploy-terraform | [Deploy via Terraform](/t/14925) |
-| 3 | h-scale | [Scale replicas](/t/9904) |
-| 3 | h-enable-tls | [Enable TLS encryption](/t/9898) |
-| 3 | h-manage-applications | [Manage client applications](/t/9902) |
+| 2 | h-setup | [Deploy]() |
+| 3 | h-deploy-lxd | [LXD](/t/11870) |
+| 3 | h-deploy-maas | [MAAS](/t/13900) |
+| 3 | h-deploy-ec2 | [AWS EC2](/t/15718) |
+| 3 | h-deploy-gce | [GCE](/t/15723) |
+| 3 | h-deploy-terraform | [Terraform](/t/14925) |
+| 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
+| 2 | h-manage-applications | [Manage client applications](/t/9902) |
+| 2 | h-scale | [Scale replicas](/t/9904) |
+| 2 | h-enable-tls | [Enable TLS encryption](/t/9898) |
 | 2 | h-backups | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9894) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10318) |
