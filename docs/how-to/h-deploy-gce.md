@@ -22,13 +22,13 @@ sudo snap install google-cloud-cli --classic
 
 Check the official the [Google Cloud (GCloud) CLI](https://cloud.google.com/sdk/docs/install)  documentation about other installation options.
 
-To check they are all correctly installed, you can run the commands demonstrated below with sample outputs:
+To check they are all correctly installed, run the commands demonstrated below with sample outputs:
 
 ```console
-~$ juju version
+> juju version
 3.5.4-genericlinux-amd64
 
-~$ gcloud --version
+> gcloud --version
 Google Cloud SDK 474.0.0
 ...
 ```
@@ -58,7 +58,7 @@ created key [aaaaaaa....aaaaaaa] of type [json] as [sa-private-key.json] for [ju
 
 ## Bootstrap Juju controller on GCE
 
-> **Note**: move newly exported GCloud jsonfile into SNAP accessible folder due to the known Juju [issue](https://bugs.launchpad.net/juju/+bug/2007575).
+It is necessary to move the newly exported GCloud json file into a SNAP-accessible folder due to a known Juju [issue](https://bugs.launchpad.net/juju/+bug/2007575).
 ```shell
 sudo mv sa-private-key.json /var/snap/juju/common/sa-private-key.json
 sudo chmod a+r /var/snap/juju/common/sa-private-key.json
@@ -84,7 +84,7 @@ Path: /var/snap/juju/common/sa-private-key.json
 Credential "juju-gce-account" added locally for cloud "google".
 ```
 
-Bootstrap Juju controller ([check all supported configuration options](https://juju.is/docs/juju/google-gce)):
+Bootstrap a Juju controller ([check all supported configuration options](https://juju.is/docs/juju/google-gce)):
 ```shell
 juju bootstrap google gce
 ```
@@ -173,8 +173,8 @@ and for newer Juju 3+ use:
 juju run data-integrator/leader get-credentials
 ```
 
-The output example:
-```shell
+Output example:
+```yaml
 mysql:
   data: '{"database": "test123", "external-node-connectivity": "true", "requested-secrets":
     "[\"username\", \"password\", \"tls\", \"tls-ca\", \"uris\"]"}'
@@ -205,12 +205,12 @@ From here you can [use/scale/backup/restore/refresh](/t/9922) your newly deploye
 
 ## Expose database (optional)
 
-If necessary to access DB from outside of GCloud (warning: [opening ports to public is risky](https://www.beyondtrust.com/blog/entry/what-is-an-open-port-what-are-the-security-implications)) open the GCloud firewall using the simple [juju expose](https://juju.is/docs/juju/juju-expose) functionality: 
+To access the database from outside of GCloud (warning: [opening ports to public is risky](https://www.beyondtrust.com/blog/entry/what-is-an-open-port-what-are-the-security-implications)) open the GCloud firewall using the simple [juju expose](https://juju.is/docs/juju/juju-expose) functionality: 
 ```shell
 juju expose mysql
 ```
 
-Once exposed, you can connect your database using the same credentials as above (Important: this time use the GCE Public IP assigned to the MySQL instance):
+Once exposed, you can connect your database using the same credentials as above. **Important**: this time, use the GCE Public IP assigned to the MySQL instance:
 ```shell
 > juju status mysql
 ...
@@ -231,7 +231,7 @@ mysql> show databases;
 3 rows in set (0.13 sec)
 ```
 
-To close the public access run:
+To close public access, run:
 ```shell
 juju unexpose mysql
 ```
@@ -241,7 +241,8 @@ juju unexpose mysql
 Always clean GCE resources that are no longer necessary -  they could be costly!
 [/note]
 
-To destroy the Juju controller and remove GCE instance (warning: all your data will be permanently removed):
+To destroy the Juju controller and remove GCE instance, run: 
+>**Warning**: all your data will be permanently removed
 ```shell
 > juju controllers
 Controller  Model    User   Access     Cloud/Region     Models  Nodes    HA  Version
@@ -277,7 +278,7 @@ Remove GCloud credentials from Juju:
 > juju remove-credential google juju-gce-account
 ```
 
-Finally, remove GCloud jsonfile user credentials (to avoid forgetting and leaking):
+Finally, remove the GCloud json file user credentials (to avoid forgetting and leaking):
 ```shell
 rm -f /var/snap/juju/common/sa-private-key.json
 ```
