@@ -57,41 +57,51 @@ This section contains some technical details about the charm's contents and depe
 
 If you are jumping over several stable revisions, check [previous release notes][All releases] before upgrading.
 
-### Requirements
-**Important:** This release of Charmed MySQL requires Juju `v.3.4.3` or `3.5.2+`. See the guide [How to upgrade Juju for a new database revision].
+## Requirements and compatibility
+This charm revision features the following changes in dependencies:
+* (increased) MySQL version `v8.0.37`
+
+> This release of Charmed MySQL requires Juju `v.3.4.3` or `3.5.2+`. See the guide [How to upgrade Juju for a new database revision].
 
 See the [system requirements] page for more details about software and hardware prerequisites.
 
-### Packaging
-This charm is based on the [`charmed-mysql` snap] Revision [113/114][snap rev113/114]. It packages:
-- mysql-server-8.0 `v8.0.37`
-  - [8.0.37-0ubuntu0.22.04.1]
-- mysql-router `v8.0.37`
-  - [8.0.37-0ubuntu0.22.04.1]
-- mysql-shell `v8.0.37`
-  - [8.0.37+dfsg-0ubuntu0.22.04.1~ppa3]
-- prometheus-mysqld-exporter `v0.14.0`
-  - [0.14.0-0ubuntu0.22.04.1~ppa2]
-- prometheus-mysqlrouter-exporter `v5.0.1`
-  - [5.0.1-0ubuntu0.22.04.1~ppa1]
-- percona-xtrabackup `v8.0.35`
-  - [8.0.35-31-0ubuntu0.22.04.1~ppa3]
+### Integration tests
+Below are the charm integrations tested with this revision on different Juju environments and architectures:
+* Juju `v2.9.49` on `amd64`
+* Juju  `v3.4.4` on `amd64` and `arm64`
 
-### Libraries and interfaces
-* **mysql `v0`**
-  * See the API reference in the [Libraries tab]
-* **grafana_agent `v0`** for integration with Grafana 
-    * Implements  `cos_agent` interface
-* **rolling_ops `v0`** for rolling operations across units 
-    * Implements `rolling_op` interface
-* **tempo_k8s `v1`, `v2`** for integration with Tempo charm
-    * Implements `tracing` interface
-* **tls_certificates_interface `v2`** for integration with TLS charms
-    * Implements `tls-certificates` interface
+**Juju `v2.9.49` on `amd64`:**
+
+| Software | Version | |
+|-----|-----|-----|
+| [tls-certificates-operator] | `rev 22`, `legacy/stable` | 
+
+**Juju `v3.4.4` on `amd64` and `arm64`:**
+| Software | Version | |
+|-----|-----|-----|
+| [self-signed-certificates] | `rev 155`, `latest/stable` | 
+
+**All:**
+| Software | Version |  |
+|-----|-----|-----|
+| [lxd] | `5.12/stable` | |
+| [landscape-client] | `rev69` | |
+| [ubuntu-advantage] | `rev95` | |
+| [s3-integrator] | `rev31` | |
+| [mysql-test-app] |  `0.0.2` | |
 
 See the [`/lib/charms` directory on GitHub] for a full list of supported libraries.
 
 See the [Integrations tab] for a full list of supported integrations/interfaces/endpoints.
+
+### Packaging
+This charm is based on the [`charmed-mysql` snap] Revision [113/114][snap rev113/114]. It packages:
+- mysql-server-8.0: [8.0.37-0ubuntu0.22.04.1]
+- mysql-router `v8.0.37`: [8.0.37-0ubuntu0.22.04.1]
+- mysql-shell `v8.0.37`: [8.0.37+dfsg-0ubuntu0.22.04.1~ppa3]
+- prometheus-mysqld-exporter `v0.14.0`: [0.14.0-0ubuntu0.22.04.1~ppa2]
+- prometheus-mysqlrouter-exporter `v5.0.1`: [5.0.1-0ubuntu0.22.04.1~ppa1]
+- percona-xtrabackup `v8.0.35`: [8.0.35-31-0ubuntu0.22.04.1~ppa3]
 
 ## Contact us
   
@@ -112,6 +122,17 @@ Charmed MySQL is an open source project that warmly welcomes community contribut
 [Libraries tab]: https://charmhub.io/mysql/libraries
 
 [`/lib/charms` directory on GitHub]: https://github.com/canonical/mysql-operator/tree/main/lib/charms
+
+[juju]: https://juju.is/docs/juju/
+[lxd]: https://documentation.ubuntu.com/lxd/en/latest/
+[data-integrator]: https://charmhub.io/data-integrator
+[s3-integrator]: https://charmhub.io/s3-integrator
+[microk8s]: https://charmhub.io/microk8s
+[tls-certificates-operator]: https://charmhub.io/tls-certificates-operator
+[self-signed-certificates]: https://charmhub.io/self-signed-certificates
+[mysql-test-app]: https://charmhub.io/mysql-test-app
+[landscape-client]: https://charmhub.io/landscape-client
+[ubuntu-advantage]: https://charmhub.io/ubuntu-advantage
 
 [snap rev113/114]: https://github.com/canonical/charmed-mysql-snap/releases/tag/rev114
 [`charmed-mysql` snap]: https://snapcraft.io/charmed-mysql

@@ -1,7 +1,7 @@
 # Charmed MySQL Documentation
 
 [note type="positive"]
-This is **[IAAS/VM](https://canonical.com/data/docs)** operator. To deploy in **[K8s](https://canonical.com/data/docs)**, use [Charmed MySQL K8s](https://charmhub.io/postgresql-k8s).
+This is **[IAAS/VM](https://canonical.com/data/docs)** operator. To deploy in **[K8s](https://canonical.com/data/docs)**, use [Charmed MySQL K8s](https://charmhub.io/mysql-k8s).
 [/note]
 
 The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/).
@@ -50,25 +50,27 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | t-enable-tls | [6. Enable TLS encryption](/t/9914) |
 | 2 | t-clean-up | [7. Clean up the environment](/t/9910) |
 | 1 | how-to | [How To]() |
-| 2 | h-setup | [Set up]() |
-| 3 | h-deploy-lxd | [Deploy on LXD](/t/11870) |
-| 3 | h-deploy-maas | [Deploy on MAAS](/t/13900) |
-| 3 | h-deploy-ec2 | [Deploy on AWS EC2](/t/15718) |
-| 3 | h-deploy-gce | [Deploy on GCE](/t/15723) |
-| 3 | h-deploy-terraform | [Deploy via Terraform](/t/14925) |
-| 3 | h-scale | [Scale replicas](/t/9904) |
-| 3 | h-enable-tls | [Enable TLS encryption](/t/9898) |
-| 3 | h-manage-applications | [Manage client applications](/t/9902) |
+| 2 | h-setup | [Deploy]() |
+| 3 | h-deploy-lxd | [LXD](/t/11870) |
+| 3 | h-deploy-maas | [MAAS](/t/13900) |
+| 3 | h-deploy-ec2 | [AWS EC2](/t/15718) |
+| 3 | h-deploy-gce | [GCE](/t/15723) |
+| 3 | h-deploy-terraform | [Terraform](/t/14925) |
+| 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
+| 2 | h-integrate| [Integrate with another application](/t/9902) |
+| 2 | h-external-access | [External access](/t/15801) |
+| 2 | h-scale | [Scale replicas](/t/9904) |
+| 2 | h-enable-tls | [Enable TLS](/t/9898) |
 | 2 | h-backups | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9894) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10318) |
-| 3 | h-create-backup | [Create a backups](/t/9896) |
+| 3 | h-create-backup | [Create a backup](/t/9896) |
 | 3 | h-restore-backup | [Restore a backup](/t/9908) |
 | 3 | h-migrate-cluster| [Migrate a cluster](/t/9906) |
 | 2 | h-monitoring | [Monitoring (COS)]() |
 | 3 | h-enable-monitoring | [Enable monitoring](/t/9900) |
+| 3 | h-enable-alert-rules | [Enable alert rules](/t/15486) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14350) |
-| 3 | h-enable-alert-rules | [Enable Alert Rules](/t/15486) |
 | 2 | h-upgrade | [Upgrade]() |
 | 3 | h-upgrade-intro | [Overview](/t/11745) |
 | 3 | h-upgrade-juju | [Upgrade Juju](/t/14325) |
@@ -76,9 +78,8 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-rollback-major | [Perform a major rollback](/t/11747) |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/11748) |
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/11749) |
-| 2 | h-integrate-your-charm | [Integrate with your charm]() |
-| 3 | h-integrate-intro | [Intro](/t/11889) |
-| 3 | h-integrate-db-with-your-charm | [Integrate a database with your charm](/t/11890) |
+| 2 | h-development| [Development](/t/11889) |
+| 3 | h-development-integrate | [Integrate a database with your charm](/t/11890) |
 | 3 | h-migrate-mysqldump | [Migrate data via mysqldump](/t/11958) |
 | 3 | h-migrate-mydumper | [Migrate data via mydumper](/t/11988) |
 | 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12008) |
@@ -91,8 +92,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-async-removal | [Removal](/t/14174) |
 | 2 | h-contribute | [Contribute](/t/14654) |
 | 1 | reference | [Reference]() |
-| 2 | r-releases | [Release Notes]() |
-| 3 | r-all-releases | [All releases](/t/11881) |
+| 2 | r-releases | [Release Notes](/t/11881) |
 | 3 | r-revision-274-275 | [Revision 274/275](/t/15275) |
 | 3 | r-revision-240 | [Revision 240](/t/14071) |
 | 3 | r-revision-196 | [Revision 196](/t/11883) |
