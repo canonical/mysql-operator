@@ -729,7 +729,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.unit.reboot(now=True)
 
         # Safeguard if receiving on start after unit initialization
-        if self.unit_initialized:
+        if self._mysql.is_data_dir_initialised():
             logger.debug("Delegate status update for start handler on initialized unit.")
             self._on_update_status(None)
             return False

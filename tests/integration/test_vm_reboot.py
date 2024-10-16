@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+from subprocess import run
 from time import sleep
 
 import pytest
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+SLEEP_WAIT = 5
 
 
 @pytest.mark.group(1)
@@ -36,8 +38,10 @@ async def test_reboot_1_of_3_units(ops_test: OpsTest) -> None:
     unit = app.units[0]
 
     logger.info(f"Rebooting single {unit.name}")
-    await unit.run("sudo reboot")
-    sleep(10)
+    _machine_restart(unit.machine.hostname)
+    logger.info("Sleep to allow juju status change")
+    sleep(SLEEP_WAIT)
+    logger.info("Waiting for the application to become idle")
     async with ops_test.fast_forward("30s"):
         await ops_test.model.wait_for_idle(
             apps=[app_name],
@@ -55,8 +59,10 @@ async def test_reboot_2_of_3_units(ops_test: OpsTest) -> None:
 
     for unit in app.units[:2]:
         logger.info(f"Rebooting {unit.name}")
-        await unit.run("sudo reboot")
-    sleep(10)
+        _machine_restart(unit.machine.hostname)
+    logger.info("Sleep to allow juju status change")
+    sleep(SLEEP_WAIT)
+    logger.info("Waiting for the application to become idle")
     async with ops_test.fast_forward("30s"):
         await ops_test.model.wait_for_idle(
             apps=[app_name],
@@ -74,11 +80,18 @@ async def test_reboot_3_of_3_units(ops_test: OpsTest) -> None:
 
     for unit in app.units:
         logger.info(f"Rebooting {unit.name}")
-        await unit.run("sudo reboot")
-    sleep(10)
+        _machine_restart(unit.machine.hostname)
+    logger.info("Sleep to allow juju status change")
+    sleep(SLEEP_WAIT)
+    logger.info("Waiting for the application to become idle")
     async with ops_test.fast_forward("30s"):
         await ops_test.model.wait_for_idle(
             apps=[app_name],
             status="active",
             timeout=15 * 60,
         )
+
+
+def _machine_restart(machine_name: str) -> None:
+    """Restart the machine."""
+    run(["lxc", "restart", machine_name], check=True)
