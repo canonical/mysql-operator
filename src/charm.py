@@ -724,11 +724,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # immediate reboot will make juju re-run the hook
             self.unit.reboot(now=True)
 
+        if not self.mysql_config.custom_config:
+            # empty config mean start never ran, skip next checks
+            return True
+
         # Safeguard if receiving on start after unit initialization
-        if self._mysql.is_data_dir_initialised():
-            logger.debug("Delegate status update for start handler on initialized unit.")
-            self._on_update_status(None)
-            return False
+        # with retries to allow time for mysqld startup
+        for _ in range(6):
+            if self.unit_initialized:
+                logger.debug("Delegate status update for start handler on initialized unit.")
+                self._on_update_status(None)
+                return False
+            logger.debug("mysqld not started yet. Retrying check")
+            sleep(5)
 
         return True
 
