@@ -14,7 +14,7 @@ from typing import Optional
 import ops
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider, charm_tracing_config
 from charms.mysql.v0.async_replication import (
     MySQLAsyncReplicationConsumer,
     MySQLAsyncReplicationOffer,
@@ -41,8 +41,7 @@ from charms.mysql.v0.mysql import (
 )
 from charms.mysql.v0.tls import MySQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -89,7 +88,6 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
     TRACING_PROTOCOL,
-    TRACING_RELATION_NAME,
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
@@ -178,6 +176,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             metrics_rules_dir="./src/alert_rules/prometheus",
             logs_rules_dir="./src/alert_rules/loki",
             log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
+            tracing_protocols=[TRACING_PROTOCOL],
         )
         self.framework.observe(
             self.on[COS_AGENT_RELATION_NAME].relation_created, self._on_cos_agent_relation_created
@@ -201,9 +200,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.replication_offer = MySQLAsyncReplicationOffer(self)
         self.replication_consumer = MySQLAsyncReplicationConsumer(self)
 
-        self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
-        )
+        self.tracing_endpoint_config, _ = charm_tracing_config(self._grafana_agent, None)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -276,9 +273,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # the upgrade already restart the daemon
             return
 
-        # restart not required if mysqld is not running
-        mysqld_running = self._mysql.is_mysqld_running()
-
         previous_config = self.mysql_config.custom_config
         if not previous_config:
             # empty config means not initialized, skipping
@@ -298,30 +292,33 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        if self.mysql_config.keys_requires_restart(changed_config):
-            # there are static configurations in changed keys
-            logger.info("Persisting configuration changes to file")
-            # persist config to file
-            self._mysql.write_content_to_file(
-                path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
-            )
-            if mysqld_running:
-                logger.info("Configuration change requires restart")
+        logger.info("Persisting configuration changes to file")
+        # always persist config to file
+        self._mysql.write_content_to_file(
+            path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
+        )
 
-                if "loose-audit_log_format" in changed_config:
-                    # plugins are manipulated running daemon
-                    if self.config.plugin_audit_enabled:
-                        self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-                    else:
-                        self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+        if (
+            self.mysql_config.keys_requires_restart(changed_config)
+            and self._mysql.is_mysqld_running()
+        ):
+            logger.info("Configuration change requires restart")
+            if "loose-audit_log_format" in changed_config:
+                # plugins are manipulated on running daemon
+                if self.config.plugin_audit_enabled:
+                    self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                else:
+                    self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
 
-                self.on[f"{self.restart.name}"].acquire_lock.emit()
-                return
+            self.on[f"{self.restart.name}"].acquire_lock.emit()
 
-        if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
+        elif dynamic_config := self.mysql_config.filter_static_keys(changed_config):
             # if only dynamic config changed, apply it
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
+                if config not in new_config_dict:
+                    # skip removed configs
+                    continue
                 self._mysql.set_dynamic_variable(config, new_config_dict[config])
 
     def _on_start(self, event: StartEvent) -> None:
@@ -570,8 +567,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     @property
     def tracing_endpoint(self) -> Optional[str]:
         """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
+        return self.tracing_endpoint_config
 
     @property
     def _mysql(self):
