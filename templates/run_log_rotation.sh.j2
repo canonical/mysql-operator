@@ -1,0 +1,13 @@
+#!/bin/bash
+
+LOG_PATH="{{ log_path }}"
+
+# touch files to ensure flush runs
+{% for log in enabled_log_files %}
+[[ -f "${LOG_PATH}/{{ log }}.log" ]] || touch "${LOG_PATH}/{{ log }}.log"
+{% endfor %}
+
+logrotate -f {{ logrotate_conf }}
+
+# vim: set filetype=sh
+
