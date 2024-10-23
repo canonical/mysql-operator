@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import typing
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import jinja2
 from charms.mysql.v0.mysql import (
@@ -280,29 +280,51 @@ class MySQL(MySQLBase):
             content=content_str,
         )
 
-    def setup_logrotate_and_cron(self) -> None:
-        """Create and write the logrotate config file."""
+    def setup_logrotate_and_cron(self, enabled_log_files: Iterable) -> None:
+        """Setup log rotation configuration for text files.
+
+        Args:
+            enabled_log_files: a iterable of enabled text logs
+        """
         logger.debug("Creating logrotate config file")
+        _LOGROTATE_CONFIG_PATH = "/etc/logrotate.d/flush_mysql_logs"
+        _LOGROTATE_SCRIPT_PATH = f"{self.charm.charm_dir}/logrotation.sh"
+        _LOGROTATE_CRON_PATH = "/etc/cron.d/flush_mysql_logs"
+        _LOG_DIR = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql"
 
         with open("templates/logrotate.j2", "r") as file:
             template = jinja2.Template(file.read())
 
-        rendered = template.render(
+        logrotate_conf_content = template.render(
             system_user=MYSQL_SYSTEM_USER,
-            snap_common_directory=CHARMED_MYSQL_COMMON_DIRECTORY,
+            log_dir=_LOG_DIR,
             charm_directory=self.charm.charm_dir,
             unit_name=self.charm.unit.name,
+            enabled_log_files=enabled_log_files,
         )
 
-        with open("/etc/logrotate.d/flush_mysql_logs", "w") as file:
-            file.write(rendered)
-
-        cron = (
-            "* 1-23 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
-            "1-59 0 * * * root logrotate -f /etc/logrotate.d/flush_mysql_logs\n"
+        self.write_content_to_file(
+            _LOGROTATE_CONFIG_PATH, logrotate_conf_content, owner="root", permission=0o644
         )
-        with open("/etc/cron.d/flush_mysql_logs", "w") as file:
-            file.write(cron)
+
+        with open("templates/run_log_rotation.sh.j2", "r") as file:
+            template = jinja2.Template(file.read())
+
+        logrotation_script_content = template.render(
+            log_path=f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql",
+            enabled_log_files=enabled_log_files,
+            logrotate_conf=_LOGROTATE_CONFIG_PATH,
+        )
+
+        self.write_content_to_file(
+            _LOGROTATE_SCRIPT_PATH, logrotation_script_content, permission=0o550
+        )
+
+        cron_content = (
+            f"* 1-23 * * * root {_LOGROTATE_SCRIPT_PATH}\n"
+            f"1-59 0 * * * root {_LOGROTATE_SCRIPT_PATH}\n"
+        )
+        self.write_content_to_file(_LOGROTATE_CRON_PATH, cron_content, owner="root")
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
