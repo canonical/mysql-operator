@@ -287,24 +287,24 @@ class MySQL(MySQLBase):
             enabled_log_files: a iterable of enabled text logs
         """
         logger.debug("Creating logrotate config file")
-        _LOGROTATE_CONFIG_PATH = "/etc/logrotate.d/flush_mysql_logs"
-        _LOGROTATE_SCRIPT_PATH = f"{self.charm.charm_dir}/logrotation.sh"
-        _LOGROTATE_CRON_PATH = "/etc/cron.d/flush_mysql_logs"
-        _LOG_DIR = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql"
+        config_path = "/etc/logrotate.d/flush_mysql_logs"
+        script_path = f"{self.charm.charm_dir}/logrotation.sh"
+        cron_path = "/etc/cron.d/flush_mysql_logs"
+        logs_dir = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql"
 
         with open("templates/logrotate.j2", "r") as file:
             template = jinja2.Template(file.read())
 
         logrotate_conf_content = template.render(
             system_user=MYSQL_SYSTEM_USER,
-            log_dir=_LOG_DIR,
+            log_dir=logs_dir,
             charm_directory=self.charm.charm_dir,
             unit_name=self.charm.unit.name,
             enabled_log_files=enabled_log_files,
         )
 
         self.write_content_to_file(
-            _LOGROTATE_CONFIG_PATH, logrotate_conf_content, owner="root", permission=0o644
+            config_path, logrotate_conf_content, owner="root", permission=0o644
         )
 
         with open("templates/run_log_rotation.sh.j2", "r") as file:
@@ -313,18 +313,13 @@ class MySQL(MySQLBase):
         logrotation_script_content = template.render(
             log_path=f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql",
             enabled_log_files=enabled_log_files,
-            logrotate_conf=_LOGROTATE_CONFIG_PATH,
+            logrotate_conf=config_path,
         )
 
-        self.write_content_to_file(
-            _LOGROTATE_SCRIPT_PATH, logrotation_script_content, permission=0o550
-        )
+        self.write_content_to_file(script_path, logrotation_script_content, permission=0o550)
 
-        cron_content = (
-            f"* 1-23 * * * root {_LOGROTATE_SCRIPT_PATH}\n"
-            f"1-59 0 * * * root {_LOGROTATE_SCRIPT_PATH}\n"
-        )
-        self.write_content_to_file(_LOGROTATE_CRON_PATH, cron_content, owner="root")
+        cron_content = f"* 1-23 * * * root {script_path}\n" f"1-59 0 * * * root {script_path}\n"
+        self.write_content_to_file(cron_path, cron_content, owner="root")
 
     def reset_root_password_and_start_mysqld(self) -> None:
         """Reset the root user password and start mysqld."""
