@@ -1,4 +1,4 @@
-# Charmed MySQL Documentation
+# Charmed MySQL documentation
 
 [note type="positive"]
 This is **[IAAS/VM](https://canonical.com/data/docs)** operator. To deploy in **[K8s](https://canonical.com/data/docs)**, use [Charmed MySQL K8s](https://charmhub.io/mysql-k8s).
@@ -55,6 +55,8 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-deploy-maas | [MAAS](/t/13900) |
 | 3 | h-deploy-ec2 | [AWS EC2](/t/15718) |
 | 3 | h-deploy-gce | [GCE](/t/15723) |
+| 3 | h-deploy-azure | [Azure](/t/15859) |
+| 3 | h-deploy-multi-az | [Multi-AZ](/t/15823) |
 | 3 | h-deploy-terraform | [Terraform](/t/14925) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
 | 2 | h-integrate| [Integrate with another application](/t/9902) |
@@ -70,6 +72,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | h-monitoring | [Monitoring (COS)]() |
 | 3 | h-enable-monitoring | [Enable monitoring](/t/9900) |
 | 3 | h-enable-alert-rules | [Enable alert rules](/t/15486) |
+| 4 | r-alert-rules | [Alert rules](/t/15839) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14350) |
 | 2 | h-upgrade | [Upgrade]() |
 | 3 | h-upgrade-intro | [Overview](/t/11745) |
@@ -101,6 +104,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | r-testing | [Testing](/t/11770) |
 | 2 | r-profiles | [Profiles](/t/11973) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/15481) |
+| 2 | r-alert-rules | [Alert rules](/t/15839) |
 | 2 | r-contacts | [Contacts](/t/11867) |
 | 1 | explanation | [Explanation]() |
 | 2 | e-architecture | [Architecture](/t/11756) |
