@@ -1,0 +1,164 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:675 Connecting to existing model localhost-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:mysql-0
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/focal/keystone-689
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/mysql-router-257
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/focal/keystone-689
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/mysql-router-257
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.5.4    unsupported  01:57:11Z
+
+App                    Version          Status  Scale  Charm         Channel      Rev  Exposed  Message
+keystone               21.0.1           active      2  keystone      yoga/stable  689  no       Application Ready
+keystone-mysql-router  8.0.39           active      2  mysql-router  8.0/stable   257  no       Unit is ready
+mysql                  8.0.37-0ubun...  active      1  mysql                        0  no       
+
+Unit                        Workload  Agent  Machine  Public address  Ports           Message
+keystone/0*                 active    idle   1        10.121.100.247  5000/tcp        Unit is ready
+  keystone-mysql-router/0*  active    idle            10.121.100.247                  Unit is ready
+keystone/1                  active    idle   2        10.121.100.40   5000/tcp        Unit is ready
+  keystone-mysql-router/1   active    idle            10.121.100.40                   Unit is ready
+mysql/0*                    active    idle   0        10.121.100.158  3306,33060/tcp  Primary
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.121.100.158  juju-e43091-0  ubuntu@22.04      Running
+1        started  10.121.100.247  juju-e43091-1  ubuntu@20.04      Running
+2        started  10.121.100.40   juju-e43091-2  ubuntu@20.04      Running
+3        stopped  10.121.100.59   juju-e43091-3  ubuntu@20.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:33:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:33:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:33:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:33:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:33:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-keystone-0: 01:33:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:34:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:34:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-keystone-1: 01:34:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-keystone-mysql-router-0: 01:39:55 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-0: 01:40:25 ERROR unit.keystone/0.juju-log Key repository setup failed, will retry in config-changed hook: Command '['sudo', '-u', 'keystone', 'keystone-manage', 'credential_migrate']' returned non-zero exit status 1.
+unit-keystone-mysql-router-0: 01:40:46 ERROR unit.keystone-mysql-router/0.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:40:53 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:01 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:41:02 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:14 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:21 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:31 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:39 ERROR unit.keystone-mysql-router/0.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:40 ERROR unit.keystone-mysql-router/0.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:42 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:43 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:45 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:41:45 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:41:52 ERROR unit.keystone-mysql-router/1.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:56 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:41:58 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:00 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:10 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:19 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:25 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:34 ERROR unit.keystone-mysql-router/1.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:42 ERROR unit.keystone-mysql-router/1.juju-log shared-db:4: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:42:51 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:00 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:43:01 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:43:12 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:14 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:43:14 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:14 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Failed to connect to database due to '(2003, "Can't connect to remote MySQL server")'
+unit-keystone-mysql-router-0: 01:43:15 ERROR unit.keystone-mysql-router/0.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:32 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:43:35 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:44 ERROR unit.keystone-mysql-router/1.juju-log db-router:5: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:43:53 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:44:34 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:45:03 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:45:40 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+machine-3: 01:45:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:45:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-keystone-0: 01:45:52 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:45:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:45:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-keystone-1: 01:45:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-keystone-mysql-router-1: 01:46:15 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:46:32 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:47:24 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:47:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-another-keystone-mysql-router-1: 01:47:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-keystone-mysql-router-0: 01:47:34 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:48:20 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:48:35 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:49:18 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:49:34 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:50:15 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:50:18 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:51:09 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:51:17 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:52:10 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:52:22 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:52:54 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:52:56 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:52:59 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-0: 01:53:26 ERROR unit.another-keystone/0.juju-log Key repository setup failed, will retry in config-changed hook: Command '['sudo', '-u', 'keystone', 'keystone-manage', 'credential_migrate']' returned non-zero exit status 1.
+unit-keystone-mysql-router-0: 01:53:29 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:53:43 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:53:49 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:53:51 ERROR unit.another-keystone-mysql-router/0.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:53:56 ERROR unit.another-keystone-mysql-router/1.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:02 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:06 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:54:08 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:11 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:19 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:24 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:54:27 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:27 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:33 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:39 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:45 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:47 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:49 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:50 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:52 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:53 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:53 ERROR unit.another-keystone-mysql-router/1.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:54 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:55 ERROR unit.another-keystone-mysql-router/1.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:56 ERROR unit.another-keystone-mysql-router/0.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:57 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:58 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:54:59 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:54:59 ERROR unit.another-keystone-mysql-router/0.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:55:00 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Failed to connect to database due to '(2003, "Can't connect to remote MySQL server")'
+unit-another-keystone-mysql-router-0: 01:55:01 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:55:03 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:55:03 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Failed to connect to database due to '(2003, "Can't connect to remote MySQL server")'
+unit-keystone-mysql-router-1: 01:55:08 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:55:12 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:55:25 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:55:28 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:56:03 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:14 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:17 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:28 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-0: 01:56:31 ERROR unit.keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:38 ERROR unit.another-keystone-mysql-router/0.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:39 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:48 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:49 ERROR unit.another-keystone-mysql-router/1.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:56 ERROR unit.another-keystone-mysql-router/0.juju-log db-router:8: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:57 ERROR unit.another-keystone-mysql-router/0.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:57 ERROR unit.another-keystone-mysql-router/1.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-0: 01:56:58 ERROR unit.another-keystone-mysql-router/0.juju-log Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:58 ERROR unit.another-keystone-mysql-router/1.juju-log shared-db:7: Unable to find implementation for relation: requires of juju-info
+unit-another-keystone-mysql-router-1: 01:56:59 ERROR unit.another-keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+unit-keystone-mysql-router-1: 01:57:07 ERROR unit.keystone-mysql-router/1.juju-log Unable to find implementation for relation: requires of juju-info
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
