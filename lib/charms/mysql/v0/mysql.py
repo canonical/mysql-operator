@@ -2471,7 +2471,7 @@ class MySQLBase(ABC):
             "    session.run_sql('STOP GROUP_REPLICATION')",
         )
         try:
-            logger.debug("Stoping Group Replication for unit")
+            logger.debug("Stopping Group Replication for unit")
             self._run_mysqlsh_script("\n".join(stop_gr_command))
         except MySQLClientError:
             logger.warning("Failed to stop Group Replication for unit")
