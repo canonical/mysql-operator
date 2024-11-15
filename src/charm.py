@@ -657,6 +657,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+        self._mysql.install_plugins(["binlog_utils_udf"])
 
         # ensure hostname can be resolved
         self.hostname_resolution.update_etc_hosts(None)
