@@ -80,7 +80,7 @@ jobs:
               allure_on_amd64: true
             architecture: arm64
           - juju:
-              snap_channel: 3.6/beta
+              snap_channel: 3.6/candidate
               allure_on_amd64: false
             architecture: arm64
     name: Integration | ${{ matrix.juju.agent || matrix.juju.snap_channel }} | ${{ matrix.architecture }}
