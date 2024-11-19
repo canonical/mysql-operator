@@ -1,0 +1,10 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:64 Build charm locally
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:67 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:75 Wait (120s) for rolling restart OR continue to writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:343 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:485 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=3067 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=3228 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=3229 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=3229 on unit mysql/2
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=3391 on unit mysql/2
