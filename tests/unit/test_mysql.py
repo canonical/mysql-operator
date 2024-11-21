@@ -873,7 +873,7 @@ class TestMySQLBase(unittest.TestCase):
         self.assertEqual(error.message, "Error message")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_users_for_unit(self, _run_mysqlsh_script):
+    def test_delete_users_for_unit_failure(self, _run_mysqlsh_script):
         """Test failure to delete users for unit."""
         _run_mysqlsh_script.side_effect = MySQLClientError
 
