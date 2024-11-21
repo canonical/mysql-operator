@@ -419,6 +419,10 @@ class MySQLPluginInstallError(Error):
     """Exception raised when there is an issue installing a MySQL plugin."""
 
 
+class MySQLGetGroupReplicationIDError(Error):
+    """Exception raised when there is an issue acquiring current current group replication id."""
+
+
 @dataclasses.dataclass
 class RouterUser:
     """MySQL Router user."""
@@ -3110,6 +3114,29 @@ class MySQLBase(ABC):
         for password in self.passwords:
             stripped_input = stripped_input.replace(password, "xxxxxxxxxxxx")
         return stripped_input
+
+    def get_current_group_replication_id(self) -> str:
+        """Get the current group replication id."""
+        logger.debug("Getting current group replication id")
+
+        commands = (
+            f"shell.connect('{self.instance_def(self.server_config_user)}')",
+            'result = session.run_sql("SELECT @@GLOBAL.group_replication_group_name")',
+            'print(f"<ID>{result.fetch_one()[0]}</ID>")',
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(commands))
+        except MySQLClientError as e:
+            logger.warning("Failed to get current group replication id", exc_info=e)
+            raise MySQLGetGroupReplicationIDError(e.message)
+
+        matches = re.search(r"<ID>(.+)</ID>", output)
+
+        if not matches:
+            raise MySQLGetGroupReplicationIDError("Failed to get current group replication id")
+
+        return matches.group(1)
 
     @abstractmethod
     def is_mysqld_running(self) -> bool:
