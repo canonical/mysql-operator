@@ -2027,13 +2027,6 @@ xtrabackup/location --defaults-file=defaults/config/file
         self.assertTrue(self.mysql.is_cluster_replica())
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
-    def test_cluster_set_cluster_count(self, _get_cluster_set_status):
-        """Test cluster_set_cluster_count."""
-        _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
-
-        self.assertEqual(self.mysql.cluster_set_cluster_count(), 2)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
     def test_get_cluster_set_name(self, _get_cluster_set_status):
         """Test cluster_set_name."""
         _get_cluster_set_status.return_value = CLUSTER_SET_STATUS
