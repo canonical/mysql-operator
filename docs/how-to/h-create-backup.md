@@ -1,22 +1,31 @@
-# Create and List Backups
-> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
+[note]
+**Note**: All commands are written for `juju >= v.3.0`
 
-Creating and listing backups requires that you:
-* [Have a Charmed MySQL deployed](/t/9904)
+If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-3-0-0---22-oct-2022).
+[/note]
+
+# How to create and list backups
+
+This guide contains recommended steps and useful commands for creating and managing backups to ensure smooth restores.
+
+## Prerequisites
+* A [deployed](/t/9904) MySQL cluster
 * Access to S3 storage
-* [Have configured settings for S3 storage](/t/9894)
+* [Configured settings for S3 storage](/t/9894)
 
-Once Charmed MySQL is `active` and `idle` (check `juju status`), you can create your first backup with the `create-backup` command:
+---
+
+## Create a backup
+Once `juju status` shows Charmed MySQL as `active` and `idle`, you can create your first backup with the `create-backup` command:
 ```shell
 juju run mysql/leader create-backup
 ```
 
-[note]
 If you have a cluster of one unit, you can run the `create-backup` action on `mysql-k8s/leader` (which will also be the primary unit). 
 
-Otherwise, you must run the `create-backup` action on a non-primary unit (see `juju status` or run `juju run-action mysql-k8s/leader get-cluster-status` to find the primary unit).
-[/note]
+Otherwise, you must run the `create-backup` action on a non-primary unit. To find the primary, see `juju status` or run `juju run mysql-k8s/leader get-cluster-status` to find the primary unit).
 
+## List backups
 You can list your available, failed, and in progress backups by running the `list-backups` command:
 ```shell
 juju run mysql/leader list-backups

@@ -1,22 +1,23 @@
-# Charmed MySQL Documentation
+> This is a **IAAS/VM** operator. To deploy in Kubernetes , see [Charmed MySQL K8s](https://charmhub.io/mysql-k8s).
 
-[note type="positive"]
-This is **[IAAS/VM](https://canonical.com/data/docs)** operator. To deploy in **[K8s](https://canonical.com/data/docs)**, use [Charmed MySQL K8s](https://charmhub.io/mysql-k8s).
-[/note]
+# Charmed MySQL documentation
 
-The Charmed MySQL Operator delivers automated operations management from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/) on the [MySQL Community Edition](https://www.mysql.com/products/community/) relational database. It is an open source, end-to-end, production-ready data platform [on top of Juju](https://juju.is/).
+Charmed MySQL is an open-source software operator that deploys and operates [MySQL Community Edition](https://www.mysql.com/products/community/) relational databases on IAAS/VM via [Juju](https://juju.is/). 
+
+This new operator built with the [charm SDK](https://juju.is/docs/sdk) replaces [**MariaDB**](https://charmhub.io/mariadb), [**OSM MariaDB**](https://charmhub.io/charmed-osm-mariadb-k8s), [**Percona cluster**](https://charmhub.io/percona-cluster) and [**MySQL InnoDB cluster**](https://charmhub.io/mysql-innodb-cluster) operators.
+
+Charmed MySQL includes features such as cluster-to-cluster replication, TLS encryption, password rotation, backups, and easy integration with other applications both inside and outside of Juju. It meets the need of deploying MySQL in a structured and consistent manner while allowing the user flexibility in configuration, simplifying reliable management of MySQL in production environments.
 
 ![image|690x424](upload://vpevillwv3S9C44LDFBxkGCxpGq.png)
 
-MySQL is the world’s most popular open source database. A relational database stores data in separate tables rather than putting all the data in one big storeroom. The database structure is organized into physical files optimized for speed. The logical data model, with objects such as data tables, views, rows, and columns, offers a flexible programming environment.
+<!--MySQL is the world’s most popular open source database. A relational database stores data in separate tables rather than putting all the data in one big storeroom. The database structure is organized into physical files optimized for speed. The logical data model, with objects such as data tables, views, rows, and columns, offers a flexible programming environment.-->
 
-This MySQL operator charm comes in two flavours to deploy and operate MySQL on [physical/virtual machines](https://github.com/canonical/mysql-operator) and [Kubernetes](https://github.com/canonical/mysql-k8s-operator). Both offer features such as replication, TLS, password rotation, and easy to use integration with applications. The Charmed MySQL Operator meets the need of deploying MySQL in a structured and consistent manner while allowing the user flexibility in configuration. It simplifies deployment, scaling, configuration and management of MySQL in production at scale in a reliable way.
+## In this documentation
 
-[note type="positive"]
-**"Charmed MySQL", "MariaDB", "OSM MariaDB", "Percona Cluster" or "Mysql Innodb Cluster"?**
-
-This "Charmed MySQL" operator is a new "[Charmed SDK](https://juju.is/docs/sdk)"-based charm to replace a "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)" operators.<br/>Read more about [legacy charms here](/t/10788).
-[/note]
+| | |
+|--|--|
+|  [Tutorials](/t/charmed-mysql-tutorial-overview/9922)</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides](/t/charmed-mysql-how-to-manage-units/9904) </br> Step-by-step guides covering key operations and common tasks |
+| [Reference](https://charmhub.io/mysql/actions) </br> Technical information - specifications, APIs, architecture | [Explanation](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) </br> Concepts - discussion and clarification of key topics  |
 
 ## Project and community
 
@@ -26,13 +27,6 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 - [Contribute](https://github.com/canonical/mysql-operator/blob/main/CONTRIBUTING.md) and report [issues](https://github.com/canonical/mysql-operator/issues/new/choose)
 - Explore [Canonical Data Fabric solutions](https://canonical.com/data)
 - [Contacts us](/t/11867) for all further questions
-
-## In this documentation
-
-| | |
-|--|--|
-|  [Tutorials](/t/charmed-mysql-tutorial-overview/9922)</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides](/t/charmed-mysql-how-to-manage-units/9904) </br> Step-by-step guides covering key operations and common tasks |
-| [Reference](https://charmhub.io/mysql/actions) </br> Technical information - specifications, APIs, architecture | [Explanation](/t/charmed-mysql-k8s-explanations-interfaces-endpoints/10250) </br> Concepts - discussion and clarification of key topics  |
 
 # Navigation
 
@@ -51,10 +45,13 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | t-clean-up | [7. Clean up the environment](/t/9910) |
 | 1 | how-to | [How To]() |
 | 2 | h-setup | [Deploy]() |
+| 3 | h-deploy-sunbeam | [Sunbeam](/t/15986) |
 | 3 | h-deploy-lxd | [LXD](/t/11870) |
 | 3 | h-deploy-maas | [MAAS](/t/13900) |
 | 3 | h-deploy-ec2 | [AWS EC2](/t/15718) |
 | 3 | h-deploy-gce | [GCE](/t/15723) |
+| 3 | h-deploy-azure | [Azure](/t/15859) |
+| 3 | h-deploy-multi-az | [Multi-AZ](/t/15823) |
 | 3 | h-deploy-terraform | [Terraform](/t/14925) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
 | 2 | h-integrate| [Integrate with another application](/t/9902) |
@@ -71,15 +68,12 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-enable-monitoring | [Enable monitoring](/t/9900) |
 | 3 | h-enable-alert-rules | [Enable alert rules](/t/15486) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14350) |
-| 2 | h-upgrade | [Upgrade]() |
-| 3 | h-upgrade-intro | [Overview](/t/11745) |
+| 2 | h-upgrade | [Upgrade](/t/11745) |
 | 3 | h-upgrade-juju | [Upgrade Juju](/t/14325) |
-| 3 | h-upgrade-major | [Perform a major upgrade](/t/11746) |
-| 3 | h-rollback-major | [Perform a major rollback](/t/11747) |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/11748) |
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/11749) |
-| 2 | h-development| [Development](/t/11889) |
-| 3 | h-development-integrate | [Integrate a database with your charm](/t/11890) |
+| 2 | h-development| [Development]() |
+| 3 | h-development-integrate | [Integrate awith your charm](/t/11890) |
 | 3 | h-migrate-mysqldump | [Migrate data via mysqldump](/t/11958) |
 | 3 | h-migrate-mydumper | [Migrate data via mydumper](/t/11988) |
 | 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12008) |
@@ -93,7 +87,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | h-contribute | [Contribute](/t/14654) |
 | 1 | reference | [Reference]() |
 | 2 | r-releases | [Release Notes](/t/11881) |
-| 3 | r-revision-274-275 | [Revision 274/275](/t/15275) |
+| 3 | r-revision-305-306 | [Revision 305/306](/t/15275) |
 | 3 | r-revision-240 | [Revision 240](/t/14071) |
 | 3 | r-revision-196 | [Revision 196](/t/11883) |
 | 3 | r-revision-151 | [Revision 151](/t/11882) |
@@ -101,11 +95,12 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | r-testing | [Testing](/t/11770) |
 | 2 | r-profiles | [Profiles](/t/11973) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/15481) |
+| 2 | r-alert-rules | [Alert rules](/t/15839) |
+| 2 | r-statuses | [Statuses](/t/10624) |
 | 2 | r-contacts | [Contacts](/t/11867) |
 | 1 | explanation | [Explanation]() |
 | 2 | e-architecture | [Architecture](/t/11756) |
 | 2 | e-interfaces-endpoints | [Interfaces and endpoints](/t/10250) |
-| 2 | e-statuses | [Statuses](/t/10624) |
 | 2 | e-users | [Users](/t/10789) |
 | 2 | e-logs | [Logs](/t/11993) |
 | 3 | e-audit-logs | [Audit Logs](/t/15424) |
@@ -114,3 +109,9 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 1 | search | [Search](https://canonical.com/data/docs/mysql/iaas) |
 
 [/details]
+
+<!--
+| 2 | h-development| [Development](/t/11889) |
+| 3 | h-upgrade-major | [Perform a major upgrade](/t/11746) |
+| 3 | h-rollback-major | [Perform a major rollback](/t/11747) |
+-->

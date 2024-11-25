@@ -74,4 +74,4 @@ Do you have questions? [Contact us]!
 [Contact us]: /t/11867
 [Charmed MySQL VM operator]: /t/11870
 [COS Monitoring]: /t/9900
-[list of Awesome Alert Rules]: https://github.com/canonical/mysql-operator/tree/main/src/alert_rules/prometheus
+[list of Awesome Alert Rules]: /t/15839

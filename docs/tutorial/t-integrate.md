@@ -37,7 +37,7 @@ Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 i
 Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications.
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  3.1.6    unsupported  00:07:00+01:00
+tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:07:00+01:00
 
 App              Version          Status   Scale  Charm            Channel     Rev  Exposed  Message
 data-integrator                   blocked      1  data-integrator  stable     13    no       Please relate the data-integrator with the desired product
@@ -66,7 +66,7 @@ juju integrate data-integrator mysql
 Wait for `juju status --watch 1s` to show all applications/units as `active`:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  3.1.6    unsupported  00:10:27+01:00
+tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:10:27+01:00
 
 App              Version          Status  Scale  Charm            Channel     Rev  Exposed  Message
 data-integrator                   active      1  data-integrator  edge       13    no

@@ -1,6 +1,6 @@
-> Reference > Release Notes > [All releases][] > Revision 274/275
+> Reference > Release Notes > [All releases][] > Revision 305/306
 
-# Revision 274/275
+# Revision 305/306
 <sub>TODO</sub>
 
 [note type="caution"]
@@ -12,8 +12,8 @@ Dear community,
 Canonical's newest Charmed MySQL operator has been published in the [8.0/stable channel].
 
 Due to the newly added support for arm64 architecture, the MySQL charm now releases two revisions simultaneously:
-* Revision 275 is built for `amd64`
-* Revision 274 is built for `arm64`
+* Revision 306 is built for `amd64`
+* Revision 305 is built for `arm64`
 
 To make sure you deploy for the right architecture, we recommend setting an [architecture constraint](https://juju.is/docs/juju/constraint#heading--arch) for your entire Juju model.
 
@@ -33,17 +33,23 @@ This release of Charmed MySQL requires Juju `v.3.4.3` or `3.5.2+`. See the [Tech
 ## Highlights
 
 Below is an overview of the major highlights, enhancements, and bugfixes in this revision. For a detailed list of all commits since the last stable release, see the [GitHub release notes].
+* [Upgraded MySQL](https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-37.html) from `v8.0.36` -> `v8.0.37` (see [Packaging](#packaging))
+* [Added support or ARM64 architecture](/t/11742) ([PR #472](https://github.com/canonical/mysql-operator/pull/472)) 
+* [Added support for Audit plugin](/t/15424) ([PR #488](https://github.com/canonical/mysql-operator/pull/488)) ([DPE-4366](https://warthogs.atlassian.net/browse/DPE-4366))
+
 
 ### Enhancements
-* Upgraded MySQL from `v8.0.36` -> `v8.0.37` (see [Packaging](#packaging))
-* Added support or ARM64 architecture ([PR #472](https://github.com/canonical/mysql-operator/pull/472)) 
-* Added support for Audit plugin ([PR #488](https://github.com/canonical/mysql-operator/pull/488)) ([DPE-4366](https://warthogs.atlassian.net/browse/DPE-4366))
-* Added support for rescanning cluster for unit rejoin after node drain ([PR #462](https://github.com/canonical/mysql-operator/pull/462)) ([DPE-4118](https://warthogs.atlassian.net/browse/DPE-4118))
-* Added Awesome Prometheus Alert Rules ([PR #493](https://github.com/canonical/mysql-operator/pull/493)) ([DPE-2477](https://warthogs.atlassian.net/browse/DPE-2477))
+
+* [Added Awesome Prometheus Alert Rules](/t/15486) ([criticality](/t/15839)) ([PR #493](https://github.com/canonical/mysql-operator/pull/493)) ([DPE-2477](https://warthogs.atlassian.net/browse/DPE-2477))
+* [Add integration with COS Tempo](/t/14350) HA ([DPE-5312](https://warthogs.atlassian.net/browse/DPE-5312))
+* [New Terraform module](/t/14925) ([DPE-5627](https://warthogs.atlassian.net/browse/DPE-5627))
 * Changeed binlog retention period (one week by default) ([PR #503](https://github.com/canonical/mysql-operator/pull/503)) ([DPE-4247](https://warthogs.atlassian.net/browse/DPE-4247))
+* Added support for re-scanning cluster for unit rejoin after node drain ([PR #462](https://github.com/canonical/mysql-operator/pull/462)) ([DPE-4118](https://warthogs.atlassian.net/browse/DPE-4118))
+* Enable and use admin address/port for operator users  ([PR #516](https://github.com/canonical/mysql-operator/pull/516)) ([DPE-5178](https://warthogs.atlassian.net/browse/DPE-5178))
 
 ### Bugfixes
 
+* Fixed MySQL Group replication start logic during the juju refresh ([PR #546](https://github.com/canonical/mysql-operator/pull/546)) ([DPE-5941](https://warthogs.atlassian.net/browse/DPE-5941))
 * Removed passwords from outputs and tracebacks ([PR #499](https://github.com/canonical/mysql-operator/pull/499)) ([DPE-4266](https://warthogs.atlassian.net/browse/DPE-4266))
 * Fixed cluster metadata and instance state checks ([PR #482](https://github.com/canonical/mysql-operator/pull/482)) ([DPE-4850](https://warthogs.atlassian.net/browse/DPE-4850))
 * Ensure username uniqueness ([PR #464](https://github.com/canonical/mysql-operator/pull/464)) ([DPE-4643](https://warthogs.atlassian.net/browse/DPE-4643))
@@ -51,6 +57,13 @@ Below is an overview of the major highlights, enhancements, and bugfixes in this
 * Added support for re-scanning cluster for unit rejoin after node drain ([PR #462](https://github.com/canonical/mysql-operator/pull/462)) ([DPE-4118](https://warthogs.atlassian.net/browse/DPE-4118))
 * Fixes for backup logging ([PR #471](https://github.com/canonical/mysql-operator/pull/471)) ([DPE-4699](https://warthogs.atlassian.net/browse/DPE-4699))
 * Fixed global-primary on endpoint ([PR #467](https://github.com/canonical/mysql-operator/pull/467)) ([DPE-4658](https://warthogs.atlassian.net/browse/DPE-4658))
+* Skip set unknown config keys ([PR #532](https://github.com/canonical/mysql-operator/pull/532)) ([DPE-5628](https://warthogs.atlassian.net/browse/DPE-5628))
+* Change key logs from debug->info ([PR #527](https://github.com/canonical/mysql-operator/pull/527)) ([DPE-4910](https://warthogs.atlassian.net/browse/DPE-4910))
+* Fixed timeout node count query ([PR #528](https://github.com/canonical/mysql-operator/pull/528)) ([DPE-5582](https://warthogs.atlassian.net/browse/DPE-5582))
+* Skip plugin install for not file found ([PR #524](https://github.com/canonical/mysql-operator/pull/524)) ([DPE-5540](https://warthogs.atlassian.net/browse/DPE-5540))
+* Skip tls reconfiguration on unit teardown ([PR #522](https://github.com/canonical/mysql-operator/pull/522)) ([DPE-5493](https://warthogs.atlassian.net/browse/DPE-5493))
+* Upgrade fix for admin-address enabled charm ([PR #520](https://github.com/canonical/mysql-operator/pull/520)) ([DPE-5178](https://warthogs.atlassian.net/browse/DPE-5178))
+* Update all dependencies to the latest versions.
 
 ## Technical details
 This section contains some technical details about the charm's contents and dependencies. 
