@@ -650,6 +650,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        # ensure hostname can be resolved
+        self.hostname_resolution.update_etc_hosts(None)
+
         self._mysql.write_mysqld_config()
         self._mysql.setup_logrotate_and_cron()
         self._mysql.reset_root_password_and_start_mysqld()
@@ -657,9 +660,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-
-        # ensure hostname can be resolved
-        self.hostname_resolution.update_etc_hosts(None)
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
