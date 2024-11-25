@@ -28,7 +28,7 @@ juju status --watch 1s
 When the application is ready, `juju status` will show the `mysql` app as `active` and the `mysql/0*` unit as `idle`, like the example below:
 ```shell
 Model      Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial   overlord    localhost/localhost  3.1.6    unsupported  00:52:59+02:00
+tutorial   overlord    localhost/localhost  3.5.2    unsupported  00:52:59+02:00
 
 App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      1  mysql  8.0/stable  151  no       Primary

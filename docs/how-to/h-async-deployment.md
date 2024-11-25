@@ -1,5 +1,13 @@
 # Deploy Async replication
 
+The following table shows the source and target controller/model combinations that are currently supported:
+
+|  | AWS | GCP | Azure |
+|---|---|:---:|:---:|
+| AWS | ![ check ] |  |  |
+| GCP |  | ![ check ] |  |
+| Azure |  | | ![ check ] |
+
 ## Deploy
 
 Deploy two MySQL Clusters, named `Rome` and `Lisbon`:
@@ -91,3 +99,5 @@ juju add-unit db2 -n 2 -m lisbon
 [note type="caution"]
 **Note**: The scaling is possible before and after the asynchronous replication established/created.
 [/note]
+
+[check]: https://img.shields.io/badge/%E2%9C%93-brightgreen
