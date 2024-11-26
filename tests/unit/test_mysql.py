@@ -1746,7 +1746,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "shell.connect('clusteradmin:clusteradminpassword@2.3.4.5:3306')",
             "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",
-            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] == shell.version.split()[1]:",
+            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] in shell.version:",
             "        print('SAME_VERSION')",
             "    else:",
             "        raise",
