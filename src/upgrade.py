@@ -199,7 +199,7 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm._mysql.start_mysqld()
             if self.charm.config.plugin_audit_enabled:
                 self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
-            self.charm._mysql.setup_logrotate_and_cron()
+            self.charm._mysql.setup_logrotate_and_cron(self.charm.text_logs)
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
