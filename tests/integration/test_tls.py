@@ -18,9 +18,9 @@ from .helpers import (
     get_tls_ca,
     get_unit_ip,
     is_connection_possible,
-    scale_application,
     unit_file_md5,
 )
+from .high_availability.high_availability_helpers import deploy_and_scale_mysql
 
 logger = logging.getLogger(__name__)
 
@@ -48,34 +48,7 @@ else:
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    if app := await app_name(ops_test):
-        if len(ops_test.model.applications[app].units) == 3:
-            return
-        else:
-            async with ops_test.fast_forward():
-                await scale_application(ops_test, app, 3)
-            return
-
-    charm = await ops_test.build_charm(".")
-
-    await ops_test.model.deploy(
-        charm,
-        application_name=APP_NAME,
-        num_units=3,
-        base="ubuntu@22.04",
-    )
-
-    # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=15 * 60,
-        )
+    await deploy_and_scale_mysql(ops_test)
 
 
 @pytest.mark.group(1)

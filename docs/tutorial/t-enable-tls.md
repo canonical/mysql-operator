@@ -37,7 +37,7 @@ juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 Wait until `self-signed-certificates` is up and active, using `juju status --watch 1s` to monitor its progress:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  2.9.42   unsupported  00:40:42+01:00
+tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:40:42+01:00
 
 App                        Version          Status  Scale  Charm                      Channel     Rev  Exposed  Message
 mysql                      8.0.32-0ubun...  active      2  mysql                      8.0/stable  147  no

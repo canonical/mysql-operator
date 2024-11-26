@@ -2471,9 +2471,22 @@ class MySQLBase(ABC):
             "    session.run_sql('STOP GROUP_REPLICATION')",
         )
         try:
+            logger.debug("Stopping Group Replication for unit")
             self._run_mysqlsh_script("\n".join(stop_gr_command))
         except MySQLClientError:
-            logger.debug("Failed to stop Group Replication for unit")
+            logger.warning("Failed to stop Group Replication for unit")
+
+    def start_group_replication(self) -> None:
+        """Start Group replication on the instance."""
+        start_gr_command = (
+            f"shell.connect('{self.instance_def(self.server_config_user)}')",
+            "session.run_sql('START GROUP_REPLICATION')",
+        )
+        try:
+            logger.debug("Starting Group Replication for unit")
+            self._run_mysqlsh_script("\n".join(start_gr_command))
+        except MySQLClientError:
+            logger.warning("Failed to start Group Replication for unit")
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""

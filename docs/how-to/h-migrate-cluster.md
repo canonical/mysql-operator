@@ -1,8 +1,16 @@
-# How to restore foreign backup
-> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
+[note]
+**Note**: All commands are written for `juju >= v.3.0`
 
-This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/9908)
+If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-3-0-0---22-oct-2022).
+[/note]
 
+# How to migrate a cluster
+
+This is a How-To for how to restore a backup that was made from a different cluster, (i.e. cluster migration via restore).
+
+To perform a basic restore from a *local* backup, please reference the [Restore How-To](/t/9908).
+
+## Prerequisites
 Restoring a backup from a previous cluster to a current cluster requires that you:
 - Have a single unit Charmed MySQL deployed and running
 - Access to S3 storage
@@ -10,12 +18,18 @@ Restoring a backup from a previous cluster to a current cluster requires that yo
 - Have the backups from the previous cluster in your S3-storage
 - Have the passwords from your previous cluster
 
+---
+
+<a href="#heading--manage-cluster-passwords"><h2 id="heading--manage-cluster-passwords">Manage cluster passwords</h2></a>
+
 When you restore a backup from an old cluster, it will restore the password from the previous cluster to your current cluster. Set the password of your current cluster to the previous cluster’s password:
 ```shell
 juju run mysql/leader set-password username=root password=<previous cluster password>
 juju run mysql/leader set-password username=clusteradmin password=<previous cluster password>
 juju run mysql/leader set-password username=serverconfig password=<previous cluster password>
 ```
+
+## List backups
 
 To view the available backups to restore you can enter the command `list-backups`:
 ```shell
@@ -29,6 +43,8 @@ This shows a list of the available backups (it is up to you to identify which `b
       ----------------------------------------------------
       YYYY-MM-DDTHH:MM:SSZ  | physical     | finished
 ```
+
+## Restore backup
 
 To restore your current cluster to the state of the previous cluster, run the `restore` command and pass the correct `backup-id` to the command:
  ```shell

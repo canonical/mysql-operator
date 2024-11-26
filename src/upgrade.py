@@ -271,6 +271,7 @@ class MySQLVMUpgrade(DataUpgrade):
                             "Instance not yet back in the cluster."
                             f" Retry {attempt.retry_state.attempt_number}/{RECOVER_ATTEMPTS}"
                         )
+                        self.charm._mysql.start_group_replication()
                         raise Exception
         except RetryError:
             raise

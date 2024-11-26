@@ -662,6 +662,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        # ensure hostname can be resolved
+        self.hostname_resolution.update_etc_hosts(None)
+
         self._mysql.write_mysqld_config()
         self._mysql.setup_logrotate_and_cron(self.text_logs)
         self._mysql.reset_root_password_and_start_mysqld()
@@ -669,9 +672,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-
-        # ensure hostname can be resolved
-        self.hostname_resolution.update_etc_hosts(None)
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
@@ -736,11 +736,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # immediate reboot will make juju re-run the hook
             self.unit.reboot(now=True)
 
+        if not self.mysql_config.custom_config:
+            # empty config mean start never ran, skip next checks
+            return True
+
         # Safeguard if receiving on start after unit initialization
-        if self.unit_initialized:
-            logger.debug("Delegate status update for start handler on initialized unit.")
-            self._on_update_status(None)
-            return False
+        # with retries to allow time for mysqld startup
+        for _ in range(6):
+            if self.unit_initialized:
+                logger.debug("Delegate status update for start handler on initialized unit.")
+                self._on_update_status(None)
+                return False
+            logger.debug("mysqld not started yet. Retrying check")
+            sleep(5)
 
         return True
 
