@@ -314,6 +314,8 @@ class MySQL(MySQLBase):
             log_path=f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql",
             enabled_log_files=enabled_log_files,
             logrotate_conf=config_path,
+            owner=MYSQL_SYSTEM_USER,
+            group=MYSQL_SYSTEM_USER,
         )
 
         self.write_content_to_file(script_path, logrotation_script_content, permission=0o550)

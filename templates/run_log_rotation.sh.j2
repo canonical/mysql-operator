@@ -4,7 +4,7 @@ LOG_PATH="{{ log_path }}"
 
 # touch files to ensure flush runs
 {% for log in enabled_log_files %}
-[[ -f "${LOG_PATH}/{{ log }}.log" ]] || touch "${LOG_PATH}/{{ log }}.log"
+[[ -f "${LOG_PATH}/{{ log }}.log" ]] || install -o "{{ owner }}" -g "{{ group }}" -m 640 /dev/null "${LOG_PATH}/{{ log }}.log"
 {% endfor %}
 
 logrotate -f {{ logrotate_conf }}
