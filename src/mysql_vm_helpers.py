@@ -831,6 +831,8 @@ class MySQL(MySQLBase):
     @staticmethod
     def reset_data_dir() -> None:
         """Reset the data directory."""
+        logger.warning(f"Resetting data directory: {MYSQL_DATA_DIR}")
+
         # Remove the data directory
         shutil.rmtree(MYSQL_DATA_DIR, ignore_errors=False)
 

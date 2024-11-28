@@ -218,7 +218,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 self.set_unit_failed()
                 return
 
-            logger.info("Downgrade is incompatible. Resetting workload")
+            logger.warning("Downgrade is incompatible. Resetting workload")
             self._reset_on_unsupported_downgrade()
         except MySQLStopMySQLDError:
             logger.exception("Failed to stop MySQL server")

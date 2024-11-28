@@ -1547,8 +1547,12 @@ class MySQLBase(ABC):
             ),
         )
 
-        try:
+        if force:
+            logger.warning(f"Promoting {cluster_name=} to primary with {force=}")
+        else:
             logger.debug(f"Promoting {cluster_name=} to primary with {force=}")
+
+        try:
             self._run_mysqlsh_script("\n".join(commands))
         except MySQLClientError:
             logger.exception("Failed to promote cluster to primary")
