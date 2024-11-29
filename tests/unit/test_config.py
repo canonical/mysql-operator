@@ -10,6 +10,7 @@ import yaml
 from ops.testing import Harness
 
 from charm import MySQLOperatorCharm
+from constants import PEER
 
 CONFIG = str(yaml.safe_load(Path("./config.yaml").read_text()))
 ACTIONS = str(yaml.safe_load(Path("./actions.yaml").read_text()))
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 def harness():
     harness = Harness(MySQLOperatorCharm, meta=METADATA, config=CONFIG, actions=ACTIONS)
     harness.add_relation("restart", "mysql")
+    harness.add_relation(PEER, "mysql")
     harness.begin()
     return harness
 
