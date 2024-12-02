@@ -297,6 +297,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.write_content_to_file(
             path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
         )
+        self._mysql.setup_logrotate_and_cron(self.text_logs)
 
         if (
             self.mysql_config.keys_requires_restart(changed_config)
@@ -620,6 +621,17 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Returns the unit's address."""
         return self.get_unit_address(self.unit)
 
+    @property
+    def text_logs(self) -> list:
+        """Enabled text logs."""
+        # slow logs isn't enabled by default
+        text_logs = ["error", "general"]
+
+        if self.config.plugin_audit_enabled:
+            text_logs.append("audit")
+
+        return text_logs
+
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
 
@@ -654,7 +666,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.hostname_resolution.update_etc_hosts(None)
 
         self._mysql.write_mysqld_config()
-        self._mysql.setup_logrotate_and_cron()
+        self._mysql.setup_logrotate_and_cron(self.text_logs)
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 

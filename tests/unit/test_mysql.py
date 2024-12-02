@@ -1882,7 +1882,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "log_error": "/var/log/mysql/error.log",
             "general_log": "ON",
             "general_log_file": "/var/log/mysql/general.log",
-            "slow_query_log_file": "/var/log/mysql/slowquery.log",
+            "slow_query_log_file": "/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": "604800",
             "loose-audit_log_format": "JSON",
             "loose-audit_log_policy": "LOGINS",
