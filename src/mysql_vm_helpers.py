@@ -320,7 +320,7 @@ class MySQL(MySQLBase):
 
         self.write_content_to_file(script_path, logrotation_script_content, permission=0o550)
 
-        cron_content = f"* 1-23 * * * root {script_path}\n" f"1-59 0 * * * root {script_path}\n"
+        cron_content = f"* 1-23 * * * root {script_path}\n1-59 0 * * * root {script_path}\n"
         self.write_content_to_file(cron_path, cron_content, owner="root")
 
     def reset_root_password_and_start_mysqld(self) -> None:
