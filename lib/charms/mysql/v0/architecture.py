@@ -26,7 +26,6 @@ from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong
 if __name__ == "__main__":
     if is_wrong_architecture():
         main(WrongArchitectureWarningCharm)
-        sys.exit(1)
 ```
 """
 
