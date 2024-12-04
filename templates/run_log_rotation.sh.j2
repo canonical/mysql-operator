@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# install files to ensure flush runs
+{% for log in enabled_log_files %}
+[[ -f "{{ log_path }}/{{ log }}.log" ]] || install -o "{{ owner }}" -g "{{ group }}" -m 640 /dev/null "{{ log_path }}/{{ log }}.log"
+{% endfor %}
+
+logrotate -f {{ logrotate_conf }}
+
+# vim: set filetype=sh
+

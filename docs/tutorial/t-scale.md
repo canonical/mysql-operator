@@ -35,7 +35,7 @@ You can now watch the scaling process in live using: `juju status --watch 1s`. I
 You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  3.1.6    unsupported  23:33:55+01:00
+tutorial  overlord    localhost/localhost  3.5.2    unsupported  23:33:55+01:00
 
 App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      3  mysql  8.0/stable  147  no
@@ -67,7 +67,7 @@ juju remove-unit mysql/2
 You’ll know that the replica was successfully removed when `juju status --watch 1s` reports:
 ```shell
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  3.1.6    unsupported  23:46:43+01:00
+tutorial  overlord    localhost/localhost  3.5.2    unsupported  23:46:43+01:00
 
 App    Version          Status  Scale  Charm  Channel     Rev  Exposed  Message
 mysql  8.0.32-0ubun...  active      2  mysql  8.0/stable  147  no

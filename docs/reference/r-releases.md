@@ -16,7 +16,7 @@ For a given release, this table shows:
 
 | Release | MySQL version | Juju version | [TLS encryption](/t/9898)* | [COS monitoring](/t/9900) | [Minor version upgrades](/t/11748) | [Cross-regional async replication](/t/14169) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [274], [275] | 8.0.37 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
+| [305], [306] | 8.0.37 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [240] | 8.0.36 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [196] | 8.0.34 | `3.1.6+` |  | ![check] | ![check] |  |
 | [151] | 8.0.32 | `2.9.32+` |  | ![check] | ![check] |  |
@@ -69,8 +69,8 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 <!-- LINKS -->
 
-[274]: /t/15275
-[275]: /t/15275
+[306]: /t/15275
+[305]: /t/15275
 [240]: /t/14071
 [196]: /t/11883
 [151]: /t/11882

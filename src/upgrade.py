@@ -200,7 +200,7 @@ class MySQLVMUpgrade(DataUpgrade):
             if self.charm.config.plugin_audit_enabled:
                 self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
             self.charm._mysql.install_plugins(["binlog_utils_udf"])
-            self.charm._mysql.setup_logrotate_and_cron()
+            self.charm._mysql.setup_logrotate_and_cron(self.charm.text_logs)
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
@@ -219,7 +219,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 self.set_unit_failed()
                 return
 
-            logger.info("Downgrade is incompatible. Resetting workload")
+            logger.warning("Downgrade is incompatible. Resetting workload")
             self._reset_on_unsupported_downgrade()
         except MySQLStopMySQLDError:
             logger.exception("Failed to stop MySQL server")

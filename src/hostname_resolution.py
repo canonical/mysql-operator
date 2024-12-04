@@ -50,14 +50,7 @@ class MySQLMachineHostnameResolution(Object):
         hostname = socket.gethostname()
         fqdn = socket.getfqdn()
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(0)
-        try:
-            s.connect(("10.10.10.10", 1))
-            ip = s.getsockname()[0]
-        except Exception:
-            logger.exception("Unable to get local IP address")
-            ip = "127.0.0.1"
+        ip = str(self.model.get_binding(PEER).network.bind_address)
 
         host_details = {"names": [hostname, fqdn], "address": ip}
 

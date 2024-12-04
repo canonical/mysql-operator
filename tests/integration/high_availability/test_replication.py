@@ -356,13 +356,11 @@ async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None
     app = get_application_name(ops_test, "mysql")
     unit = ops_test.model.applications[app].units[0]
 
-    # Exclude slowquery log files as slowquery logs are not enabled by default
     log_types = ["error", "general", "audit"]
     log_files = ["error.log", "general.log", "audit.log"]
     archive_directories = [
         "archive_error",
         "archive_general",
-        "archive_slowquery",
         "archive_audit",
     ]
 
@@ -418,7 +416,6 @@ async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None
     ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
 
     logger.info("Ensuring log files were rotated")
-    # Exclude checking slowquery log rotation as slowquery logs are disabled by default
     for log in set(log_types):
         file_contents = await read_contents_from_file_in_unit(
             ops_test, unit, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/{log}.log"
