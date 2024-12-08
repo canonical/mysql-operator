@@ -35,6 +35,7 @@ from typing_extensions import override
 
 from constants import (
     CHARMED_MYSQL,
+    CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
@@ -201,6 +202,9 @@ class MySQL(MySQLBase):
                 os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
             subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+            subprocess.run(
+                ["snap", "alias", "charmed-mysql.mysqlbinlog", "mysqlbinlog"], check=True
+            )
 
             installed_by_mysql_server_file.touch(exist_ok=True)
         except snap.SnapError:
@@ -815,6 +819,47 @@ class MySQL(MySQLBase):
     def _file_exists(self, path: str) -> bool:
         """Check if file exists."""
         return os.path.exists(path)
+
+    def start_stop_binlogs_collecting(self, force_restart: bool = False) -> bool:
+        """Start or stop binlogs collecting service.
+
+        Based on the "binlogs-collecting" app peer data value and unit leadership.
+
+        Args:
+            force_restart: whether to restart service even if it's already running.
+
+        Returns: whether the operation was successful.
+        """
+        cache = snap.SnapCache()
+        selected_snap = cache[CHARMED_MYSQL_SNAP_NAME]
+        if not selected_snap.present:
+            raise SnapServiceOperationError(f"Snap {CHARMED_MYSQL_SNAP_NAME} not installed")
+
+        is_running = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["active"]
+
+        if is_running and (
+            not self.charm.unit.is_leader() or "binlogs-collecting" not in self.charm.app_peer_data
+        ):
+            logger.debug("Stopping binlogs collector")
+            selected_snap.stop([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+
+        if not self.charm.unit.is_leader():
+            return True
+
+        if "binlogs-collecting" in self.charm.app_peer_data and (force_restart or not is_running):
+            logger.debug("Restarting binlogs collector")
+            if not self.charm.backups.update_binlogs_collector_config():
+                return False
+            selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+
+        return True
+
+    def get_cluster_members(self) -> list[str]:
+        """Get cluster members in MySQL MEMBER_HOST format.
+
+        Returns: list of cluster members in MySQL MEMBER_HOST format.
+        """
+        return [host.names[1] for host in self.charm.hostname_resolution._get_host_details()]
 
     @staticmethod
     def write_content_to_file(

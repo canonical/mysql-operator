@@ -106,6 +106,7 @@ from tenacity import (
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
+    CHARMED_MYSQL_PITR_HELPER,
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     COS_AGENT_RELATION_NAME,
@@ -336,6 +337,10 @@ class MySQLEmptyDataDirectoryError(Error):
 
 class MySQLRestoreBackupError(Error):
     """Exception raised when there is an error restoring a backup."""
+
+
+class MySQLRestorePitrError(Error):
+    """Exception raised when there is an error during point-in-time-recovery restore."""
 
 
 class MySQLDeleteTempRestoreDirectoryError(Error):
@@ -2903,6 +2908,62 @@ class MySQLBase(ABC):
             logger.exception("Failed to restore backup")
             raise MySQLRestoreBackupError
 
+    def restore_pitr(
+        self,
+        host: str,
+        mysql_user: str,
+        password: str,
+        s3_parameters: Dict[str, str],
+        restore_to_time: str,
+        user: str | None = None,
+        group: str | None = None,
+    ) -> Tuple[str, str]:
+        """Run point-in-time-recovery using binary logs from the S3 repository.
+
+        Args:
+            host: the MySQL host to connect to.
+            mysql_user: the MySQL user to connect to.
+            password: the password of the provided MySQL user.
+            s3_parameters: S3 relation parameters.
+            restore_to_time: the MySQL timestamp to restore to or keyword `latest`.
+            user: the user with which to execute the commands.
+            group: the group with which to execute the commands.
+        """
+        bucket_url = (
+            f"{s3_parameters['bucket']}/{s3_parameters['path']}binlogs"
+            if s3_parameters["path"][-1] == "/"
+            else f"{s3_parameters['bucket']}/{s3_parameters['path']}/binlogs"
+        )
+
+        try:
+            return self._execute_commands(
+                [
+                    CHARMED_MYSQL_PITR_HELPER,
+                    "recover",
+                ],
+                user=user,
+                group=group,
+                env_extra={
+                    "BINLOG_S3_ENDPOINT": s3_parameters["endpoint"],
+                    "HOST": host,
+                    "USER": mysql_user,
+                    "PASS": password,
+                    "PITR_DATE": restore_to_time if restore_to_time != "latest" else "",
+                    "PITR_RECOVERY_TYPE": "latest" if restore_to_time == "latest" else "date",
+                    "STORAGE_TYPE": "s3",
+                    "BINLOG_ACCESS_KEY_ID": s3_parameters["access-key"],
+                    "BINLOG_SECRET_ACCESS_KEY": s3_parameters["secret-key"],
+                    "BINLOG_S3_REGION": s3_parameters["region"],
+                    "BINLOG_S3_BUCKET_URL": bucket_url,
+                },
+            )
+        except MySQLExecError as e:
+            logger.exception("Failed to restore pitr")
+            raise MySQLRestorePitrError(e.message)
+        except Exception:
+            logger.exception("Failed to restore pitr")
+            raise MySQLRestorePitrError
+
     def delete_temp_restore_directory(
         self,
         temp_restore_directory: str,
@@ -3192,5 +3253,26 @@ class MySQLBase(ABC):
 
         Args:
             path: Path to the file to check
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def start_stop_binlogs_collecting(self, force_restart: bool = False) -> bool:
+        """Start or stop binlogs collecting service.
+
+        Based on the `binlogs-collecting` app peer data value and unit leadership.
+
+        Args:
+            force_restart: whether to restart service even if it's already running.
+
+        Returns: whether the operation was successful.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_cluster_members(self) -> list[str]:
+        """Get cluster members in MySQL MEMBER_HOST format.
+
+        Returns: list of the cluster members in the MySQL MEMBER_HOST format.
         """
         raise NotImplementedError
