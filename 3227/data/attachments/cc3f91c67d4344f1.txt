@@ -1,0 +1,12 @@
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:61 Rebooting mysql/0
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:61 Rebooting mysql/1
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:63 Sleep to allow juju status change
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:65 Waiting for the application to become idle
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mysql/0 [idle] maintenance: offline
+  mysql/1 [executing] active: 
+  mysql/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: Primary
