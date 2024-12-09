@@ -2,10 +2,17 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import unittest.mock as mock
 from unittest.mock import patch
 
 from charms.mysql.v0.architecture import is_wrong_architecture
+
+TEST_MANIFEST = """
+    bases:
+        - architectures:
+            - {arch}
+          channel: '22.04'
+          name: ubuntu
+"""
 
 
 def test_wrong_architecture_file_not_found():
@@ -22,7 +29,7 @@ def test_wrong_architecture_amd64():
     with (
         patch("os.environ", return_value={"CHARM_DIR": "/tmp"}),
         patch("pathlib.Path.exists", return_value=True),
-        patch("builtins.open", mock.mock_open(read_data="amd64\n")),
+        patch("pathlib.Path.read_text", return_value=TEST_MANIFEST.format(arch="amd64")),
         patch("platform.machine") as machine,
     ):
         machine.return_value = "x86_64"
@@ -36,7 +43,7 @@ def test_wrong_architecture_arm64():
     with (
         patch("os.environ", return_value={"CHARM_DIR": "/tmp"}),
         patch("pathlib.Path.exists", return_value=True),
-        patch("builtins.open", mock.mock_open(read_data="arm64\n")),
+        patch("pathlib.Path.read_text", return_value=TEST_MANIFEST.format(arch="arm64")),
         patch("platform.machine") as machine,
     ):
         machine.return_value = "x86_64"

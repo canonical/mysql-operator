@@ -35,6 +35,7 @@ import pathlib
 import platform
 import sys
 
+import yaml
 from ops import BlockedStatus, CharmBase
 
 # The unique Charmhub library identifier, never change it
@@ -42,7 +43,7 @@ LIBID = "827e04542dba4c2a93bdc70ae40afdb1"
 LIBAPI = 0
 LIBPATCH = 1
 
-PYDEPS = ["ops>=2.0.0"]
+PYDEPS = ["ops>=2.0.0", "pyyaml>=5.0"]
 
 
 logger = logging.getLogger(__name__)
@@ -67,12 +68,12 @@ def is_wrong_architecture() -> bool:
         logger.error("Cannot check architecture: manifest file not found in %s", manifest_path)
         return False
 
-    with open(manifest_path, "r") as file:
-        manifest = file.read()
+    manifest = yaml.safe_load(manifest_path.read_text())
+    manifest_arch = [arch for base in manifest["bases"] for arch in base["architectures"]]
+    hardware_arch = platform.machine()
 
-    hw_arch = platform.machine()
-    if ("amd64" in manifest and hw_arch == "x86_64") or (
-        "arm64" in manifest and hw_arch == "aarch64"
+    if ("amd64" in manifest_arch and hardware_arch == "x86_64") or (
+        "arm64" in manifest_arch and hardware_arch == "aarch64"
     ):
         logger.debug("Charm architecture matches")
         return False
