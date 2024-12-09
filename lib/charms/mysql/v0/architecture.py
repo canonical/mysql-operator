@@ -69,11 +69,15 @@ def is_wrong_architecture() -> bool:
         return False
 
     manifest = yaml.safe_load(manifest_path.read_text())
-    manifest_arch = [arch for base in manifest["bases"] for arch in base["architectures"]]
-    hardware_arch = platform.machine()
 
-    if ("amd64" in manifest_arch and hardware_arch == "x86_64") or (
-        "arm64" in manifest_arch and hardware_arch == "aarch64"
+    manifest_archs = []
+    for base in manifest["bases"]:
+        base_archs = base.get("architectures", [])
+        manifest_archs.extend(base_archs)
+
+    hardware_arch = platform.machine()
+    if ("amd64" in manifest_archs and hardware_arch == "x86_64") or (
+        "arm64" in manifest_archs and hardware_arch == "aarch64"
     ):
         logger.debug("Charm architecture matches")
         return False
