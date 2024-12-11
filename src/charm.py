@@ -4,6 +4,12 @@
 
 """Charmed Machine Operator for MySQL."""
 
+from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
+from ops.main import main
+
+if is_wrong_architecture() and __name__ == "__main__":
+    main(WrongArchitectureWarningCharm)
+
 import logging
 import random
 import socket
@@ -55,7 +61,6 @@ from ops import (
     Unit,
     WaitingStatus,
 )
-from ops.main import main
 from tenacity import (
     RetryError,
     Retrying,
