@@ -33,7 +33,8 @@ import pathlib
 import platform
 
 import yaml
-from ops import CharmBase, ErrorStatus
+from ops.charm import CharmBase
+from ops.model import ErrorStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "827e04542dba4c2a93bdc70ae40afdb1"
