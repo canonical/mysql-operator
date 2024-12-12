@@ -33,7 +33,8 @@ import pathlib
 import platform
 
 import yaml
-from ops import CharmBase
+from ops.charm import CharmBase
+from ops.model import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "827e04542dba4c2a93bdc70ae40afdb1"
@@ -52,8 +53,10 @@ class WrongArchitectureWarningCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
+        hw_arch = platform.machine()
+        self.unit.status = BlockedStatus(f"Error: Charm incompatible with {hw_arch} architecture")
         raise RuntimeError(
-            f"Incompatible architecture: this charm revision does not support {platform.machine()}. "
+            f"Incompatible architecture: this charm revision does not support {hw_arch}. "
             f"If this app is being refreshed, rollback with instructions from Charmhub docs. "
             f"If this app is being deployed for the first time, remove it and deploy it again "
             f"using a compatible revision."
