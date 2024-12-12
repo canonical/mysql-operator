@@ -18,8 +18,6 @@ The WrongArchitectureWarningCharm class is designed to be used alongside
 the is-wrong-architecture helper function, as follows:
 
 ```python
-import sys
-
 from ops import main
 from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
 
@@ -33,10 +31,10 @@ import logging
 import os
 import pathlib
 import platform
-import sys
 
 import yaml
-from ops import BlockedStatus, CharmBase
+from ops.charm import CharmBase
+from ops.model import BlockedStatus
 
 # The unique Charmhub library identifier, never change it
 LIBID = "827e04542dba4c2a93bdc70ae40afdb1"
@@ -56,13 +54,22 @@ class WrongArchitectureWarningCharm(CharmBase):
         super().__init__(*args)
 
         hw_arch = platform.machine()
-        self.unit.status = BlockedStatus(f"Error: Charm incompatible with {hw_arch} architecture")
-        sys.exit(0)
+        self.unit.status = BlockedStatus(
+            f"Charm incompatible with {hw_arch} architecture. "
+            f"If this app is being refreshed, rollback"
+        )
+        raise RuntimeError(
+            f"Incompatible architecture: this charm revision does not support {hw_arch}. "
+            f"If this app is being refreshed, rollback with instructions from Charmhub docs. "
+            f"If this app is being deployed for the first time, remove it and deploy it again "
+            f"using a compatible revision."
+        )
 
 
 def is_wrong_architecture() -> bool:
     """Checks if charm was deployed on wrong architecture."""
-    manifest_path = pathlib.Path(os.environ["CHARM_DIR"], "manifest.yaml")
+    charm_path = os.environ.get("CHARM_DIR", "")
+    manifest_path = pathlib.Path(charm_path, "manifest.yaml")
 
     if not manifest_path.exists():
         logger.error("Cannot check architecture: manifest file not found in %s", manifest_path)
