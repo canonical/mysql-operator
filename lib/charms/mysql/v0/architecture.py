@@ -54,8 +54,8 @@ class WrongArchitectureWarningCharm(CharmBase):
 
         raise RuntimeError(
             f"Incompatible architecture: this charm revision does not support {platform.machine()}. "
-            f"If the application is being refreshed, rollback with instructions from Charmhub docs. "
-            f"If the application is being deployed for the first time, remove it and deploy it again "
+            f"If this app is being refreshed, rollback with instructions from Charmhub docs. "
+            f"If this app is being deployed for the first time, remove it and deploy it again "
             f"using a compatible revision."
         )
 
