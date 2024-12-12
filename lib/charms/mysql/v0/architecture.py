@@ -54,7 +54,10 @@ class WrongArchitectureWarningCharm(CharmBase):
         super().__init__(*args)
 
         hw_arch = platform.machine()
-        self.unit.status = BlockedStatus(f"Error: Charm incompatible with {hw_arch} architecture")
+        self.unit.status = BlockedStatus(
+            f"Charm incompatible with {hw_arch} architecture. "
+            f"If this app is being refreshed, rollback"
+        )
         raise RuntimeError(
             f"Incompatible architecture: this charm revision does not support {hw_arch}. "
             f"If this app is being refreshed, rollback with instructions from Charmhub docs. "
