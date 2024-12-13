@@ -1880,7 +1880,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "innodb_buffer_pool_size": "23219666944",
             "log_error_services": "log_filter_internal;log_sink_internal",
             "log_error": "/var/log/mysql/error.log",
-            "general_log": "ON",
+            "general_log": "OFF",
             "general_log_file": "/var/log/mysql/general.log",
             "slow_query_log_file": "/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": "604800",
@@ -1888,6 +1888,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_strategy": "ASYNCHRONOUS",
             "loose-audit_log_file": "/var/log/mysql/audit.log",
+            "audit_log_filter": "OFF",
             "innodb_buffer_pool_chunk_size": "2902458368",
         }
         self.maxDiff = None

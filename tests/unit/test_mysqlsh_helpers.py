@@ -289,7 +289,7 @@ class TestMySQL(unittest.TestCase):
             "innodb_buffer_pool_size = 1234",
             "log_error_services = log_filter_internal;log_sink_internal",
             "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = ON",
+            "general_log = OFF",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
@@ -297,6 +297,7 @@ class TestMySQL(unittest.TestCase):
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
             "loose-audit_log_strategy = ASYNCHRONOUS",
+            "audit_log_filter = OFF",
             "innodb_buffer_pool_chunk_size = 5678",
             "\n",
         ))
