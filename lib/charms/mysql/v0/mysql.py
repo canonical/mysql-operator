@@ -1006,6 +1006,7 @@ class MySQLBase(ABC):
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
+            "audit_log_filter": "OFF",
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
         }
@@ -1018,8 +1019,6 @@ class MySQLBase(ABC):
             config["mysqld"]["loose-audit_log_strategy"] = "ASYNCHRONOUS"
         else:
             config["mysqld"]["loose-audit_log_strategy"] = "SEMISYNCHRONOUS"
-        # Permanently disable the plugin audit_log_filter
-        config["mysqld"]["audit_log_filter"] = "OFF"
 
         if innodb_buffer_pool_chunk_size:
             config["mysqld"]["innodb_buffer_pool_chunk_size"] = str(innodb_buffer_pool_chunk_size)
