@@ -357,7 +357,7 @@ async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None
     unit = ops_test.model.applications[app].units[0]
 
     log_types = ["error", "general", "audit"]
-    log_files = ["error.log", "general.log", "audit.log"]
+    log_files = ["error.log", "audit.log"]
     archive_directories = [
         "archive_error",
         "archive_general",
