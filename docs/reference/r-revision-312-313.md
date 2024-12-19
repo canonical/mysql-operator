@@ -1,19 +1,15 @@
-> Reference > Release Notes > [All releases][] > Revision 305/306
+> Reference > Release Notes > [All releases][] > Revision 312/313
 
-# Revision 305/306
-<sub>TODO</sub>
-
-[note type="caution"]
-This page is a work in progress for a future release.
-[/note]
+# Revision 312/313
+<sub>December 3, 2024</sub>
 
 Dear community,
 
 Canonical's newest Charmed MySQL operator has been published in the [8.0/stable channel].
 
 Due to the newly added support for arm64 architecture, the MySQL charm now releases two revisions simultaneously:
-* Revision 306 is built for `amd64`
-* Revision 305 is built for `arm64`
+* Revision 313 is built for `amd64`
+* Revision 312 is built for `arm64`
 
 To make sure you deploy for the right architecture, we recommend setting an [architecture constraint](https://juju.is/docs/juju/constraint#heading--arch) for your entire Juju model.
 
@@ -33,22 +29,22 @@ This release of Charmed MySQL requires Juju `v.3.4.3` or `3.5.2+`. See the [Tech
 ## Highlights
 
 Below is an overview of the major highlights, enhancements, and bugfixes in this revision. For a detailed list of all commits since the last stable release, see the [GitHub release notes].
-* [Upgraded MySQL](https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-37.html) from `v8.0.36` -> `v8.0.37` (see [Packaging](#packaging))
+* [Upgraded MySQL](https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-37.html) from `v8.0.36` -> `v8.0.39` (see [Packaging](#packaging)) ([DPE-4573](https://warthogs.atlassian.net/browse/DPE-4573))
 * [Added support or ARM64 architecture](/t/11742) ([PR #472](https://github.com/canonical/mysql-operator/pull/472)) 
 * [Added support for Audit plugin](/t/15424) ([PR #488](https://github.com/canonical/mysql-operator/pull/488)) ([DPE-4366](https://warthogs.atlassian.net/browse/DPE-4366))
-
 
 ### Enhancements
 
 * [Added Awesome Prometheus Alert Rules](/t/15486) ([criticality](/t/15839)) ([PR #493](https://github.com/canonical/mysql-operator/pull/493)) ([DPE-2477](https://warthogs.atlassian.net/browse/DPE-2477))
-* [Add integration with COS Tempo](/t/14350) HA ([DPE-5312](https://warthogs.atlassian.net/browse/DPE-5312))
-* [New Terraform module](/t/14925) ([DPE-5627](https://warthogs.atlassian.net/browse/DPE-5627))
-* Changeed binlog retention period (one week by default) ([PR #503](https://github.com/canonical/mysql-operator/pull/503)) ([DPE-4247](https://warthogs.atlassian.net/browse/DPE-4247))
+* [Add integration with COS Tempo HA](/t/14350) ([DPE-5312](https://warthogs.atlassian.net/browse/DPE-5312))
+* [New Terraform module](/t/14925) ([PR #540](https://github.com/canonical/mysql-operator/pull/540)) ([DPE-5627](https://warthogs.atlassian.net/browse/DPE-5627))
+* Changed binlog retention period (one week by default) ([PR #503](https://github.com/canonical/mysql-operator/pull/503)) ([DPE-4247](https://warthogs.atlassian.net/browse/DPE-4247))
 * Added support for re-scanning cluster for unit rejoin after node drain ([PR #462](https://github.com/canonical/mysql-operator/pull/462)) ([DPE-4118](https://warthogs.atlassian.net/browse/DPE-4118))
 * Enable and use admin address/port for operator users  ([PR #516](https://github.com/canonical/mysql-operator/pull/516)) ([DPE-5178](https://warthogs.atlassian.net/browse/DPE-5178))
 
 ### Bugfixes
 
+* Add warnings to destructive actions by ([PR #555](https://github.com/canonical/mysql-operator/pull/555)) ([DPE-5711](https://warthogs.atlassian.net/browse/DPE-5711))
 * Fixed MySQL Group replication start logic during the juju refresh ([PR #546](https://github.com/canonical/mysql-operator/pull/546)) ([DPE-5941](https://warthogs.atlassian.net/browse/DPE-5941))
 * Removed passwords from outputs and tracebacks ([PR #499](https://github.com/canonical/mysql-operator/pull/499)) ([DPE-4266](https://warthogs.atlassian.net/browse/DPE-4266))
 * Fixed cluster metadata and instance state checks ([PR #482](https://github.com/canonical/mysql-operator/pull/482)) ([DPE-4850](https://warthogs.atlassian.net/browse/DPE-4850))
@@ -63,6 +59,11 @@ Below is an overview of the major highlights, enhancements, and bugfixes in this
 * Skip plugin install for not file found ([PR #524](https://github.com/canonical/mysql-operator/pull/524)) ([DPE-5540](https://warthogs.atlassian.net/browse/DPE-5540))
 * Skip tls reconfiguration on unit teardown ([PR #522](https://github.com/canonical/mysql-operator/pull/522)) ([DPE-5493](https://warthogs.atlassian.net/browse/DPE-5493))
 * Upgrade fix for admin-address enabled charm ([PR #520](https://github.com/canonical/mysql-operator/pull/520)) ([DPE-5178](https://warthogs.atlassian.net/browse/DPE-5178))
+* Bump cffi to version 1.16.0 ([PR #549](https://github.com/canonical/mysql-operator/pull/549))
+* Fixed use juju provided ip ([PR #558](https://github.com/canonical/mysql-operator/pull/558)) ([DPE-6105](https://warthogs.atlassian.net/browse/DPE-6105))
+* Fixed regression on MAAS deployment ([PR #554](https://github.com/canonical/mysql-operator/pull/554)) ([DPE-6055](https://warthogs.atlassian.net/browse/DPE-6055))
+* Add new VM reboot tests ([PR #534](https://github.com/canonical/mysql-operator/pull/534)) ([DPE-5415](https://warthogs.atlassian.net/browse/DPE-5415))
+* Fixed starting group replication while waiting for upgrade ([PR #546](https://github.com/canonical/mysql-operator/pull/546)) ([DPE-5941](https://warthogs.atlassian.net/browse/DPE-5941))
 * Update all dependencies to the latest versions.
 
 ## Technical details
@@ -72,7 +73,7 @@ If you are jumping over several stable revisions, check [previous release notes]
 
 ## Requirements and compatibility
 This charm revision features the following changes in dependencies:
-* (increased) MySQL version `v8.0.37`
+* (increased) MySQL version `v8.0.39`
 
 > This release of Charmed MySQL requires Juju `v.3.4.3` or `3.5.2+`. See the guide [How to upgrade Juju for a new database revision].
 
@@ -109,9 +110,9 @@ See the [Integrations tab] for a full list of supported integrations/interfaces/
 
 ### Packaging
 This charm is based on the [`charmed-mysql` snap] Revision [113/114][snap rev113/114]. It packages:
-- mysql-server-8.0: [8.0.37-0ubuntu0.22.04.1]
-- mysql-router `v8.0.37`: [8.0.37-0ubuntu0.22.04.1]
-- mysql-shell `v8.0.37`: [8.0.37+dfsg-0ubuntu0.22.04.1~ppa3]
+- mysql-server-8.0: [8.0.39-0ubuntu0.22.04.1]
+- mysql-router `v8.0.39`: [8.0.39-0ubuntu0.22.04.1]
+- mysql-shell `v8.0.38`: [8.0.38+dfsg-0ubuntu0.22.04.1~ppa2]
 - prometheus-mysqld-exporter `v0.14.0`: [0.14.0-0ubuntu0.22.04.1~ppa2]
 - prometheus-mysqlrouter-exporter `v5.0.1`: [5.0.1-0ubuntu0.22.04.1~ppa1]
 - percona-xtrabackup `v8.0.35`: [8.0.35-31-0ubuntu0.22.04.1~ppa3]
@@ -149,8 +150,8 @@ Charmed MySQL is an open source project that warmly welcomes community contribut
 
 [snap rev113/114]: https://github.com/canonical/charmed-mysql-snap/releases/tag/rev114
 [`charmed-mysql` snap]: https://snapcraft.io/charmed-mysql
-[8.0.37-0ubuntu0.22.04.1]: https://launchpad.net/ubuntu/+source/mysql-8.0/8.0.37-0ubuntu0.22.04.3
-[8.0.37+dfsg-0ubuntu0.22.04.1~ppa3]: https://launchpad.net/~data-platform/+archive/ubuntu/mysql-shell
+[8.0.39-0ubuntu0.22.04.1]: https://launchpad.net/ubuntu/+source/mysql-8.0/8.0.39-0ubuntu0.22.04.1
+[8.0.38+dfsg-0ubuntu0.22.04.1~ppa2]: https://launchpad.net/~data-platform/+archive/ubuntu/mysql-shell
 [0.14.0-0ubuntu0.22.04.1~ppa2]: https://launchpad.net/~data-platform/+archive/ubuntu/mysqld-exporter
 [5.0.1-0ubuntu0.22.04.1~ppa1]: https://launchpad.net/~data-platform/+archive/ubuntu/mysqlrouter-exporter
 [8.0.35-31-0ubuntu0.22.04.1~ppa3]: https://launchpad.net/~data-platform/+archive/ubuntu/xtrabackup
