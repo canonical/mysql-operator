@@ -87,7 +87,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | h-contribute | [Contribute](/t/14654) |
 | 1 | reference | [Reference]() |
 | 2 | r-releases | [Release Notes](/t/11881) |
-| 3 | r-revision-305-306 | [Revision 305/306](/t/15275) |
+| 3 | r-revision-312-313 | [Revision 312/313](/t/15275) |
 | 3 | r-revision-240 | [Revision 240](/t/14071) |
 | 3 | r-revision-196 | [Revision 196](/t/11883) |
 | 3 | r-revision-151 | [Revision 151](/t/11882) |
