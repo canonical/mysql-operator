@@ -835,22 +835,29 @@ class MySQL(MySQLBase):
         if not selected_snap.present:
             raise SnapServiceOperationError(f"Snap {CHARMED_MYSQL_SNAP_NAME} not installed")
 
-        is_running = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["active"]
+        is_enabled = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["enabled"]
+        is_active = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["active"]
+        supposed_to_run = (
+            self.charm.unit.is_leader() and "binlogs-collecting" in self.charm.app_peer_data
+        )
 
-        if is_running and (
-            not self.charm.unit.is_leader() or "binlogs-collecting" not in self.charm.app_peer_data
-        ):
-            logger.debug("Stopping binlogs collector")
-            selected_snap.stop([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+        if supposed_to_run and is_enabled and not is_active:
+            logger.error("Binlogs collector is enabled but not running")
+            if force_restart:
+                logger.error("Binlogs collector will be restarted due to force_restart option")
+            else:
+                logger.error("Restarting binlogs collector to reanimate unhealthy service")
+                selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
 
-        if not self.charm.unit.is_leader():
-            return True
+        if is_enabled and (force_restart or not supposed_to_run):
+            logger.debug("Disabling binlogs collector")
+            selected_snap.stop([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], disable=True)
 
-        if "binlogs-collecting" in self.charm.app_peer_data and (force_restart or not is_running):
-            logger.debug("Restarting binlogs collector")
+        if supposed_to_run and (force_restart or not is_enabled):
+            logger.debug("Enabling binlogs collector")
             if not self.charm.backups.update_binlogs_collector_config():
                 return False
-            selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+            selected_snap.start([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], enable=True)
 
         return True
 
