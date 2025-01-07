@@ -56,7 +56,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@snap-24
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@snap-24-test
     with:
       cache: true
 
@@ -82,7 +82,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@snap-24
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@snap-24-test
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
