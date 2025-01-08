@@ -41,27 +41,27 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 |[313]  |![check] | | ![check]  |
 |[312] |  | ![check]| ![check] |
 
-[details=Release 240]
+[details=Older releases]
+
+### Release 240
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[240] |![check]| | ![check]   |
-[/details]
 
-[details=Release 196]
+### Release 196
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[196] |![check]| | ![check]   |
-[/details]
 
-[details=Release 151]
+### Release 151
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[151] |![check]| | ![check]   |
-[/details]
 
+[/details]
 
 [note]
  Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or leave a comment.
