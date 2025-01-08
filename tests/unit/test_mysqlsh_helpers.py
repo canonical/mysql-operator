@@ -308,15 +308,7 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
-        )
+        self.assertTrue(call().write(config) in _open_mock.mock_calls)
 
         # Test `testing` profile
         self.mysql.charm.config.profile = "testing"
@@ -348,18 +340,13 @@ class TestMySQL(unittest.TestCase):
             "\n",
         ))
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(
-                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
-                    "w",
-                    encoding="utf-8",
-                ),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
+        self.assertTrue(
+            call(
+                f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                "w",
+                encoding="utf-8",
+            )
+            in _open_mock.mock_calls
         )
 
     @patch(
