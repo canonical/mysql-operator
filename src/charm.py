@@ -392,8 +392,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
-        if not self._mysql.start_stop_binlogs_collecting():
-            logger.error("Failed to start or stop binlogs collecting during peer relation event")
+        if not self._mysql.reconcile_binlogs_collection():
+            logger.error("Failed to reconcile binlogs collection during peer relation event")
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""

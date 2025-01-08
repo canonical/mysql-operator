@@ -820,7 +820,7 @@ class MySQL(MySQLBase):
         """Check if file exists."""
         return os.path.exists(path)
 
-    def start_stop_binlogs_collecting(self, force_restart: bool = False) -> bool:
+    def reconcile_binlogs_collection(self, force_restart: bool = False) -> bool:
         """Start or stop binlogs collecting service.
 
         Based on the "binlogs-collecting" app peer data value and unit leadership.
