@@ -45,6 +45,7 @@ from constants import (
     CHARMED_MYSQLD_EXPORTER_SERVICE,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
+    MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE,
     MYSQL_DATA_DIR,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
@@ -860,6 +861,12 @@ class MySQL(MySQLBase):
             selected_snap.start([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], enable=True)
 
         return True
+
+    def delete_binlogs_collector_config(self) -> None:
+        """Delete binlogs collector config file."""
+        logger.info("Deleting binlogs collector config")
+        if os.path.exists(MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE):
+            os.remove(MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE)
 
     def get_cluster_members(self) -> list[str]:
         """Get cluster members in MySQL MEMBER_HOST format.
