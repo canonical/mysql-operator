@@ -37,3 +37,5 @@ parts:
       craftctl default
     charm-strict-dependencies: true
     charm-requirements: [requirements.txt]
+    charm-binary-python-packages:
+      - mysql-connector-python

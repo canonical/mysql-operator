@@ -12,9 +12,10 @@ import shutil
 import subprocess
 import tempfile
 import typing
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import jinja2
+import mysql.connector
 from charms.mysql.v0.mysql import (
     BYTES_1MB,
     Error,
@@ -33,8 +34,8 @@ from charms.operator_libs_linux.v2 import snap
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
+from connector import MySQLConnector
 from constants import (
-    CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
@@ -55,10 +56,6 @@ from constants import (
 )
 
 logger = logging.getLogger(__name__)
-
-if typing.TYPE_CHECKING:
-    from charm import MySQLOperatorCharm
-
 
 if typing.TYPE_CHECKING:
     from charm import MySQLOperatorCharm
@@ -525,7 +522,7 @@ class MySQL(MySQLBase):
             )
         except subprocess.CalledProcessError:
             logger.exception(
-                "Failed to change data directory permissions or ownershp after restoring"
+                "Failed to change data directory permissions or ownership after restoring"
             )
             raise MySQLRestoreBackupError
 
@@ -653,7 +650,7 @@ class MySQL(MySQLBase):
         if not self.is_mysqld_running():
             logger.warning("mysqld is not running, skipping flush host cache")
             return
-        flush_host_cache_command = "TRUNCATE TABLE performance_schema.host_cache"
+        flush_host_cache_command = ("TRUNCATE TABLE performance_schema.host_cache",)
 
         try:
             logger.debug("Truncating the MySQL host cache")
@@ -703,13 +700,18 @@ class MySQL(MySQLBase):
         self.stop_mysql_exporter()
         self.connect_mysql_exporter()
 
-    def _run_mysqlsh_script(self, script: str, timeout=None) -> str:
+    def _run_mysqlsh_script(
+        self, script: str, user: str, host: str, password: str, timeout=None
+    ) -> str:
         """Execute a MySQL shell script.
 
         Raises CalledProcessError if the script gets a non-zero return code.
 
         Args:
             script: Mysqlsh script string
+            user: User to invoke the mysqlsh script with
+            host: Host to run the script on
+            password: Password to invoke the mysqlsh script
             timeout: (optional) Timeout for the script
 
         Returns:
@@ -717,12 +719,17 @@ class MySQL(MySQLBase):
         """
         # Use the self.mysqlsh_common_dir for the confined mysql-shell snap.
         with tempfile.NamedTemporaryFile(mode="w", dir=CHARMED_MYSQL_COMMON_DIRECTORY) as _file:
-            _file.write(script)
+            # prepend every shell command with
+            # - set wizard to false. cannot be set on cmd line option as it conflicts with --passwords-from-stdin
+            # - a separator to ease output parsing, as password prompt get printed to stdout
+            prepend_cmd = "shell.options.set('useWizards', False)\nprint('###')\n"
+            _file.write(prepend_cmd + script)  # prepend output separator to script
             _file.flush()
 
             command = [
                 CHARMED_MYSQLSH,
-                "--no-wizard",
+                "--passwords-from-stdin",
+                f"--uri={user}@{host}",
                 "--python",
                 "-f",
                 _file.name,
@@ -733,49 +740,58 @@ class MySQL(MySQLBase):
                 # snap_daemon
                 shutil.chown(_file.name, user="snap_daemon", group="root")
 
-                return subprocess.check_output(
-                    command, stderr=subprocess.PIPE, timeout=timeout
-                ).decode("utf-8")
+                output = subprocess.check_output(
+                    command,
+                    stderr=subprocess.PIPE,
+                    timeout=timeout,
+                    input=password,
+                    text=True,
+                    env=os.environ
+                    | {"MYSQL_TEST_LOGIN_FILE": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/.mylogin.cnf"},
+                )
+                # split output to clean mysqlsh garbage
+                return output.split("###")[1].strip()
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 raise MySQLClientError
 
     def _run_mysqlcli_script(
         self,
-        script: str,
+        script: Union[Tuple[Any, ...], List[Any]],
         user: str = "root",
         password: Optional[str] = None,
         timeout: Optional[int] = None,
-    ) -> str:
-        """Execute a MySQL CLI script.
+    ) -> list:
+        """Execute a MySQL script.
 
         Execute SQL script as instance root user.
-        Raises CalledProcessError if the script gets a non-zero return code.
+
+        Raises:
+            MySQLClientError if the script gets a non-zero return code.
+            TimeoutError if the script times out.
 
         Args:
-            script: raw SQL script string
+            script: raw SQL script string or string Iterable
             user: (optional) user to invoke the mysql cli script with (default is "root")
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
         """
-        command = [
-            CHARMED_MYSQL,
-            "-u",
-            user,
-            "--protocol=SOCKET",
-            f"--socket={MYSQLD_SOCK_FILE}",
-            "-e",
-            script,
-        ]
+        config = {"user": user, "unix_socket": MYSQLD_SOCK_FILE}
 
         if password:
-            command.append(f"--password={password}")
+            config["password"] = password
 
         try:
-            return subprocess.check_output(
-                command, stderr=subprocess.PIPE, timeout=timeout
-            ).decode("utf-8")
-        except subprocess.CalledProcessError as e:
-            raise MySQLClientError(self.strip_off_passwords(e.stderr.decode("utf-8")))
+            r = []
+            for item in script:
+                with MySQLConnector(config=config, query_timeout=timeout) as cursor:
+                    cursor.execute(item)
+                    r = cursor.fetchall()
+            # only last (or single) result is returned
+            return r
+
+        except mysql.connector.errors.Error:
+            logger.exception("MySQL connector exception")
+            raise MySQLClientError
 
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.

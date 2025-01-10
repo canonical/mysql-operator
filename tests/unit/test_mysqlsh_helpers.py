@@ -73,9 +73,11 @@ class TestMySQL(unittest.TestCase):
     @patch("shutil.chown")
     def test_run_mysqlsh_script(self, _chown, _check_output, _):
         """Test a successful execution of run_mysqlsh_script."""
-        _check_output.return_value = b"stdout"
+        _check_output.return_value = "###stdout"
 
-        self.mysql._run_mysqlsh_script("script")
+        self.mysql._run_mysqlsh_script(
+            "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
+        )
 
         _check_output.assert_called_once()
         _chown.assert_called_once()
@@ -88,26 +90,23 @@ class TestMySQL(unittest.TestCase):
         _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=1)
 
         with self.assertRaises(MySQLClientError):
-            self.mysql._run_mysqlsh_script("script")
+            self.mysql._run_mysqlsh_script(
+                "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
+            )
 
-    @patch("subprocess.check_output")
-    def test_run_mysqlcli_script(self, _check_output):
+    @patch("mysql_vm_helpers.MySQLConnector")
+    def test_run_mysqlcli_script(self, connector):
         """Test a successful execution of run_mysqlsh_script."""
-        self.mysql._run_mysqlcli_script("script", timeout=10)
+        mock_cursor = MagicMock()
+        connector.return_value.__enter__.return_value = mock_cursor
 
-        _check_output.assert_called_once_with(
-            [
-                "charmed-mysql.mysql",
-                "-u",
-                "root",
-                "--protocol=SOCKET",
-                "--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock",
-                "-e",
-                "script",
-            ],
-            stderr=subprocess.PIPE,
+        self.mysql._run_mysqlcli_script(
+            ("script",),
+            user="root",
             timeout=10,
         )
+
+        mock_cursor.execute.assert_called_with("script")
 
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script_exception(self, _check_output):
@@ -117,7 +116,7 @@ class TestMySQL(unittest.TestCase):
         )
 
         with self.assertRaises(MySQLClientError):
-            self.mysql._run_mysqlcli_script("script")
+            self.mysql._run_mysqlcli_script(("script",))
 
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
     @patch("os.path.exists", return_value=False)

@@ -913,22 +913,16 @@ class MySQLBase(ABC):
             user: User name.
             host: Host name, default to unit address.
         """
-        password_map = {
-            self.server_config_user: self.server_config_password,
-            self.cluster_admin_user: self.cluster_admin_password,
-            "root": self.root_password,
-            self.backups_user: self.backups_password,
-        }
         if host and ":" in host:
             # strip port from address
             host = host.split(":")[0]
 
         if user in (self.server_config_user, self.backups_user):
             # critical operator users use admin address
-            return f"{user}:{password_map[user]}@{host or self.instance_address}:{ADMIN_PORT}"
+            return f"{host or self.instance_address}:{ADMIN_PORT}"
         elif host != self.instance_address:
-            return f"{user}:{password_map[user]}@{host}:3306"
-        return f"{user}:{password_map[user]}@{self.socket_uri}"
+            return f"{host}:3306"
+        return f"{self.socket_uri}"
 
     def render_mysqld_configuration(  # noqa: C901
         self,
@@ -1072,11 +1066,11 @@ class MySQLBase(ABC):
             logger.debug(f"Configuring MySQL users for {self.instance_address}")
             if password_needed:
                 self._run_mysqlcli_script(
-                    "; ".join(configure_users_commands),
+                    configure_users_commands,
                     password=self.root_password,
                 )
             else:
-                self._run_mysqlcli_script("; ".join(configure_users_commands))
+                self._run_mysqlcli_script(configure_users_commands)
         except MySQLClientError as e:
             logger.exception(
                 f"Failed to configure users for: {self.instance_address} with error {e.message}",
@@ -1126,9 +1120,12 @@ class MySQLBase(ABC):
                 command = f"{command_prefix} '{plugin_file}';"
                 if super_read_only:
                     command = (
-                        f"SET GLOBAL super_read_only=OFF; {command}"
-                        "SET GLOBAL super_read_only=ON;"
+                        "SET GLOBAL super_read_only=OFF",
+                        command,
+                        "SET GLOBAL super_read_only=ON",
                     )
+                else:
+                    command = (command,)
                 logger.info(f"Installing {plugin=}")
                 self._run_mysqlcli_script(
                     command,
@@ -1160,9 +1157,12 @@ class MySQLBase(ABC):
                 command = f"UNINSTALL PLUGIN {plugin};"
                 if super_read_only:
                     command = (
-                        f"SET GLOBAL super_read_only=OFF; {command}"
-                        "SET GLOBAL super_read_only=ON;"
+                        "SET GLOBAL super_read_only=OFF",
+                        command,
+                        "SET GLOBAL super_read_only=ON",
                     )
+                else:
+                    command = (command,)
                 self._run_mysqlcli_script(
                     command,
                     user=self.server_config_user,
@@ -1178,13 +1178,11 @@ class MySQLBase(ABC):
         """Return a set of explicitly installed plugins."""
         try:
             output = self._run_mysqlcli_script(
-                "select name from mysql.plugin",
+                ("select name from mysql.plugin",),
                 password=self.root_password,
             )
             return {
-                plugin
-                for plugin in output.splitlines()
-                if plugin not in ["clone", "group_replication"]
+                plugin[0] for plugin in output if plugin[0] not in ["clone", "group_replication"]
             }
         except MySQLClientError:
             logger.exception(
@@ -1195,16 +1193,16 @@ class MySQLBase(ABC):
     def does_mysql_user_exist(self, username: str, hostname: str) -> bool:
         """Checks if a mysql user already exists."""
         user_existence_commands = (
-            f"select if((select count(*) from mysql.user where user = '{username}' and host = '{hostname}'), 'USER_EXISTS', 'USER_DOES_NOT_EXIST') as ''",
+            f"select user from mysql.user where user = '{username}' and host = '{hostname}'",
         )
 
         try:
             output = self._run_mysqlcli_script(
-                "; ".join(user_existence_commands),
+                user_existence_commands,
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-            return "USER_EXISTS" in output
+            return len(output) == 1
         except MySQLClientError as e:
             logger.exception(
                 f"Failed to check for existence of mysql user {username}@{hostname}",
@@ -1222,13 +1220,13 @@ class MySQLBase(ABC):
             )
             # Using server_config_user as we are sure it has create user grants
             create_mysqlrouter_user_commands = (
-                f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+                "shell.connect_to_primary()",
                 f"session.run_sql(\"CREATE USER '{username}'@'{hostname}' IDENTIFIED BY '{password}' ATTRIBUTE '{escaped_mysqlrouter_user_attributes}';\")",
             )
 
             # Using server_config_user as we are sure it has create user grants
             mysqlrouter_user_grant_commands = (
-                f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+                "shell.connect_to_primary()",
                 f"session.run_sql(\"GRANT CREATE USER ON *.* TO '{username}'@'{hostname}' WITH GRANT OPTION;\")",
                 f"session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO '{username}'@'{hostname}';\")",
                 f"session.run_sql(\"GRANT SELECT ON mysql.user TO '{username}'@'{hostname}';\")",
@@ -1238,9 +1236,19 @@ class MySQLBase(ABC):
             )
 
             logger.debug(f"Configuring MySQLRouter {username=}")
-            self._run_mysqlsh_script("\n".join(create_mysqlrouter_user_commands))
+            self._run_mysqlsh_script(
+                "\n".join(create_mysqlrouter_user_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
             # grant permissions to the newly created mysqlrouter user
-            self._run_mysqlsh_script("\n".join(mysqlrouter_user_grant_commands))
+            self._run_mysqlsh_script(
+                "\n".join(mysqlrouter_user_grant_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to configure mysqlrouter {username=}")
             raise MySQLConfigureRouterUserError
@@ -1261,9 +1269,7 @@ class MySQLBase(ABC):
             attributes["unit_name"] = unit_name
         try:
             # Using server_config_user as we are sure it has create database grants
-            connect_command = (
-                f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
-            )
+            connect_command = ("shell.connect_to_primary()",)
             create_database_commands = (
                 f'session.run_sql("CREATE DATABASE IF NOT EXISTS `{database_name}`;")',
             )
@@ -1281,7 +1287,12 @@ class MySQLBase(ABC):
             else:
                 commands = connect_command + create_scoped_user_commands
 
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(
                 f"Failed to create application database {database_name} and scoped user {username}@{hostname}",
@@ -1315,7 +1326,6 @@ class MySQLBase(ABC):
         """Get users for related MySQL Router unit."""
         relation_user = f"relation-{relation_id}"
         command = [
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             (
                 "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "
                 f"INFORMATION_SCHEMA.USER_ATTRIBUTES WHERE ATTRIBUTE->'$.created_by_user'='{relation_user}' "
@@ -1324,7 +1334,12 @@ class MySQLBase(ABC):
             "print(result.fetch_all())",
         ]
         try:
-            output = self._run_mysqlsh_script("\n".join(command))
+            output = self._run_mysqlsh_script(
+                "\n".join(command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(
                 f"Failed to get MySQL Router users for relation {relation_id} and unit {mysql_router_unit_name}"
@@ -1336,13 +1351,18 @@ class MySQLBase(ABC):
     def delete_users_for_unit(self, unit_name: str) -> None:
         """Delete users for a unit."""
         drop_users_command = [
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
         ]
         drop_users_command.extend(
             self._get_statements_to_delete_users_with_attribute("unit_name", f"'{unit_name}'")
         )
         try:
-            self._run_mysqlsh_script("\n".join(drop_users_command))
+            self._run_mysqlsh_script(
+                "\n".join(drop_users_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(f"Failed to query and delete users for unit {unit_name}")
             raise MySQLDeleteUsersForUnitError(e.message)
@@ -1350,7 +1370,7 @@ class MySQLBase(ABC):
     def delete_users_for_relation(self, username: str) -> None:
         """Delete users for a relation."""
         drop_users_command = [
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             f"session.run_sql(\"DROP USER IF EXISTS '{username}'@'%';\")",
         ]
         # If the relation is with a MySQL Router charm application, delete any users
@@ -1359,7 +1379,12 @@ class MySQLBase(ABC):
             self._get_statements_to_delete_users_with_attribute("created_by_user", f"'{username}'")
         )
         try:
-            self._run_mysqlsh_script("\n".join(drop_users_command))
+            self._run_mysqlsh_script(
+                "\n".join(drop_users_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(f"Failed to delete {username=}")
             raise MySQLDeleteUsersForRelationError(e.message)
@@ -1367,11 +1392,16 @@ class MySQLBase(ABC):
     def delete_user(self, username: str) -> None:
         """Delete user."""
         drop_user_command = [
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             f"session.run_sql(\"DROP USER `{username}`@'%'\")",
         ]
         try:
-            self._run_mysqlsh_script("\n".join(drop_user_command))
+            self._run_mysqlsh_script(
+                "\n".join(drop_user_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(f"Failed to delete user {username}")
             raise MySQLDeleteUserError(e.message)
@@ -1379,12 +1409,16 @@ class MySQLBase(ABC):
     def remove_router_from_cluster_metadata(self, router_id: str) -> None:
         """Remove MySQL Router from InnoDB Cluster metadata."""
         command = [
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             "cluster = dba.get_cluster()",
             f'cluster.remove_router_metadata("{router_id}")',
         ]
         try:
-            self._run_mysqlsh_script("\n".join(command))
+            self._run_mysqlsh_script(
+                "\n".join(command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception(f"Failed to remove router from metadata with ID {router_id}")
             raise MySQLRemoveRouterFromMetadataError(e.message)
@@ -1402,13 +1436,17 @@ class MySQLBase(ABC):
             value = f"`{value}`"
 
         logger.debug(f"Setting {variable=} to {value=}")
-        set_var_command = [
-            f"shell.connect('{self.instance_def(self.server_config_user, instance_address)}')",
-            f"session.run_sql(\"SET {'PERSIST' if persist else 'GLOBAL'} {variable}={value}\")",
-        ]
+        set_var_command = (
+            f'session.run_sql("SET {"PERSIST" if persist else "GLOBAL"} {variable}={value}")'
+        )
 
         try:
-            self._run_mysqlsh_script("\n".join(set_var_command))
+            self._run_mysqlsh_script(
+                set_var_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, instance_address),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to set {variable=} to {value=}")
             raise MySQLSetVariableError
@@ -1416,13 +1454,17 @@ class MySQLBase(ABC):
     def get_variable_value(self, variable: str) -> str:
         """Get the value of a variable."""
         get_var_command = [
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"result = session.run_sql(\"SHOW VARIABLES LIKE '{variable}'\")",
             "print(result.fetch_all())",
         ]
 
         try:
-            output = self._run_mysqlsh_script("\n".join(get_var_command))
+            output = self._run_mysqlsh_script(
+                "\n".join(get_var_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to get value for {variable=}")
             raise MySQLGetVariableError
@@ -1442,13 +1484,16 @@ class MySQLBase(ABC):
                 "clusterAdminPassword": self.cluster_admin_password,
             })
 
-        configure_instance_command = (
-            f"dba.configure_instance('{self.instance_def(self.server_config_user)}', {options})",
-        )
+        configure_instance_command = f"dba.configure_instance(options={options})"
 
         try:
             logger.debug(f"Configuring instance for InnoDB on {self.instance_address}")
-            self._run_mysqlsh_script("\n".join(configure_instance_command))
+            self._run_mysqlsh_script(
+                configure_instance_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
             self.wait_until_mysql_connection()
         except MySQLClientError:
             logger.exception(f"Failed to configure instance {self.instance_address}")
@@ -1463,14 +1508,18 @@ class MySQLBase(ABC):
         }
 
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"cluster = dba.create_cluster('{self.cluster_name}', {options})",
             f"cluster.set_instance_option('{self.instance_address}', 'label', '{unit_label}')",
         )
 
         try:
             logger.debug(f"Creating a MySQL InnoDB cluster on {self.instance_address}")
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to create cluster on instance: {self.instance_address}")
             raise MySQLCreateClusterError
@@ -1478,14 +1527,19 @@ class MySQLBase(ABC):
     def create_cluster_set(self) -> None:
         """Create a cluster set for the cluster on cluster primary."""
         commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"cluster.create_cluster_set('{self.cluster_set_name}')",
         )
 
         try:
             logger.debug(f"Creating cluster set name {self.cluster_set_name}")
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to create cluster-set")
             raise MySQLCreateClusterSetError from None
@@ -1510,7 +1564,7 @@ class MySQLBase(ABC):
             options["cloneDonor"] = donor
 
         commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             "cs = dba.get_cluster_set()",
             f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
             f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
@@ -1518,7 +1572,12 @@ class MySQLBase(ABC):
 
         try:
             logger.debug(f"Creating replica cluster {replica_cluster_name}")
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             if method == "auto":
                 logger.warning(
@@ -1538,7 +1597,7 @@ class MySQLBase(ABC):
     def promote_cluster_to_primary(self, cluster_name: str, force: bool = False) -> None:
         """Promote a cluster to become the primary cluster on the cluster set."""
         commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             "cs = dba.get_cluster_set()",
             (
                 f"cs.force_primary_cluster('{cluster_name}')"
@@ -1553,7 +1612,12 @@ class MySQLBase(ABC):
             logger.debug(f"Promoting {cluster_name=} to primary with {force=}")
 
         try:
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to promote cluster to primary")
             raise MySQLPromoteClusterToPrimaryError
@@ -1561,13 +1625,17 @@ class MySQLBase(ABC):
     def fence_writes(self) -> None:
         """Fence writes on the primary cluster."""
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             "c = dba.get_cluster()",
             "c.fence_writes()",
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to fence writes on cluster")
             raise MySQLFencingWritesError
@@ -1575,14 +1643,18 @@ class MySQLBase(ABC):
     def unfence_writes(self) -> None:
         """Unfence writes on the primary cluster and reset read_only flag."""
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             "c = dba.get_cluster()",
             "c.unfence_writes()",
             "session.run_sql('SET GLOBAL read_only=OFF')",
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to resume writes on primary cluster")
             raise MySQLFencingWritesError
@@ -1607,7 +1679,6 @@ class MySQLBase(ABC):
     def cluster_metadata_exists(self, from_instance: str) -> bool:
         """Check if this cluster metadata exists on database."""
         check_cluster_metadata_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             (
                 'result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
                 f".clusters where cluster_name = '{self.cluster_name}';\")"
@@ -1617,7 +1688,11 @@ class MySQLBase(ABC):
 
         try:
             output = self._run_mysqlsh_script(
-                "\n".join(check_cluster_metadata_commands), timeout=60
+                "\n".join(check_cluster_metadata_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+                timeout=60,
             )
         except MySQLClientError:
             logger.warning(f"Failed to check if cluster metadata exists {from_instance=}")
@@ -1628,14 +1703,20 @@ class MySQLBase(ABC):
     def rejoin_cluster(self, cluster_name) -> None:
         """Try to rejoin a cluster to the cluster set."""
         commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             "cs = dba.get_cluster_set()",
             f"cs.rejoin_cluster('{cluster_name}')",
         )
 
         try:
             logger.debug(f"Rejoining {cluster_name=}")
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
+
             logger.info(f"Rejoined {cluster_name=}")
         except MySQLClientError:
             logger.exception("Failed to rejoin cluster")
@@ -1644,7 +1725,7 @@ class MySQLBase(ABC):
     def remove_replica_cluster(self, replica_cluster_name: str, force: bool = False) -> None:
         """Remove a replica cluster from the cluster-set."""
         commands = [
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             "cs = dba.get_cluster_set()",
         ]
         if force:
@@ -1654,7 +1735,12 @@ class MySQLBase(ABC):
 
         try:
             logger.debug(f"Removing replica cluster {replica_cluster_name}")
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to remove replica cluster")
             raise MySQLRemoveReplicaClusterError
@@ -1677,7 +1763,7 @@ class MySQLBase(ABC):
             )
 
             self._run_mysqlcli_script(
-                "; ".join(initialize_table_commands),
+                initialize_table_commands,
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
@@ -1714,7 +1800,6 @@ class MySQLBase(ABC):
 
         connect_instance = from_instance or self.instance_address
         connect_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, connect_instance)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             "shell.options['dba.restartWaitTimeout'] = 3600",
         )
@@ -1730,7 +1815,12 @@ class MySQLBase(ABC):
                 f"Adding instance {instance_address}/{instance_unit_label} to {self.cluster_name=}"
                 f"with recovery {method=}"
             )
-            self._run_mysqlsh_script("\n".join(connect_commands + add_instance_command))
+            self._run_mysqlsh_script(
+                "\n".join(connect_commands + add_instance_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, connect_instance),
+            )
 
         except MySQLClientError:
             if method == "clone":
@@ -1758,7 +1848,6 @@ class MySQLBase(ABC):
     ) -> bool:
         """Confirm if instance is configured for use in an InnoDB cluster."""
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, instance_address)}')",
             "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
             'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
         )
@@ -1768,7 +1857,12 @@ class MySQLBase(ABC):
                 f"Confirming instance {instance_address}/{instance_unit_label} configuration for InnoDB"
             )
 
-            output = self._run_mysqlsh_script("\n".join(commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, instance_address),
+            )
             return "INSTANCE_CONFIGURED" in output
         except MySQLClientError as e:
             # confirmation can fail if the clusteradmin user does not yet exist on the instance
@@ -1779,25 +1873,31 @@ class MySQLBase(ABC):
 
     def drop_group_replication_metadata_schema(self) -> None:
         """Drop the group replication metadata schema from current unit."""
-        commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
-            "dba.drop_metadata_schema()",
-        )
+        commands = "dba.drop_metadata_schema()"
 
         try:
-            self._run_mysqlsh_script("\n".join(commands))
+            self._run_mysqlsh_script(
+                commands,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to drop group replication metadata schema")
 
     def are_locks_acquired(self, from_instance: Optional[str] = None) -> bool:
         """Report if any topology change is being executed."""
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
             "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
         )
         try:
-            output = self._run_mysqlsh_script("\n".join(commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+            )
         except MySQLClientError:
             # log error and fallback to assuming topology is changing
             logger.exception("Failed to get locks count")
@@ -1821,13 +1921,17 @@ class MySQLBase(ABC):
             options["addInstances"] = "auto"
 
         rescan_cluster_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"cluster.rescan({options})",
         )
         try:
             logger.debug("Rescanning cluster")
-            self._run_mysqlsh_script("\n".join(rescan_cluster_commands))
+            self._run_mysqlsh_script(
+                "\n".join(rescan_cluster_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+            )
         except MySQLClientError as e:
             logger.exception("Error rescanning the cluster")
             raise MySQLRescanClusterError(e.message)
@@ -1835,7 +1939,6 @@ class MySQLBase(ABC):
     def is_instance_in_cluster(self, unit_label: str) -> bool:
         """Confirm if instance is in the cluster."""
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"print(cluster.status()['defaultReplicaSet']['topology'].get('{unit_label}', {{}}).get('status', 'NOT_A_MEMBER'))",
         )
@@ -1843,7 +1946,12 @@ class MySQLBase(ABC):
         try:
             logger.debug(f"Checking existence of unit {unit_label} in cluster {self.cluster_name}")
 
-            output = self._run_mysqlsh_script("\n".join(commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
             return (
                 MySQLMemberState.ONLINE in output.lower()
                 or MySQLMemberState.RECOVERING in output.lower()
@@ -1866,13 +1974,18 @@ class MySQLBase(ABC):
         """Get the cluster status dictionary."""
         options = {"extended": extended}
         status_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"print(cluster.status({options}))",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(status_commands), timeout=30)
+            output = self._run_mysqlsh_script(
+                "\n".join(status_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+                timeout=30,
+            )
             output_dict = json.loads(output.lower())
             return output_dict
         except MySQLClientError:
@@ -1884,13 +1997,18 @@ class MySQLBase(ABC):
         """Get the cluster-set status dictionary."""
         options = {"extended": extended}
         status_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             "cs = dba.get_cluster_set()",
             f"print(cs.status({options}))",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(status_commands), timeout=150)
+            output = self._run_mysqlsh_script(
+                "\n".join(status_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+                timeout=150,
+            )
             output_dict = json.loads(output.lower())
             return output_dict
         except MySQLClientError:
@@ -1908,13 +2026,18 @@ class MySQLBase(ABC):
         if not replica_cluster_name:
             replica_cluster_name = self.cluster_name
         status_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             "cs = dba.get_cluster_set()",
             f"print(cs.status(extended=1)['clusters']['{replica_cluster_name}']['globalStatus'])",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(status_commands), timeout=30)
+            output = self._run_mysqlsh_script(
+                "\n".join(status_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+                timeout=30,
+            )
             return output.lower().strip()
         except MySQLClientError:
             logger.warning(f"Failed to get replica cluster status for {replica_cluster_name}")
@@ -1934,13 +2057,18 @@ class MySQLBase(ABC):
                 f" WHERE member_state = '{node_status.value.upper()}'"
             )
         size_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, from_instance)}')",
             f'result = session.run_sql("{query}")',
             'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(size_commands), timeout=30)
+            output = self._run_mysqlsh_script(
+                "\n".join(size_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+                timeout=30,
+            )
         except MySQLClientError:
             logger.warning("Failed to get node count")
             return 0
@@ -2008,12 +2136,16 @@ class MySQLBase(ABC):
             "force": "true" if force else "false",
         }
         remove_instance_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, connect_instance)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             "cluster.remove_instance("
             f"'{self.cluster_admin_user}@{self.instance_address}', {remove_instance_options})",
         )
-        self._run_mysqlsh_script("\n".join(remove_instance_commands))
+        self._run_mysqlsh_script(
+            "\n".join(remove_instance_commands),
+            user=self.server_config_user,
+            password=self.server_config_password,
+            host=self.instance_def(self.server_config_user, connect_instance),
+        )
 
     @retry(
         retry=retry_if_exception_type(MySQLRemoveInstanceRetryError),
@@ -2121,11 +2253,15 @@ class MySQLBase(ABC):
         """Dissolve the cluster independently of the unit teardown process."""
         logger.debug(f"Dissolving cluster {self.cluster_name}")
         dissolve_cluster_commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             "cluster.dissolve({'force': 'true'})",
         )
-        self._run_mysqlsh_script("\n".join(dissolve_cluster_commands))
+        self._run_mysqlsh_script(
+            "\n".join(dissolve_cluster_commands),
+            user=self.server_config_user,
+            password=self.server_config_password,
+            host=self.instance_def(self.server_config_user),
+        )
 
     def _acquire_lock(self, primary_address: str, unit_label: str, lock_name: str) -> bool:
         """Attempts to acquire a lock by using the mysql.juju_units_operations table."""
@@ -2134,7 +2270,6 @@ class MySQLBase(ABC):
         )
 
         acquire_lock_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, host=primary_address)}')",
             (
                 f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='{unit_label}',"
                 f" status='in-progress' WHERE task='{lock_name}' AND executor='';\")"
@@ -2147,7 +2282,12 @@ class MySQLBase(ABC):
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(acquire_lock_commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(acquire_lock_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, primary_address),
+            )
         except MySQLClientError:
             logger.debug(f"Failed to acquire lock {lock_name}")
             return False
@@ -2162,12 +2302,16 @@ class MySQLBase(ABC):
         logger.debug(f"Releasing {lock_name=} @{primary_address=} for {unit_label=}")
 
         release_lock_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, host=primary_address)}')",
             "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"
             f" WHERE task='{lock_name}' AND executor='{unit_label}';\")",
             "print(r.get_affected_items_count())",
         )
-        affected_rows = self._run_mysqlsh_script("\n".join(release_lock_commands))
+        affected_rows = self._run_mysqlsh_script(
+            "\n".join(release_lock_commands),
+            user=self.server_config_user,
+            password=self.server_config_password,
+            host=self.instance_def(self.server_config_user, primary_address),
+        )
         if affected_rows:
             if int(affected_rows) == 0:
                 logger.warning("No lock to release")
@@ -2179,7 +2323,6 @@ class MySQLBase(ABC):
         logger.debug(f"Getting cluster member addresses, excluding units {exclude_unit_labels}")
 
         get_cluster_members_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             (
                 "member_addresses = ','.join([member['address'] for label, member in "
@@ -2188,7 +2331,12 @@ class MySQLBase(ABC):
             "print(f'<MEMBER_ADDRESSES>{member_addresses}</MEMBER_ADDRESSES>')",
         )
 
-        output = self._run_mysqlsh_script("\n".join(get_cluster_members_commands))
+        output = self._run_mysqlsh_script(
+            "\n".join(get_cluster_members_commands),
+            user=self.server_config_user,
+            password=self.server_config_password,
+            host=self.instance_def(self.server_config_user),
+        )
         matches = re.search(r"<MEMBER_ADDRESSES>(.*)</MEMBER_ADDRESSES>", output)
 
         if not matches:
@@ -2208,13 +2356,18 @@ class MySQLBase(ABC):
         logger.debug("Getting cluster primary member's address")
 
         get_cluster_primary_commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user, host=connect_instance_address)}')",
+            "shell.connect_to_primary()",
             "primary_address = shell.parse_uri(session.uri)['host']",
             "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(get_cluster_primary_commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(get_cluster_primary_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, connect_instance_address),
+            )
         except MySQLClientError as e:
             logger.warning("Failed to get cluster primary addresses", exc_info=e)
             raise MySQLGetClusterPrimaryAddressError(e.message)
@@ -2232,14 +2385,18 @@ class MySQLBase(ABC):
         logger.debug("Getting cluster set global primary member's address")
 
         get_cluster_set_global_primary_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, host=connect_instance_address)}')",
             "cs = dba.get_cluster_set()",
             "global_primary = cs.status()['globalPrimaryInstance']",
             "print(f'<PRIMARY_ADDRESS>{global_primary}</PRIMARY_ADDRESS>')",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(get_cluster_set_global_primary_commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(get_cluster_set_global_primary_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, connect_instance_address),
+            )
         except MySQLClientError as e:
             logger.warning("Failed to get cluster set global primary addresses", exc_info=e)
             raise MySQLGetClusterPrimaryAddressError(e.message)
@@ -2274,12 +2431,17 @@ class MySQLBase(ABC):
         logger.debug(f"Setting cluster primary to {new_primary_address}")
 
         set_cluster_primary_commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"cluster.set_primary_instance('{new_primary_address}')",
         )
         try:
-            self._run_mysqlsh_script("\n".join(set_cluster_primary_commands))
+            self._run_mysqlsh_script(
+                "\n".join(set_cluster_primary_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception("Failed to set cluster primary")
             raise MySQLSetClusterPrimaryError(e.message)
@@ -2288,7 +2450,6 @@ class MySQLBase(ABC):
         """Wrapper for API check_for_server_upgrade."""
         # use cluster admin user to enforce standard port usage
         check_command = [
-            f"shell.connect('{self.instance_def(self.cluster_admin_user, host=instance)}')",
             "try:",
             "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",  # ValueError is raised for same version check
@@ -2306,7 +2467,12 @@ class MySQLBase(ABC):
             return output
 
         try:
-            output = self._run_mysqlsh_script("\n".join(check_command))
+            output = self._run_mysqlsh_script(
+                "\n".join(check_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, instance),
+            )
             if "SAME_VERSION" in output:
                 return
             result = json.loads(_strip_output(output))
@@ -2321,13 +2487,17 @@ class MySQLBase(ABC):
         logger.debug("Getting InnoDB version")
 
         get_version_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             'result = session.run_sql("SELECT version()")',
             'print(f"<VERSION>{result.fetch_one()[0]}</VERSION>")',
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(get_version_commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(get_version_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.warning("Failed to get workload version", exc_info=e)
             raise MySQLGetMySQLVersionError(e.message)
@@ -2344,15 +2514,20 @@ class MySQLBase(ABC):
     ) -> None:
         """Grants specified privileges to the provided database user."""
         grant_privileges_commands = (
-            f"shell.connect_to_primary('{self.instance_def(self.server_config_user)}')",
+            "shell.connect_to_primary()",
             (
                 f"session.run_sql(\"GRANT {', '.join(privileges)} ON *.* TO '{username}'@'{hostname}'"
-                f"{' WITH GRANT OPTION' if with_grant_option else ''}\")"
+                f'{" WITH GRANT OPTION" if with_grant_option else ""}")'
             ),
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(grant_privileges_commands))
+            self._run_mysqlsh_script(
+                "\n".join(grant_privileges_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.warning(f"Failed to grant privileges to user {username}@{hostname}", exc_info=e)
             raise MySQLGrantPrivilegesToUserError(e.message)
@@ -2364,14 +2539,18 @@ class MySQLBase(ABC):
             raise MySQLCheckUserExistenceError("No primary found")
 
         update_user_password_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user, host=instance_address)}')",
             f"session.run_sql(\"ALTER USER '{username}'@'{host}' IDENTIFIED BY '{new_password}';\")",
             'session.run_sql("FLUSH PRIVILEGES;")',
         )
 
         logger.debug(f"Updating password for {username}.")
         try:
-            self._run_mysqlsh_script("\n".join(update_user_password_commands))
+            self._run_mysqlsh_script(
+                "\n".join(update_user_password_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, instance_address),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to update user password for user {username}")
             raise MySQLCheckUserExistenceError
@@ -2381,7 +2560,7 @@ class MySQLBase(ABC):
         """Get member status (MEMBER_STATE, MEMBER_ROLE) in the cluster."""
         member_state_query = (
             "SELECT MEMBER_STATE, MEMBER_ROLE, MEMBER_ID, @@server_uuid"
-            " FROM performance_schema.replication_group_members"
+            " FROM performance_schema.replication_group_members",
         )
 
         try:
@@ -2398,24 +2577,27 @@ class MySQLBase(ABC):
             raise MySQLUnableToGetMemberStateError(e.message)
 
         # output is like:
-        # 'MEMBER_STATE\tMEMBER_ROLE\tMEMBER_ID\t@@server_uuid\nONLINE\tPRIMARY\t<uuid>\t<uuid>\n'
-        lines = output.strip().lower().split("\n")
-        if len(lines) < 2:
+        # [('ONLINE',
+        #  'PRIMARY',
+        #  '1de30105-ce16-11ef-bb27-00163e3cb985',
+        #  '1de30105-ce16-11ef-bb27-00163e3cb985'), (...)]
+        if len(output) == 0:
             raise MySQLNoMemberStateError("No member state retrieved")
 
-        if len(lines) == 2:
+        def lower_or_unknown(value) -> str:
+            return value.lower() if value else "unknown"
+
+        if len(output) == 1:
             # Instance just know it own state
             # sometimes member_id is not populated
-            results = lines[1].split("\t")
-            return results[0], results[1] or "unknown"
+            return lower_or_unknown(output[0][0]), lower_or_unknown(output[0][1])
 
-        for line in lines[1:]:
+        for row in output:
             # results will be like:
             # ['online', 'primary', 'a6c00302-1c07-11ee-bca1-...', 'a6c00302-1c07-11ee-bca1-...']
-            results = line.split("\t")
-            if results[2] == results[3]:
+            if row[2] == row[3]:
                 # filter server uuid
-                return results[0], results[1] or "unknown"
+                return lower_or_unknown(row[0]), lower_or_unknown(row[1])
 
         raise MySQLNoMemberStateError("No member state retrieved")
 
@@ -2438,38 +2620,49 @@ class MySQLBase(ABC):
     def stop_group_replication(self) -> None:
         """Stop Group replication if enabled on the instance."""
         stop_gr_command = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             "data = session.run_sql('SELECT 1 FROM performance_schema.replication_group_members')",
             "if len(data.fetch_all()) > 0:",
             "    session.run_sql('STOP GROUP_REPLICATION')",
         )
         try:
             logger.debug("Stopping Group Replication for unit")
-            self._run_mysqlsh_script("\n".join(stop_gr_command))
+            self._run_mysqlsh_script(
+                "\n".join(stop_gr_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.warning("Failed to stop Group Replication for unit")
 
     def start_group_replication(self) -> None:
         """Start Group replication on the instance."""
-        start_gr_command = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
-            "session.run_sql('START GROUP_REPLICATION')",
-        )
+        start_gr_command = "session.run_sql('START GROUP_REPLICATION')"
+
         try:
             logger.debug("Starting Group Replication for unit")
-            self._run_mysqlsh_script("\n".join(start_gr_command))
+            self._run_mysqlsh_script(
+                start_gr_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.warning("Failed to start Group Replication for unit")
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""
         reboot_from_outage_command = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
-            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')",
+            f"dba.reboot_cluster_from_complete_outage('{self.cluster_name}')"
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(reboot_from_outage_command))
+            self._run_mysqlsh_script(
+                reboot_from_outage_command,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception("Failed to reboot cluster")
             raise MySQLRebootFromCompleteOutageError(e.message)
@@ -2494,7 +2687,7 @@ class MySQLBase(ABC):
 
         try:
             self._run_mysqlcli_script(
-                "; ".join(set_instance_offline_mode_commands),
+                set_instance_offline_mode_commands,
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
@@ -2505,13 +2698,17 @@ class MySQLBase(ABC):
     def set_instance_option(self, option: str, value: Any) -> None:
         """Sets an instance option."""
         set_instance_option_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             f"cluster.set_instance_option('{self.instance_address}', '{option}', '{value}')",
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(set_instance_option_commands))
+            self._run_mysqlsh_script(
+                "\n".join(set_instance_option_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception(f"Failed to set option {option} with value {value}")
             raise MySQLSetInstanceOptionError
@@ -2520,14 +2717,18 @@ class MySQLBase(ABC):
         """Indicates whether an instance exists in offline_mode and hidden from router."""
         offline_mode_message = "Instance has offline_mode enabled"
         commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             f"cluster_topology = dba.get_cluster('{self.cluster_name}').status()['defaultReplicaSet']['topology']",
             f"selected_instances = [label for label, member in cluster_topology.items() if '{offline_mode_message}' in member.get('instanceErrors', '') and member.get('hiddenFromRouter')]",
             "print(f'<OFFLINE_MODE_INSTANCES>{len(selected_instances)}</OFFLINE_MODE_INSTANCES>')",
         )
 
         try:
-            output = self._run_mysqlsh_script("\n".join(commands))
+            output = self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError as e:
             logger.exception("Failed to query offline mode instances")
             raise MySQLOfflineModeAndHiddenInstanceExistsError(e.message)
@@ -2947,11 +3148,11 @@ class MySQLBase(ABC):
     ) -> None:
         """Setup TLS files and requirement mode."""
         enable_commands = (
-            f"SET PERSIST ssl_ca='{ca_path}';"
-            f"SET PERSIST ssl_key='{key_path}';"
-            f"SET PERSIST ssl_cert='{cert_path}';"
-            f"SET PERSIST require_secure_transport={'on' if require_tls else 'off'};"
-            "ALTER INSTANCE RELOAD TLS;"
+            f"SET PERSIST ssl_ca='{ca_path}'",
+            f"SET PERSIST ssl_key='{key_path}'",
+            f"SET PERSIST ssl_cert='{cert_path}'",
+            f"SET PERSIST require_secure_transport={'on' if require_tls else 'off'}",
+            "ALTER INSTANCE RELOAD TLS",
         )
 
         try:
@@ -2967,7 +3168,6 @@ class MySQLBase(ABC):
     def kill_unencrypted_sessions(self) -> None:
         """Kill non local, non system open unencrypted connections."""
         kill_connections_command = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             (
                 'processes = session.run_sql("'
                 "SELECT processlist_id FROM performance_schema.threads WHERE "
@@ -2979,7 +3179,12 @@ class MySQLBase(ABC):
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(kill_connections_command))
+            self._run_mysqlsh_script(
+                "\n".join(kill_connections_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to kill external sessions")
             raise MySQLKillSessionError
@@ -2987,7 +3192,6 @@ class MySQLBase(ABC):
     def kill_client_sessions(self) -> None:
         """Kill non local, non system open unencrypted connections."""
         kill_connections_command = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             (
                 'processes = session.run_sql("'
                 "SELECT processlist_id FROM performance_schema.threads WHERE "
@@ -2999,20 +3203,27 @@ class MySQLBase(ABC):
         )
 
         try:
-            self._run_mysqlsh_script("\n".join(kill_connections_command))
+            self._run_mysqlsh_script(
+                "\n".join(kill_connections_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
         except MySQLClientError:
             logger.exception("Failed to kill external sessions")
             raise MySQLKillSessionError
 
     def check_mysqlsh_connection(self) -> bool:
         """Checks if it is possible to connect to the server with mysqlsh."""
-        connect_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
-            'session.run_sql("SELECT 1")',
-        )
+        connect_commands = 'session.run_sql("SELECT 1")'
 
         try:
-            self._run_mysqlsh_script("\n".join(connect_commands))
+            self._run_mysqlsh_script(
+                connect_commands,
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
             return True
         except MySQLClientError:
             logger.exception("Failed to connect to MySQL with mysqlsh")
@@ -3031,7 +3242,6 @@ class MySQLBase(ABC):
     def flush_mysql_logs(self, logs_type: Union[MySQLTextLogs, list[MySQLTextLogs]]) -> None:
         """Flushes the specified logs_type logs."""
         flush_logs_commands = [
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             'session.run_sql("SET sql_log_bin = 0")',
         ]
 
@@ -3049,19 +3259,29 @@ class MySQLBase(ABC):
             flush_logs_commands.append("session.run_sql(\"set global audit_log_flush='ON'\")")
 
         try:
-            self._run_mysqlsh_script("\n".join(flush_logs_commands), timeout=50)
+            self._run_mysqlsh_script(
+                "\n".join(flush_logs_commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+                timeout=50,
+            )
         except MySQLClientError:
             logger.warning(f"Failed to flush {logs_type} logs.")
 
     def get_databases(self) -> set[str]:
         """Return a set with all databases on the server."""
         list_databases_commands = (
-            f"shell.connect('{self.instance_def(self.server_config_user)}')",
             'result = session.run_sql("SHOW DATABASES")',
             "for db in result.fetch_all():\n  print(db[0])",
         )
 
-        output = self._run_mysqlsh_script("\n".join(list_databases_commands))
+        output = self._run_mysqlsh_script(
+            "\n".join(list_databases_commands),
+            user=self.server_config_user,
+            password=self.server_config_password,
+            host=self.instance_def(self.server_config_user),
+        )
         return set(output.split())
 
     def get_non_system_databases(self) -> set[str]:
@@ -3120,13 +3340,18 @@ class MySQLBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _run_mysqlsh_script(self, script: str, timeout: Optional[int] = None) -> str:
+    def _run_mysqlsh_script(
+        self, script: str, user: str, host: str, password: str, timeout: Optional[int] = None
+    ) -> str:
         """Execute a MySQL shell script.
 
         Raises MySQLClientError if script execution fails.
 
         Args:
             script: Mysqlsh script string
+            user: User to invoke the mysqlsh script with
+            host: Host to run the script on
+            password: Password to invoke the mysqlsh script
             timeout: Optional timeout for script execution
 
         Returns:
@@ -3137,16 +3362,18 @@ class MySQLBase(ABC):
     @abstractmethod
     def _run_mysqlcli_script(
         self,
-        script: str,
+        script: Union[Tuple[Any, ...], List[Any]],
         user: str = "root",
         password: Optional[str] = None,
         timeout: Optional[int] = None,
-    ) -> str:
+    ) -> list:
         """Execute a MySQL CLI script.
 
         Execute SQL script as instance with given user.
 
-        Raises MySQLClientError if script execution fails.
+        Raises:
+            MySQLClientError if script execution fails.
+            TimeoutError if script execution times out.
 
         Args:
             script: raw SQL script string
