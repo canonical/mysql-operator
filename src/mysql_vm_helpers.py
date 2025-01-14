@@ -787,6 +787,14 @@ class MySQL(MySQLBase):
                 process.sendline(password)
 
                 stdout = process.readlines()
+
+                if "ERROR" in stdout[1]:
+                    # some errors will not bubble up from spawned process
+                    # but are reported in the stdout
+                    logger.error(stdout[1].strip())
+                    raise MySQLClientError
+
+                # index 0 contains empty \r\n
                 return [line.strip().split() for line in stdout[1:]] if stdout else []
             else:
                 stdout = subprocess.check_output(command, timeout=timeout, text=True)
