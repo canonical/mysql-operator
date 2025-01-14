@@ -68,10 +68,8 @@ class TestMySQL(unittest.TestCase):
             StubCharm(),  # type: ignore
         )
 
-    @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    @patch("shutil.chown")
-    def test_run_mysqlsh_script(self, _chown, _check_output, _):
+    def test_run_mysqlsh_script(self, _check_output):
         """Test a successful execution of run_mysqlsh_script."""
         _check_output.return_value = "###stdout"
 
@@ -80,12 +78,9 @@ class TestMySQL(unittest.TestCase):
         )
 
         _check_output.assert_called_once()
-        _chown.assert_called_once()
 
-    @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    @patch("shutil.chown")
-    def test_run_mysqlsh_script_exception(self, _, _check_output, __):
+    def test_run_mysqlsh_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
         _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=1)
 
@@ -94,19 +89,52 @@ class TestMySQL(unittest.TestCase):
                 "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
             )
 
-    @patch("mysql_vm_helpers.MySQLConnector")
-    def test_run_mysqlcli_script(self, connector):
-        """Test a successful execution of run_mysqlsh_script."""
-        mock_cursor = MagicMock()
-        connector.return_value.__enter__.return_value = mock_cursor
+    @patch("subprocess.check_output")
+    @patch("pexpect.spawnu")
+    def test_run_mysqlcli_script(self, _spawnu, _check_output):
+        """Test a successful execution of run_mysqlcli_script."""
+        mock_process = MagicMock()
+        _spawnu.return_value = mock_process
+        mock_process.readlines.return_value = [" \r\n", "result1\r\n", "result2\r\n"]
 
-        self.mysql._run_mysqlcli_script(
+        result = self.mysql._run_mysqlcli_script(
+            ("script",),
+            user="root",
+            password="password",
+            timeout=10,
+        )
+
+        _spawnu.assert_called_once_with(
+            f'charmed-mysql.mysql -u root -p -N -B --socket={MYSQLD_SOCK_FILE} -e "script"',
+            timeout=10,
+        )
+        mock_process.expect.assert_called_once_with("Enter password:")
+        mock_process.sendline.assert_called_once_with("password")
+        self.assertEqual(result, [["result1"], ["result2"]])
+
+        # Test without password
+        _check_output.return_value = "result1\nresult2\n"
+        result = self.mysql._run_mysqlcli_script(
             ("script",),
             user="root",
             timeout=10,
         )
 
-        mock_cursor.execute.assert_called_with("script")
+        _check_output.assert_called_once_with(
+            [
+                "charmed-mysql.mysql",
+                "-u",
+                "root",
+                "-N",
+                "-B",
+                f"--socket={MYSQLD_SOCK_FILE}",
+                "-e",
+                "script",
+            ],
+            timeout=10,
+            text=True,
+        )
+        self.assertEqual(result, [["result1"], ["result2"]])
 
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script_exception(self, _check_output):

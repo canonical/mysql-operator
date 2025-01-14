@@ -15,7 +15,7 @@ import typing
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import jinja2
-import mysql.connector
+import pexpect
 from charms.mysql.v0.mysql import (
     BYTES_1MB,
     Error,
@@ -34,8 +34,8 @@ from charms.operator_libs_linux.v2 import snap
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
-from connector import MySQLConnector
 from constants import (
+    CHARMED_MYSQL,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
@@ -717,42 +717,33 @@ class MySQL(MySQLBase):
         Returns:
             String representing the output of the mysqlsh command
         """
-        # Use the self.mysqlsh_common_dir for the confined mysql-shell snap.
-        with tempfile.NamedTemporaryFile(mode="w", dir=CHARMED_MYSQL_COMMON_DIRECTORY) as _file:
-            # prepend every shell command with
-            # - set wizard to false. cannot be set on cmd line option as it conflicts with --passwords-from-stdin
-            # - a separator to ease output parsing, as password prompt get printed to stdout
-            prepend_cmd = "shell.options.set('useWizards', False)\nprint('###')\n"
-            _file.write(prepend_cmd + script)  # prepend output separator to script
-            _file.flush()
+        # prepend every shell command with
+        # - set wizard to false. cannot be set on cmd line option as it conflicts with --passwords-from-stdin
+        # - a separator to ease output parsing, as password prompt get printed to stdout
+        prepend_cmd = "shell.options.set('useWizards', False)\nprint('###')\n"
+        script = prepend_cmd + script  # prepend output separator to script
 
-            command = [
-                CHARMED_MYSQLSH,
-                "--passwords-from-stdin",
-                f"--uri={user}@{host}",
-                "--python",
-                "-f",
-                _file.name,
-            ]
+        command = [
+            CHARMED_MYSQLSH,
+            "--passwords-from-stdin",
+            f"--uri={user}@{host}",
+            "--python",
+            "-c",
+            script,
+        ]
 
-            try:
-                # need to change permissions since charmed-mysql.mysqlsh runs as
-                # snap_daemon
-                shutil.chown(_file.name, user="snap_daemon", group="root")
-
-                output = subprocess.check_output(
-                    command,
-                    stderr=subprocess.PIPE,
-                    timeout=timeout,
-                    input=password,
-                    text=True,
-                    env=os.environ
-                    | {"MYSQL_TEST_LOGIN_FILE": f"{CHARMED_MYSQL_COMMON_DIRECTORY}/.mylogin.cnf"},
-                )
-                # split output to clean mysqlsh garbage
-                return output.split("###")[1].strip()
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                raise MySQLClientError
+        try:
+            output = subprocess.check_output(
+                command,
+                stderr=subprocess.PIPE,
+                timeout=timeout,
+                input=password,
+                text=True,
+            )
+            # split output to clean mysqlsh garbage
+            return output.split("###")[1].strip()
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            raise MySQLClientError
 
     def _run_mysqlcli_script(
         self,
@@ -775,22 +766,37 @@ class MySQL(MySQLBase):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
         """
-        config = {"user": user, "unix_socket": MYSQLD_SOCK_FILE}
-
-        if password:
-            config["password"] = password
+        command = [
+            CHARMED_MYSQL,
+            "-u",
+            user,
+            "-N",
+            "-B",
+            f"--socket={MYSQLD_SOCK_FILE}",
+            "-e",
+            ";".join(script),
+        ]
 
         try:
-            r = []
-            for item in script:
-                with MySQLConnector(config=config, query_timeout=timeout) as cursor:
-                    cursor.execute(item)
-                    r = cursor.fetchall()
-            # only last (or single) result is returned
-            return r
+            if password:
+                command.insert(3, "-p")
+                # need to contain SQL in quotes for pexpect
+                command[-1] = f'"{command[-1]}"'
+                process = pexpect.spawnu(" ".join(command), timeout=timeout)
+                process.expect("Enter password:")
+                process.sendline(password)
 
-        except mysql.connector.errors.Error:
-            logger.exception("MySQL connector exception")
+                stdout = process.readlines()
+                return [line.strip().split() for line in stdout[1:]] if stdout else []
+            else:
+                stdout = subprocess.check_output(command, timeout=timeout, text=True)
+                return [line.split() for line in stdout.strip().split("\n")] if stdout else []
+
+        except (pexpect.TIMEOUT, subprocess.TimeoutExpired):
+            logger.exception("MySQL cli command timedout")
+            raise TimeoutError
+        except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError):
+            logger.exception("Failed to execute MySQL cli command")
             raise MySQLClientError
 
     def is_data_dir_initialised(self) -> bool:
