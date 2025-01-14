@@ -19,6 +19,8 @@ parts:
       - -requirements.txt
     prime:
       - snap_revisions.json
+      - scripts
+      - templates
   charm:
     build-snaps:
       - rustup
