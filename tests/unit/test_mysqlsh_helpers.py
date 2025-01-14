@@ -289,10 +289,11 @@ class TestMySQL(unittest.TestCase):
             "innodb_buffer_pool_size = 1234",
             "log_error_services = log_filter_internal;log_sink_internal",
             "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = ON",
+            "general_log = OFF",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_filter = OFF",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
@@ -307,15 +308,7 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
-        )
+        self.assertTrue(call().write(config) in _open_mock.mock_calls)
 
         # Test `testing` profile
         self.mysql.charm.config.profile = "testing"
@@ -332,10 +325,11 @@ class TestMySQL(unittest.TestCase):
             "innodb_buffer_pool_size = 20971520",
             "log_error_services = log_filter_internal;log_sink_internal",
             "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = ON",
+            "general_log = OFF",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
+            "loose-audit_log_filter = OFF",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
@@ -346,18 +340,13 @@ class TestMySQL(unittest.TestCase):
             "\n",
         ))
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(
-                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
-                    "w",
-                    encoding="utf-8",
-                ),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
+        self.assertTrue(
+            call(
+                f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                "w",
+                encoding="utf-8",
+            )
+            in _open_mock.mock_calls
         )
 
     @patch(

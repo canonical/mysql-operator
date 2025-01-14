@@ -637,7 +637,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def text_logs(self) -> list:
         """Enabled text logs."""
         # slow logs isn't enabled by default
-        text_logs = ["error", "general"]
+        text_logs = ["error"]
 
         if self.config.plugin_audit_enabled:
             text_logs.append("audit")
