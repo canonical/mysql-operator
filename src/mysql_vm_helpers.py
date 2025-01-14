@@ -788,7 +788,7 @@ class MySQL(MySQLBase):
 
                 stdout = process.readlines()
 
-                if "ERROR" in stdout[1]:
+                if len(stdout) > 1 and "ERROR" in stdout[1]:
                     # some errors will not bubble up from spawned process
                     # but are reported in the stdout
                     logger.error(stdout[1].strip())
