@@ -71,7 +71,7 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_run_mysqlsh_script(self, _check_output):
         """Test a successful execution of run_mysqlsh_script."""
-        _check_output.return_value = "###stdout"
+        _check_output.return_value = "garbage_that_mysqlsh_output###stdout"
 
         self.mysql._run_mysqlsh_script(
             "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
