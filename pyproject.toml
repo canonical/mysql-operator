@@ -10,8 +10,6 @@ python = "^3.10"
 ops = "^2.8.0"
 tenacity = "^8.2.2"
 boto3 = "^1.28.23"
-# TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
-pyopenssl = "^24.0.0"
 typing_extensions = "^4.7.1"
 jinja2 = "^3.1.2"
 python_hosts = "^1.0.6"

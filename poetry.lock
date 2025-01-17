@@ -245,7 +245,7 @@ version = "1.17.1"
 description = "Foreign Function Interface for Python calling C code."
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "charm-libs", "integration"]
+groups = ["charm-libs", "integration"]
 files = [
     {file = "cffi-1.17.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:df8b1c11f177bc2313ec4b2d46baec87a5f3e71fc8b45dab2ee7cae86d9aba14"},
     {file = "cffi-1.17.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8f2cdc858323644ab277e9bb925ad72ae0e67f69e804f4898c070998d50b1a67"},
@@ -315,7 +315,7 @@ files = [
     {file = "cffi-1.17.1-cp39-cp39-win_amd64.whl", hash = "sha256:d016c76bdd850f3c626af19b0542c9677ba156e4ee4fccfdd7848803533ef662"},
     {file = "cffi-1.17.1.tar.gz", hash = "sha256:1c39c6016c32bc48dd54561950ebd6836e1670f2ae46128f67cf49e789c52824"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\"", charm-libs = "platform_python_implementation != \"PyPy\""}
+markers = {charm-libs = "platform_python_implementation != \"PyPy\""}
 
 [package.dependencies]
 pycparser = "*"
@@ -535,7 +535,7 @@ version = "43.0.1"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 optional = false
 python-versions = ">=3.7"
-groups = ["main", "charm-libs", "integration"]
+groups = ["charm-libs", "integration"]
 files = [
     {file = "cryptography-43.0.1-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:8385d98f6a3bf8bb2d65a73e17ed87a3ba84f6991c155691c51112075f9ffc5d"},
     {file = "cryptography-43.0.1-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:27e613d7077ac613e399270253259d9d53872aaf657471473ebfc9a52935c062"},
@@ -1462,12 +1462,12 @@ version = "2.21"
 description = "C parser in Python"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-groups = ["main", "charm-libs", "integration"]
+groups = ["charm-libs", "integration"]
 files = [
     {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},
     {file = "pycparser-2.21.tar.gz", hash = "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\"", charm-libs = "platform_python_implementation != \"PyPy\""}
+markers = {charm-libs = "platform_python_implementation != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -1591,25 +1591,6 @@ cffi = ">=1.4.1"
 [package.extras]
 docs = ["sphinx (>=1.6.5)", "sphinx-rtd-theme"]
 tests = ["hypothesis (>=3.27.0)", "pytest (>=3.2.1,!=3.3.0)"]
-
-[[package]]
-name = "pyopenssl"
-version = "24.2.1"
-description = "Python wrapper module around the OpenSSL library"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-files = [
-    {file = "pyOpenSSL-24.2.1-py3-none-any.whl", hash = "sha256:967d5719b12b243588573f39b0c677637145c7a1ffedcd495a487e58177fbb8d"},
-    {file = "pyopenssl-24.2.1.tar.gz", hash = "sha256:4247f0dbe3748d560dcbb2ff3ea01af0f9a1a001ef5f7c4c647956ed8cbf0e95"},
-]
-
-[package.dependencies]
-cryptography = ">=41.0.5,<44"
-
-[package.extras]
-docs = ["sphinx (!=5.2.0,!=5.2.0.post0,!=7.2.5)", "sphinx-rtd-theme"]
-test = ["pretend", "pytest (>=3.0.1)", "pytest-rerunfailures"]
 
 [[package]]
 name = "pyrfc3339"
@@ -2451,4 +2432,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "82b4b30f83966ff9fcdeec64a03c152be08ceffb9cbd7f021e14d694c68d4c87"
+content-hash = "9b0ab9fa998ff12c1fca99489181affd0144c9ac447ab62079940d48c3301dc9"
