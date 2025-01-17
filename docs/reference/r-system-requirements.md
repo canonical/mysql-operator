@@ -22,6 +22,7 @@ The charm supports several Juju releases from [2.9 LTS](https://juju.is/docs/juj
 
 | Juju major release | Supported minor versions | Compatible charm revisions |Comment |
 |:--------|:-----|:-----|:-----|
+| ![3.6 LTS] | `3.6.1+` | 325+ |     |
 | ![3.5] | `3.5.2+` | [240]+ |     |
 | ![3.4] | `3.4.3+` | [240]+ | Known issues with `3.4.2`: [bug #1](https://bugs.launchpad.net/juju/+bug/2065284), [bug #2](https://bugs.launchpad.net/juju/+bug/2064772)   |
 | ![3.1] | `3.1.6+` | [196]+ |     |
@@ -59,6 +60,7 @@ The charm is based on the [charmed-mysql snap](https://snapcraft.io/charmed-mysq
 [3.1]: https://img.shields.io/badge/3.1-%23E95420?label=Juju
 [3.4]: https://img.shields.io/badge/3.4-%23E95420?label=Juju
 [3.5]: https://img.shields.io/badge/3.5-%23E95420?label=Juju
+[3.6 LTS]: https://img.shields.io/badge/3.6_LTS-%23E95420?label=Juju
 
 <!-- LINKS -->
 [240]: /t/14071
