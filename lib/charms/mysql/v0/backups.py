@@ -48,10 +48,16 @@ class MySQL(MySQLBase):
 import datetime
 import logging
 import pathlib
+import re
 import typing
 from typing import Dict, List, Optional, Tuple
 
-from charms.data_platform_libs.v0.s3 import S3Requirer
+import yaml
+from charms.data_platform_libs.v0.s3 import (
+    CredentialsChangedEvent,
+    CredentialsGoneEvent,
+    S3Requirer,
+)
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
     MySQLCreateClusterError,
@@ -67,6 +73,7 @@ from charms.mysql.v0.mysql import (
     MySQLPrepareBackupForRestoreError,
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
+    MySQLRestorePitrError,
     MySQLRetrieveBackupWithXBCloudError,
     MySQLServiceNotRunningError,
     MySQLSetInstanceOfflineModeError,
@@ -76,6 +83,7 @@ from charms.mysql.v0.mysql import (
     MySQLUnableToGetMemberStateError,
 )
 from charms.mysql.v0.s3_helpers import (
+    ensure_s3_compatible_group_replication_id,
     fetch_and_check_existence_of_s3_path,
     list_backups_in_s3_path,
     upload_content_to_s3,
@@ -85,7 +93,12 @@ from ops.framework import Object
 from ops.jujuversion import JujuVersion
 from ops.model import BlockedStatus, MaintenanceStatus
 
-from constants import MYSQL_DATA_DIR
+from constants import (
+    MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE,
+    MYSQL_DATA_DIR,
+    SERVER_CONFIG_PASSWORD_KEY,
+    SERVER_CONFIG_USERNAME,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +115,10 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 12
 
+ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE = "S3 repository claimed by another cluster"
+MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
+    "Move restored cluster to another S3 repository"
+)
 
 if typing.TYPE_CHECKING:
     from charm import MySQLOperatorCharm
@@ -119,6 +136,13 @@ class MySQLBackups(Object):
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups)
         self.framework.observe(self.charm.on.restore_action, self._on_restore)
+        self.framework.observe(
+            self.s3_integrator.on.credentials_changed, self._on_s3_credentials_changed
+        )
+        self.framework.observe(self.charm.on.leader_elected, self._on_s3_credentials_changed)
+        self.framework.observe(
+            self.s3_integrator.on.credentials_gone, self._on_s3_credentials_gone
+        )
 
     # ------------------ Helpers ------------------
     @property
@@ -235,18 +259,33 @@ class MySQLBackups(Object):
 
     # ------------------ Create Backup ------------------
 
-    def _on_create_backup(self, event: ActionEvent) -> None:
-        """Handle the create backup action."""
-        logger.info("A backup has been requested on unit")
+    def _pre_create_backup_checks(self, event: ActionEvent) -> bool:
+        """Run some checks before creating the backup.
 
+        Returns: a boolean indicating whether operation should be run.
+        """
         if not self._s3_integrator_relation_exists:
             logger.error("Backup failed: missing relation with S3 integrator charm")
             event.fail("Missing relation with S3 integrator charm")
-            return
+            return False
+
+        if "s3-block-message" in self.charm.app_peer_data:
+            logger.error("Backup failed: S3 relation is blocked for write")
+            event.fail("S3 relation is blocked for write")
+            return False
 
         if not self.charm._mysql.is_mysqld_running():
             logger.error(f"Backup failed: process mysqld is not running on {self.charm.unit.name}")
             event.fail("Process mysqld not running")
+            return False
+
+        return True
+
+    def _on_create_backup(self, event: ActionEvent) -> None:
+        """Handle the create backup action."""
+        logger.info("A backup has been requested on unit")
+
+        if not self._pre_create_backup_checks(event):
             return
 
         datetime_backup_requested = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -455,6 +494,18 @@ class MySQLBackups(Object):
             event.fail(error_message)
             return False
 
+        # Quick check for timestamp format
+        restore_to_time = event.params.get("restore-to-time")
+        if (
+            restore_to_time
+            and restore_to_time != "latest"
+            and not self._is_mysql_timestamp(restore_to_time)
+        ):
+            error_message = "Bad restore-to-time format"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
+
         if not self.charm._mysql.is_server_connectable():
             error_message = "Server running mysqld is not connectable"
             logger.error(f"Restore failed: {error_message}")
@@ -479,7 +530,7 @@ class MySQLBackups(Object):
 
         return True
 
-    def _on_restore(self, event: ActionEvent) -> None:
+    def _on_restore(self, event: ActionEvent) -> None:  # noqa: C901
         """Handle the restore backup action event.
 
         Restore a backup from S3 (parameters for which can retrieved from the
@@ -489,7 +540,12 @@ class MySQLBackups(Object):
             return
 
         backup_id = event.params["backup-id"].strip().strip("/")
-        logger.info(f"A restore with backup-id {backup_id} has been requested on unit")
+        restore_to_time = event.params.get("restore-to-time")
+        logger.info(
+            f"A restore with backup-id {backup_id}"
+            f"{f' to time point {restore_to_time}' if restore_to_time else ''}"
+            f" has been requested on the unit"
+        )
 
         # Retrieve and validate missing S3 parameters
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
@@ -519,13 +575,27 @@ class MySQLBackups(Object):
         if not success:
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
-
             if recoverable:
                 self._clean_data_dir_and_start_mysqld()
             else:
                 self.charm.unit.status = BlockedStatus(error_message)
-
             return
+
+        if restore_to_time is not None:
+            self.charm.unit.status = MaintenanceStatus("Running point-in-time-recovery operations")
+            success, error_message = self._pitr_restore(restore_to_time, s3_parameters)
+            if not success:
+                logger.error(f"Restore failed: {error_message}")
+                event.fail(error_message)
+                self.charm.unit.status = BlockedStatus(error_message)
+                return
+
+        self.charm.app_peer_data.update({
+            "s3-block-message": MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR,
+            "binlogs-collecting": "",
+        })
+        if not self.charm._mysql.reconcile_binlogs_collection():
+            logger.error("Failed to stop binlogs collecting prior to restore")
 
         # Run post-restore operations
         self.charm.unit.status = MaintenanceStatus("Running post-restore operations")
@@ -611,6 +681,10 @@ class MySQLBackups(Object):
         except MySQLRestoreBackupError:
             return False, False, f"Failed to restore backup {backup_id}"
 
+        success, error_message = self._clean_data_dir_and_start_mysqld()
+        if not success:
+            return False, False, error_message
+
         return True, True, ""
 
     def _clean_data_dir_and_start_mysqld(self) -> Tuple[bool, str]:
@@ -636,15 +710,29 @@ class MySQLBackups(Object):
 
         return True, ""
 
+    def _pitr_restore(
+        self, restore_to_time: str, s3_parameters: Dict[str, str]
+    ) -> Tuple[bool, str]:
+        try:
+            logger.info("Restoring point-in-time-recovery")
+            stdout, stderr = self.charm._mysql.restore_pitr(
+                host=self.charm.get_unit_address(self.charm.unit),
+                mysql_user=SERVER_CONFIG_USERNAME,
+                password=self.charm.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
+                s3_parameters=s3_parameters,
+                restore_to_time=restore_to_time,
+            )
+            logger.debug(f"Stdout of mysql-pitr-helper restore command: {stdout}")
+            logger.debug(f"Stderr of mysql-pitr-helper restore command: {stderr}")
+        except MySQLRestorePitrError:
+            return False, f"Failed to restore point-in-time-recovery to the {restore_to_time}"
+        return True, ""
+
     def _post_restore(self) -> Tuple[bool, str]:
         """Run operations required after restoring a backup.
 
         Returns: tuple of (success, error_message)
         """
-        success, error_message = self._clean_data_dir_and_start_mysqld()
-        if not success:
-            return success, error_message
-
         try:
             logger.info("Configuring instance to be part of an InnoDB cluster")
             self.charm._mysql.configure_instance(create_cluster_admin=False)
@@ -674,3 +762,121 @@ class MySQLBackups(Object):
             return False, "Failed to rescan the cluster"
 
         return True, ""
+
+    def _on_s3_credentials_changed(self, event: CredentialsChangedEvent) -> None:
+        if not self.charm.unit.is_leader():
+            logger.debug("Early exit on _on_s3_credentials_changed: unit is not a leader")
+            return
+
+        if not self._s3_integrator_relation_exists:
+            logger.debug(
+                "Early exit on _on_s3_credentials_changed: s3 integrator relation does not exist"
+            )
+            return
+
+        if (
+            not self.charm._mysql.is_mysqld_running()
+            or not self.charm.unit_initialized
+            or not self.charm.upgrade.idle
+        ):
+            logger.debug(
+                "Deferring _on_s3_credentials_changed: mysql cluster is not started yet or upgrade is occurring"
+            )
+            event.defer()
+            return
+
+        logger.info("Retrieving s3 parameters from the s3-integrator relation")
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            logger.error(f"Missing S3 parameters: {missing_parameters}")
+            return
+
+        logger.info("Ensuring compatibility with the provided S3 repository")
+        if ensure_s3_compatible_group_replication_id(
+            self.charm._mysql.get_current_group_replication_id(), s3_parameters
+        ):
+            self.charm.app_peer_data.update({
+                "s3-block-message": "",
+                "binlogs-collecting": "true",
+            })
+        else:
+            self.charm.app_peer_data.update({
+                "s3-block-message": ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+                "binlogs-collecting": "",
+            })
+
+        if not self.charm._mysql.reconcile_binlogs_collection(True):
+            logger.error("Failed to restart binlogs collecting after S3 relation update")
+
+    def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
+        self.charm._mysql.delete_binlogs_collector_config()
+        if not self.charm.unit.is_leader():
+            logger.debug("Early exit on _on_s3_credentials_gone: unit is not a leader")
+            return
+        self.charm.app_peer_data.update({
+            "s3-block-message": "",
+            "binlogs-collecting": "",
+        })
+        if not self.charm._mysql.reconcile_binlogs_collection():
+            logger.error("Failed to stop binlogs collecting after S3 relation depart")
+
+    def update_binlogs_collector_config(self) -> bool:
+        """Update binlogs collector service config file.
+
+        Returns: whether this operation was successful.
+        """
+        if not self._s3_integrator_relation_exists:
+            logger.error(
+                "Cannot update binlogs collector config: s3 integrator relation does not exist"
+            )
+            return False
+
+        logger.info("Retrieving s3 parameters from the s3-integrator relation")
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            logger.error(
+                f"Cannot update binlogs collector config: Missing S3 parameters: {missing_parameters}"
+            )
+            return False
+
+        bucket_url = (
+            f"{s3_parameters['bucket']}/{s3_parameters['path']}binlogs"
+            if s3_parameters["path"][-1] == "/"
+            else f"{s3_parameters['bucket']}/{s3_parameters['path']}/binlogs"
+        )
+
+        content = yaml.dump({
+            "endpoint": s3_parameters["endpoint"],
+            "hosts": self.charm._mysql.get_cluster_members(),
+            "user": SERVER_CONFIG_USERNAME,
+            "pass": self.charm.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
+            "storage_type": "s3",
+            "s3": {
+                "access_key_id": s3_parameters["access-key"],
+                "secret_access_key": s3_parameters["secret-key"],
+                "bucket_url": bucket_url,
+                "default_region": s3_parameters["region"],
+            },
+        })
+        self.charm._mysql.write_content_to_file(
+            path=MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE,
+            content=content,
+        )
+
+        return True
+
+    def _is_mysql_timestamp(self, timestamp: str) -> bool:
+        # Format is the same as in the mysql-pitr-helper project.
+        if not re.match(
+            r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$",
+            timestamp,
+        ):
+            return False
+        try:
+            self._parse_mysql_timestamp(timestamp)
+            return True
+        except ValueError:
+            return False
+
+    def _parse_mysql_timestamp(self, timestamp: str) -> datetime.datetime:
+        return datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")

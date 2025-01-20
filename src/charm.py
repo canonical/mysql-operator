@@ -392,6 +392,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
+        if not self._mysql.reconcile_binlogs_collection():
+            logger.error("Failed to reconcile binlogs collection during peer relation event")
+
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # Only executes if the unit was initialised
@@ -541,6 +544,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 self.unit.status = MaintenanceStatus("Unable to find cluster primary")
                 return
 
+            if "s3-block-message" in self.app_peer_data:
+                self.app.status = BlockedStatus(self.app_peer_data["s3-block-message"])
+                return
+
             # Set active status when primary is known
             self.app.status = ActiveStatus()
 
@@ -677,6 +684,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+        self._mysql.install_plugins(["binlog_utils_udf"])
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
