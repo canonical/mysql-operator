@@ -10,12 +10,12 @@ python = "^3.10"
 ops = "^2.8.0"
 tenacity = "^8.2.2"
 boto3 = "^1.28.23"
-# TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
-pyopenssl = "^24.0.0"
 typing_extensions = "^4.7.1"
 jinja2 = "^3.1.2"
 python_hosts = "^1.0.6"
 pexpect = "^4.9.0"
+pyyaml = "^6.0.2"
+
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -23,11 +23,12 @@ ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py
 poetry-core = "*"
 # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
-# grafana_agent/v0/cos_agent.py requires pydantic <2
-pydantic = "^1.10, <2"
+# data_platform_libs/v0/data_models.py requires pydantic ^1.10
+# grafana_agent/v0/cos_agent.py requires pydantic
+pydantic = "^1.10"
 # grafana_agent/v0/cos_agent.py
-cosl = ">=0.0.7"
-# tls_certificates_interface/v1/tls_certificates.py
+cosl = "*"
+# tls_certificates_interface/v2/tls_certificates.py
 cryptography = ">=42.0.5"
 jsonschema = "*"
 # tempo_coordinator_k8s/v0/charm_tracing.py
