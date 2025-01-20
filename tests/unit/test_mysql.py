@@ -2283,6 +2283,26 @@ xtrabackup/location --defaults-file=defaults/config/file
         with self.assertRaises(MySQLGetClusterPrimaryAddressError):
             self.mysql.get_cluster_set_global_primary_address()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_is_cluster_auto_rejoin_ongoing(self, _run_mysqlsh_script):
+        """Test is_cluster_auto_rejoin_ongoing."""
+        _run_mysqlsh_script.return_value = (
+            "<COMPLETED_ATTEMPTS>1</COMPLETED_ATTEMPTS>\n"
+            "<ESTIMATED_ATTEMPTS>3</ESTIMATED_ATTEMPTS>\n"
+        )
+        assert self.mysql.is_cluster_auto_rejoin_ongoing() is True
+
+        _run_mysqlsh_script.return_value = (
+            "<COMPLETED_ATTEMPTS>3</COMPLETED_ATTEMPTS>\n"
+            "<ESTIMATED_ATTEMPTS>3</ESTIMATED_ATTEMPTS>\n"
+        )
+        assert self.mysql.is_cluster_auto_rejoin_ongoing() is False
+
+        _run_mysqlsh_script.return_value = ""
+        _run_mysqlsh_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLClientError):
+            self.mysql.is_cluster_auto_rejoin_ongoing()
+
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
     def test_is_cluster_replica(self, _get_cluster_set_status):
         """Test is_cluster_replica."""
