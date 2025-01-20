@@ -10,11 +10,10 @@ python = "^3.10"
 ops = "^2.8.0"
 tenacity = "^8.2.2"
 boto3 = "^1.28.23"
-# TODO: Remove insecure dependency https://github.com/canonical/mysql-operator/issues/246
-pyopenssl = "^24.0.0"
 typing_extensions = "^4.7.1"
 jinja2 = "^3.1.2"
 python_hosts = "^1.0.6"
+pyyaml = "^6.0.2"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -22,11 +21,12 @@ ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py
 poetry-core = "*"
 # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
-# grafana_agent/v0/cos_agent.py requires pydantic <2
-pydantic = "^1.10, <2"
+# data_platform_libs/v0/data_models.py requires pydantic ^1.10
+# grafana_agent/v0/cos_agent.py requires pydantic
+pydantic = "^1.10"
 # grafana_agent/v0/cos_agent.py
-cosl = ">=0.0.7"
-# tls_certificates_interface/v1/tls_certificates.py
+cosl = "*"
+# tls_certificates_interface/v2/tls_certificates.py
 cryptography = ">=42.0.5"
 jsonschema = "*"
 # tempo_coordinator_k8s/v0/charm_tracing.py
@@ -54,11 +54,11 @@ parameterized = "^0.9.0"
 
 [tool.poetry.group.integration.dependencies]
 pytest = "^7.4.0"
-pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v26.0.0", subdirectory = "python/pytest_plugins/github_secrets"}
-pytest-microceph = {git = "https://github.com/canonical/data-platform-workflows", tag = "v26.0.0", subdirectory = "python/pytest_plugins/microceph"}
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-microceph = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/microceph"}
 pytest-operator = "^0.28.0"
-pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v26.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
-pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v26.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 juju = "^3.6.0.0"
 mysql-connector-python = "~8.0.33"
 tenacity = "^8.2.2"
@@ -66,7 +66,7 @@ boto3 = "^1.28.11"
 pyyaml = "^6.0"
 urllib3 = "^1.26.16"
 allure-pytest = "^2.13.2"
-allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v26.0.0", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
+allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.0", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 
 
 [tool.coverage.run]
