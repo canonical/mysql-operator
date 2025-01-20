@@ -578,21 +578,8 @@ class MySQLBackups(Object):
             if recoverable:
                 self._clean_data_dir_and_start_mysqld()
             else:
-                self.charm.app_peer_data.update({
-                    "s3-block-message": MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR,
-                    "binlogs-collecting": "",
-                })
-                if not self.charm._mysql.reconcile_binlogs_collection():
-                    logger.error("Failed to stop binlogs collecting after failed restore")
                 self.charm.unit.status = BlockedStatus(error_message)
             return
-
-        self.charm.app_peer_data.update({
-            "s3-block-message": MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR,
-            "binlogs-collecting": "",
-        })
-        if not self.charm._mysql.reconcile_binlogs_collection():
-            logger.error("Failed to stop binlogs collecting prior to restore")
 
         if restore_to_time is not None:
             self.charm.unit.status = MaintenanceStatus("Running point-in-time-recovery operations")
@@ -602,6 +589,13 @@ class MySQLBackups(Object):
                 event.fail(error_message)
                 self.charm.unit.status = BlockedStatus(error_message)
                 return
+
+        self.charm.app_peer_data.update({
+            "s3-block-message": MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR,
+            "binlogs-collecting": "",
+        })
+        if not self.charm._mysql.reconcile_binlogs_collection():
+            logger.error("Failed to stop binlogs collecting prior to restore")
 
         # Run post-restore operations
         self.charm.unit.status = MaintenanceStatus("Running post-restore operations")
