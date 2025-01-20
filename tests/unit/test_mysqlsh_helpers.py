@@ -71,10 +71,13 @@ class TestMySQL(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_run_mysqlsh_script(self, _check_output):
         """Test a successful execution of run_mysqlsh_script."""
-        _check_output.return_value = "garbage_that_mysqlsh_output###stdout"
+        _check_output.return_value = "###stdout"
 
         self.mysql._run_mysqlsh_script(
-            "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
+            "script",
+            user="serverconfig",
+            password="serverconfigpassword",
+            host="127.0.0.1",
         )
 
         _check_output.assert_called_once()
@@ -86,7 +89,10 @@ class TestMySQL(unittest.TestCase):
 
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlsh_script(
-                "script", user="serverconfig", password="serverconfigpassword", host="127.0.0.1"
+                "script",
+                user="serverconfig",
+                password="serverconfigpassword",
+                host="127.0.0.1",
             )
 
     @patch("subprocess.check_output")
@@ -95,8 +101,9 @@ class TestMySQL(unittest.TestCase):
         """Test a successful execution of run_mysqlcli_script."""
         mock_process = MagicMock()
         _spawnu.return_value = mock_process
-        mock_process.readlines.return_value = [" \r\n", "result1\r\n", "result2\r\n"]
+        mock_process.readlines.return_value = ["\r\n", "result1\r\n", "result2\r\n"]
 
+        # Test with password
         result = self.mysql._run_mysqlcli_script(
             ("script",),
             user="root",
@@ -105,7 +112,7 @@ class TestMySQL(unittest.TestCase):
         )
 
         _spawnu.assert_called_once_with(
-            f'charmed-mysql.mysql -u root -p -N -B --socket={MYSQLD_SOCK_FILE} -e "script"',
+            'charmed-mysql.mysql -u root -p -N -B --socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock -e "script"',
             timeout=10,
         )
         mock_process.expect.assert_called_once_with("Enter password:")
@@ -113,7 +120,7 @@ class TestMySQL(unittest.TestCase):
         self.assertEqual(result, [["result1"], ["result2"]])
 
         # Test without password
-        _check_output.return_value = "result1\nresult2\n"
+        _check_output.return_value = "result1\nresult2"
         result = self.mysql._run_mysqlcli_script(
             ("script",),
             user="root",
@@ -127,7 +134,7 @@ class TestMySQL(unittest.TestCase):
                 "root",
                 "-N",
                 "-B",
-                f"--socket={MYSQLD_SOCK_FILE}",
+                "--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock",
                 "-e",
                 "script",
             ],
@@ -140,11 +147,12 @@ class TestMySQL(unittest.TestCase):
     def test_run_mysqlcli_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
         _check_output.side_effect = subprocess.CalledProcessError(
-            cmd="", returncode=-1, stderr=b"Test error message"
+            cmd="", returncode=-1, stderr="Test error message"
         )
 
+        sql_script = ("CREATE USER 'test_user'@'localhost' IDENTIFIED BY 'password';",)
         with self.assertRaises(MySQLClientError):
-            self.mysql._run_mysqlcli_script(("script",))
+            self.mysql._run_mysqlcli_script(sql_script)
 
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
     @patch("os.path.exists", return_value=False)

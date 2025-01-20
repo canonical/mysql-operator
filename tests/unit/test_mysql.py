@@ -2402,6 +2402,32 @@ xtrabackup/location --defaults-file=defaults/config/file
         with self.assertRaises(MySQLClientError):
             self.mysql._get_installed_plugins()
 
+    def test_strip_off_password(self):
+        _input = """
+("Traceback (most recent call last):",
+  File "/var/lib/juju/agents/unit-mysql-k8s-edge-0/charm/src/mysql_k8s_helpers.py", line 642, in _run_mysqlsh_script
+    stdout, _ = process.wait_output()
+  File "/var/lib/juju/agents/unit-mysql-k8s-edge-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 1771, in wait_output
+    raise ExecError[AnyStr](self._command, exit_code, out_value, err_value)
+ops.pebble.ExecError: non-zero exit code 1 executing ['/usr/bin/mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@mysql-k8s-edge-0.mysql-k8s-edge-endpoints.stg-alutay-datasql-juju361.svc.cluster.local:33062', '--python', '--verbose=0', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsh$
+ll.connect_to_primary()\nsession.run_sql("CREATE DATABASE IF NOT EXISTS `continuous_writes_database`;")\nsession.run_sql("CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY \'s1ffxPedAmX58aOdCRSzxEpm\' ATTRIBUTE \'{}\';")\nsession.run_sql("GRANT USAGE ON *.* TO `relation-21_ff7306c7454f44`@`%`;")\nses
+sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes_database`.* TO `relation-21_ff7306c7454f44`@`%`;")'], stdout="\x1b[1mPlease provide the password for 'serverconfig@mysql-k8s-edge-0.mysql-k8s-edge-endpoints.stg-alutay-datasql-juju361.svc.cluster.local:33062': \x1b[0m###\n", stderr='Cannot set LC_ALL to
+ locale en_US.UTF-8: No such file or directory\n\x1b[36mNOTE: \x1b[0mAlready connected to a PRIMARY.\nTraceback (most recent call last):\n  File "<string>", line 5, in <module>\nmysqlsh.DBError: MySQL Error (1396): ClassicSession.run_sql: Operation CREATE USER failed for \'relation-21_ff7306c7454f44\'@\'%\'\n
+"""
+        output = self.mysql.strip_off_passwords(_input)
+        self.assertTrue("s1ffxPedAmX58aOdCRSzxEpm" not in output)
+
+    def test_strip_off_passwords_from_exception(self):
+        # Simulate an exception with a password in the message
+        original_exception = Exception("The error")
+        original_exception.cmd = [
+            "CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY 's1ffxPedAmX58aOdCRSzxEpm' ATTRIBUTE '{}';",
+        ]
+
+        self.mysql.strip_off_passwords_from_exception(original_exception)
+
+        self.assertNotIn("s1ffxPedAmX58aOdCRSzxEpm", original_exception.cmd[0])
+
     def test_abstract_methods(self):
         """Test abstract methods."""
         with self.assertRaises(NotImplementedError):

@@ -742,8 +742,14 @@ class MySQL(MySQLBase):
             )
             # split output to clean mysqlsh garbage
             return output.split("###")[1].strip()
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        except subprocess.CalledProcessError as e:
+            self.strip_off_passwords_from_exception(e)
+            logger.exception("Failed to execute mysql-shell command")
             raise MySQLClientError
+        except subprocess.TimeoutExpired as e:
+            self.strip_off_passwords_from_exception(e)
+            logger.exception("MySQL shell command timed out")
+            raise TimeoutError
 
     def _run_mysqlcli_script(
         self,
@@ -800,10 +806,12 @@ class MySQL(MySQLBase):
                 stdout = subprocess.check_output(command, timeout=timeout, text=True)
                 return [line.split() for line in stdout.strip().split("\n")] if stdout else []
 
-        except (pexpect.TIMEOUT, subprocess.TimeoutExpired):
-            logger.exception("MySQL cli command timedout")
+        except (pexpect.TIMEOUT, subprocess.TimeoutExpired) as e:
+            self.strip_off_passwords_from_exception(e)
+            logger.exception("MySQL cli command timed out")
             raise TimeoutError
-        except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError):
+        except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError) as e:
+            self.strip_off_passwords_from_exception(e)
             logger.exception("Failed to execute MySQL cli command")
             raise MySQLClientError
 
