@@ -2420,6 +2420,27 @@ class MySQLBase(ABC):
 
         raise MySQLNoMemberStateError("No member state retrieved")
 
+    def is_cluster_auto_rejoin_ongoing(self):
+        """Check if the instance is performing a cluster auto rejoin operation."""
+        cluster_auto_rejoin_command = (
+            f"shell.connect('{self.instance_def(self.server_config_user)}')",
+            "cursor = session.run_sql('SELECT WORK_COMPLETED, WORK_ESTIMATED FROM performance_schema.events_stages_current WHERE EVENT_NAME LIKE '%auto-rejoin%'')"
+            "result = cursor.fetch_one()"
+            "print(f'<COMPLETED_ATTEMPTS>{result[0]}</COMPLETED_ATTEMPTS>')",
+            "print(f'<ESTIMATED_ATTEMPTS>{result[1]}</ESTIMATED_ATTEMPTS>')",
+        )
+
+        try:
+            output = self._run_mysqlsh_script("\n".join(cluster_auto_rejoin_command))
+        except MySQLClientError as e:
+            logger.warning("Failed to get cluster auto-rejoin information", exc_info=e)
+            return False
+
+        completed_matches = re.search(r"<COMPLETED_ATTEMPTS>(\d)</COMPLETED_ATTEMPTS>", output)
+        estimated_matches = re.search(r"<ESTIMATED_ATTEMPTS>(\d)</ESTIMATED_ATTEMPTS>", output)
+
+        return int(completed_matches.group(1)) < int(estimated_matches.group(1))
+
     def is_cluster_replica(self, from_instance: Optional[str] = None) -> Optional[bool]:
         """Check if this cluster is a replica in a cluster set."""
         cs_status = self.get_cluster_set_status(extended=0, from_instance=from_instance)
