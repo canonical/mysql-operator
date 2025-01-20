@@ -449,7 +449,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             }
             all_states.add("offline")
 
-            if all_states == {"offline"} and self.unit.is_leader():
+            if self.unit.is_leader() and all_states == {"offline"}:
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
                 logger.info("Attempting reboot from complete outage.")
@@ -459,6 +459,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
+
+            elif not self.unit.is_leader() and self._mysql.is_cluster_auto_rejoin_ongoing():
+                logger.info("Cluster auto-rejoin attempts are still ongoing.")
+
+            elif not self.unit.is_leader() and not self._mysql.is_cluster_auto_rejoin_ongoing():
+                logger.info("Cluster auto-rejoin attempts are exhausted. Attempting manual rejoin")
+                self._execute_manual_rejoin()
 
         if state == "unreachable":
             try:
@@ -470,6 +477,27 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     self.unit.status = BlockedStatus("Unable to recover from an unreachable state")
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
+
+    def _execute_manual_rejoin(self) -> None:
+        """Executes an instance manual rejoin.
+
+        It is supposed to be called when the MySQL 8.0.21+ auto-rejoin attempts have been exhausted,
+        on an OFFLINE replica that still belongs to the cluster
+        """
+        if not self._mysql.is_instance_in_cluster(self.unit_label):
+            logger.warning("Instance does not belong to the cluster. Cannot perform manual rejoin")
+            return
+
+        cluster_primary = self._get_primary_from_online_peer()
+
+        self._mysql.remove_instance(
+            unit_label=self.unit_label,
+        )
+        self._mysql.add_instance_to_cluster(
+            instance_address=self.unit_address,
+            instance_unit_label=self.unit_label,
+            from_instance=cluster_primary,
+        )
 
     def _on_update_status(self, _) -> None:  # noqa: C901
         """Handle update status.
