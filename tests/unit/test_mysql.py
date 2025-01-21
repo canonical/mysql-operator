@@ -450,6 +450,7 @@ class TestMySQLBase(unittest.TestCase):
             user="serverconfig",
             password="serverconfigpassword",
             host="127.0.0.1:33062",
+            exception_as_warning=True,
         )
         _acquire_lock.assert_called_once()
         _release_lock.assert_called_once()
@@ -823,8 +824,9 @@ class TestMySQLBase(unittest.TestCase):
             host="127.0.0.2:33062",
         )
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.cluster_metadata_exists", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_instance_in_cluster(self, _run_mysqlsh_script):
+    def test_is_instance_in_cluster(self, _run_mysqlsh_script, _cluster_metadata_exists):
         """Test a successful execution of is_instance_in_cluster() method."""
         _run_mysqlsh_script.return_value = "ONLINE"
 
@@ -1118,11 +1120,16 @@ class TestMySQLBase(unittest.TestCase):
     def test_cluster_metadata_exists(self, _run_mysqlsh_script):
         """Test cluster_metadata_exists method."""
         commands = "\n".join((
+            "result = session.run_sql(\"SHOW DATABASES LIKE 'mysql_innodb_cluster_metadata'\")",
+            "content = result.fetch_all()",
+            "if content:",
             (
-                'result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
+                '  result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
                 f".clusters where cluster_name = '{self.mysql.cluster_name}';\")"
             ),
-            "print(bool(result.fetch_one()))",
+            "  print(bool(result.fetch_one()))",
+            "else:",
+            "  print(False)",
         ))
 
         _run_mysqlsh_script.return_value = "True\n"
@@ -1134,6 +1141,7 @@ class TestMySQLBase(unittest.TestCase):
             password="serverconfigpassword",
             host="1.2.3.4:33062",
             timeout=60,
+            exception_as_warning=True,
         )
 
         _run_mysqlsh_script.reset_mock()
@@ -2153,6 +2161,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             user="serverconfig",
             password="serverconfigpassword",
             host="127.0.0.1:33062",
+            exception_as_warning=True,
         )
 
         _run_mysqlsh_script.reset_mock()
@@ -2178,12 +2187,14 @@ xtrabackup/location --defaults-file=defaults/config/file
                 user="serverconfig",
                 password="serverconfigpassword",
                 host="127.0.0.1:33062",
+                exception_as_warning=True,
             ),
             call(
                 "\n".join(commands2),
                 user="serverconfig",
                 password="serverconfigpassword",
                 host="127.0.0.1:33062",
+                exception_as_warning=False,
             ),
         ])
 
@@ -2258,6 +2269,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             password="serverconfigpassword",
             host="127.0.0.1:33062",
             timeout=30,
+            exception_as_warning=True,
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")

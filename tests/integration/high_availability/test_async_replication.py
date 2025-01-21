@@ -265,15 +265,6 @@ async def test_failover(ops_test: OpsTest, first_model: Model, second_model: Mod
         **{"--wait": "5m", "force": True},
     )
 
-    cluster_set_status = await get_cluster_status(leader_unit, cluster_set=True)
-    logger.info("Checking clusters statuses")
-    assert (
-        cluster_set_status["clusters"]["lima"]["clusterrole"] == "primary"
-    ), "standby not promoted to primary"
-    assert (
-        cluster_set_status["clusters"]["cuzco"]["globalstatus"] == "invalidated"
-    ), "old primary not invalidated"
-
     # restore mysqld process
     logger.info("Unfreezing mysqld on primary cluster units")
     for unit in second_model_units:
@@ -283,6 +274,15 @@ async def test_failover(ops_test: OpsTest, first_model: Model, second_model: Mod
             "sleep 0.5; done"
         )
         await unit.ssh(unfreeze_cmd)
+
+    cluster_set_status = await get_cluster_status(leader_unit, cluster_set=True)
+    logger.info("Checking clusters statuses")
+    assert (
+        cluster_set_status["clusters"]["lima"]["clusterrole"] == "primary"
+    ), "standby not promoted to primary"
+    assert (
+        cluster_set_status["clusters"]["cuzco"]["globalstatus"] == "invalidated"
+    ), "old primary not invalidated"
 
 
 @juju3

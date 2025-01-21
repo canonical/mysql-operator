@@ -659,9 +659,9 @@ class MySQL(MySQLBase):
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-        except MySQLClientError as e:
-            logger.exception("Failed to truncate the MySQL host cache")
-            raise MySQLFlushHostCacheError(e.message)
+        except MySQLClientError:
+            logger.error("Failed to truncate the MySQL host cache")
+            raise MySQLFlushHostCacheError
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
@@ -701,11 +701,19 @@ class MySQL(MySQLBase):
         self.connect_mysql_exporter()
 
     def _run_mysqlsh_script(
-        self, script: str, user: str, host: str, password: str, timeout=None
+        self,
+        script: str,
+        user: str,
+        host: str,
+        password: str,
+        timeout=None,
+        exception_as_warning: bool = False,
     ) -> str:
         """Execute a MySQL shell script.
 
-        Raises CalledProcessError if the script gets a non-zero return code.
+        Raises:
+            MySQLClientError if the script gets a non-zero return code.
+            TimeoutError if the script times out.
 
         Args:
             script: Mysqlsh script string
@@ -713,6 +721,7 @@ class MySQL(MySQLBase):
             host: Host to run the script on
             password: Password to invoke the mysqlsh script
             timeout: (optional) Timeout for the script
+            exception_as_warning: (optional) whether the exception should be treated as warning
 
         Returns:
             String representing the output of the mysqlsh command
@@ -743,12 +752,18 @@ class MySQL(MySQLBase):
             # split output to clean mysqlsh garbage
             return output.split("###")[1].strip()
         except subprocess.CalledProcessError as e:
-            self.strip_off_passwords_from_exception(e)
-            logger.exception("Failed to execute mysql-shell command")
+            if exception_as_warning:
+                logger.warning("Failed to execute mysql-shell command")
+            else:
+                self.strip_off_passwords_from_exception(e)
+                logger.exception("Failed to execute mysql-shell command")
             raise MySQLClientError
         except subprocess.TimeoutExpired as e:
-            self.strip_off_passwords_from_exception(e)
-            logger.exception("MySQL shell command timed out")
+            if exception_as_warning:
+                logger.warning("MySQL shell command timed out")
+            else:
+                self.strip_off_passwords_from_exception(e)
+                logger.exception("MySQL shell command timed out")
             raise TimeoutError
 
     def _run_mysqlcli_script(
@@ -757,6 +772,7 @@ class MySQL(MySQLBase):
         user: str = "root",
         password: Optional[str] = None,
         timeout: Optional[int] = None,
+        exception_as_warning: bool = False,
     ) -> list:
         """Execute a MySQL script.
 
@@ -771,6 +787,7 @@ class MySQL(MySQLBase):
             user: (optional) user to invoke the mysql cli script with (default is "root")
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
+            exception_as_warning: (optional) whether the exception should be treated as warning
         """
         command = [
             CHARMED_MYSQL,
@@ -807,12 +824,18 @@ class MySQL(MySQLBase):
                 return [line.split() for line in stdout.strip().split("\n")] if stdout else []
 
         except (pexpect.TIMEOUT, subprocess.TimeoutExpired) as e:
-            self.strip_off_passwords_from_exception(e)
-            logger.exception("MySQL cli command timed out")
+            if exception_as_warning:
+                logger.warning("MySQL cli command timed out")
+            else:
+                self.strip_off_passwords_from_exception(e)
+                logger.exception("MySQL cli command timed out")
             raise TimeoutError
         except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError) as e:
-            self.strip_off_passwords_from_exception(e)
-            logger.exception("Failed to execute MySQL cli command")
+            if exception_as_warning:
+                logger.warning("Failed to execute MySQL cli command")
+            else:
+                self.strip_off_passwords_from_exception(e)
+                logger.exception("Failed to execute MySQL cli command")
             raise MySQLClientError
 
     def is_data_dir_initialised(self) -> bool:
