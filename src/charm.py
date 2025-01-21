@@ -57,6 +57,7 @@ from ops import (
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
+    RelationDepartedEvent,
     StartEvent,
     Unit,
     WaitingStatus,
@@ -166,6 +167,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         )
 
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
 
         self.mysql_config = MySQLConfig(MYSQLD_CUSTOM_CONFIG_FILE)
         self.shared_db_relation = SharedDBRelation(self)
@@ -392,8 +394,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
-        if not self._mysql.reconcile_binlogs_collection():
+        if not self._mysql.reconcile_binlogs_collection(True):
             logger.error("Failed to reconcile binlogs collection during peer relation event")
+
+    def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
+        if not self._mysql.reconcile_binlogs_collection(True):
+            logger.error("Failed to reconcile binlogs collection during peer departed event")
 
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
