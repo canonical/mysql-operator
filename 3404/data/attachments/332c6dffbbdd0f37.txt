@@ -1,0 +1,147 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:675 Connecting to existing model localhost-localhost:test on unspecified cloud
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:48 Deploying mysql and scaling to 3 units
+[32mINFO    [0m juju.model:model.py:2284 Deploying local:mysql-0
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: agent initialising
+  mysql/1 [allocating] waiting: agent initialising
+  mysql/2 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: Waiting to start MySQL
+  mysql/1 [executing] waiting: Waiting to start MySQL
+  mysql/2 [executing] waiting: Waiting to start MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] waiting: Waiting to join the cluster
+  mysql/2 [executing] waiting: Waiting to join the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] waiting: waiting to join the cluster.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:51 Deploying mysql-test-app
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/mysql-test-app-63
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [idle] waiting: 
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:54 Relating mysql with mysql-test-app
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql-test-app/0 [idle] waiting: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:343 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m mysql.connector:authentication.py:66 package: mysql.connector.plugins
+[32mINFO    [0m mysql.connector:authentication.py:67 plugin_name: caching_sha2_password
+[32mINFO    [0m mysql.connector:authentication.py:71 AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=820 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=827 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=834 on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:396 Stopping server on unit mysql/0
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:399 Removing data directory
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:415 Purge binlogs on unit mysql/1
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:415 Purge binlogs on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:423 Waiting unit to enter in maintenance.
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:430 Waiting unit to be back online.
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.test_self_healing:test_self_healing.py:442 Check if instance in cluster
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:343 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=2038 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=2045 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=2051 on unit mysql/2
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.1    unsupported  01:38:05Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.39-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   63  no       
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle       3        10.108.158.64                   
+mysql/0*           active    executing  0        10.108.158.4    3306,33060/tcp  
+mysql/1            active    idle       1        10.108.158.28   3306,33060/tcp  
+mysql/2            active    executing  2        10.108.158.208  3306,33060/tcp  Primary
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.108.158.4    juju-58df31-0  ubuntu@22.04      Running
+1        started  10.108.158.28   juju-58df31-1  ubuntu@22.04      Running
+2        started  10.108.158.208  juju-58df31-2  ubuntu@22.04      Running
+3        started  10.108.158.64   juju-58df31-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:31:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:31:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:31:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:31:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:31:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:31:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:31:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:31:11 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:35:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:35:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:36:59 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:37:09 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:37:19 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:37:22 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 01:37:22 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 161, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1958, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster status")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster status
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
