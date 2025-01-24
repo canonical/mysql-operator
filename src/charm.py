@@ -7,7 +7,6 @@
 from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
 from ops.main import main
 
-
 if is_wrong_architecture() and __name__ == "__main__":
     main(WrongArchitectureWarningCharm)
 
