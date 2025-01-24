@@ -44,6 +44,18 @@ options:
     description: Number of days for binary logs retention
     type: int
     default: 7
+  logs_audit_policy:
+    description: |
+      Audit log policy. Allowed values are: "all", "logins" (default), "queries".
+      Reg. at https://docs.percona.com/percona-server/8.0/audit-log-plugin.html#audit_log_policy
+    type: string
+    default: logins
+  logs_retention_period:
+    description: |
+      Period for rotated logs retention, in days. When set to "auto" (default) it will default to
+      to 3 days, or 1 day if related to COS. Accept values equal or greater then 3 otherwise.
+    type: string
+    default: auto
   # Experimental features
   experimental-max-connections:
     type: int

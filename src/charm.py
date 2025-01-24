@@ -7,6 +7,8 @@
 from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
 from ops.main import main
 
+from log_rotation_setup import LogRotationSetup, LogSyncingEvents
+
 if is_wrong_architecture() and __name__ == "__main__":
     main(WrongArchitectureWarningCharm)
 
@@ -27,7 +29,6 @@ from charms.mysql.v0.async_replication import (
 )
 from charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME, MySQLBackups
 from charms.mysql.v0.mysql import (
-    BYTES_1MB,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
@@ -75,7 +76,6 @@ from config import CharmConfig, MySQLConfig
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
-    CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -121,7 +121,9 @@ class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
 
 
-class MySQLCustomCharmEvents(FlushMySQLLogsCharmEvents, IPAddressChangeCharmEvents):
+class MySQLCustomCharmEvents(
+    FlushMySQLLogsCharmEvents, IPAddressChangeCharmEvents, LogSyncingEvents
+):
     """Custom event sources for the charm."""
 
 
@@ -189,6 +191,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.framework.observe(
             self.on[COS_AGENT_RELATION_NAME].relation_broken, self._on_cos_agent_relation_broken
         )
+
+        self.log_rotation_setup = LogRotationSetup(self)
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
         self.hostname_resolution = MySQLMachineHostnameResolution(self)
@@ -284,25 +288,17 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return
 
         # render the new config
-        memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
-        new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
-            profile=self.config.profile,
-            audit_log_enabled=self.config.plugin_audit_enabled,
-            audit_log_strategy=self.config.plugin_audit_strategy,
-            snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
-            memory_limit=memory_limit_bytes,
-            experimental_max_connections=self.config.experimental_max_connections,
-            binlog_retention_days=self.config.binlog_retention_days,
-        )
+        new_config_dict = self._mysql.write_mysqld_config()
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        logger.info("Persisting configuration changes to file")
-        # always persist config to file
-        self._mysql.write_content_to_file(
-            path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
-        )
-        self._mysql.setup_logrotate_and_cron(self.text_logs)
+        # Log rotation setup as DA124
+        if self.config.logs_retention_period == "auto" and self.model.get_relation("logging"):
+            retention_period, compress = "1", self.unit_peer_data.get("logs_synced") == "true"
+        else:
+            retention_period, compress = "3", True
+
+        self._mysql.setup_logrotate_and_cron(retention_period, self.text_logs, compress)
 
         if (
             self.mysql_config.keys_requires_restart(changed_config)
@@ -325,7 +321,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 if config not in new_config_dict:
                     # skip removed configs
                     continue
-                self._mysql.set_dynamic_variable(config, new_config_dict[config])
+                self._mysql.set_dynamic_variable(
+                    config.removeprefix("loose-"), new_config_dict[config]
+                )
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -618,7 +616,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Get the hostname of the unit."""
         if unit_name:
             unit = self.model.get_unit(unit_name)
-            return self.peers.data[unit]["instance-hostname"].split(":")[0]
+            return self.peers.data[unit]["instance-hostname"].split(":")[0]  # type: ignore
         return self.unit_peer_data["instance-hostname"].split(":")[0]
 
     @property
@@ -671,7 +669,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.hostname_resolution.update_etc_hosts(None)
 
         self._mysql.write_mysqld_config()
-        self._mysql.setup_logrotate_and_cron(self.text_logs)
+        self._mysql.setup_logrotate_and_cron(
+            logs_retention_period=self.config.logs_retention_period,
+            enabled_log_files=self.text_logs,
+        )
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 

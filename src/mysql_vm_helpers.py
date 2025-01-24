@@ -244,22 +244,23 @@ class MySQL(MySQLBase):
             logger.error("Failed to query system memory")
             raise MySQLGetAvailableMemoryError
 
-    def write_mysqld_config(self) -> None:
+    def write_mysqld_config(self) -> dict:
         """Create custom mysql config file.
 
         Raises: MySQLCreateCustomMySQLDConfigError if there is an error creating the
             custom mysqld config
         """
-        logger.debug("Writing mysql configuration file")
+        logger.info("Writing mysql configuration file")
         memory_limit = None
         if self.charm.config.profile_limit_memory:
             # Convert from config value in MB to bytes
             memory_limit = self.charm.config.profile_limit_memory * BYTES_1MB
         try:
-            content_str, _ = self.render_mysqld_configuration(
+            content_str, content_dict = self.render_mysqld_configuration(
                 profile=self.charm.config.profile,
                 audit_log_enabled=self.charm.config.plugin_audit_enabled,
                 audit_log_strategy=self.charm.config.plugin_audit_strategy,
+                audit_log_policy=self.charm.config.logs_audit_policy,
                 snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
                 memory_limit=memory_limit,
                 binlog_retention_days=self.charm.config.binlog_retention_days,
@@ -277,17 +278,33 @@ class MySQL(MySQLBase):
             content=content_str,
         )
 
-    def setup_logrotate_and_cron(self, enabled_log_files: Iterable) -> None:
+        return content_dict
+
+    def setup_logrotate_and_cron(
+        self,
+        logs_retention_period: str,
+        enabled_log_files: Iterable,
+        logs_compression: bool = True,
+    ) -> None:
         """Setup log rotation configuration for text files.
 
         Args:
+            logs_retention_period: logs retention period in days
             enabled_log_files: a iterable of enabled text logs
+            logs_compression: whether logs should be compressed after rotation
         """
         logger.debug("Creating logrotate config file")
         config_path = "/etc/logrotate.d/flush_mysql_logs"
         script_path = f"{self.charm.charm_dir}/logrotation.sh"
         cron_path = "/etc/cron.d/flush_mysql_logs"
         logs_dir = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql"
+
+        if logs_retention_period == "auto":
+            retention_period = 3
+        else:
+            retention_period = int(logs_retention_period)
+        # days * minutes/day = amount of rotated files to keep
+        logs_rotations = retention_period * 1440
 
         with open("templates/logrotate.j2", "r") as file:
             template = jinja2.Template(file.read())
@@ -298,6 +315,9 @@ class MySQL(MySQLBase):
             charm_directory=self.charm.charm_dir,
             unit_name=self.charm.unit.name,
             enabled_log_files=enabled_log_files,
+            logs_retention_period=retention_period,
+            logs_rotations=logs_rotations,
+            logs_compression=logs_compression,
         )
 
         self.write_content_to_file(

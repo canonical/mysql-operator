@@ -930,6 +930,7 @@ class MySQLBase(ABC):
         profile: str,
         audit_log_enabled: bool,
         audit_log_strategy: str,
+        audit_log_policy: str,
         memory_limit: Optional[int] = None,
         experimental_max_connections: Optional[int] = None,
         binlog_retention_days: int,
@@ -1001,7 +1002,7 @@ class MySQLBase(ABC):
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
             "loose-audit_log_filter": "OFF",
-            "loose-audit_log_policy": "LOGINS",
+            "loose-audit_log_policy": audit_log_policy.upper(),
             "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
         }
 
