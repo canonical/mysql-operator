@@ -292,7 +292,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
         # Log rotation setup as DA124
-        if self.config.logs_retention_period == "auto" and self.model.get_relation("logging"):
+        if self.config.logs_retention_period == "auto" and self.model.get_relation(
+            COS_AGENT_RELATION_NAME
+        ):
             retention_period, compress = "1", self.unit_peer_data.get("logs_synced") == "true"
         else:
             retention_period, compress = "3", True

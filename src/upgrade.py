@@ -192,14 +192,13 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
             # override config, avoid restart
-            self.charm._mysql.write_mysqld_config()
+            self.charm._on_config_changed(None)
             self.charm.unit.status = MaintenanceStatus("starting services...")
             # stop cron daemon to be able to query `error.log`
             set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
             if self.charm.config.plugin_audit_enabled:
                 self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
-            self.charm._mysql.setup_logrotate_and_cron(self.charm.text_logs)
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
