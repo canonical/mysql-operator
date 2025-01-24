@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Handler for log rotation setup on relation to COS."""
+"""Handler for log rotation setup in relation to COS."""
 
 import logging
 import os
@@ -30,7 +30,7 @@ class LogSyncingEvents(CharmEvents):
 
 
 class LogRotationSetup(Object):
-    """TODO: Proper comment"""
+    """Configure logrotation settings in relation to COS integration."""
 
     def __init__(self, charm: "MySQLOperatorCharm"):
         super().__init__(charm, "log-rotation-setup")
@@ -46,6 +46,7 @@ class LogRotationSetup(Object):
         )
 
     def _cos_relation_created(self, _):
+        """Start monitoring script that tracks start of log syncing."""
         script_path = f"{self.charm.charm_dir}/scripts/wait_for_log_sync.sh"
 
         new_env = os.environ.copy()
@@ -73,6 +74,7 @@ class LogRotationSetup(Object):
         self.charm.unit_peer_data["logs_synced"] = "true"
 
     def _cos_relation_broken(self, _):
+        """Unset auto value for log retention."""
         if self.charm.config.logs_retention_period != "auto":
             return
         logger.info("Reconfigure log rotation after logs upload stops")

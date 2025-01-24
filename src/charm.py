@@ -7,7 +7,6 @@
 from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
 from ops.main import main
 
-from log_rotation_setup import LogRotationSetup, LogSyncingEvents
 
 if is_wrong_architecture() and __name__ == "__main__":
     main(WrongArchitectureWarningCharm)
@@ -97,6 +96,7 @@ from constants import (
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
 from ip_address_observer import IPAddressChangeCharmEvents
+from log_rotation_setup import LogRotationSetup, LogSyncingEvents
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -271,7 +271,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, _) -> None:
+    def _on_config_changed(self, _) -> None:  # noqa: C901
         """Handle the config changed event."""
         if not self._is_peer_data_set:
             # skip when not initialized
