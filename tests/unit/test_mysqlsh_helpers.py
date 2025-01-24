@@ -42,6 +42,7 @@ class StubConfig:
         self.experimental_max_connections = None
         self.plugin_audit_strategy = "async"
         self.binlog_retention_days = 7
+        self.logs_audit_policy = "logins"
 
 
 class StubCharm:
