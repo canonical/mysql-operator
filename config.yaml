@@ -52,7 +52,7 @@ options:
     default: logins
   logs_retention_period:
     description: |
-      Period for rotated logs retention, in days. When set to "auto" (default) it will default to
+      Period for rotated logs retention, in days. When set to "auto" (default) it will default
       to 3 days, or 1 day if related to COS. Accept values equal or greater then 3 otherwise.
     type: string
     default: auto
