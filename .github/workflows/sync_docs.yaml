@@ -14,5 +14,5 @@ jobs:
     with:
       reviewers: a-velasco
     permissions:
-      contents: write  # Needed to push branch & tag
+      contents: write  # Needed to create git tags
       pull-requests: write  # Needed to create PR

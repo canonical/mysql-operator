@@ -1,6 +1,6 @@
 # Clients for Async replication
 
-## Pre-requisits
+## Pre-requisites
 Make sure both `Rome` and `Lisbon` Clusters are deployed using the [Async Deployment manual](/t/14169)!
 
 ## Offer and consume DB endpoints
