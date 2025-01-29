@@ -2926,8 +2926,8 @@ class MySQLBase(ABC):
         temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str, str]:
         """Retrieve the specified backup from S3."""
         nproc_command = ["nproc"]
@@ -2993,8 +2993,8 @@ class MySQLBase(ABC):
         backup_location: str,
         xtrabackup_location: str,
         xtrabackup_plugin_dir: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Prepare the backup in the provided dir for restore."""
         try:
@@ -3034,8 +3034,8 @@ class MySQLBase(ABC):
     def empty_data_files(
         self,
         mysql_data_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> None:
         """Empty the mysql data directory in preparation of backup restore."""
         empty_data_files_command = [
@@ -3071,8 +3071,8 @@ class MySQLBase(ABC):
         defaults_config_file: str,
         mysql_data_directory: str,
         xtrabackup_plugin_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Restore the provided prepared backup."""
         restore_backup_command = [
@@ -3105,8 +3105,8 @@ class MySQLBase(ABC):
     def delete_temp_restore_directory(
         self,
         temp_restore_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         logger.info(f"Deleting temp restore directory in {temp_restore_directory}")
