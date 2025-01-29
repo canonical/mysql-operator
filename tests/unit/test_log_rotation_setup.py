@@ -33,7 +33,7 @@ class TestLogRotationSetup(unittest.TestCase):
         self.harness.update_config({"logs_retention_period": "auto"})
         self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
         event = MagicMock()
-        self.charm.log_rotation_setup._log_syncing(event)
+        self.charm.log_rotation_setup._update_logs_rotation(event)
         self.assertEqual(self.harness.charm.unit_peer_data["logs_synced"], "true")
         mock_setup.assert_called_once()
 

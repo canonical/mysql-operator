@@ -95,7 +95,7 @@ from constants import (
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
 from ip_address_observer import IPAddressChangeCharmEvents
-from log_rotation_setup import LogRotationSetup, LogSyncingEvents
+from log_rotation_setup import LogRotationSetup
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -120,9 +120,7 @@ class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
 
 
-class MySQLCustomCharmEvents(
-    FlushMySQLLogsCharmEvents, IPAddressChangeCharmEvents, LogSyncingEvents
-):
+class MySQLCustomCharmEvents(FlushMySQLLogsCharmEvents, IPAddressChangeCharmEvents):
     """Custom event sources for the charm."""
 
 
@@ -291,15 +289,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        # Log rotation setup as DA124
-        if self.config.logs_retention_period == "auto" and self.model.get_relation(
-            COS_AGENT_RELATION_NAME
-        ):
-            retention_period, compress = "1", self.unit_peer_data.get("logs_synced") == "true"
-        else:
-            retention_period, compress = "3", True
-
-        self._mysql.setup_logrotate_and_cron(retention_period, self.text_logs, compress)
+        # Override log rotation
+        self.log_rotation_setup.setup()
 
         if (
             self.mysql_config.keys_requires_restart(changed_config)
@@ -702,10 +693,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.hostname_resolution.update_etc_hosts(None)
 
         self._mysql.write_mysqld_config()
-        self._mysql.setup_logrotate_and_cron(
-            logs_retention_period=self.config.logs_retention_period,
-            enabled_log_files=self.text_logs,
-        )
+        self.log_rotation_setup.setup()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 

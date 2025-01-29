@@ -282,7 +282,7 @@ class MySQL(MySQLBase):
 
     def setup_logrotate_and_cron(
         self,
-        logs_retention_period: str,
+        logs_retention_period: int,
         enabled_log_files: Iterable,
         logs_compression: bool = True,
     ) -> None:
@@ -299,12 +299,8 @@ class MySQL(MySQLBase):
         cron_path = "/etc/cron.d/flush_mysql_logs"
         logs_dir = f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql"
 
-        if logs_retention_period == "auto":
-            retention_period = 3
-        else:
-            retention_period = int(logs_retention_period)
         # days * minutes/day = amount of rotated files to keep
-        logs_rotations = retention_period * 1440
+        logs_rotations = logs_retention_period * 1440
 
         with open("templates/logrotate.j2", "r") as file:
             template = jinja2.Template(file.read())
@@ -315,7 +311,7 @@ class MySQL(MySQLBase):
             charm_directory=self.charm.charm_dir,
             unit_name=self.charm.unit.name,
             enabled_log_files=enabled_log_files,
-            logs_retention_period=retention_period,
+            logs_retention_period=logs_retention_period,
             logs_rotations=logs_rotations,
             logs_compression=logs_compression,
         )

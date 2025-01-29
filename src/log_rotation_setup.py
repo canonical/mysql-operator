@@ -4,12 +4,11 @@
 """Handler for log rotation setup in relation to COS."""
 
 import logging
-import os
-import subprocess
 import typing
+import yaml
+from pathlib import Path
 
-from ops.charm import CharmEvents
-from ops.framework import EventBase, EventSource, Object
+from ops.framework import Object
 
 from constants import COS_AGENT_RELATION_NAME
 
@@ -18,15 +17,8 @@ if typing.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
-class LogSyncing(EventBase):
-    """Custom event for the start of log syncing."""
-
-
-class LogSyncingEvents(CharmEvents):
-    """Charm event for log syncing init."""
-
-    log_syncing = EventSource(LogSyncing)
+_POSITIONS_FILE = "/var/snap/grafana-agent/current/grafana-agent-positions/log_file_scraper.yml"
+_LOGS_SYNCED = "logs_synced"
 
 
 class LogRotationSetup(Object):
@@ -37,7 +29,7 @@ class LogRotationSetup(Object):
 
         self.charm = charm
 
-        self.framework.observe(self.charm.on.log_syncing, self._log_syncing)
+        self.framework.observe(self.charm.on.update_status, self._update_logs_rotation)
         self.framework.observe(
             self.charm.on[COS_AGENT_RELATION_NAME].relation_created, self._cos_relation_created
         )
@@ -45,43 +37,70 @@ class LogRotationSetup(Object):
             self.charm.on[COS_AGENT_RELATION_NAME].relation_broken, self._cos_relation_broken
         )
 
-    def _cos_relation_created(self, _):
-        """Start monitoring script that tracks start of log syncing."""
-        script_path = f"{self.charm.charm_dir}/scripts/wait_for_log_sync.sh"
+    @property
+    def _logs_are_syncing(self):
+        return self.charm.unit_peer_data.get(_LOGS_SYNCED) == "true"
 
-        new_env = os.environ.copy()
-        if "JUJU_CONTEXT_ID" in new_env:
-            new_env.pop("JUJU_CONTEXT_ID")
+    def setup(self):
+        """Setup log rotation."""
+        # retention setting
+        if self.charm.config.logs_retention_period == "auto":
+            retention_period = 1 if self._logs_are_syncing else 3
+        else:
+            retention_period = int(self.charm.config.logs_retention_period)
 
-        subprocess.Popen([script_path], env=new_env)
-        logger.info("Started log sync wait script")
+        # compression setting
+        compress = self._logs_are_syncing or not self.charm.has_cos_relation
 
-    def _log_syncing(self, _):
-        """LogSyncing event handler.
+        self.charm._mysql.setup_logrotate_and_cron(
+            retention_period, self.charm.text_logs, compress
+        )
 
-        Reconfigure log rotation after promtail start sync.
+    def _update_logs_rotation(self, _):
+        """Check for log rotation auto configuration handler.
+
+        Reconfigure log rotation if promtail/gagent start sync.
         """
-        if self.charm.config.logs_retention_period != "auto":
+        if not self.model.get_relation(COS_AGENT_RELATION_NAME):
+            return
+
+        if self._logs_are_syncing:
+            # reconfiguration done
+            return
+
+        positions_file = Path(_POSITIONS_FILE)
+
+        not_started_msg = "Log syncing not yet started."
+        if not positions_file.exists():
+            logger.debug(not_started_msg)
+            return
+
+        with open(positions_file, "r") as pos_fd:
+            positions = yaml.safe_load(pos_fd.read())
+
+        if sync_files := positions.get("positions"):
+            for log_file, line in sync_files.items():
+                if "mysql" in log_file and int(line) > 0:
+                    break
+            else:
+                logger.debug(not_started_msg)
+                return
+        else:
+            logger.debug(not_started_msg)
             return
 
         logger.info("Reconfigure log rotation after logs upload started")
-        self.charm._mysql.setup_logrotate_and_cron(
-            logs_retention_period="1",
-            enabled_log_files=self.charm.text_logs,
-            logs_compression=True,
-        )
+        self.charm.unit_peer_data[_LOGS_SYNCED] = "true"
+        self.setup()
 
-        self.charm.unit_peer_data["logs_synced"] = "true"
+    def _cos_relation_created(self, _):
+        """Handle relation created."""
+        logger.info("Reconfigure log rotation on cos relation created")
+        self.setup()
 
     def _cos_relation_broken(self, _):
         """Unset auto value for log retention."""
-        if self.charm.config.logs_retention_period != "auto":
-            return
         logger.info("Reconfigure log rotation after logs upload stops")
-        self.charm._mysql.setup_logrotate_and_cron(
-            logs_retention_period="3",
-            enabled_log_files=self.charm.text_logs,
-            logs_compression=True,
-        )
 
-        del self.charm.unit_peer_data["logs_synced"]
+        del self.charm.unit_peer_data[_LOGS_SYNCED]
+        self.setup()
