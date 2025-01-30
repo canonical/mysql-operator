@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from ops.testing import Harness
 
@@ -23,18 +23,26 @@ class TestLogRotationSetup(unittest.TestCase):
         )
         self.charm = self.harness.charm
 
-    @patch("subprocess.Popen")
-    def test_cos_relation_created(self, mock_popen):
-        self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
-        mock_popen.assert_called_once()
-
     @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
-    def test_log_syncing(self, mock_setup):
+    def test_cos_relation_created(self, mock_setup):
+        self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
+        mock_setup.assert_called_once_with(3, self.charm.text_logs, False)
+
+    @patch("pathlib.Path.exists", return_value=True)
+    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
+    def test_log_syncing(self, mock_setup, mock_exist):
         self.harness.update_config({"logs_retention_period": "auto"})
         self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
+        positions = (
+            "positions:\n  '/var/snap/charmed-mysql/common/var/log/mysql/error.log': '466'\n"
+        )
         event = MagicMock()
-        self.charm.log_rotation_setup._update_logs_rotation(event)
+        mock_setup.assert_called_once()
+        mock_setup.reset_mock()
+        with patch("builtins.open", mock_open(read_data=positions)):
+            self.charm.log_rotation_setup._update_logs_rotation(event)
         self.assertEqual(self.harness.charm.unit_peer_data["logs_synced"], "true")
+        mock_exist.assert_called_once()
         mock_setup.assert_called_once()
 
     @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")

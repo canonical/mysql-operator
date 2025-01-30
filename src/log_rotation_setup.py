@@ -5,9 +5,9 @@
 
 import logging
 import typing
-import yaml
 from pathlib import Path
 
+import yaml
 from ops.framework import Object
 
 from constants import COS_AGENT_RELATION_NAME
