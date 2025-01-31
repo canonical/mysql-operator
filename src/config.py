@@ -26,8 +26,11 @@ class MySQLConfig:
         "innodb_buffer_pool_chunk_size",
         "group_replication_message_cache_size",
         "log_error",
-        "loose-audit_log_strategy",
+        "loose-audit_log_filter",
+        "loose-audit_log_file",
         "loose-audit_log_format",
+        "loose-audit_log_policy",
+        "loose-audit_log_strategy",
         "admin_address",
     }
 
