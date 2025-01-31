@@ -268,7 +268,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Handle the leader settings changed event."""
         self.unit_peer_data.update({"leader": "false"})
 
-    def _on_config_changed(self, _) -> None:  # noqa: C901
+    def _on_config_changed(self, _) -> None:
         """Handle the config changed event."""
         if not self._is_peer_data_set:
             # skip when not initialized
@@ -300,9 +300,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if "loose-audit_log_format" in changed_config:
                 # plugins are manipulated on running daemon
                 if self.config.plugin_audit_enabled:
-                    self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                    self._mysql.install_plugins(["audit_log"])
                 else:
-                    self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+                    self._mysql.uninstall_plugins(["audit_log"])
 
             self.on[f"{self.restart.name}"].acquire_lock.emit()
 
@@ -698,7 +698,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.configure_mysql_users()
 
         if self.config.plugin_audit_enabled:
-            self._mysql.install_plugins(["audit_log", "audit_log_filter"])
+            self._mysql.install_plugins(["audit_log"])
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
