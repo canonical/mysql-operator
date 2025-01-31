@@ -46,7 +46,6 @@ from constants import (
     CHARMED_MYSQLD_EXPORTER_SERVICE,
     CHARMED_MYSQLD_SERVICE,
     CHARMED_MYSQLSH,
-    MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE,
     MYSQL_DATA_DIR,
     MYSQL_SYSTEM_USER,
     MYSQLD_CONFIG_DIRECTORY,
@@ -882,13 +881,16 @@ class MySQL(MySQLBase):
         """Check if file exists."""
         return os.path.exists(path)
 
-    def reconcile_binlogs_collection(self, force_restart: bool = False) -> bool:
+    def reconcile_binlogs_collection(
+        self, force_restart: bool = False, ignore_inactive_error: bool = False
+    ) -> bool:
         """Start or stop binlogs collecting service.
 
         Based on the "binlogs-collecting" app peer data value and unit leadership.
 
         Args:
             force_restart: whether to restart service even if it's already running.
+            ignore_inactive_error: whether to not log an error when the service should be enabled but not active right now.
 
         Returns: whether the operation was successful.
         """
@@ -903,13 +905,23 @@ class MySQL(MySQLBase):
             self.charm.unit.is_leader() and "binlogs-collecting" in self.charm.app_peer_data
         )
 
-        if supposed_to_run and is_enabled and not is_active:
+        if supposed_to_run:
+            selected_snap.set({
+                f"mysql-pitr-helper-collector.{k.lower().replace('_', '-')}": v
+                for k, v in self.charm.backups.get_binlogs_collector_config().items()
+            })
+        else:
+            selected_snap.unset("mysql-pitr-helper-collector")
+
+        if supposed_to_run and is_enabled and not is_active and not ignore_inactive_error:
             logger.error("Binlogs collector is enabled but not running")
             if force_restart:
                 logger.error("Binlogs collector will be restarted due to force_restart option")
             else:
                 logger.error("Restarting binlogs collector to reanimate unhealthy service")
-                selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+
+        if supposed_to_run and is_enabled and not is_active and not force_restart:
+            selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
 
         if is_enabled and (force_restart or not supposed_to_run):
             logger.debug("Disabling binlogs collector")
@@ -917,17 +929,9 @@ class MySQL(MySQLBase):
 
         if supposed_to_run and (force_restart or not is_enabled):
             logger.debug("Enabling binlogs collector")
-            if not self.charm.backups.update_binlogs_collector_config():
-                return False
             selected_snap.start([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], enable=True)
 
         return True
-
-    def delete_binlogs_collector_config(self) -> None:
-        """Delete binlogs collector config file."""
-        logger.info("Deleting binlogs collector config")
-        if os.path.exists(MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE):
-            os.remove(MYSQL_BINLOGS_COLLECTOR_CONFIG_FILE)
 
     def get_cluster_members(self) -> list[str]:
         """Get cluster members in MySQL MEMBER_HOST format.
