@@ -394,11 +394,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
-        if not self._mysql.reconcile_binlogs_collection(True):
+        if not self._mysql.reconcile_binlogs_collection(force_restart=True):
             logger.error("Failed to reconcile binlogs collection during peer relation event")
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
-        if not self._mysql.reconcile_binlogs_collection(True):
+        if not self._mysql.reconcile_binlogs_collection(force_restart=True):
             logger.error("Failed to reconcile binlogs collection during peer departed event")
 
     def _on_database_storage_detaching(self, _) -> None:
