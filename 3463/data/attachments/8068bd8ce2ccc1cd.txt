@@ -1,0 +1,293 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:98 Refresh the charm back to stable channel
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:105 Wait (120s) for rolling restart OR continue to writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:343 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:486 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=5832 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=5833 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:368 max_written_value=5836 on unit mysql/2
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Model status:
+
+Model  Controller           Cloud/Region         Version  SLA          Timestamp
+test   localhost-localhost  localhost/localhost  3.6.2    unsupported  01:46:07Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.39-0ubun...  active      3  mysql           8.0/stable   313  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   63  no       Last written value=3110
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   0        10.6.216.189                    Last written value=3110
+mysql/0*           active    idle   1        10.6.216.34     3306,33060/tcp  Primary
+mysql/1            active    idle   2        10.6.216.151    3306,33060/tcp  
+mysql/2            active    idle   3        10.6.216.89                     
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.6.216.189  juju-f060bb-0  ubuntu@22.04      Running
+1        started  10.6.216.34   juju-f060bb-1  ubuntu@22.04      Running
+2        started  10.6.216.151  juju-f060bb-2  ubuntu@22.04      Running
+3        started  10.6.216.89   juju-f060bb-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:796 Juju error logs:
+
+machine-0: 01:32:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:32:23 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-test-app-0: 01:32:23 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:32:27 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:32:32 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+machine-1: 01:32:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:32:33 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:32:33 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+machine-3: 01:32:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:32:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 01:32:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:32:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:32:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:32:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:32:37 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:32:39 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:32:40 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:32:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:32:43 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:32:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:32:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:32:46 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:32:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:32:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:32:51 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:32:52 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:32:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:32:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:32:59 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:33:00 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:33:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:33:02 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:33:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:33:10 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:33:10 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:33:11 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:33:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:33:20 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:33:23 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:33:24 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:33:33 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:33:33 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:33:35 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:33:39 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:33:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:33:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:33:51 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:33:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:34:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:34:08 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:34:10 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-test-app-0: 01:34:19 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-test-app-63" for mysql-test-app/0: failed to download charm "ch:amd64/mysql-test-app-63" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:34:29 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:34:31 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:34:32 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:34:55 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:34:56 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:34:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:35:25 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:35:26 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:35:29 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:36:04 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:36:05 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:36:07 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:36:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:36:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:36:49 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-1: 01:37:46 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/1: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-0: 01:37:47 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/0: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:37:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/mysql-313" for mysql/2: failed to download charm "ch:amd64/mysql-313" from API server: download request with archiveSha256 length 0 not valid
+unit-mysql-2: 01:42:06 ERROR unit.mysql/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-1: 01:42:06 ERROR unit.mysql/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-0: 01:42:06 ERROR unit.mysql/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-1: 01:42:08 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-2.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+unit-mysql-1: 01:42:08 ERROR unit.mysql/1.juju-log Failed to set variable='loose-audit_log_filter' to value='OFF'
+unit-mysql-1: 01:42:08 ERROR unit.mysql/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-2.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 1434, in set_dynamic_variable
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 760, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/charm.py", line 912, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/charm.py", line 328, in _on_config_changed
+    self._mysql.set_dynamic_variable(config, new_config_dict[config])
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 1442, in set_dynamic_variable
+    raise MySQLSetVariableError
+charms.mysql.v0.mysql.MySQLSetVariableError
+unit-mysql-0: 01:42:08 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-1.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+unit-mysql-0: 01:42:08 ERROR unit.mysql/0.juju-log Failed to set variable='loose-audit_log_filter' to value='OFF'
+unit-mysql-0: 01:42:08 ERROR unit.mysql/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-1.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1434, in set_dynamic_variable
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 760, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 912, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 328, in _on_config_changed
+    self._mysql.set_dynamic_variable(config, new_config_dict[config])
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 1442, in set_dynamic_variable
+    raise MySQLSetVariableError
+charms.mysql.v0.mysql.MySQLSetVariableError
+unit-mysql-1: 01:42:09 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-0: 01:42:09 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-2: 01:42:09 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-3.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+unit-mysql-2: 01:42:09 ERROR unit.mysql/2.juju-log Failed to set variable='loose-audit_log_filter' to value='OFF'
+unit-mysql-2: 01:42:09 ERROR unit.mysql/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 745, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-f060bb-3.lxd:33062', '--python', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsession.run_sql("SET GLOBAL loose-audit_log_filter=OFF")']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1434, in set_dynamic_variable
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 760, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/charm.py", line 912, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/charm.py", line 328, in _on_config_changed
+    self._mysql.set_dynamic_variable(config, new_config_dict[config])
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 1442, in set_dynamic_variable
+    raise MySQLSetVariableError
+charms.mysql.v0.mysql.MySQLSetVariableError
+unit-mysql-2: 01:42:09 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-1: 01:44:17 ERROR unit.mysql/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-0: 01:44:17 ERROR unit.mysql/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-2: 01:44:17 ERROR unit.mysql/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Forgetting main...
