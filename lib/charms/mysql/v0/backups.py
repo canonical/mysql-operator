@@ -82,6 +82,7 @@ from charms.mysql.v0.mysql import (
     MySQLUnableToGetMemberStateError,
 )
 from charms.mysql.v0.s3_helpers import (
+    _construct_endpoint,
     ensure_s3_compatible_group_replication_id,
     fetch_and_check_existence_of_s3_path,
     list_backups_in_s3_path,
@@ -715,8 +716,8 @@ class MySQLBackups(Object):
             logger.info("Restoring point-in-time-recovery")
             stdout, stderr = self.charm._mysql.restore_pitr(
                 host=self.charm.get_unit_address(self.charm.unit),
-                mysql_user=SERVER_CONFIG_USERNAME,
-                password=self.charm.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
+                mysql_user=self.charm._mysql.server_config_user,
+                password=self.charm._mysql.server_config_password,
                 s3_parameters=s3_parameters,
                 restore_to_time=restore_to_time,
             )
@@ -818,13 +819,22 @@ class MySQLBackups(Object):
             logger.error("Failed to restart binlogs collecting after S3 relation update")
 
     def _on_s3_credentials_gone(self, event: CredentialsGoneEvent) -> None:
-        if self.charm.unit.is_leader():
-            self.charm.app_peer_data.update({
-                "s3-block-message": "",
-                "binlogs-collecting": "",
-            })
+        if not self.charm.unit.is_leader():
+            logger.debug("Early exit on _on_s3_credentials_gone: unit is not a leader")
+            return
+
+        self.charm.app_peer_data.update({
+            "s3-block-message": "",
+            "binlogs-collecting": "",
+        })
+        try:
             if not self.charm._mysql.reconcile_binlogs_collection():
                 logger.error("Failed to stop binlogs collecting after S3 relation depart")
+        except Exception as e:
+            logger.error(e)
+            logger.error(
+                "Exception is occurred when trying to stop binlogs collecting after S3 relation depart. It may be a leader departure"
+            )
 
     def get_binlogs_collector_config(self) -> Dict[str, str]:
         """Update binlogs collector service config file.
@@ -852,7 +862,7 @@ class MySQLBackups(Object):
         )
 
         return {
-            "ENDPOINT": s3_parameters["endpoint"],
+            "ENDPOINT": _construct_endpoint(s3_parameters),
             "HOSTS": ",".join(self.charm._mysql.get_cluster_members()),
             "USER": SERVER_CONFIG_USERNAME,
             "PASS": self.charm.get_secret("app", SERVER_CONFIG_PASSWORD_KEY),
