@@ -883,28 +883,50 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit.status = ActiveStatus(self.active_status_message)
         logger.info(f"Instance {instance_label} added to cluster")
 
-    def _restart(self, event: EventBase) -> None:
-        """Restart the MySQL service."""
-        if self.peers.units != self.restart_peers.units:
-            # defer restart until all units are in the relation
-            logger.debug("Deferring restart until all units are in the relation")
-            event.defer()
-            return
-        if self.peers.units and self._mysql.is_unit_primary(self.unit_label):
-            restart_states = {
-                self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
-            }
-            if restart_states == {"unset"}:
-                logger.debug("Restarting leader")
-            elif restart_states != {"release"}:
-                # Wait other units restart first to minimize primary switchover
-                logger.debug("Primary is waiting for other units to restart")
-                event.defer()
-                return
+    def recover_unit_after_restart(self) -> None:
+        """Wait for unit recovery/rejoin after restart."""
+        recovery_attempts = 30
+        logger.info("Recovering unit")
+        if self.app.planned_units() == 1:
+            self._mysql.reboot_from_complete_outage()
+        else:
+            try:
+                for attempt in Retrying(
+                    stop=stop_after_attempt(recovery_attempts), wait=wait_fixed(15)
+                ):
+                    with attempt:
+                        self._mysql.hold_if_recovering()
+                        if not self._mysql.is_instance_in_cluster(self.unit_label):
+                            logger.debug(
+                                "Instance not yet back in the cluster."
+                                f" Retry {attempt.retry_state.attempt_number}/{recovery_attempts}"
+                            )
+                            raise Exception
+            except RetryError:
+                raise
 
+    def _restart(self, _: EventBase) -> None:
+        """Restart the service."""
+        if not self.unit_initialized:
+            logger.debug("Restarting standalone mysqld")
+            self._mysql.restart_mysqld()
+            return
+
+        if self.app.planned_units() > 1 and self._mysql.is_unit_primary(self.unit_label):
+            try:
+                new_primary = self.get_unit_address(self.peers.units.pop())
+                logger.debug(f"Switching primary to {new_primary}")
+                self._mysql.set_cluster_primary(new_primary)
+            except MySQLSetClusterPrimaryError:
+                logger.warning("Changing primary failed")
+
+        logger.debug("Restarting mysqld")
         self.unit.status = MaintenanceStatus("restarting MySQL")
         self._mysql.restart_mysqld()
+        self.unit.status = MaintenanceStatus("recovering unit after restart")
         sleep(10)
+        self.recover_unit_after_restart()
+
         self._on_update_status(None)
 
 

@@ -13,6 +13,7 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from ops.testing import Harness
+from tenacity import RetryError
 
 from charm import MySQLOperatorCharm
 
@@ -131,6 +132,7 @@ class TestUpgrade(unittest.TestCase):
         mock_get_primary_label.assert_called_once()
         assert mock_set_dynamic_variable.call_count == 2
 
+    @patch("charm.MySQLOperatorCharm.recover_unit_after_restart")
     @patch("mysql_vm_helpers.MySQL.install_plugins")
     @patch("upgrade.set_cron_daemon")
     @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
@@ -138,19 +140,16 @@ class TestUpgrade(unittest.TestCase):
     @patch("upgrade.MySQLVMUpgrade._reset_on_unsupported_downgrade")
     @patch("mysql_vm_helpers.MySQL.hold_if_recovering")
     @patch("pathlib.Path.exists", return_value=True)
-    @patch("upgrade.RECOVER_ATTEMPTS", 1)
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.33")
     @patch("charm.MySQLOperatorCharm.install_workload", return_value=True)
     @patch("charm.MySQLOperatorCharm.unit_fqdn", return_value="10.0.1.1")
     @patch("mysql_vm_helpers.MySQL.stop_mysqld")
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("upgrade.MySQLVMUpgrade._check_server_upgradeability")
-    @patch("mysql_vm_helpers.MySQL.is_instance_in_cluster", return_value=True)
     @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron", return_value=True)
     def test_upgrade_granted(
         self,
         mock_setup_logrotate_and_cron,
-        mock_is_instance_in_cluster,
         mock_check_server_upgradeability,
         mock_start_mysqld,
         mock_stop_mysqld,
@@ -164,6 +163,7 @@ class TestUpgrade(unittest.TestCase):
         mock_write_mysqld_config,
         mock_set_cron_daemon,
         mock_install_plugins,
+        mock_recover_unit_after_restart,
     ):
         """Test upgrade-granted hook."""
         self.charm.on.config_changed.emit()
@@ -175,7 +175,6 @@ class TestUpgrade(unittest.TestCase):
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/1")["state"],
             "idle",  # change to `completed` - behavior not yet set in the lib
         )
-        mock_is_instance_in_cluster.assert_called_once()
         mock_check_server_upgradeability.assert_called_once()
         mock_start_mysqld.assert_called_once()
         mock_stop_mysqld.assert_called_once()
@@ -188,7 +187,7 @@ class TestUpgrade(unittest.TestCase):
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
         )
         # setup for exception
-        mock_is_instance_in_cluster.return_value = False
+        mock_recover_unit_after_restart.side_effect = RetryError
 
         self.charm.upgrade._on_upgrade_granted(None)
         self.assertEqual(
