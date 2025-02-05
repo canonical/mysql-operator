@@ -317,31 +317,6 @@ async def app_name(ops_test: OpsTest) -> str:
     return None
 
 
-def cluster_name(unit: Unit, model_name: str) -> str:
-    """Returns the MySQL cluster name.
-
-    Args:
-        unit: A unit to get data from
-        model_name: The current model name
-    Returns:
-        The (str) mysql cluster name
-    """
-    output = subprocess.check_output([
-        "juju",
-        "show-unit",
-        unit.name,
-        "--format=json",
-        f"--model={model_name}",
-    ])
-    output = json.loads(output.decode("utf-8"))
-
-    for relation in output[unit.name]["relation-info"]:
-        if relation["endpoint"] == "database-peers":
-            return relation["application-data"]["cluster-name"]
-    logger.error(f"Failed to retrieve cluster name from unit {unit.name}")
-    raise ValueError("Failed to retrieve cluster name")
-
-
 async def get_model_logs(ops_test: OpsTest, log_level: str, log_lines: int = 100) -> str:
     """Return the juju logs from a specific model.
 
