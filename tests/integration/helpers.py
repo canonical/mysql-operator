@@ -342,6 +342,25 @@ def cluster_name(unit: Unit, model_name: str) -> str:
     raise ValueError("Failed to retrieve cluster name")
 
 
+async def get_model_logs(ops_test: OpsTest, log_level: str, log_lines: int = 100) -> str:
+    """Return the juju logs from a specific model.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        log_level: The logging level to return messages from
+        log_lines: The maximum lines to return at once
+    """
+    _, output, _ = await ops_test.juju(
+        "debug-log",
+        f"--model={ops_test.model.info.name}",
+        f"--level={log_level}",
+        f"--lines={log_lines}",
+        "--no-tail",
+    )
+
+    return output
+
+
 async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
     """Return the pid of a process running in a given unit.
 

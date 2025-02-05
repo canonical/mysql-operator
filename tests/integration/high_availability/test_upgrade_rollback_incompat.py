@@ -15,7 +15,12 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .. import juju_, markers
-from ..helpers import get_leader_unit, get_relation_data, get_unit_by_index
+from ..helpers import (
+    get_leader_unit,
+    get_model_logs,
+    get_relation_data,
+    get_unit_by_index,
+)
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
@@ -172,6 +177,11 @@ async def test_rollback(ops_test, continuous_writes) -> None:
         timeout=TIMEOUT,
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
+
+    logger.info("Ensure rollback has taken place")
+    message = "Downgrade is incompatible. Resetting workload"
+    warnings = await get_model_logs(ops_test, log_level="WARNING")
+    assert message in warnings
 
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
