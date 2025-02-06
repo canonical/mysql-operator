@@ -42,6 +42,7 @@ class StubConfig:
         self.experimental_max_connections = None
         self.plugin_audit_strategy = "async"
         self.binlog_retention_days = 7
+        self.logs_audit_policy = "logins"
 
 
 class StubCharm:
@@ -328,7 +329,6 @@ class TestMySQL(unittest.TestCase):
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
-            "loose-audit_log_filter = OFF",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",
@@ -364,7 +364,6 @@ class TestMySQL(unittest.TestCase):
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
             "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
-            "loose-audit_log_filter = OFF",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "loose-audit_log_format = JSON",

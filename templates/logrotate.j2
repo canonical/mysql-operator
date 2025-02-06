@@ -6,8 +6,16 @@ createolddir 770 {{ system_user }} {{ system_user }}
 
 # Frequency of logs rotation
 hourly
-maxage 7
-rotate 10800
+maxage {{ logs_retention_period }}
+rotate {{ logs_rotations }}
+
+# Compression settings
+{% if logs_compression %}
+compress
+delaycompress
+{% else %}
+nocompress
+{% endif %}
 
 # Naming of rotated files should be in the format:
 dateext
@@ -16,7 +24,6 @@ dateformat -%Y%m%d_%H%M
 # Settings to prevent misconfigurations and unwanted behaviours
 ifempty
 missingok
-nocompress
 nomail
 nosharedscripts
 nocopytruncate

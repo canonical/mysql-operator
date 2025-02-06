@@ -2058,7 +2058,6 @@ xtrabackup/location --defaults-file=defaults/config/file
             "general_log_file": "/var/log/mysql/general.log",
             "slow_query_log_file": "/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": "604800",
-            "loose-audit_log_filter": "OFF",
             "loose-audit_log_format": "JSON",
             "loose-audit_log_policy": "LOGINS",
             "loose-audit_log_strategy": "ASYNCHRONOUS",
@@ -2072,6 +2071,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
+            audit_log_policy="LOGINS",
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -2088,6 +2088,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
+            audit_log_policy="LOGINS",
             memory_limit=memory_limit,
         )
         self.assertEqual(rendered_config, expected_config)
@@ -2103,6 +2104,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
+            audit_log_policy="LOGINS",
         )
         self.assertEqual(rendered_config, expected_config)
 
@@ -2114,6 +2116,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
+            audit_log_policy="LOGINS",
             experimental_max_connections=500,
             memory_limit=memory_limit,
         )
@@ -2126,6 +2129,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             binlog_retention_days=7,
             audit_log_enabled=True,
             audit_log_strategy="async",
+            audit_log_policy="LOGINS",
             experimental_max_connections=800,
             memory_limit=memory_limit,
         )

@@ -133,7 +133,6 @@ class TestUpgrade(unittest.TestCase):
 
     @patch("mysql_vm_helpers.MySQL.install_plugins")
     @patch("upgrade.set_cron_daemon")
-    @patch("mysql_vm_helpers.MySQL.write_mysqld_config")
     @patch("upgrade.MySQLVMUpgrade._check_server_unsupported_downgrade")
     @patch("upgrade.MySQLVMUpgrade._reset_on_unsupported_downgrade")
     @patch("mysql_vm_helpers.MySQL.hold_if_recovering")
@@ -146,10 +145,10 @@ class TestUpgrade(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.start_mysqld")
     @patch("upgrade.MySQLVMUpgrade._check_server_upgradeability")
     @patch("mysql_vm_helpers.MySQL.is_instance_in_cluster", return_value=True)
-    @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron", return_value=True)
+    @patch("charm.MySQLOperatorCharm._on_config_changed")
     def test_upgrade_granted(
         self,
-        mock_setup_logrotate_and_cron,
+        mock_config_change,
         mock_is_instance_in_cluster,
         mock_check_server_upgradeability,
         mock_start_mysqld,
@@ -161,7 +160,6 @@ class TestUpgrade(unittest.TestCase):
         mock_hold_if_recovering,
         mock_reset_on_unsupported_downgrade,
         mock_check_server_unsupported_downgrade,
-        mock_write_mysqld_config,
         mock_set_cron_daemon,
         mock_install_plugins,
     ):
@@ -181,8 +179,7 @@ class TestUpgrade(unittest.TestCase):
         mock_stop_mysqld.assert_called_once()
         mock_install_workload.assert_called_once()
         mock_get_mysql_version.assert_called_once()
-        mock_setup_logrotate_and_cron.assert_called_once()
-        mock_write_mysqld_config.assert_called_once()
+        mock_config_change.assert_called()
 
         self.harness.update_relation_data(
             self.upgrade_relation_id, "mysql/0", {"state": "upgrading"}
