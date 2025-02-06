@@ -4,8 +4,7 @@
 """Test charms subordinated to MySQL charm."""
 
 import asyncio
-
-import pytest
+import os
 
 from .relations.test_database import APPLICATION_APP_NAME, CLUSTER_NAME, DATABASE_APP_NAME, TIMEOUT
 
@@ -13,12 +12,10 @@ UBUNTU_PRO_APP_NAME = "ubuntu-advantage"
 LANDSCAPE_CLIENT_APP_NAME = "landscape-client"
 
 
-@pytest.mark.group(1)
-async def test_ubuntu_pro(ops_test, github_secrets):
-    db_charm = await ops_test.build_charm(".")
+async def test_ubuntu_pro(ops_test, charm):
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm,
+            charm,
             application_name=DATABASE_APP_NAME,
             config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
             base="ubuntu@22.04",
@@ -33,7 +30,7 @@ async def test_ubuntu_pro(ops_test, github_secrets):
             UBUNTU_PRO_APP_NAME,
             application_name=UBUNTU_PRO_APP_NAME,
             channel="latest/edge",
-            config={"token": github_secrets["UBUNTU_PRO_TOKEN"]},
+            config={"token": os.environ["UBUNTU_PRO_TOKEN"]},
             base="ubuntu@22.04",
         ),
     )
@@ -50,15 +47,14 @@ async def test_ubuntu_pro(ops_test, github_secrets):
         )
 
 
-@pytest.mark.group(1)
-async def test_landscape_client(ops_test, github_secrets):
+async def test_landscape_client(ops_test):
     await ops_test.model.deploy(
         LANDSCAPE_CLIENT_APP_NAME,
         application_name=LANDSCAPE_CLIENT_APP_NAME,
         channel="latest/edge",
         config={
-            "account-name": github_secrets["LANDSCAPE_ACCOUNT_NAME"],
-            "registration-key": github_secrets["LANDSCAPE_REGISTRATION_KEY"],
+            "account-name": os.environ["LANDSCAPE_ACCOUNT_NAME"],
+            "registration-key": os.environ["LANDSCAPE_REGISTRATION_KEY"],
             "ppa": "ppa:landscape/self-hosted-beta",
         },
         base="ubuntu@22.04",

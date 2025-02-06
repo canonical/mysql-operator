@@ -2,20 +2,17 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
-from .helpers import get_charm
 
 MYSQL_APP_NAME = "mysql"
 
 
-@pytest.mark.group(1)
 @markers.amd64_only
 async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
-    charm = await get_charm(".", "arm64")
+    charm = "./mysql_ubuntu@22.04-arm64.charm"
 
     await ops_test.model.deploy(
         charm,
@@ -32,11 +29,10 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @markers.arm64_only
 async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
-    charm = await get_charm(".", "amd64")
+    charm = "./mysql_ubuntu@22.04-amd64.charm"
 
     await ops_test.model.deploy(
         charm,

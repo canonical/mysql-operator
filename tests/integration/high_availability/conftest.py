@@ -39,14 +39,14 @@ async def continuous_writes(ops_test: OpsTest):
 
 
 @pytest.fixture()
-async def highly_available_cluster(ops_test: OpsTest) -> None:
+async def highly_available_cluster(ops_test: OpsTest, charm) -> None:
     """Run the set up for high availability tests.
 
     Args:
         ops_test: The ops test framework
     """
     logger.info("Deploying mysql and scaling to 3 units")
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, charm)
 
     logger.info("Deploying mysql-test-app")
     application_name = await deploy_and_scale_application(ops_test)
