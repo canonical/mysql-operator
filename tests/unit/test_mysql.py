@@ -300,7 +300,7 @@ class TestMySQLBase(unittest.TestCase):
         # Test with create_cluster_admin=False
         configure_instance_commands = [
             "dba.configure_instance(options=",
-            "{'restart': True})",
+            "{'restart': 'true'})",
         ]
 
         self.mysql.configure_instance(create_cluster_admin=False)
@@ -316,7 +316,7 @@ class TestMySQLBase(unittest.TestCase):
 
         # Test with create_cluster_admin=True
         configure_instance_commands[1] = (
-            "{'restart': True, "
+            "{'restart': 'true', "
             "'clusterAdmin': 'clusteradmin', 'clusterAdminPassword': 'clusteradminpassword'})"
         )
         self.mysql.configure_instance(create_cluster_admin=True)
