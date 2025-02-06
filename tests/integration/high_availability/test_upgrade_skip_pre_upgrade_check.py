@@ -9,7 +9,6 @@ from time import sleep
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import markers
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
@@ -24,7 +23,6 @@ TEST_APP_NAME = "mysql-test-app"
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -57,7 +55,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest):
     """Test updating from stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
@@ -90,7 +87,6 @@ async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest):
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_rollback_without_pre_upgrade_check(ops_test: OpsTest):
     """Test refresh back to stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
