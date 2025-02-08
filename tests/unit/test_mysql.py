@@ -842,6 +842,7 @@ class TestMySQLBase(unittest.TestCase):
             user="serverconfig",
             password="serverconfigpassword",
             host="127.0.0.1:33062",
+            exception_as_warning=True,
         )
 
         _run_mysqlsh_script.return_value = "NOT_A_MEMBER"
