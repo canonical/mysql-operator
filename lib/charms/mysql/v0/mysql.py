@@ -134,7 +134,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 82
+LIBPATCH = 84
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -939,6 +939,7 @@ class MySQLBase(ABC):
         profile: str,
         audit_log_enabled: bool,
         audit_log_strategy: str,
+        audit_log_policy: str,
         memory_limit: Optional[int] = None,
         experimental_max_connections: Optional[int] = None,
         binlog_retention_days: int,
@@ -1009,8 +1010,7 @@ class MySQLBase(ABC):
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
-            "loose-audit_log_filter": "OFF",
-            "loose-audit_log_policy": "LOGINS",
+            "loose-audit_log_policy": audit_log_policy.upper(),
             "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
             "gtid_mode": "ON",
             "enforce_gtid_consistency": "ON",
@@ -1475,7 +1475,11 @@ class MySQLBase(ABC):
         return rows[0][1]
 
     def configure_instance(self, create_cluster_admin: bool = True) -> None:
-        """Configure the instance to be used in an InnoDB cluster."""
+        """Configure the instance to be used in an InnoDB cluster.
+
+        Args:
+            create_cluster_admin: Whether to create the cluster admin user.
+        """
         options = {
             "restart": "true",
         }
@@ -1967,6 +1971,7 @@ class MySQLBase(ABC):
                 user=self.server_config_user,
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
+                exception_as_warning=True,
             )
             return (
                 MySQLMemberState.ONLINE in output.lower()
@@ -2962,8 +2967,8 @@ class MySQLBase(ABC):
         temp_restore_directory: str,
         xbcloud_location: str,
         xbstream_location: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str, str]:
         """Retrieve the specified backup from S3."""
         nproc_command = ["nproc"]
@@ -3029,8 +3034,8 @@ class MySQLBase(ABC):
         backup_location: str,
         xtrabackup_location: str,
         xtrabackup_plugin_dir: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Prepare the backup in the provided dir for restore."""
         try:
@@ -3070,8 +3075,8 @@ class MySQLBase(ABC):
     def empty_data_files(
         self,
         mysql_data_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> None:
         """Empty the mysql data directory in preparation of backup restore."""
         empty_data_files_command = [
@@ -3107,8 +3112,8 @@ class MySQLBase(ABC):
         defaults_config_file: str,
         mysql_data_directory: str,
         xtrabackup_plugin_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Restore the provided prepared backup."""
         restore_backup_command = [
@@ -3197,8 +3202,8 @@ class MySQLBase(ABC):
     def delete_temp_restore_directory(
         self,
         temp_restore_directory: str,
-        user=None,
-        group=None,
+        user: Optional[str] = None,
+        group: Optional[str] = None,
     ) -> None:
         """Delete the temp restore directory from the mysql data directory."""
         logger.info(f"Deleting temp restore directory in {temp_restore_directory}")

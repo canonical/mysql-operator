@@ -7,7 +7,6 @@ import logging
 import os
 import pathlib
 import shutil
-import subprocess
 from time import sleep
 from zipfile import ZipFile
 
@@ -15,7 +14,12 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .. import juju_, markers
-from ..helpers import get_leader_unit, get_relation_data, get_unit_by_index
+from ..helpers import (
+    get_leader_unit,
+    get_model_logs,
+    get_relation_data,
+    get_unit_by_index,
+)
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
     relate_mysql_and_application,
@@ -48,7 +52,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
 
-    async with ops_test.fast_forward("10s"):
+    async with ops_test.fast_forward("30s"):
         await ops_test.model.deploy(
             charm,
             application_name=MYSQL_APP_NAME,
@@ -63,6 +67,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             channel="latest/edge",
             num_units=1,
             base="ubuntu@22.04",
+            config={"auto_start_writes": False, "sleep_interval": "500"},
         )
 
         await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP)
@@ -101,15 +106,14 @@ async def test_upgrade_to_failling(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     application = ops_test.model.applications[MYSQL_APP_NAME]
-    logger.info("Build charm locally")
 
-    sub_regex_failing_rejoin = (
-        's/logger.debug("Recovering unit")'
-        "/self.charm._mysql.set_instance_offline_mode(True); raise RetryError/"
-    )
-    src_patch(sub_regex=sub_regex_failing_rejoin, file_name="src/upgrade.py")
-    new_charm = await charm_local_build(ops_test, refresh=True)
-    src_patch(revert=True)
+    with InjectFailure(
+        path="src/upgrade.py",
+        original_str="self.charm.recover_unit_after_restart()",
+        replace_str="raise Exception",
+    ):
+        logger.info("Build charm with failure injected")
+        new_charm = await charm_local_build(ops_test, refresh=True)
 
     logger.info("Refresh the charm")
     await application.refresh(path=new_charm)
@@ -173,19 +177,35 @@ async def test_rollback(ops_test, continuous_writes) -> None:
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
 
+    logger.info("Ensure rollback has taken place")
+    message = "Downgrade is incompatible. Resetting workload"
+    warnings = await get_model_logs(ops_test, log_level="WARNING")
+    assert message in warnings
+
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-def src_patch(sub_regex: str = "", file_name: str = "", revert: bool = False) -> None:
-    """Apply a patch to the source code."""
-    if revert:
-        cmd = "git checkout src/"  # revert changes on src/ dir
-        logger.info("Reverting patch on source")
-    else:
-        cmd = f"sed -i -e '{sub_regex}' {file_name}"
-        logger.info("Applying patch to source")
-    subprocess.run([cmd], shell=True, check=True)
+class InjectFailure(object):
+    def __init__(self, path: str, original_str: str, replace_str: str):
+        self.path = path
+        self.original_str = original_str
+        self.replace_str = replace_str
+        with open(path, "r") as file:
+            self.original_content = file.read()
+
+    def __enter__(self):
+        logger.info("Injecting failure")
+        assert self.original_str in self.original_content, "replace content not found"
+        new_content = self.original_content.replace(self.original_str, self.replace_str)
+        assert self.original_str not in new_content, "original string not replaced"
+        with open(self.path, "w") as file:
+            file.write(new_content)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        logger.info("Reverting failure")
+        with open(self.path, "w") as file:
+            file.write(self.original_content)
 
 
 async def charm_local_build(ops_test: OpsTest, refresh: bool = False):

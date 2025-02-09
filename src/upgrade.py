@@ -29,7 +29,6 @@ from charms.mysql.v0.mysql import (
 from ops import RelationDataContent
 from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from constants import CHARMED_MYSQL_COMMON_DIRECTORY
@@ -38,9 +37,6 @@ if TYPE_CHECKING:
     from charm import MySQLOperatorCharm
 
 logger = logging.getLogger(__name__)
-
-
-RECOVER_ATTEMPTS = 30
 
 
 class MySQLVMDependenciesModel(BaseModel):
@@ -192,15 +188,14 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
             self._check_server_upgradeability()
             # override config, avoid restart
-            self.charm._mysql.write_mysqld_config()
+            self.charm._on_config_changed(None)
             self.charm.unit.status = MaintenanceStatus("starting services...")
             # stop cron daemon to be able to query `error.log`
             set_cron_daemon("stop")
             self.charm._mysql.start_mysqld()
             if self.charm.config.plugin_audit_enabled:
-                self.charm._mysql.install_plugins(["audit_log", "audit_log_filter"])
+                self.charm._mysql.install_plugins(["audit_log"])
             self.charm._mysql.install_plugins(["binlog_utils_udf"])
-            self.charm._mysql.setup_logrotate_and_cron(self.charm.text_logs)
         except VersionError:
             logger.exception("Failed to upgrade MySQL dependencies")
             self.set_unit_failed()
@@ -241,10 +236,7 @@ class MySQLVMUpgrade(DataUpgrade):
         self.charm.unit.status = MaintenanceStatus("recovering unit after upgrade")
 
         try:
-            if self.charm.app.planned_units() > 1:
-                self._recover_multi_unit_cluster()
-            else:
-                self._recover_single_unit_cluster()
+            self.charm.recover_unit_after_restart()
 
             logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
             self.set_unit_completed()
@@ -258,29 +250,6 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm.unit.status = BlockedStatus(
                 "upgrade failed. Check logs for rollback instruction"
             )
-
-    def _recover_multi_unit_cluster(self) -> None:
-        logger.debug("Recovering unit")
-        try:
-            for attempt in Retrying(
-                stop=stop_after_attempt(RECOVER_ATTEMPTS), wait=wait_fixed(10)
-            ):
-                with attempt:
-                    self.charm._mysql.hold_if_recovering()
-                    if not self.charm._mysql.is_instance_in_cluster(self.charm.unit_label):
-                        logger.debug(
-                            "Instance not yet back in the cluster."
-                            f" Retry {attempt.retry_state.attempt_number}/{RECOVER_ATTEMPTS}"
-                        )
-                        self.charm._mysql.start_group_replication()
-                        raise Exception
-        except RetryError:
-            raise
-
-    def _recover_single_unit_cluster(self) -> None:
-        """Recover single unit cluster."""
-        logger.debug("Recovering single unit cluster")
-        self.charm._mysql.reboot_from_complete_outage()
 
     def _on_upgrade_changed(self, _) -> None:
         """Handle the upgrade changed event.

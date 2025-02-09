@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_, markers
+from .. import juju_
 from ..helpers import get_leader_unit, get_primary_unit_wrapper, retrieve_database_variable_value
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
@@ -23,7 +23,6 @@ TEST_APP_NAME = "mysql-test-app"
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -55,7 +54,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -80,7 +78,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_upgrade_from_stable(ops_test: OpsTest):
     """Test updating from stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
