@@ -110,6 +110,7 @@ async def ensure_n_online_mysql_members(
 
 async def deploy_and_scale_mysql(
     ops_test: OpsTest,
+    charm,
     check_for_existing_application: bool = True,
     mysql_application_name: str = MYSQL_DEFAULT_APP_NAME,
     num_units: int = 3,
@@ -131,8 +132,6 @@ async def deploy_and_scale_mysql(
                 await scale_application(ops_test, application_name, num_units)
 
         return application_name
-
-    charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 

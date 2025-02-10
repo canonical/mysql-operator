@@ -8,8 +8,7 @@ import secrets
 import string
 import subprocess
 import tempfile
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
@@ -974,10 +973,3 @@ def get_unit_by_index(app_name: str, units: list, index: int):
     for unit in units:
         if unit.name == f"{app_name}/{index}":
             return unit
-
-
-async def get_charm(charm_path: Union[str, Path], architecture: str) -> Path:
-    """Fetches packed charm from CI runner without checking for architecture."""
-    charm_path = Path(charm_path)
-    packed_charms = list(charm_path.glob(f"*-{architecture}.charm"))
-    return packed_charms[0].resolve(strict=True)
