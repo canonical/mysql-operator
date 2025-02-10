@@ -257,10 +257,12 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
+    @patch("mysql_vm_helpers.MySQL.reconcile_binlogs_collection", return_value=True)
     @patch("python_hosts.Hosts.write")
     def test_on_update(
         self,
         _,
+        __,
         _snap_service_operation,
         _reboot_from_complete_outage,
         _is_volume_mounted,
@@ -270,6 +272,14 @@ class TestCharm(unittest.TestCase):
         _unit_initialized,
         _cluster_initialized,
     ):
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.app.name,
+            {
+                "cluster-name": "test-cluster",
+                "cluster-set-domain-name": "test-domain",
+            },
+        )
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
         self.charm.on.config_changed.emit()
