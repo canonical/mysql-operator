@@ -331,6 +331,8 @@ class TestMySQL(unittest.TestCase):
             "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "gtid_mode = ON",
+            "enforce_gtid_consistency = ON",
             "loose-audit_log_format = JSON",
             "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 5678",
@@ -343,7 +345,7 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
-        self.assertTrue(call().write(config) in _open_mock.mock_calls)
+        assert call().write(config) in _open_mock.mock_calls
 
         # Test `testing` profile
         self.mysql.charm.config.profile = "testing"
@@ -366,6 +368,8 @@ class TestMySQL(unittest.TestCase):
             "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
+            "gtid_mode = ON",
+            "enforce_gtid_consistency = ON",
             "loose-audit_log_format = JSON",
             "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 1048576",
@@ -538,7 +542,13 @@ class TestMySQL(unittest.TestCase):
         self.mysql.install_and_configure_mysql_dependencies()
 
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
-        _run.assert_called_once_with(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+        self.assertEqual(
+            _run.mock_calls,
+            [
+                call(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True),
+                call(["snap", "alias", "charmed-mysql.mysqlbinlog", "mysqlbinlog"], check=True),
+            ],
+        )
 
     def test_get_available_memory(self):
         meminfo = (
