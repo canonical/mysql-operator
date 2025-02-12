@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import pathlib
 import zipfile
 from pathlib import Path
 from shutil import copy
@@ -33,7 +34,6 @@ MYSQL_APP_NAME = "mysql"
 TEST_APP_NAME = "mysql-test-app"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -64,7 +64,6 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -88,20 +87,16 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert await primary_unit.is_leader_from_status(), "Primary unit not set to leader"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_edge(
     ops_test: OpsTest,
+    charm,
     continuous_writes,
 ) -> None:
     logger.info("Ensure continuous_writes")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     application = ops_test.model.applications[MYSQL_APP_NAME]
-    logger.info("Build charm locally")
-
-    global charm
-    charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm)
@@ -121,9 +116,8 @@ async def test_upgrade_from_edge(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
+async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
 
@@ -132,7 +126,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     logger.info("Run pre-upgrade-check action")
     await juju_.run_action(leader_unit, "pre-upgrade-check")
 
-    fault_charm = f"/tmp/{charm.name}"
+    fault_charm = f"/tmp/{pathlib.Path(charm).name}"
     copy(charm, fault_charm)
 
     logger.info("Inject dependency fault")

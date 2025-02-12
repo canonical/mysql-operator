@@ -22,7 +22,6 @@ MYSQL_APP_NAME = "mysql"
 TEST_APP_NAME = "mysql-test-app"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -54,12 +53,9 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
 
 
-@pytest.mark.group(1)
-async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest):
+async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest, charm):
     """Test updating from stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
-    logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm)
@@ -86,7 +82,6 @@ async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest):
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-@pytest.mark.group(1)
 async def test_rollback_without_pre_upgrade_check(ops_test: OpsTest):
     """Test refresh back to stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
