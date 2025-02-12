@@ -11,3 +11,5 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/static_code_analysis.yaml@feature/static-code-analysis
     with:
       project: mysql-operator
+    secrets:
+      tics-token: ${{ secrets.TICSAUTHTOKEN }}
