@@ -5,7 +5,6 @@ name: Static code static_code_analysis
 on:
   pull_request:
 
-
 jobs:
   code_analysis:
     name: Tiobe Code Analysis
