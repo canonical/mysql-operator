@@ -1,0 +1,16 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Static code static_code_analysis
+
+on:
+  schedule:
+    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
+  workflow_dispatch:
+
+
+jobs:
+  code_analysis:
+    name: Tiobe Code Analysis
+    uses: canonical/data-platform-workflows/.github/workflows/static_code_analysis.yaml@feature/static-code-analysis
+    with:
+      project: mysql-operator
