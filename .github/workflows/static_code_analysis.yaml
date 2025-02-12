@@ -3,9 +3,7 @@
 name: Static code static_code_analysis
 
 on:
-  schedule:
-    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
-  workflow_dispatch:
+  pull_request:
 
 
 jobs:
