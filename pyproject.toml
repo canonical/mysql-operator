@@ -27,7 +27,7 @@ poetry-core = "*"
 # grafana_agent/v0/cos_agent.py requires pydantic
 pydantic = "^1.10"
 # grafana_agent/v0/cos_agent.py
-cosl = "*"
+cosl = ">=0.0.50"
 # tls_certificates_interface/v2/tls_certificates.py
 cryptography = ">=42.0.5"
 jsonschema = "*"
