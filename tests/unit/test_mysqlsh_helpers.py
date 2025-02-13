@@ -18,6 +18,7 @@ from charms.mysql.v0.mysql import (
 )
 
 from constants import (
+    CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     MYSQLD_CONFIG_DIRECTORY,
@@ -576,3 +577,169 @@ class TestMySQL(unittest.TestCase):
         _chown.assert_called_once()
         _makedirs.assert_called_once()
         _rmtree.assert_called_once()
+
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_reconcile_binlogs_collection_standby(self, _snap_cache):
+        _mysql_snap = MagicMock()
+        _snap_cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
+        _mysql_snap.present = True
+        self.mysql.charm = MagicMock()
+        self.mysql.charm.unit = MagicMock()
+
+        self.mysql.charm.unit.is_leader.return_value = False
+        self.mysql.charm.app_peer_data = {
+            "binlogs-collecting": "True",
+        }
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": True,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_not_called()
+        _mysql_snap.unset.assert_called_once()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_called_once()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": False,
+                "active": False,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_not_called()
+        _mysql_snap.unset.assert_called_once()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_not_called()
+        _mysql_snap.reset_mock()
+
+    @patch("mysql_vm_helpers.snap.SnapCache")
+    def test_reconcile_binlogs_collection_leader(self, _snap_cache):
+        _mysql_snap = MagicMock()
+        _snap_cache.return_value = {CHARMED_MYSQL_SNAP_NAME: _mysql_snap}
+        _mysql_snap.present = True
+        self.mysql.charm = MagicMock()
+        self.mysql.charm.backups = MagicMock()
+        self.mysql.charm.unit = MagicMock()
+
+        self.mysql.charm.unit.is_leader.return_value = True
+        self.mysql.charm.backups.get_binlogs_collector_config.return_value = {
+            "TEST_CONFIG": "FILE"
+        }
+        self.mysql.charm.app_peer_data = {}
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": True,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_not_called()
+        _mysql_snap.unset.assert_called_once()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_called_once()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": False,
+                "active": False,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_not_called()
+        _mysql_snap.unset.assert_called_once()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_not_called()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": True,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_not_called()
+        _mysql_snap.unset.assert_called_once()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_called_once()
+        _mysql_snap.reset_mock()
+
+        self.mysql.charm.app_peer_data = {
+            "binlogs-collecting": "True",
+        }
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": False,
+                "active": False,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_called_once_with({
+            "mysql-pitr-helper-collector.test-config": "FILE"
+        })
+        _mysql_snap.unset.assert_not_called()
+        _mysql_snap.start.assert_called_once()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_not_called()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": True,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(True, True)
+        _mysql_snap.set.assert_called_once_with({
+            "mysql-pitr-helper-collector.test-config": "FILE"
+        })
+        _mysql_snap.unset.assert_not_called()
+        _mysql_snap.start.assert_called_once()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_called_once()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": True,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(False, True)
+        _mysql_snap.set.assert_called_once_with({
+            "mysql-pitr-helper-collector.test-config": "FILE"
+        })
+        _mysql_snap.unset.assert_not_called()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_not_called()
+        _mysql_snap.stop.assert_not_called()
+        _mysql_snap.reset_mock()
+
+        _mysql_snap.services = {
+            CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE: {
+                "enabled": True,
+                "active": False,
+            }
+        }
+        self.mysql.reconcile_binlogs_collection(False, True)
+        _mysql_snap.set.assert_called_once_with({
+            "mysql-pitr-helper-collector.test-config": "FILE"
+        })
+        _mysql_snap.unset.assert_not_called()
+        _mysql_snap.start.assert_not_called()
+        _mysql_snap.restart.assert_called_once()
+        _mysql_snap.stop.assert_not_called()
+        _mysql_snap.reset_mock()
