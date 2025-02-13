@@ -385,7 +385,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # Only executes if the unit was initialised
-        if not self.unit_initialized:
+        if not self.unit_initialized():
             return
 
         # No need to remove the instance from the cluster if it is not a member of the cluster
@@ -440,6 +440,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             all_states.add("offline")
 
             if all_states == {"offline"} and self.unit.is_leader():
+                self.hostname_resolution.update_etc_hosts(None)
+                if not snap_service_operation(
+                    CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
+                ):
+                    self.unit.status = BlockedStatus(
+                        "Unable to restart mysqld before rebooting from complete outage"
+                    )
+                    return
+
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
                 logger.info("Attempting reboot from complete outage.")
@@ -509,7 +518,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if (
             self.unit_peer_data.get("member-state") == "waiting"
             and not self.unit_configured
-            and not self.unit_initialized
+            and not self.unit_initialized()
             and not self.unit.is_leader()
         ):
             # avoid changing status while in initialising
@@ -768,14 +777,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return True
 
         # Safeguard if receiving on start after unit initialization
-        # with retries to allow time for mysqld startup
-        for _ in range(6):
-            if self.unit_initialized:
-                logger.debug("Delegate status update for start handler on initialized unit.")
-                self._on_update_status(None)
-                return False
-            logger.debug("mysqld not started yet. Retrying check")
-            sleep(5)
+        # with retries to allow for mysqld startup
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(5)):
+                with attempt:
+                    if self.unit_initialized(raise_exceptions=True):
+                        logger.debug(
+                            "Delegate status update for start handler on initialized unit."
+                        )
+                        self._on_update_status(None)
+                        return False
+        except RetryError:
+            event.defer()
+            return False
 
         return True
 
@@ -786,7 +800,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return (
             self.unit_peer_data.get("member-state") == "waiting"
             and self.unit_configured
-            and not self.unit_initialized
+            and not self.unit_initialized()
             and self.cluster_initialized
         )
 
@@ -897,7 +911,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
     def _restart(self, _: EventBase) -> None:
         """Restart the service."""
-        if not self.unit_initialized:
+        if not self.unit_initialized():
             logger.debug("Restarting standalone mysqld")
             self._mysql.restart_mysqld()
             return

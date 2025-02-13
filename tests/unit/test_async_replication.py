@@ -255,10 +255,7 @@ class TestAsyncRelation(unittest.TestCase):
         )
         self.assertEqual(self.async_replica.state, States.FAILED)
 
-    @patch(
-        "charm.MySQLOperatorCharm.unit_initialized",
-        new_callable=PropertyMock(return_value=True),
-    )
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_consumer_created(self, _mysql, _, _unit_initialized):
         """Test replica creation."""
@@ -271,10 +268,7 @@ class TestAsyncRelation(unittest.TestCase):
 
         self.assertTrue(isinstance(self.charm.unit.status, WaitingStatus))
 
-    @patch(
-        "charm.MySQLOperatorCharm.unit_initialized",
-        new_callable=PropertyMock(return_value=True),
-    )
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_consumer_created_user_data(self, _mysql, _, _unit_initialized):
         """Test replica creation."""
@@ -368,10 +362,7 @@ class TestAsyncRelation(unittest.TestCase):
         _mysql.update_user_password.assert_called()
         self.assertNotEqual(original_cluster_name, self.charm.app_peer_data["cluster-name"])
 
-    @patch(
-        "charm.MySQLOperatorCharm.unit_initialized",
-        new_callable=PropertyMock(return_value=True),
-    )
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charm.MySQLOperatorCharm._on_update_status")
     @patch(
         "charms.mysql.v0.async_replication.MySQLAsyncReplicationConsumer.state",
@@ -445,9 +436,7 @@ class TestAsyncRelation(unittest.TestCase):
 
     # actions
     @patch("charm.MySQLOperatorCharm._on_update_status")
-    @patch(
-        "charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock(return_value=True)
-    )
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_promote_to_primary(self, _mysql, _, _unit_initialized, _on_update_status):
         self.harness.set_leader(True)

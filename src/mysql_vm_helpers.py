@@ -410,7 +410,7 @@ class MySQL(MySQLBase):
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
 
-        if check_port and not self.check_mysqlsh_connection():
+        if check_port and not self.check_mysqlcli_connection():
             raise MySQLServiceNotRunningError("Connection with mysqlsh not possible")
 
         logger.debug("MySQL connection possible")

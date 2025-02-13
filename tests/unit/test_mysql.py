@@ -13,6 +13,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLCheckUserExistenceError,
     MySQLClientError,
+    MySQLClusterMetadataExistsError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
@@ -1118,7 +1119,8 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_cluster_metadata_exists(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):
         """Test cluster_metadata_exists method."""
         commands = "\n".join((
             "result = session.run_sql(\"SHOW DATABASES LIKE 'mysql_innodb_cluster_metadata'\")",
@@ -1144,10 +1146,42 @@ class TestMySQLBase(unittest.TestCase):
             timeout=60,
             exception_as_warning=True,
         )
+        _run_mysqlcli_script.assert_not_called()
 
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError
-        self.assertFalse(self.mysql.cluster_metadata_exists("1.2.3.4"))
+        with self.assertRaises(MySQLClusterMetadataExistsError):
+            self.mysql.cluster_metadata_exists("1.2.3.4")
+
+        _run_mysqlsh_script.reset_mock()
+
+        query = (
+            "SELECT cluster_name "
+            "FROM mysql_innodb_cluster_metadata.clusters "
+            "WHERE EXISTS "
+            "("
+            "SELECT * "
+            "FROM information_schema.schemata "
+            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
+            ")",
+        )
+
+        _run_mysqlcli_script.return_value = [[self.mysql.cluster_name]]
+
+        self.assertTrue(self.mysql.cluster_metadata_exists())
+        _run_mysqlsh_script.assert_not_called()
+        _run_mysqlcli_script.assert_called_once_with(
+            query,
+            user="root",
+            password="password",
+            timeout=60,
+            exception_as_warning=True,
+        )
+
+        _run_mysqlcli_script.reset_mock()
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLClusterMetadataExistsError):
+            self.mysql.cluster_metadata_exists()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
