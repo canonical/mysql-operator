@@ -257,7 +257,9 @@ class TestCharm(unittest.TestCase):
     @patch("charm.snap_service_operation")
     @patch("python_hosts.Hosts.write")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
-    @patch("hostname_resolution.MySQLMachineHostnameResolution.update_etc_hosts", return_value=True)
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.update_etc_hosts", return_value=True
+    )
     def test_on_update(
         self,
         _,
