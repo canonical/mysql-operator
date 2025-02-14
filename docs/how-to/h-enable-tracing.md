@@ -9,8 +9,8 @@ This guide contains the steps to enable tracing with [Grafana Tempo](https://gra
 
 To summarize:
 * [Deploy the Tempo charm in a COS K8s environment](#heading--deploy)
-* [Integrate it with the COS charms](#heading--integrate)
 * [Offer interfaces for cross-model integrations](#heading--offer)
+* [Consume and integrate cross-model integrations](#heading--consume)
 * [View MySQL traces on Grafana](#heading--view)
 
 
@@ -36,31 +36,14 @@ First, switch to the Kubernetes controller where the COS model is deployed:
 ```shell
 juju switch <k8s_controller_name>:<cos_model_name>
 ```
-Then, deploy the [`tempo-k8s`](https://charmhub.io/tempo-k8s) charm:
-```shell
-juju deploy -n 1 tempo-k8s --channel latest/edge
-```
 
-<a href="#heading--integrate"><h2 id="heading--integrate"> Integrate with the COS charms </h2></a>
+Then, deploy the dependencies of Tempo following [this tutorial](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489). In particular, we would want to:
+- Deploy the minio charm
+- Deploy the s3 integrator charm
+- Add a bucket in minio using a python script
+- Configure s3 integrator with the minio credentials
 
-Integrate `tempo-k8s` with the COS charms as follows:
-
-```shell
-juju integrate tempo-k8s:grafana-dashboard grafana:grafana-dashboard
-juju integrate tempo-k8s:grafana-source grafana:grafana-source
-juju integrate tempo-k8s:ingress traefik:traefik-route
-juju integrate tempo-k8s:metrics-endpoint prometheus:metrics-endpoint
-juju integrate tempo-k8s:logging loki:logging
-```
-If you would like to instrument traces from the COS charms as well, create the following integrations:
-```shell
-juju integrate tempo-k8s:tracing alertmanager:tracing
-juju integrate tempo-k8s:tracing catalogue:tracing
-juju integrate tempo-k8s:tracing grafana:tracing
-juju integrate tempo-k8s:tracing loki:tracing
-juju integrate tempo-k8s:tracing prometheus:tracing
-juju integrate tempo-k8s:tracing traefik:tracing
-```
+Finally, deploy and integrate with Tempo HA in [a monolithic setup](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489#heading--deploy-monolithic-setup).
 
 <a href="#heading--offer"><h2 id="heading--offer"> Offer interfaces </h2></a>
 
@@ -69,7 +52,7 @@ Next, offer interfaces for cross-model integrations from the model where Charmed
 To offer the Tempo integration, run
 
 ```shell
-juju offer tempo-k8s:tracing
+juju offer <tempo_coordinator_k8s_application_name>:tracing
 ```
 
 Then, switch to the Charmed MySQL VM model, find the offers, and integrate (relate) with them:
@@ -85,44 +68,60 @@ Below is a sample output where `k8s` is the K8s controller name and `cos` is the
 
 ```shell
 Store  URL                            Access  Interfaces
-k8s    admin/cos.tempo-k8s            admin   tracing:tracing
+k8s    admin/cos.tempo                admin   tracing:tracing
 ```
 
 Next, consume this offer so that it is reachable from the current model:
 
 ```shell
-juju consume k8s:admin/cos.tempo-k8s
+juju consume k8s:admin/cos.tempo
 ```
 
-Relate Charmed MySQL with the above consumed interface:
+<a href="#heading--consume"><h2 id="heading--consume"> Consume interfaces </h2></a>
 
+First, deploy [Grafana Agent](https://charmhub.io/grafana-agent) from the `latest/edge` channel:
 ```shell
-juju integrate mysql:tracing tempo-k8s:tracing
+juju deploy grafana-agent --channel latest/edge
 ```
+
+Then, integrate Grafana Agent with Charmed MySQL:
+```
+juju integrate mysql:cos-agent grafana-agent:cos-agent
+```
+
+Finally, integrate Grafana Agent with the consumed interface from the previous section:
+```shell
+juju integrate grafana-agent:tracing tempo:tracing
+```
+
 
 Wait until the model settles. The following is an example of the `juju status --relations` on the Charmed MySQL model:
 
 ```shell
-Model  Controller  Cloud/Region         Version  SLA          Timestamp
-mysql  lxd         localhost/localhost  3.4.2    unsupported  20:20:15Z
+Model     Controller  Cloud/Region         Version  SLA          Timestamp
+database  lxd         localhost/localhost  3.5.4    unsupported  19:15:55Z
 
-SAAS       Status  Store  URL
-tempo-k8s  active  k8s   admin/cos.tempo-k8s
+SAAS   Status  Store       URL
+tempo  active  k8s         admin/cos.tempo
 
-App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
-mysql  8.0.36-0ubun...  active      1  mysql           239  no       
+App            Version          Status   Scale  Charm          Channel      Rev  Exposed  Message
+grafana-agent                   blocked      1  grafana-agent  latest/edge  282  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+mysql          8.0.37-0ubun...  active       1  mysql                         0  no       
 
-Unit      Workload  Agent  Machine  Public address  Ports           Message
-mysql/0*  active    idle   0        10.205.193.206  3306,33060/tcp  Primary
+Unit                Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*            active    idle   0        10.205.193.32   3306,33060/tcp  Primary
+  grafana-agent/0*  blocked   idle            10.205.193.32                   Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
 
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.205.193.206  juju-d32b3c-0  ubuntu@22.04      Running
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.205.193.32  juju-4f3e50-0  ubuntu@22.04      Running
 
-Integration provider  Requirer              Interface    Type     Message
-mysql:database-peers  mysql:database-peers  mysql_peers  peer     
-mysql:restart         mysql:restart         rolling_op   peer     
-mysql:upgrade         mysql:upgrade         upgrade      peer     
-tempo-k8s:tracing     mysql:tracing         tracing      regular
+Integration provider  Requirer                 Interface              Type         Message
+grafana-agent:peers   grafana-agent:peers      grafana_agent_replica  peer         
+mysql:cos-agent       grafana-agent:cos-agent  cos_agent              subordinate  
+mysql:database-peers  mysql:database-peers     mysql_peers            peer         
+mysql:restart         mysql:restart            rolling_op             peer         
+mysql:upgrade         mysql:upgrade            upgrade                peer         
+tempo:tracing         grafana-agent:tracing    tracing                regular  
 ```
 
 [note]
@@ -137,4 +136,4 @@ Below is a screenshot demonstrating a Charmed MySQL trace:
 
 ![Example MySQL trace with Grafana Tempo|690x378](upload://nzIU9vclqmeqwFSF1eV1xKhK6fY.png)
 
-Feel free to read through the [Tempo documentation](https://discourse.charmhub.io/t/tempo-k8s-docs-index/14005) at your leisure to explore its deployment and its integrations.
+Feel free to read through the [Tempo HA documentation](https://discourse.charmhub.io/t/charmed-tempo-ha/15531) at your leisure to explore its deployment and its integrations.

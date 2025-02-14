@@ -1,14 +1,29 @@
-# Configure S3 for RadosGW
-> **:information_source: Hint**: Use [Juju 3](/t/5064). Otherwise replace `juju run ...` with `juju run-action --wait ...` and `juju integrate` with `juju relate` for Juju 2.9.
+[note]
+**Note**: All commands are written for `juju >= v.3.0`
 
-Charmed MySQL backup can be stored on any S3 compatible storage, e.g. on [Ceph](https://ceph.com/en/) via [RadosGW](https://docs.ceph.com/en/latest/man/8/radosgw/). The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm for **RadosGW** (click [here](/t/charmed-mysql-how-to-configure-s3-for-aws/9894) to backup on AWS S3):
+If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-3-0-0---22-oct-2022).
+[/note]
+
+# Configure S3 for RadosGW
+
+A MySQL backup can be stored on any S3-compatible storage. S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator).
+
+This guide will teach you how to deploy and configure the s3-integrator charm on Ceph via [RadosGW](https://docs.ceph.com/en/quincy/man/8/radosgw/), send the configuration to a Charmed MySQL application, and update it. 
+> For AWS, see the guide [How to configure S3 for AWS](/t/9681)
+
+## Configure s3-integrator
+First, install the MinIO client and create a bucket:
 ```shell
-# Install MinIO client and create a bucket:
 mc config host add dest https://radosgw.mycompany.fqdn <access-key> <secret-key> --api S3v4 --lookup path
 mc mb dest/backups-bucket
-
+```
+Then, deploy and run the charm:
+```shell
 juju deploy s3-integrator
 juju run s3-integrator/leader sync-s3-credentials access-key=<access-key> secret-key=<secret-key>
+```
+Lastly, use `juju config` to add your configuration parameters. For example:
+```
 juju config s3-integrator \
     endpoint="https://radosgw.mycompany.fqdn" \
     bucket="backups-bucket" \
@@ -18,13 +33,14 @@ juju config s3-integrator \
     s3-uri-style="path"
 ```
 
-To pass these configurations to Charmed MySQL, relate the two applications:
+## Integrate with Charmed MySQL
+
+To pass these configurations to Charmed PostgreSQL, integrate the two applications:
 ```shell
 juju integrate s3-integrator mysql
 ```
 
-You can create/list/restore backups now:
-
+You can create, list, and restore backups now:
 ```shell
 juju run mysql/leader list-backups
 juju run mysql/leader create-backup
@@ -32,7 +48,7 @@ juju run mysql/leader list-backups
 juju run mysql/leader restore backup-id=<backup-id-here>
 ```
 
-You can also update your S3 configuration options after relating, using:
+You can also update your S3 configuration options after integrating using
 ```shell
 juju config s3-integrator <option>=<value>
 ```

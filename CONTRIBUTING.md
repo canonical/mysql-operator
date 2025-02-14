@@ -41,7 +41,7 @@ poetry install
 tox run -e format        # update your code according to linting rules
 tox run -e lint          # code style
 tox run -e unit          # unit tests
-tox run -e integration   # integration tests
+charmcraft test lxd-vm:  # integration tests
 tox                      # runs 'lint' and 'unit' environments
 ```
 
@@ -50,7 +50,7 @@ tox                      # runs 'lint' and 'unit' environments
 Build the charm in this git repository using:
 
 ```shell
-tox run -e build-dev
+charmcraftcache pack
 ```
 
 ### Deploy

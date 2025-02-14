@@ -60,3 +60,4 @@ class MySQLLogs(Object):
             return
 
         self.charm._mysql.flush_mysql_logs(text_logs)
+        logger.debug(f"Flushed {text_logs.lower()}")

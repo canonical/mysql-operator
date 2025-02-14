@@ -42,6 +42,7 @@ class StubConfig:
         self.experimental_max_connections = None
         self.plugin_audit_strategy = "async"
         self.binlog_retention_days = 7
+        self.logs_audit_policy = "logins"
 
 
 class StubCharm:
@@ -68,56 +69,91 @@ class TestMySQL(unittest.TestCase):
             StubCharm(),  # type: ignore
         )
 
-    @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    @patch("shutil.chown")
-    def test_run_mysqlsh_script(self, _chown, _check_output, _):
+    def test_run_mysqlsh_script(self, _check_output):
         """Test a successful execution of run_mysqlsh_script."""
-        _check_output.return_value = b"stdout"
+        _check_output.return_value = "###stdout"
 
-        self.mysql._run_mysqlsh_script("script")
+        self.mysql._run_mysqlsh_script(
+            "script",
+            user="serverconfig",
+            password="serverconfigpassword",
+            host="127.0.0.1",
+        )
 
         _check_output.assert_called_once()
-        _chown.assert_called_once()
 
-    @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
-    @patch("shutil.chown")
-    def test_run_mysqlsh_script_exception(self, _, _check_output, __):
+    def test_run_mysqlsh_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
         _check_output.side_effect = subprocess.CalledProcessError(cmd="", returncode=1)
 
         with self.assertRaises(MySQLClientError):
-            self.mysql._run_mysqlsh_script("script")
+            self.mysql._run_mysqlsh_script(
+                "script",
+                user="serverconfig",
+                password="serverconfigpassword",
+                host="127.0.0.1",
+            )
 
     @patch("subprocess.check_output")
-    def test_run_mysqlcli_script(self, _check_output):
-        """Test a successful execution of run_mysqlsh_script."""
-        self.mysql._run_mysqlcli_script("script", timeout=10)
+    @patch("pexpect.spawnu")
+    def test_run_mysqlcli_script(self, _spawnu, _check_output):
+        """Test a successful execution of run_mysqlcli_script."""
+        mock_process = MagicMock()
+        _spawnu.return_value = mock_process
+        mock_process.readlines.return_value = ["\r\n", "result1\r\n", "result2\r\n"]
+
+        # Test with password
+        result = self.mysql._run_mysqlcli_script(
+            ("script",),
+            user="root",
+            password="password",
+            timeout=10,
+        )
+
+        _spawnu.assert_called_once_with(
+            'charmed-mysql.mysql -u root -p -N -B --socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock -e "script"',
+            timeout=10,
+        )
+        mock_process.expect.assert_called_once_with("Enter password:")
+        mock_process.sendline.assert_called_once_with("password")
+        self.assertEqual(result, [["result1"], ["result2"]])
+
+        # Test without password
+        _check_output.return_value = "result1\nresult2"
+        result = self.mysql._run_mysqlcli_script(
+            ("script",),
+            user="root",
+            timeout=10,
+        )
 
         _check_output.assert_called_once_with(
             [
                 "charmed-mysql.mysql",
                 "-u",
                 "root",
-                "--protocol=SOCKET",
+                "-N",
+                "-B",
                 "--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock",
                 "-e",
                 "script",
             ],
-            stderr=subprocess.PIPE,
             timeout=10,
+            text=True,
         )
+        self.assertEqual(result, [["result1"], ["result2"]])
 
     @patch("subprocess.check_output")
     def test_run_mysqlcli_script_exception(self, _check_output):
         """Test a failed execution of run_mysqlsh_script."""
         _check_output.side_effect = subprocess.CalledProcessError(
-            cmd="", returncode=-1, stderr=b"Test error message"
+            cmd="", returncode=-1, stderr="Test error message"
         )
 
+        sql_script = ("CREATE USER 'test_user'@'localhost' IDENTIFIED BY 'password';",)
         with self.assertRaises(MySQLClientError):
-            self.mysql._run_mysqlcli_script("script")
+            self.mysql._run_mysqlcli_script(sql_script)
 
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
     @patch("os.path.exists", return_value=False)
@@ -289,10 +325,10 @@ class TestMySQL(unittest.TestCase):
             "innodb_buffer_pool_size = 1234",
             "log_error_services = log_filter_internal;log_sink_internal",
             "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = ON",
+            "general_log = OFF",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
             "loose-group_replication_paxos_single_leader = ON",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
@@ -308,15 +344,7 @@ class TestMySQL(unittest.TestCase):
         _open.assert_called_once_with(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8")
         _get_available_memory.assert_called_once()
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(MYSQLD_CUSTOM_CONFIG_FILE, "w", encoding="utf-8"),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
-        )
+        self.assertTrue(call().write(config) in _open_mock.mock_calls)
 
         # Test `testing` profile
         self.mysql.charm.config.profile = "testing"
@@ -333,10 +361,10 @@ class TestMySQL(unittest.TestCase):
             "innodb_buffer_pool_size = 20971520",
             "log_error_services = log_filter_internal;log_sink_internal",
             "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = ON",
+            "general_log = OFF",
             "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slowquery.log",
             "loose-group_replication_paxos_single_leader = ON",
+            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds = 604800",
             "loose-audit_log_policy = LOGINS",
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
@@ -348,18 +376,13 @@ class TestMySQL(unittest.TestCase):
             "\n",
         ))
 
-        self.assertEqual(
-            sorted(_open_mock.mock_calls),
-            sorted([
-                call(
-                    f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
-                    "w",
-                    encoding="utf-8",
-                ),
-                call().__enter__(),
-                call().write(config),
-                call().__exit__(None, None, None),
-            ]),
+        self.assertTrue(
+            call(
+                f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
+                "w",
+                encoding="utf-8",
+            )
+            in _open_mock.mock_calls
         )
 
     @patch(

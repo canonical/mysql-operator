@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import juju_, markers
+from .. import juju_
 from ..helpers import get_leader_unit, get_primary_unit_wrapper, retrieve_database_variable_value
 from .high_availability_helpers import (
     ensure_all_units_continuous_writes_incrementing,
@@ -22,8 +22,6 @@ MYSQL_APP_NAME = "mysql"
 TEST_APP_NAME = "mysql-test-app"
 
 
-@pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
@@ -54,8 +52,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
 
 
-@pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -79,13 +75,9 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert await primary_unit.is_leader_from_status(), "Primary unit not set to leader"
 
 
-@pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
-async def test_upgrade_from_stable(ops_test: OpsTest):
+async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     """Test updating from stable channel."""
     application = ops_test.model.applications[MYSQL_APP_NAME]
-    logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm)

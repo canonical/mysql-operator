@@ -110,6 +110,7 @@ async def ensure_n_online_mysql_members(
 
 async def deploy_and_scale_mysql(
     ops_test: OpsTest,
+    charm,
     check_for_existing_application: bool = True,
     mysql_application_name: str = MYSQL_DEFAULT_APP_NAME,
     num_units: int = 3,
@@ -131,8 +132,6 @@ async def deploy_and_scale_mysql(
                 await scale_application(ops_test, application_name, num_units)
 
         return application_name
-
-    charm = await ops_test.build_charm(".")
 
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
@@ -356,10 +355,11 @@ async def ensure_all_units_continuous_writes_incrementing(
     )
 
     async with ops_test.fast_forward(fast_interval="15s"):
-        for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
-            with attempt:
-                # ensure that all units are up to date (including the previous primary)
-                for unit in mysql_units:
+        for unit in mysql_units:
+            for attempt in Retrying(
+                reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)
+            ):
+                with attempt:
                     # ensure the max written value is incrementing (continuous writes is active)
                     max_written_value = await get_max_written_value_in_database(
                         ops_test, unit, server_config_credentials

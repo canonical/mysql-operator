@@ -18,9 +18,9 @@ from .helpers import (
     get_tls_ca,
     get_unit_ip,
     is_connection_possible,
-    scale_application,
     unit_file_md5,
 )
+from .high_availability.high_availability_helpers import deploy_and_scale_mysql
 
 logger = logging.getLogger(__name__)
 
@@ -44,41 +44,12 @@ else:
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    if app := await app_name(ops_test):
-        if len(ops_test.model.applications[app].units) == 3:
-            return
-        else:
-            async with ops_test.fast_forward():
-                await scale_application(ops_test, app, 3)
-            return
-
-    charm = await ops_test.build_charm(".")
-
-    await ops_test.model.deploy(
-        charm,
-        application_name=APP_NAME,
-        num_units=3,
-        base="ubuntu@22.04",
-    )
-
-    # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APP_NAME].units) == 3
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=15 * 60,
-        )
+    await deploy_and_scale_mysql(ops_test, charm)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_connection_before_tls(ops_test: OpsTest) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
@@ -107,7 +78,6 @@ async def test_connection_before_tls(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection not possible to unit {unit.name} with disabled TLS"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_enable_tls(ops_test: OpsTest) -> None:
     """Test for encryption enablement when relation to TLS charm."""
@@ -151,7 +121,6 @@ async def test_enable_tls(ops_test: OpsTest) -> None:
     assert await get_tls_ca(ops_test, all_units[0].name), "❌ No CA found after TLS relation"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_rotate_tls_key(ops_test: OpsTest) -> None:
     """Verify rotating tls private keys restarts cluster with new certificates.
@@ -208,7 +177,6 @@ async def test_rotate_tls_key(ops_test: OpsTest) -> None:
         ), f"❌ Unencrypted connection possible to unit {unit.name} with enabled TLS"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_disable_tls(ops_test: OpsTest) -> None:
     # Remove the relation

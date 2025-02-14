@@ -4,6 +4,12 @@
 
 """Charmed Machine Operator for MySQL."""
 
+from charms.mysql.v0.architecture import WrongArchitectureWarningCharm, is_wrong_architecture
+from ops.main import main
+
+if is_wrong_architecture() and __name__ == "__main__":
+    main(WrongArchitectureWarningCharm)
+
 import logging
 import random
 import socket
@@ -14,14 +20,13 @@ from typing import Optional
 import ops
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
-from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider, charm_tracing_config
 from charms.mysql.v0.async_replication import (
     MySQLAsyncReplicationConsumer,
     MySQLAsyncReplicationOffer,
 )
 from charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME, MySQLBackups
 from charms.mysql.v0.mysql import (
-    BYTES_1MB,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
@@ -41,8 +46,7 @@ from charms.mysql.v0.mysql import (
 )
 from charms.mysql.v0.tls import MySQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -56,7 +60,6 @@ from ops import (
     Unit,
     WaitingStatus,
 )
-from ops.main import main
 from tenacity import (
     RetryError,
     Retrying,
@@ -71,7 +74,6 @@ from config import CharmConfig, MySQLConfig
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
-    CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
     CHARMED_MYSQLD_SERVICE,
     CLUSTER_ADMIN_PASSWORD_KEY,
@@ -89,11 +91,11 @@ from constants import (
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
     TRACING_PROTOCOL,
-    TRACING_RELATION_NAME,
 )
 from flush_mysql_logs import FlushMySQLLogsCharmEvents, MySQLLogs
 from hostname_resolution import MySQLMachineHostnameResolution
 from ip_address_observer import IPAddressChangeCharmEvents
+from log_rotation_setup import LogRotationSetup
 from mysql_vm_helpers import (
     MySQL,
     MySQLCreateCustomMySQLDConfigError,
@@ -178,6 +180,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             metrics_rules_dir="./src/alert_rules/prometheus",
             logs_rules_dir="./src/alert_rules/loki",
             log_slots=[f"{CHARMED_MYSQL_SNAP_NAME}:logs"],
+            tracing_protocols=[TRACING_PROTOCOL],
         )
         self.framework.observe(
             self.on[COS_AGENT_RELATION_NAME].relation_created, self._on_cos_agent_relation_created
@@ -185,6 +188,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.framework.observe(
             self.on[COS_AGENT_RELATION_NAME].relation_broken, self._on_cos_agent_relation_broken
         )
+
+        self.log_rotation_setup = LogRotationSetup(self)
         self.s3_integrator = S3Requirer(self, S3_INTEGRATOR_RELATION_NAME)
         self.backups = MySQLBackups(self, self.s3_integrator)
         self.hostname_resolution = MySQLMachineHostnameResolution(self)
@@ -201,9 +206,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.replication_offer = MySQLAsyncReplicationOffer(self)
         self.replication_consumer = MySQLAsyncReplicationConsumer(self)
 
-        self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
-        )
+        self.tracing_endpoint_config, _ = charm_tracing_config(self._grafana_agent, None)
 
     # =======================
     #  Charm Lifecycle Hooks
@@ -244,6 +247,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             BACKUPS_PASSWORD_KEY,
         ]
 
+        logger.info("Generating internal user credentials")
         for required_password in required_passwords:
             if not self.get_secret("app", required_password):
                 self.set_secret(
@@ -275,53 +279,43 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # the upgrade already restart the daemon
             return
 
-        # restart not required if mysqld is not running
-        mysqld_running = self._mysql.is_mysqld_running()
-
         previous_config = self.mysql_config.custom_config
         if not previous_config:
             # empty config means not initialized, skipping
             return
 
         # render the new config
-        memory_limit_bytes = (self.config.profile_limit_memory or 0) * BYTES_1MB
-        new_config_content, new_config_dict = self._mysql.render_mysqld_configuration(
-            profile=self.config.profile,
-            audit_log_enabled=self.config.plugin_audit_enabled,
-            audit_log_strategy=self.config.plugin_audit_strategy,
-            snap_common=CHARMED_MYSQL_COMMON_DIRECTORY,
-            memory_limit=memory_limit_bytes,
-            experimental_max_connections=self.config.experimental_max_connections,
-            binlog_retention_days=self.config.binlog_retention_days,
-        )
+        new_config_dict = self._mysql.write_mysqld_config()
 
         changed_config = compare_dictionaries(previous_config, new_config_dict)
 
-        if self.mysql_config.keys_requires_restart(changed_config):
-            # there are static configurations in changed keys
-            logger.info("Persisting configuration changes to file")
-            # persist config to file
-            self._mysql.write_content_to_file(
-                path=MYSQLD_CUSTOM_CONFIG_FILE, content=new_config_content
-            )
-            if mysqld_running:
-                logger.info("Configuration change requires restart")
+        # Override log rotation
+        self.log_rotation_setup.setup()
 
-                if "loose-audit_log_format" in changed_config:
-                    # plugins are manipulated running daemon
-                    if self.config.plugin_audit_enabled:
-                        self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-                    else:
-                        self._mysql.uninstall_plugins(["audit_log", "audit_log_filter"])
+        if (
+            self.mysql_config.keys_requires_restart(changed_config)
+            and self._mysql.is_mysqld_running()
+        ):
+            logger.info("Configuration change requires restart")
+            if "loose-audit_log_format" in changed_config:
+                # plugins are manipulated on running daemon
+                if self.config.plugin_audit_enabled:
+                    self._mysql.install_plugins(["audit_log"])
+                else:
+                    self._mysql.uninstall_plugins(["audit_log"])
 
-                self.on[f"{self.restart.name}"].acquire_lock.emit()
-                return
+            self.on[f"{self.restart.name}"].acquire_lock.emit()
 
-        if dynamic_config := self.mysql_config.filter_static_keys(changed_config):
+        elif dynamic_config := self.mysql_config.filter_static_keys(changed_config):
             # if only dynamic config changed, apply it
             logger.info("Configuration does not requires restart")
             for config in dynamic_config:
-                self._mysql.set_dynamic_variable(config, new_config_dict[config])
+                if config not in new_config_dict:
+                    # skip removed configs
+                    continue
+                self._mysql.set_dynamic_variable(
+                    config.removeprefix("loose-"), new_config_dict[config]
+                )
 
     def _on_start(self, event: StartEvent) -> None:
         """Handle the start event.
@@ -448,13 +442,21 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if all_states == {"offline"} and self.unit.is_leader():
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
-                logger.debug("Attempting reboot from complete outage.")
+                logger.info("Attempting reboot from complete outage.")
                 try:
                     # reboot from outage forcing it when it a single unit
                     self._mysql.reboot_from_complete_outage()
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
+                finally:
+                    return
+
+            if self._mysql.is_cluster_auto_rejoin_ongoing():
+                logger.info("Cluster auto-rejoin attempts are still ongoing.")
+            else:
+                logger.info("Cluster auto-rejoin attempts are exhausted. Attempting manual rejoin")
+                self._execute_manual_rejoin()
 
         if state == "unreachable":
             try:
@@ -467,6 +469,30 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
 
+    def _execute_manual_rejoin(self) -> None:
+        """Executes an instance manual rejoin.
+
+        It is supposed to be called when the MySQL 8.0.21+ auto-rejoin attempts have been exhausted,
+        on an OFFLINE replica that still belongs to the cluster
+        """
+        if not self._mysql.is_instance_in_cluster(self.unit_label):
+            logger.warning("Instance does not belong to the cluster. Cannot perform manual rejoin")
+            return
+
+        cluster_primary = self._get_primary_from_online_peer()
+        if not cluster_primary:
+            logger.warning("Instance does not have ONLINE peers. Cannot perform manual rejoin")
+            return
+
+        self._mysql.remove_instance(
+            unit_label=self.unit_label,
+        )
+        self._mysql.add_instance_to_cluster(
+            instance_address=self.unit_address,
+            instance_unit_label=self.unit_label,
+            from_instance=cluster_primary,
+        )
+
     def _on_update_status(self, _) -> None:  # noqa: C901
         """Handle update status.
 
@@ -478,7 +504,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             or not is_volume_mounted()
         ):
             # health checks only after cluster and member are initialised
-            logger.debug("skip status update when not initialized")
+            logger.info("skip status update when not initialized")
             return
         if (
             self.unit_peer_data.get("member-state") == "waiting"
@@ -487,7 +513,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             and not self.unit.is_leader()
         ):
             # avoid changing status while in initialising
-            logger.debug("skip status update while initialising")
+            logger.info("skip status update while initialising")
             return
 
         if not self.upgrade.idle:
@@ -569,8 +595,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     @property
     def tracing_endpoint(self) -> Optional[str]:
         """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
+        return self.tracing_endpoint_config
 
     @property
     def _mysql(self):
@@ -615,13 +640,24 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Get the hostname of the unit."""
         if unit_name:
             unit = self.model.get_unit(unit_name)
-            return self.peers.data[unit]["instance-hostname"].split(":")[0]
+            return self.peers.data[unit]["instance-hostname"].split(":")[0]  # type: ignore
         return self.unit_peer_data["instance-hostname"].split(":")[0]
 
     @property
     def unit_address(self) -> str:
         """Returns the unit's address."""
         return self.get_unit_address(self.unit)
+
+    @property
+    def text_logs(self) -> list:
+        """Enabled text logs."""
+        # slow logs isn't enabled by default
+        text_logs = ["error"]
+
+        if self.config.plugin_audit_enabled:
+            text_logs.append("audit")
+
+        return text_logs
 
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
@@ -653,16 +689,16 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         Create users and configuration to setup instance as an Group Replication node.
         Raised errors must be treated on handlers.
         """
+        # ensure hostname can be resolved
+        self.hostname_resolution.update_etc_hosts(None)
+
         self._mysql.write_mysqld_config()
-        self._mysql.setup_logrotate_and_cron()
+        self.log_rotation_setup.setup()
         self._mysql.reset_root_password_and_start_mysqld()
         self._mysql.configure_mysql_users()
 
         if self.config.plugin_audit_enabled:
-            self._mysql.install_plugins(["audit_log", "audit_log_filter"])
-
-        # ensure hostname can be resolved
-        self.hostname_resolution.update_etc_hosts(None)
+            self._mysql.install_plugins(["audit_log"])
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
@@ -727,11 +763,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             # immediate reboot will make juju re-run the hook
             self.unit.reboot(now=True)
 
+        if not self.mysql_config.custom_config:
+            # empty config mean start never ran, skip next checks
+            return True
+
         # Safeguard if receiving on start after unit initialization
-        if self.unit_initialized:
-            logger.debug("Delegate status update for start handler on initialized unit.")
-            self._on_update_status(None)
-            return False
+        # with retries to allow time for mysqld startup
+        for _ in range(6):
+            if self.unit_initialized:
+                logger.debug("Delegate status update for start handler on initialized unit.")
+                self._on_update_status(None)
+                return False
+            logger.debug("mysqld not started yet. Retrying check")
+            sleep(5)
 
         return True
 
@@ -772,9 +816,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 cluster_primary = self._get_primary_from_online_peer()
                 if not cluster_primary:
                     self.unit.status = WaitingStatus("waiting to get cluster primary from peers")
-                    logger.debug(
-                        "waiting: unable to retrieve the cluster primary from online peer"
-                    )
+                    logger.info("waiting: unable to retrieve the cluster primary from online peer")
                     return
 
                 if (
@@ -803,7 +845,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
                 if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):
                     self.unit.status = WaitingStatus("waiting to join the cluster.")
-                    logger.debug("waiting: cluster lock is held")
+                    logger.info("waiting: cluster lock is held")
                     return
 
                 self.unit.status = MaintenanceStatus("joining the cluster")
@@ -820,40 +862,61 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     from_instance=cluster_primary,
                     lock_instance=lock_instance,
                 )
-                logger.debug(f"Added instance {instance_address} to cluster")
             except MySQLAddInstanceToClusterError:
-                logger.debug(f"Unable to add instance {instance_address} to cluster.")
+                logger.info(f"Unable to add instance {instance_address} to cluster.")
                 return
             except MySQLLockAcquisitionError:
                 self.unit.status = WaitingStatus("waiting to join the cluster")
-                logger.debug("Waiting to join the cluster, failed to acquire lock.")
+                logger.info("Waiting to join the cluster, failed to acquire lock.")
                 return
         self.unit_peer_data["member-state"] = "online"
         self.unit.status = ActiveStatus(self.active_status_message)
-        logger.debug(f"Instance {instance_label} is cluster member")
+        logger.info(f"Instance {instance_label} added to cluster")
 
-    def _restart(self, event: EventBase) -> None:
-        """Restart the MySQL service."""
-        if self.peers.units != self.restart_peers.units:
-            # defer restart until all units are in the relation
-            logger.debug("Deferring restart until all units are in the relation")
-            event.defer()
+    def recover_unit_after_restart(self) -> None:
+        """Wait for unit recovery/rejoin after restart."""
+        recovery_attempts = 30
+        logger.info("Recovering unit")
+        if self.app.planned_units() == 1:
+            self._mysql.reboot_from_complete_outage()
+        else:
+            try:
+                for attempt in Retrying(
+                    stop=stop_after_attempt(recovery_attempts), wait=wait_fixed(15)
+                ):
+                    with attempt:
+                        self._mysql.hold_if_recovering()
+                        if not self._mysql.is_instance_in_cluster(self.unit_label):
+                            logger.debug(
+                                "Instance not yet back in the cluster."
+                                f" Retry {attempt.retry_state.attempt_number}/{recovery_attempts}"
+                            )
+                            raise Exception
+            except RetryError:
+                raise
+
+    def _restart(self, _: EventBase) -> None:
+        """Restart the service."""
+        if not self.unit_initialized:
+            logger.debug("Restarting standalone mysqld")
+            self._mysql.restart_mysqld()
             return
-        if self.peers.units and self._mysql.is_unit_primary(self.unit_label):
-            restart_states = {
-                self.restart_peers.data[unit].get("state", "unset") for unit in self.peers.units
-            }
-            if restart_states == {"unset"}:
-                logger.debug("Restarting leader")
-            elif restart_states != {"release"}:
-                # Wait other units restart first to minimize primary switchover
-                logger.debug("Primary is waiting for other units to restart")
-                event.defer()
-                return
 
+        if self.app.planned_units() > 1 and self._mysql.is_unit_primary(self.unit_label):
+            try:
+                new_primary = self.get_unit_address(self.peers.units.pop())
+                logger.debug(f"Switching primary to {new_primary}")
+                self._mysql.set_cluster_primary(new_primary)
+            except MySQLSetClusterPrimaryError:
+                logger.warning("Changing primary failed")
+
+        logger.debug("Restarting mysqld")
         self.unit.status = MaintenanceStatus("restarting MySQL")
         self._mysql.restart_mysqld()
+        self.unit.status = MaintenanceStatus("recovering unit after restart")
         sleep(10)
+        self.recover_unit_after_restart()
+
         self._on_update_status(None)
 
 

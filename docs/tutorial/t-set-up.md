@@ -1,46 +1,64 @@
-# Environment Setup
+> [Charmed MySQL Tutorial](/t/9922) > 1. Set up your environment
 
-This is part of the [Charmed MySQL Tutorial](/t/charmed-mysql-tutorial-overview/9922?channel=8.0/edge). Please refer to this page for more information and the overview of the content.
+# Set up your environment
 
-## Minimum requirements
+In this first step, you will set up a development environment with the required components for deploying Charmed MySQL.
 
-Before we start, make sure your machine meets [the following requirements](/t/11742).
+[note]
+Before you start, make sure your machine meets the [minimum system requirements](/t/11742).
+[/note]
 
-## Multipass environment
-[Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses "[cloud-init](https://cloud-init.io/)" standard to install and configure all the necessary parts automatically.
+## Summary
+* [Set up Multipass](#set-up-multipass)
+* [Set up Juju](#set-up-juju)
 
-Let's install Multipass from [Snap](https://snapcraft.io/multipass) and launch a new VM using "[charm-dev](https://github.com/canonical/multipass-blueprints/blob/main/v1/charm-dev.yaml)" cloud-init config:
+---
+
+## Set up Multipass
+[Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses the [cloud-init](https://cloud-init.io/) standard to install and configure all the necessary parts automatically.
+
+Install Multipass from the [snap store](https://snapcraft.io/multipass):
 ```shell
-sudo snap install multipass && \
-multipass launch --cpus 4 --memory 8G --disk 30G --name my-vm charm-dev # tune CPU/RAM/HDD accordingly to your needs 
+sudo snap install multipass
 ```
-*Note: all 'multipass launch' params are [described here](https://multipass.run/docs/launch-command)*.
 
-Multipass [list of commands](https://multipass.run/docs/multipass-cli-commands) is short and self-explanatory, e.g. show all running VMs:
+Launch a new VM using the [`charm-dev`](https://github.com/canonical/multipass-blueprints/blob/main/v1/charm-dev.yaml) cloud-init config:
 ```shell
-multipass list
+multipass launch --cpus 4 --memory 8G --disk 30G --name my-vm charm-dev
 ```
 
-As soon as new VM started, enter inside using:
+> All `multipass launch` params are described in the [Multipass documentation](https://multipass.run/docs/launch-command).
+
+The list of [Multipass commands](https://multipass.run/docs/multipass-cli-commands) is short and self-explanatory. For example, to show all running VMs, just run `multipass list`.
+
+As soon as new VM has started, access it with the following command:
 ```shell
 multipass shell my-vm
 ```
-*Note: if at any point you'd like to leave Multipass VM, enter `Ctrl+d` or type `exit`*.
+> If at any point you'd like to leave Multipass VM, enter `Ctrl+D` or type `exit`.
 
-All the parts have been pre-installed inside VM already, like LXD and Juju (the files '/var/log/cloud-init.log' and '/var/log/cloud-init-output.log' contain all low-level installation details). Let's bootstrap Juju to use local LXD:
+All necessary components have been pre-installed inside VM already, like LXD and Juju. The files `/var/log/cloud-init.log` and `/var/log/cloud-init-output.log` contain all low-level installation details. 
+
+## Set up Juju
+
+Let's bootstrap Juju to use the local LXD controller. We will call it "overlord", but you can give it any name you'd like.
 ```shell
 juju bootstrap localhost overlord
 ```
 
-The controller can work with different models; models host applications such as Charmed MySQL. Set up a specific model for Charmed MySQL named ‘tutorial’:
+
+The controller can work with different [Juju models](https://juju.is/docs/juju/model). Set up a specific model for Charmed MySQL named ‘tutorial’:
 ```shell
 juju add-model tutorial
 ```
 
-You can now view the model you created above by entering the command `juju status` into the command line. You should see the following:
-```
+You can now view the model you created above by entering the command `juju status` into the command line. You should see something similar to the following output:
+
+```none
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial overlord    localhost/localhost  3.1.6    unsupported  23:20:53+01:00
+tutorial overlord    localhost/localhost  3.5.2    unsupported  23:20:53+01:00
 
 Model "admin/tutorial" is empty.
 ```
+
+> Next step: [2.  Deploy MySQL](/t/9912?channel=8.0/edge)

@@ -6,8 +6,16 @@ createolddir 770 {{ system_user }} {{ system_user }}
 
 # Frequency of logs rotation
 hourly
-maxage 7
-rotate 10800
+maxage {{ logs_retention_period }}
+rotate {{ logs_rotations }}
+
+# Compression settings
+{% if logs_compression %}
+compress
+delaycompress
+{% else %}
+nocompress
+{% endif %}
 
 # Naming of rotated files should be in the format:
 dateext
@@ -16,43 +24,18 @@ dateformat -%Y%m%d_%H%M
 # Settings to prevent misconfigurations and unwanted behaviours
 ifempty
 missingok
-nocompress
 nomail
 nosharedscripts
 nocopytruncate
 
-{{ snap_common_directory }}/var/log/mysql/error.log {
-    olddir archive_error
+{% for log in enabled_log_files %}
+{{ log_dir }}/{{ log }}.log {
+    olddir archive_{{ log }}
     postrotate
         juju_command=/usr/bin/juju-run
         if command -v /usr/bin/juju-exec; then juju_command=/usr/bin/juju-exec; fi
-        "$juju_command" -u {{ unit_name }} LOGS_TYPE=ERROR JUJU_DISPATCH_PATH=hooks/flush_mysql_logs {{ charm_directory }}/dispatch
+        "$juju_command" -u {{ unit_name }} LOGS_TYPE={{ log|upper }} JUJU_DISPATCH_PATH=hooks/flush_mysql_logs {{ charm_directory }}/dispatch
     endscript
 }
+{% endfor %}
 
-{{ snap_common_directory }}/var/log/mysql/general.log {
-    olddir archive_general
-    postrotate
-        juju_command=/usr/bin/juju-run
-        if command -v /usr/bin/juju-exec; then juju_command=/usr/bin/juju-exec; fi
-        "$juju_command" -u {{ unit_name }} LOGS_TYPE=GENERAL JUJU_DISPATCH_PATH=hooks/flush_mysql_logs {{ charm_directory }}/dispatch
-    endscript
-}
-
-{{ snap_common_directory }}/var/log/mysql/slowquery.log {
-    olddir archive_slowquery
-    postrotate
-        juju_command=/usr/bin/juju-run
-        if command -v /usr/bin/juju-exec; then juju_command=/usr/bin/juju-exec; fi
-        "$juju_command" -u {{ unit_name }} LOGS_TYPE=SLOW JUJU_DISPATCH_PATH=hooks/flush_mysql_logs {{ charm_directory }}/dispatch
-    endscript
-}
-
-{{ snap_common_directory }}/var/log/mysql/audit.log {
-    olddir archive_audit
-    postrotate
-        juju_command=/usr/bin/juju-run
-        if command -v /usr/bin/juju-exec; then juju_command=/usr/bin/juju-exec; fi
-        "$juju_command" -u {{ unit_name }} LOGS_TYPE=AUDIT JUJU_DISPATCH_PATH=hooks/flush_mysql_logs {{ charm_directory }}/dispatch
-    endscript
-}
