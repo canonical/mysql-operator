@@ -1176,6 +1176,7 @@ class TestMySQLBase(unittest.TestCase):
             password="password",
             timeout=60,
             exception_as_warning=True,
+            log_errors=False,
         )
 
         _run_mysqlcli_script.reset_mock()

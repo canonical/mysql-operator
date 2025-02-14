@@ -89,23 +89,29 @@ class MySQLMachineHostnameResolution(Object):
 
         return host_details
 
-    def update_etc_hosts(self, _) -> None:
-        """Potentially update the /etc/hosts file with new hostname to IP for units."""
+    def update_etc_hosts(self, _) -> bool:
+        """Potentially update the /etc/hosts file with new hostname to IP for units.
+
+        Returns: whether a loopback host entry exists in /etc/hosts
+        """
         if not self.charm._is_peer_data_set:
-            return
+            return False
 
         host_entries = self._get_host_details()
         if not host_entries:
             logger.debug("No hostnames in the peer databag. Skipping update of /etc/hosts")
-            return
+            return False
 
         logger.debug("Updating /etc/hosts with new hostname to IP mappings")
         hosts = Hosts()
+
+        loopback_host_exists = False
 
         if hosts.exists(address="127.0.1.1", names=[socket.getfqdn()]):
             # remove MAAS injected entry
             logger.debug("Removing MAAS injected entry from /etc/hosts")
             hosts.remove_all_matching(address="127.0.1.1")
+            loopback_host_exists = True
 
         hosts.remove_all_matching(comment=COMMENT)
         hosts.add(host_entries)
@@ -115,3 +121,5 @@ class MySQLMachineHostnameResolution(Object):
             self.charm._mysql.flush_host_cache()
         except MySQLFlushHostCacheError:
             logger.warning("Unable to flush MySQL host cache")
+
+        return loopback_host_exists

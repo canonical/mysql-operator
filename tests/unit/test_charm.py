@@ -256,9 +256,11 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
     @patch("python_hosts.Hosts.write")
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     def test_on_update(
         self,
         _,
+        __,
         _snap_service_operation,
         _reboot_from_complete_outage,
         _is_volume_mounted,
@@ -323,6 +325,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
-        _get_cluster_primary_address.assert_called_once()
+        _get_cluster_primary_address.assert_not_called()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))

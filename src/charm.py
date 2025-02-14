@@ -422,7 +422,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
 
-    def _handle_non_online_instance_status(self, state) -> None:
+    def _handle_non_online_instance_status(self, state) -> bool:  # noqa: C901
         """Helper method to handle non-online instance statuses.
 
         Invoked from the update status event handler.
@@ -430,7 +430,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if state == "recovering":
             # server is in the process of becoming an active member
             logger.info("Instance is being recovered")
-            return
+            return True
 
         if state == "offline":
             # Group Replication is active but the member does not belong to any group
@@ -440,14 +440,16 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             all_states.add("offline")
 
             if all_states == {"offline"} and self.unit.is_leader():
-                self.hostname_resolution.update_etc_hosts(None)
-                if not snap_service_operation(
+                loopback_entry_exists = self.hostname_resolution.update_etc_hosts(None)
+                if loopback_entry_exists and not snap_service_operation(
                     CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
                 ):
                     self.unit.status = BlockedStatus(
                         "Unable to restart mysqld before rebooting from complete outage"
                     )
-                    return
+                    return False
+
+                self._mysql.wait_until_mysql_connection()
 
                 # All instance are off or its a single unit cluster
                 # reboot cluster from outage from the leader unit
@@ -455,15 +457,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 try:
                     # reboot from outage forcing it when it a single unit
                     self._mysql.reboot_from_complete_outage()
+                    return True
                 except MySQLRebootFromCompleteOutageError:
                     logger.error("Failed to reboot cluster from complete outage.")
                     self.unit.status = BlockedStatus("failed to recover cluster.")
-                finally:
-                    return
+                    return False
 
             if self._mysql.is_cluster_auto_rejoin_ongoing():
                 logger.info("Cluster auto-rejoin attempts are still ongoing.")
-            else:
+            elif all_states != {"offline"}:
                 logger.info("Cluster auto-rejoin attempts are exhausted. Attempting manual rejoin")
                 self._execute_manual_rejoin()
 
@@ -475,8 +477,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     # mysqld access not possible and daemon restart fails
                     # force reset necessary
                     self.unit.status = BlockedStatus("Unable to recover from an unreachable state")
+                    return False
             except SnapServiceOperationError as e:
                 self.unit.status = BlockedStatus(e.message)
+                return False
+
+        return True
 
     def _execute_manual_rejoin(self) -> None:
         """Executes an instance manual rejoin.
@@ -559,7 +565,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             else MaintenanceStatus(state)
         )
 
-        self._handle_non_online_instance_status(state)
+        if not self._handle_non_online_instance_status(state):
+            return
 
         if self.unit.is_leader():
             try:

@@ -623,7 +623,11 @@ class MySQLCharmBase(CharmBase, ABC):
 
         for unit in self.app_units:
             try:
-                if self._mysql.cluster_metadata_exists(self.get_unit_address(unit)):
+                if unit != self.unit and self._mysql.cluster_metadata_exists(
+                    self.get_unit_address(unit)
+                ):
+                    return True
+                elif self._mysql.cluster_metadata_exists():
                     return True
             except MySQLClusterMetadataExistsError:
                 pass
@@ -1736,6 +1740,7 @@ class MySQLBase(ABC):
                 password=self.root_password,
                 timeout=60,
                 exception_as_warning=True,
+                log_errors=False,
             )
         except MySQLClientError:
             logger.warning("Failed to check if local cluster metadata exists")
@@ -3290,7 +3295,7 @@ class MySQLBase(ABC):
             raise MySQLKillSessionError
 
     def check_mysqlcli_connection(self) -> bool:
-        """Checks if it is possible to connect to the server with mysqlsh."""
+        """Checks if it is possible to connect to the server with mysqlcli."""
         connect_commands = ("SELECT 1",)
 
         try:
@@ -3477,6 +3482,7 @@ class MySQLBase(ABC):
         password: Optional[str] = None,
         timeout: Optional[int] = None,
         exception_as_warning: bool = False,
+        log_errors: bool = False,
     ) -> list:
         """Execute a MySQL CLI script.
 
@@ -3492,6 +3498,7 @@ class MySQLBase(ABC):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
             exception_as_warning: (optional) whether the exception should be treated as warning
+            log_errors: (optional) whether errors in the output should be logged
         """
         raise NotImplementedError
 

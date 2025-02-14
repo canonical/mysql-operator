@@ -411,7 +411,7 @@ class MySQL(MySQLBase):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
 
         if check_port and not self.check_mysqlcli_connection():
-            raise MySQLServiceNotRunningError("Connection with mysqlsh not possible")
+            raise MySQLServiceNotRunningError("Connection with mysqlcli not possible")
 
         logger.debug("MySQL connection possible")
 
@@ -789,6 +789,7 @@ class MySQL(MySQLBase):
         password: Optional[str] = None,
         timeout: Optional[int] = None,
         exception_as_warning: bool = False,
+        log_errors: bool = True,
     ) -> list:
         """Execute a MySQL script.
 
@@ -804,6 +805,7 @@ class MySQL(MySQLBase):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
             exception_as_warning: (optional) whether the exception should be treated as warning
+            log_errors: (optional) whether errors in the output should be logged
         """
         command = [
             CHARMED_MYSQL,
@@ -830,7 +832,8 @@ class MySQL(MySQLBase):
                 if len(stdout) > 1 and "ERROR" in stdout[1]:
                     # some errors will not bubble up from spawned process
                     # but are reported in the stdout
-                    logger.error(stdout[1].strip())
+                    if log_errors:
+                        logger.error(stdout[1].strip())
                     raise MySQLClientError
 
                 # index 0 contains empty \r\n
