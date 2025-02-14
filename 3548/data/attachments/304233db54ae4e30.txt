@@ -1,0 +1,73 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/mysql-313
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/mysql-test-app-65
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: agent initialising
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: Installing MySQL
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: Waiting to start MySQL
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: Setting up cluster node
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+  mysql-test-app/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [executing] maintenance: Installing MySQL
+  mysql/2 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] waiting: Waiting to start MySQL
+  mysql/2 [executing] maintenance: Setting up cluster node
+  mysql-test-app/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] waiting: Waiting to join the cluster
+  mysql/2 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [executing] maintenance: joining the cluster
+  mysql/2 [executing] active: 
+  mysql-test-app/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql-test-app/0 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:47 Wait for applications to become active
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  mysql-test-app/0 [idle] active:
