@@ -102,6 +102,8 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | e-architecture | [Architecture](/t/11756) |
 | 2 | e-interfaces-endpoints | [Interfaces and endpoints](/t/10250) |
 | 2 | e-users | [Users](/t/10789) |
+| 2 | e-security | [Security](/t/16784) |
+| 2 | e-cryptography | [Cryptography](/t/16785) |
 | 2 | e-logs | [Logs](/t/11993) |
 | 3 | e-audit-logs | [Audit Logs](/t/15424) |
 | 2 | e-juju | [Juju](/t/11959) |
