@@ -1,0 +1,29 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.2    unsupported  01:56:45Z
+
+App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+mysql  8.0.41-0ubun...  active    2/3  mysql             0  no       
+
+Unit      Workload  Agent       Machine  Public address  Ports           Message
+mysql/0*  active    idle        0        10.76.181.25    3306,33060/tcp  Primary
+mysql/1   active    idle        1        10.76.181.16                    
+mysql/2   waiting   allocating  2                                        waiting for machine
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.76.181.25  juju-cfa59d-0  ubuntu@22.04      Running
+1        started  10.76.181.16  juju-cfa59d-1  ubuntu@22.04      Running
+2        down                   juju-cfa59d-2  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:32:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:32:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:34:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:34:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:34:03 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:71 Cleaning backups from cloud buckets
