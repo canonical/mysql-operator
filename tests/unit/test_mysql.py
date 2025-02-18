@@ -1123,19 +1123,17 @@ class TestMySQLBase(unittest.TestCase):
     def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):
         """Test cluster_metadata_exists method."""
         commands = "\n".join((
-            "result = session.run_sql(\"SHOW DATABASES LIKE 'mysql_innodb_cluster_metadata'\")",
-            "content = result.fetch_all()",
-            "if content:",
-            (
-                '  result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
-                f".clusters where cluster_name = '{self.mysql.cluster_name}';\")"
-            ),
-            "  print(bool(result.fetch_one()))",
-            "else:",
-            "  print(False)",
+            'cursor = session.run_sql("SELECT cluster_name '
+            "FROM mysql_innodb_cluster_metadata.clusters "
+            "WHERE EXISTS ("
+            "SELECT * "
+            "FROM information_schema.schemata "
+            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
+            ')")',
+            "print(cursor.fetch_one())",
         ))
 
-        _run_mysqlsh_script.return_value = "True\n"
+        _run_mysqlsh_script.return_value = f"[{self.mysql.cluster_name}]\n"
 
         self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
         _run_mysqlsh_script.assert_called_once_with(

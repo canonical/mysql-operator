@@ -1693,16 +1693,14 @@ class MySQLBase(ABC):
         """Check if this cluster metadata exists on database."""
         if from_instance:
             check_cluster_metadata_commands = (
-                "result = session.run_sql(\"SHOW DATABASES LIKE 'mysql_innodb_cluster_metadata'\")",
-                "content = result.fetch_all()",
-                "if content:",
-                (
-                    '  result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
-                    f".clusters where cluster_name = '{self.cluster_name}';\")"
-                ),
-                "  print(bool(result.fetch_one()))",
-                "else:",
-                "  print(False)",
+                'cursor = session.run_sql("SELECT cluster_name '
+                "FROM mysql_innodb_cluster_metadata.clusters "
+                "WHERE EXISTS ("
+                "SELECT * "
+                "FROM information_schema.schemata "
+                "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
+                ')")',
+                "print(cursor.fetch_one())",
             )
 
             try:
@@ -1720,7 +1718,7 @@ class MySQLBase(ABC):
                     f"Failed to check if cluster metadata exists {from_instance=}"
                 )
 
-            return output.strip() == "True"
+            return self.cluster_name in output
 
         check_cluster_metadata_query = (
             "SELECT cluster_name "
