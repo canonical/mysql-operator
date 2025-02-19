@@ -1130,7 +1130,7 @@ class TestMySQLBase(unittest.TestCase):
             "FROM information_schema.schemata "
             "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
             ')")',
-            "print(cursor.fetch_one())",
+            "print(cursor.fetch_all())",
         ))
 
         _run_mysqlsh_script.return_value = f"[{self.mysql.cluster_name}]\n"
