@@ -1700,7 +1700,7 @@ class MySQLBase(ABC):
                 "FROM information_schema.schemata "
                 "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
                 ')")',
-                "print(cursor.fetch_one())",
+                "print(cursor.fetch_all())",
             )
 
             try:
@@ -1744,7 +1744,8 @@ class MySQLBase(ABC):
             logger.warning("Failed to check if local cluster metadata exists")
             raise MySQLClusterMetadataExistsError("Failed to check if cluster metadata exists")
 
-        return self.cluster_name in output[0][0]
+        cluster_names = [entry[0].strip() for entry in output]
+        return self.cluster_name in cluster_names
 
     def rejoin_cluster(self, cluster_name) -> None:
         """Try to rejoin a cluster to the cluster set."""
