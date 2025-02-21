@@ -105,13 +105,10 @@ class MySQLMachineHostnameResolution(Object):
         logger.debug("Updating /etc/hosts with new hostname to IP mappings")
         hosts = Hosts()
 
-        loopback_host_exists = False
-
-        if hosts.exists(address="127.0.1.1", names=[socket.getfqdn()]):
+        if loopback_host_exists := hosts.exists(address="127.0.1.1", names=[socket.getfqdn()]):
             # remove MAAS injected entry
             logger.debug("Removing MAAS injected entry from /etc/hosts")
             hosts.remove_all_matching(address="127.0.1.1")
-            loopback_host_exists = True
 
         hosts.remove_all_matching(comment=COMMENT)
         hosts.add(host_entries)

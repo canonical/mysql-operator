@@ -1122,14 +1122,17 @@ class TestMySQLBase(unittest.TestCase):
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):
         """Test cluster_metadata_exists method."""
-        commands = "\n".join((
-            'cursor = session.run_sql("SELECT cluster_name '
+        query = (
+            "SELECT cluster_name "
             "FROM mysql_innodb_cluster_metadata.clusters "
             "WHERE EXISTS ("
             "SELECT * "
             "FROM information_schema.schemata "
             "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
-            ')")',
+            ")"
+        )
+        commands = "\n".join((
+            f'cursor = session.run_sql("{query}")',
             "print(cursor.fetch_all())",
         ))
 
@@ -1153,23 +1156,12 @@ class TestMySQLBase(unittest.TestCase):
 
         _run_mysqlsh_script.reset_mock()
 
-        query = (
-            "SELECT cluster_name "
-            "FROM mysql_innodb_cluster_metadata.clusters "
-            "WHERE EXISTS "
-            "("
-            "SELECT * "
-            "FROM information_schema.schemata "
-            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
-            ")",
-        )
-
         _run_mysqlcli_script.return_value = [[self.mysql.cluster_name]]
 
         self.assertTrue(self.mysql.cluster_metadata_exists())
         _run_mysqlsh_script.assert_not_called()
         _run_mysqlcli_script.assert_called_once_with(
-            query,
+            (query,),
             user="root",
             password="password",
             timeout=60,

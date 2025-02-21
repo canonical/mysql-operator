@@ -1690,16 +1690,26 @@ class MySQLBase(ABC):
         return cluster_name in cs_status["clusters"]
 
     def cluster_metadata_exists(self, from_instance: Optional[str] = None) -> bool:
-        """Check if this cluster metadata exists on database."""
+        """Check if this cluster metadata exists on database.
+
+        Use mysqlsh when querying clusters from remote instances. However, use
+        mysqlcli when querying locally since this method can be called before
+        the cluster is initialized (before serverconfig and root users are set up
+        correctly)
+        """
+        get_clusters_query = (
+            "SELECT cluster_name "
+            "FROM mysql_innodb_cluster_metadata.clusters "
+            "WHERE EXISTS ("
+            "SELECT * "
+            "FROM information_schema.schemata "
+            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
+            ")"
+        )
+
         if from_instance:
             check_cluster_metadata_commands = (
-                'cursor = session.run_sql("SELECT cluster_name '
-                "FROM mysql_innodb_cluster_metadata.clusters "
-                "WHERE EXISTS ("
-                "SELECT * "
-                "FROM information_schema.schemata "
-                "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
-                ')")',
+                f'cursor = session.run_sql("{get_clusters_query}")',
                 "print(cursor.fetch_all())",
             )
 
@@ -1720,20 +1730,9 @@ class MySQLBase(ABC):
 
             return self.cluster_name in output
 
-        check_cluster_metadata_query = (
-            "SELECT cluster_name "
-            "FROM mysql_innodb_cluster_metadata.clusters "
-            "WHERE EXISTS "
-            "("
-            "SELECT * "
-            "FROM information_schema.schemata "
-            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
-            ")",
-        )
-
         try:
             output = self._run_mysqlcli_script(
-                check_cluster_metadata_query,
+                (get_clusters_query,),
                 user=ROOT_USERNAME,
                 password=self.root_password,
                 timeout=60,
