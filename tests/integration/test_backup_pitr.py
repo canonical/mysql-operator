@@ -95,7 +95,12 @@ async def test_build_and_deploy_aws(
     ops_test: OpsTest, cloud_configs_aws: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, charm, APPLICATION_NAME_AWS, S3_NAME_AWS, cloud_configs_aws[0], cloud_configs_aws[1]
+        ops_test,
+        charm,
+        APPLICATION_NAME_AWS,
+        S3_NAME_AWS,
+        cloud_configs_aws[0],
+        cloud_configs_aws[1],
     )
 
 
@@ -105,7 +110,12 @@ async def test_build_and_deploy_gcp(
     ops_test: OpsTest, cloud_configs_gcp: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, charm, APPLICATION_NAME_GCP, S3_NAME_GCP, cloud_configs_gcp[0], cloud_configs_gcp[1]
+        ops_test,
+        charm,
+        APPLICATION_NAME_GCP,
+        S3_NAME_GCP,
+        cloud_configs_gcp[0],
+        cloud_configs_gcp[1],
     )
 
 
@@ -119,7 +129,12 @@ async def build_and_deploy_operations(
 ) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
     logger.info("Deploying s3 integrator")
-    await ops_test.model.deploy(S3_INTEGRATOR, application_name=s3_application_name, channel=S3_INTEGRATOR_CHANNEL, base="ubuntu@22.04")
+    await ops_test.model.deploy(
+        S3_INTEGRATOR,
+        application_name=s3_application_name,
+        channel=S3_INTEGRATOR_CHANNEL,
+        base="ubuntu@22.04",
+    )
 
     logger.info("Deploying mysql")
     await deploy_and_scale_mysql(ops_test, charm, mysql_application_name=mysql_application_name)
@@ -168,7 +183,9 @@ async def test_pitr_gcp(ops_test: OpsTest) -> None:
     await pitr_operations(ops_test, APPLICATION_NAME_GCP, S3_NAME_GCP)
 
 
-async def pitr_operations(ops_test: OpsTest, mysql_application_name: str, s3_application_name: str) -> None:
+async def pitr_operations(
+    ops_test: OpsTest, mysql_application_name: str, s3_application_name: str
+) -> None:
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     non_primary_units = [
         unit
