@@ -2,8 +2,8 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import os
 import logging
+import os
 import uuid
 
 import boto3
