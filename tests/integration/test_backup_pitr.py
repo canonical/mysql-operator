@@ -90,25 +90,26 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials) -> None:
 @pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_aws(
-    ops_test: OpsTest, cloud_configs_aws: tuple[dict[str, str], dict[str, str]]
+    ops_test: OpsTest, cloud_configs_aws: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, APPLICATION_NAME_AWS, cloud_configs_aws[0], cloud_configs_aws[1]
+        ops_test, charm, APPLICATION_NAME_AWS, cloud_configs_aws[0], cloud_configs_aws[1]
     )
 
 
 @pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_gcp(
-    ops_test: OpsTest, cloud_configs_gcp: tuple[dict[str, str], dict[str, str]]
+    ops_test: OpsTest, cloud_configs_gcp: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, APPLICATION_NAME_GCP, cloud_configs_gcp[0], cloud_configs_gcp[1]
+        ops_test, charm, APPLICATION_NAME_GCP, cloud_configs_gcp[0], cloud_configs_gcp[1]
     )
 
 
 async def build_and_deploy_operations(
     ops_test: OpsTest,
+    charm: str,
     mysql_application_name: str,
     cloud_configs: dict[str, str],
     cloud_credentials: dict[str, str],
@@ -118,7 +119,7 @@ async def build_and_deploy_operations(
     await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL, base="ubuntu@22.04")
 
     logger.info("Deploying mysql")
-    await deploy_and_scale_mysql(ops_test, mysql_application_name=mysql_application_name)
+    await deploy_and_scale_mysql(ops_test, charm, mysql_application_name=mysql_application_name)
 
     logger.info("Rotating mysql credentials")
     primary_mysql = await get_primary_unit_wrapper(ops_test, mysql_application_name)
