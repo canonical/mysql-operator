@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import os
 import logging
 import uuid
 
@@ -38,7 +39,7 @@ MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
 
 
 @pytest.fixture(scope="session")
-def cloud_configs_aws(github_secrets) -> tuple[dict[str, str], dict[str, str]]:
+def cloud_configs_aws() -> tuple[dict[str, str], dict[str, str]]:
     configs = {
         "endpoint": "https://s3.amazonaws.com",
         "bucket": "data-charms-testing",
@@ -46,15 +47,15 @@ def cloud_configs_aws(github_secrets) -> tuple[dict[str, str], dict[str, str]]:
         "region": "us-east-1",
     }
     credentials = {
-        "access-key": github_secrets["AWS_ACCESS_KEY"],
-        "secret-key": github_secrets["AWS_SECRET_KEY"],
+        "access-key": os.environ["AWS_ACCESS_KEY"],
+        "secret-key": os.environ["AWS_SECRET_KEY"],
     }
     yield configs, credentials
     clean_backups_from_buckets(configs, credentials)
 
 
 @pytest.fixture(scope="session")
-def cloud_configs_gcp(github_secrets) -> tuple[dict[str, str], dict[str, str]]:
+def cloud_configs_gcp() -> tuple[dict[str, str], dict[str, str]]:
     configs = {
         "endpoint": "https://storage.googleapis.com",
         "bucket": "data-charms-testing",
@@ -62,8 +63,8 @@ def cloud_configs_gcp(github_secrets) -> tuple[dict[str, str], dict[str, str]]:
         "region": "",
     }
     credentials = {
-        "access-key": github_secrets["GCP_ACCESS_KEY"],
-        "secret-key": github_secrets["GCP_SECRET_KEY"],
+        "access-key": os.environ["GCP_ACCESS_KEY"],
+        "secret-key": os.environ["GCP_SECRET_KEY"],
     }
     yield configs, credentials
     clean_backups_from_buckets(configs, credentials)
