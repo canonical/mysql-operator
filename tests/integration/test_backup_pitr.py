@@ -33,6 +33,8 @@ DATABASE_NAME = "backup-database"
 TABLE_NAME = "backup-table"
 APPLICATION_NAME_AWS = "mysql-aws"
 APPLICATION_NAME_GCP = "mysql-gcp"
+S3_NAME_AWS = "s3-aws"
+S3_NAME_GCP = "s3-gcp"
 MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
     "Move restored cluster to another S3 repository"
 )
@@ -93,7 +95,7 @@ async def test_build_and_deploy_aws(
     ops_test: OpsTest, cloud_configs_aws: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, charm, APPLICATION_NAME_AWS, cloud_configs_aws[0], cloud_configs_aws[1]
+        ops_test, charm, APPLICATION_NAME_AWS, S3_NAME_AWS, cloud_configs_aws[0], cloud_configs_aws[1]
     )
 
 
@@ -103,7 +105,7 @@ async def test_build_and_deploy_gcp(
     ops_test: OpsTest, cloud_configs_gcp: tuple[dict[str, str], dict[str, str]], charm
 ) -> None:
     await build_and_deploy_operations(
-        ops_test, charm, APPLICATION_NAME_GCP, cloud_configs_gcp[0], cloud_configs_gcp[1]
+        ops_test, charm, APPLICATION_NAME_GCP, S3_NAME_GCP, cloud_configs_gcp[0], cloud_configs_gcp[1]
     )
 
 
@@ -111,12 +113,13 @@ async def build_and_deploy_operations(
     ops_test: OpsTest,
     charm: str,
     mysql_application_name: str,
+    s3_application_name: str,
     cloud_configs: dict[str, str],
     cloud_credentials: dict[str, str],
 ) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
     logger.info("Deploying s3 integrator")
-    await ops_test.model.deploy(S3_INTEGRATOR, channel=S3_INTEGRATOR_CHANNEL, base="ubuntu@22.04")
+    await ops_test.model.deploy(S3_INTEGRATOR, application_name=s3_application_name, channel=S3_INTEGRATOR_CHANNEL, base="ubuntu@22.04")
 
     logger.info("Deploying mysql")
     await deploy_and_scale_mysql(ops_test, charm, mysql_application_name=mysql_application_name)
@@ -129,25 +132,25 @@ async def build_and_deploy_operations(
 
     logger.info("Configuring s3 integrator and integrating it with mysql")
     await ops_test.model.wait_for_idle(
-        apps=[S3_INTEGRATOR],
+        apps=[s3_application_name],
         status="blocked",
         raise_on_blocked=False,
         timeout=TIMEOUT,
     )
-    await ops_test.model.applications[S3_INTEGRATOR].set_config(cloud_configs)
+    await ops_test.model.applications[s3_application_name].set_config(cloud_configs)
     await juju_.run_action(
-        ops_test.model.units[f"{S3_INTEGRATOR}/0"],  # pyright: ignore
+        ops_test.model.units[f"{s3_application_name}/0"],  # pyright: ignore
         "sync-s3-credentials",
         **cloud_credentials,
     )
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         status="active",
         timeout=TIMEOUT,
     )
-    await ops_test.model.relate(mysql_application_name, S3_INTEGRATOR)
+    await ops_test.model.relate(mysql_application_name, s3_application_name)
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         status="active",
         timeout=TIMEOUT,
     )
@@ -156,16 +159,16 @@ async def build_and_deploy_operations(
 @pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_pitr_aws(ops_test: OpsTest) -> None:
-    await pitr_operations(ops_test, APPLICATION_NAME_AWS)
+    await pitr_operations(ops_test, APPLICATION_NAME_AWS, S3_NAME_AWS)
 
 
 @pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
 async def test_pitr_gcp(ops_test: OpsTest) -> None:
-    await pitr_operations(ops_test, APPLICATION_NAME_GCP)
+    await pitr_operations(ops_test, APPLICATION_NAME_GCP, S3_NAME_GCP)
 
 
-async def pitr_operations(ops_test: OpsTest, mysql_application_name: str) -> None:
+async def pitr_operations(ops_test: OpsTest, mysql_application_name: str, s3_application_name: str) -> None:
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
     non_primary_units = [
         unit
@@ -230,7 +233,7 @@ async def pitr_operations(ops_test: OpsTest, mysql_application_name: str) -> Non
         primary_unit, "restore", **{"backup-id": backup_id, "restore-to-time": ts_year_before}
     )
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         timeout=TIMEOUT,
     )
     assert await check_test_data_existence(
@@ -242,7 +245,7 @@ async def pitr_operations(ops_test: OpsTest, mysql_application_name: str) -> Non
         primary_unit, "restore", **{"backup-id": backup_id, "restore-to-time": ts_year_after}
     )
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         timeout=TIMEOUT,
     )
     assert await check_test_data_existence(
@@ -254,7 +257,7 @@ async def pitr_operations(ops_test: OpsTest, mysql_application_name: str) -> Non
         primary_unit, "restore", **{"backup-id": backup_id, "restore-to-time": ts}
     )
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         timeout=TIMEOUT,
     )
     assert await check_test_data_existence(
@@ -266,7 +269,7 @@ async def pitr_operations(ops_test: OpsTest, mysql_application_name: str) -> Non
         primary_unit, "restore", **{"backup-id": backup_id, "restore-to-time": "latest"}
     )
     await ops_test.model.wait_for_idle(
-        apps=[mysql_application_name, S3_INTEGRATOR],
+        apps=[mysql_application_name, s3_application_name],
         timeout=TIMEOUT,
     )
     assert await check_test_data_existence(
