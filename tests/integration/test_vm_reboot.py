@@ -22,14 +22,12 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 SLEEP_WAIT = 5
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    await deploy_and_scale_mysql(ops_test)
+    await deploy_and_scale_mysql(ops_test, charm)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_reboot_1_of_3_units(ops_test: OpsTest) -> None:
     """Reboot a single unit and ensure it comes back online."""
@@ -50,7 +48,6 @@ async def test_reboot_1_of_3_units(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_reboot_2_of_3_units(ops_test: OpsTest) -> None:
     """Reboot a single unit and ensure it comes back online."""
@@ -71,7 +68,6 @@ async def test_reboot_2_of_3_units(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_reboot_3_of_3_units(ops_test: OpsTest) -> None:
     """Reboot a single unit and ensure it comes back online."""

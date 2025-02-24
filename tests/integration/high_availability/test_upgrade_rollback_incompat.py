@@ -4,7 +4,6 @@
 import ast
 import json
 import logging
-import os
 import pathlib
 import shutil
 from time import sleep
@@ -32,12 +31,11 @@ MYSQL_APP_NAME = "mysql"
 TEST_APP = "mysql-test-app"
 
 
-@pytest.mark.group(1)
 # TODO: remove after next incompatible MySQL server version released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
 @markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Simple test to ensure that the mysql and application charms get deployed."""
     snap_revisions = pathlib.Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
@@ -47,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    charm = await charm_local_build(ops_test)
+    charm = await charm_local_build(ops_test, charm)
 
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
@@ -78,7 +76,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 # TODO: remove after next incompatible MySQL server version released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
 @markers.amd64_only
@@ -93,13 +90,13 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     await juju_.run_action(leader_unit, "pre-upgrade-check")
 
 
-@pytest.mark.group(1)
 # TODO: remove after next incompatible MySQL server version released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
 @markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_upgrade_to_failling(
     ops_test: OpsTest,
+    charm,
     continuous_writes,
 ) -> None:
     logger.info("Ensure continuous_writes")
@@ -113,7 +110,7 @@ async def test_upgrade_to_failling(
         replace_str="raise Exception",
     ):
         logger.info("Build charm with failure injected")
-        new_charm = await charm_local_build(ops_test, refresh=True)
+        new_charm = await charm_local_build(ops_test, charm, refresh=True)
 
     logger.info("Refresh the charm")
     await application.refresh(path=new_charm)
@@ -139,12 +136,11 @@ async def test_upgrade_to_failling(
     )
 
 
-@pytest.mark.group(1)
 # TODO: remove after next incompatible MySQL server version released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
 @markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_rollback(ops_test, continuous_writes) -> None:
+async def test_rollback(ops_test, charm, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
     snap_revisions = pathlib.Path("snap_revisions.json")
@@ -155,7 +151,7 @@ async def test_rollback(ops_test, continuous_writes) -> None:
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    charm = await charm_local_build(ops_test, refresh=True)
+    charm = await charm_local_build(ops_test, charm, refresh=True)
 
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
@@ -208,7 +204,7 @@ class InjectFailure(object):
             file.write(self.original_content)
 
 
-async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
+async def charm_local_build(ops_test: OpsTest, charm, refresh: bool = False):
     """Wrapper for a local charm build zip file updating."""
     local_charms = pathlib.Path().glob("local-*.charm")
     for lc in local_charms:
@@ -216,22 +212,16 @@ async def charm_local_build(ops_test: OpsTest, refresh: bool = False):
         # pytest_operator_cache globbing them
         lc.unlink()
 
-    charm = await ops_test.build_charm(".")
+    update_files = ["snap_revisions.json", "src/upgrade.py"]
 
-    if os.environ.get("CI") == "true":
-        # CI will get charm from common cache
-        # make local copy and update charm zip
+    charm = pathlib.Path(shutil.copy(charm, f"local-{pathlib.Path(charm).stem}.charm"))
 
-        update_files = ["snap_revisions.json", "src/upgrade.py"]
+    for path in update_files:
+        with open(path, "r") as f:
+            content = f.read()
 
-        charm = pathlib.Path(shutil.copy(charm, f"local-{charm.stem}.charm"))
-
-        for path in update_files:
-            with open(path, "r") as f:
-                content = f.read()
-
-            with ZipFile(charm, mode="a") as charm_zip:
-                charm_zip.writestr(path, content)
+        with ZipFile(charm, mode="a") as charm_zip:
+            charm_zip.writestr(path, content)
 
     if refresh:
         # when refreshing, return posix path

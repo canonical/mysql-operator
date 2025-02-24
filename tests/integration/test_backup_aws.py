@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 import uuid
 from pathlib import Path
 
@@ -46,11 +47,11 @@ backup_id, value_before_backup, value_after_backup = "", None, None
 
 
 @pytest.fixture(scope="session")
-def cloud_credentials(github_secrets) -> dict[str, str]:
+def cloud_credentials() -> dict[str, str]:
     """Read cloud credentials."""
     return {
-        "access-key": github_secrets["AWS_ACCESS_KEY"],
-        "secret-key": github_secrets["AWS_SECRET_KEY"],
+        "access-key": os.environ["AWS_ACCESS_KEY"],
+        "secret-key": os.environ["AWS_SECRET_KEY"],
     }
 
 
@@ -86,10 +87,9 @@ def clean_backups_from_buckets(cloud_configs, cloud_credentials):
         bucket_object.delete()
 
 
-@pytest.mark.group(1)
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, charm)
 
     primary_mysql = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
@@ -116,11 +116,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
+async def test_backup(ops_test: OpsTest, charm, cloud_configs, cloud_credentials) -> None:
     """Test to create a backup and list backups."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, charm)
 
     global backup_id, value_before_backup, value_after_backup
 
@@ -189,13 +188,12 @@ async def test_backup(ops_test: OpsTest, cloud_configs, cloud_credentials) -> No
     )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restore_on_same_cluster(
-    ops_test: OpsTest, cloud_configs, cloud_credentials
+    ops_test: OpsTest, charm, cloud_configs, cloud_credentials
 ) -> None:
     """Test to restore a backup to the same mysql cluster."""
-    mysql_application_name = await deploy_and_scale_mysql(ops_test)
+    mysql_application_name = await deploy_and_scale_mysql(ops_test, charm)
 
     logger.info("Scaling mysql application to 1 unit")
     async with ops_test.fast_forward():
@@ -296,14 +294,16 @@ async def test_restore_on_same_cluster(
     await scale_application(ops_test, mysql_application_name, 0)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_restore_on_new_cluster(ops_test: OpsTest, cloud_configs, cloud_credentials) -> None:
+async def test_restore_on_new_cluster(
+    ops_test: OpsTest, charm, cloud_configs, cloud_credentials
+) -> None:
     """Test to restore a backup on a new mysql cluster."""
     logger.info("Deploying a new mysql cluster")
 
     new_mysql_application_name = await deploy_and_scale_mysql(
         ops_test,
+        charm,
         check_for_existing_application=False,
         mysql_application_name="another-mysql",
         num_units=1,

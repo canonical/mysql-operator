@@ -33,13 +33,10 @@ TEST_DATABASE = "continuous_writes_database"
 TIMEOUT = 15 * 60
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    db_charm = await ops_test.build_charm(".")
-
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
     logger.info(
@@ -48,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     await asyncio.gather(
         ops_test.model.deploy(
-            db_charm,
+            charm,
             application_name=DATABASE_APP_NAME,
             config=config,
             num_units=3,
@@ -99,7 +96,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 1
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_creation(ops_test: OpsTest):
     """Relate charms and wait for the expected changes in status."""
@@ -131,7 +127,6 @@ async def test_relation_creation(ops_test: OpsTest):
         )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_relation_broken(ops_test: OpsTest):
     """Remove relation and wait for the expected changes in status."""
