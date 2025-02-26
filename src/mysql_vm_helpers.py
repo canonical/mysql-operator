@@ -353,12 +353,6 @@ class MySQL(MySQLBase):
                 mode="w",
                 encoding="utf-8",
             ) as _sql_file:
-                _sql_file.write(
-                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
-                    "FLUSH PRIVILEGES;"
-                )
-                _sql_file.flush()
-
                 try:
                     subprocess.check_output([
                         "sudo",
@@ -370,6 +364,12 @@ class MySQL(MySQLBase):
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for temp SQL file"
                     )
+
+                _sql_file.write(
+                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
+                    "FLUSH PRIVILEGES;"
+                )
+                _sql_file.flush()
 
                 _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
                 _custom_config_file.flush()
