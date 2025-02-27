@@ -56,6 +56,7 @@ from ops import (
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
+    RelationDepartedEvent,
     StartEvent,
     Unit,
     WaitingStatus,
@@ -165,6 +166,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         )
 
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
 
         self.mysql_config = MySQLConfig(MYSQLD_CUSTOM_CONFIG_FILE)
         self.shared_db_relation = SharedDBRelation(self)
@@ -382,6 +384,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
+        if not self._mysql.reconcile_binlogs_collection(force_restart=True):
+            logger.error("Failed to reconcile binlogs collection during peer relation event")
+
+    def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
+        if not self._mysql.reconcile_binlogs_collection(force_restart=True):
+            logger.error("Failed to reconcile binlogs collection during peer departed event")
+
     def _on_database_storage_detaching(self, _) -> None:
         """Handle the database storage detaching event."""
         # Only executes if the unit was initialised
@@ -563,6 +572,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 self.unit.status = MaintenanceStatus("Unable to find cluster primary")
                 return
 
+            if "s3-block-message" in self.app_peer_data:
+                self.app.status = BlockedStatus(self.app_peer_data["s3-block-message"])
+                return
+
             # Set active status when primary is known
             self.app.status = ActiveStatus()
 
@@ -699,6 +712,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log"])
+        self._mysql.install_plugins(["binlog_utils_udf"])
 
         current_mysqld_pid = self._mysql.get_pid_of_port_3306()
         self._mysql.configure_instance()
