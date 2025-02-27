@@ -999,6 +999,7 @@ class MySQLBase(ABC):
             "log_error": f"{snap_common}/var/log/mysql/error.log",
             "general_log": "OFF",
             "general_log_file": f"{snap_common}/var/log/mysql/general.log",
+            "loose-group_replication_paxos_single_leader": "ON",
             "slow_query_log_file": f"{snap_common}/var/log/mysql/slow.log",
             "binlog_expire_logs_seconds": f"{binlog_retention_seconds}",
             "loose-audit_log_policy": audit_log_policy.upper(),
