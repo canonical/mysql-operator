@@ -1,0 +1,19 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:102 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:479 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=8 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=47 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=47 on unit mysql/2
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=67 on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:194 Injecting failure
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:112 Build charm with failure injected
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:202 Reverting failure
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:115 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:118 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:123 Get first upgrading unit
+[32mINFO    [0m integration.high_availability.test_upgrade_rollback_incompat:test_upgrade_rollback_incompat.py:132 Wait for upgrade to fail on upgrading unit
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
