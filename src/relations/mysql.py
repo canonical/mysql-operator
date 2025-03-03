@@ -166,7 +166,7 @@ class MySQLRelation(Object):
             return
 
         # wait until the unit is initialized
-        if not self.charm.unit_initialized:
+        if not self.charm.unit_initialized():
             event.defer()
             return
 

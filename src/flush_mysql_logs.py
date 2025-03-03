@@ -44,7 +44,7 @@ class MySQLLogs(Object):
         """Flush the specified (via LOGS_TYPE env var) mysql logs."""
         if (
             self.charm.peers is None
-            or not self.charm.unit_initialized
+            or not self.charm.unit_initialized()
             or not self.charm.upgrade.idle
             or not self.charm._mysql.is_mysqld_running()
         ):
