@@ -1,0 +1,77 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:82 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:85 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:91 Wait for upgrade to complete
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: stopping services..
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: recovering unit after upgrade
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: upgrading snap...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: recovering unit after upgrade
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] maintenance: upgrade completed
+  mysql/1 [executing] maintenance: stopping services..
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] maintenance: upgrade completed
+  mysql/1 [executing] maintenance: starting services...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: Primary
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:96 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:479 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28029 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28029 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28029 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28747 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28754 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=28759 on unit mysql/2
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.3    unsupported  01:41:16Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.41-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   73  no       Last written value=28623
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   0        10.38.58.8                      Last written value=28623
+mysql/0            active    idle   1        10.38.58.82     3306,33060/tcp  
+mysql/1*           active    idle   2        10.38.58.116    3306,33060/tcp  
+mysql/2            active    idle   3        10.38.58.238    3306,33060/tcp  Primary
+
+Machine  State    Address       Inst id        Base          AZ  Message
+0        started  10.38.58.8    juju-e7f7a9-0  ubuntu@22.04      Running
+1        started  10.38.58.82   juju-e7f7a9-1  ubuntu@22.04      Running
+2        started  10.38.58.116  juju-e7f7a9-2  ubuntu@22.04      Running
+3        started  10.38.58.238  juju-e7f7a9-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-2: 01:30:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:30:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:30:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:32:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:32:37 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:32:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:32:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:32:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:32:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
