@@ -1,0 +1,50 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:89 Refresh the charm back to stable channel
+[32mINFO    [0m integration.high_availability.test_upgrade_skip_pre_upgrade_check:test_upgrade_skip_pre_upgrade_check.py:96 Wait (120s) for rolling restart OR continue to writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:479 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6067 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6069 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6071 on unit mysql/2
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.3    unsupported  01:40:06Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.39-0ubun...  active      3  mysql           8.0/stable   313  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   73  no       Last written value=2685
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   0        10.226.19.172                   Last written value=2685
+mysql/0            active    idle   1        10.226.19.10                    
+mysql/1            active    idle   2        10.226.19.217   3306,33060/tcp  
+mysql/2*           active    idle   3        10.226.19.113   3306,33060/tcp  Primary
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.226.19.172  juju-55f391-0  ubuntu@22.04      Running
+1        started  10.226.19.10   juju-55f391-1  ubuntu@22.04      Running
+2        started  10.226.19.217  juju-55f391-2  ubuntu@22.04      Running
+3        started  10.226.19.113  juju-55f391-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:30:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:30:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:32:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:32:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:32:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:32:45 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:32:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:32:50 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:36:06 ERROR unit.mysql/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-1: 01:36:06 ERROR unit.mysql/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-2: 01:36:06 ERROR unit.mysql/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-1: 01:38:15 ERROR unit.mysql/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-2: 01:38:15 ERROR unit.mysql/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-mysql-0: 01:38:15 ERROR unit.mysql/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
