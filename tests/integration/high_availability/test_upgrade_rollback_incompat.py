@@ -174,9 +174,11 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
 
     logger.info("Ensure rollback has taken place")
-    message = "Downgrade is incompatible. Resetting workload"
+    downgrade_incompatible_message = "Downgrade is incompatible. Resetting workload"
+    refresh_unnecessary_message = "Refresh of snap charmed-mysql was unnecessary"
     warnings = await get_model_logs(ops_test, log_level="WARNING", log_lines=1000)
-    assert message in warnings
+    infos = await get_model_logs(ops_test, log_level="INFO", log_lines=1000)
+    assert downgrade_incompatible_message in warnings or refresh_unnecessary_message in infos
 
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
