@@ -175,7 +175,7 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
 
     logger.info("Ensure rollback has taken place")
     message = "Downgrade is incompatible. Resetting workload"
-    warnings = await get_model_logs(ops_test, log_level="WARNING")
+    warnings = await get_model_logs(ops_test, log_level="WARNING", log_lines=1000)
     assert message in warnings
 
     logger.info("Ensure continuous_writes after rollback procedure")
