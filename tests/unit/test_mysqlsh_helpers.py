@@ -542,13 +542,15 @@ class TestMySQL(unittest.TestCase):
         self.mysql.install_and_configure_mysql_dependencies()
 
         _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
-        self.assertEqual(
-            _run.mock_calls,
-            [
-                call(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True),
-                call(["snap", "alias", "charmed-mysql.mysqlbinlog", "mysqlbinlog"], check=True),
-            ],
-        )
+
+        assert _mysql_snap.alias.call_count == 7
+        _mysql_snap.alias.assert_any_call("mysql")
+        _mysql_snap.alias.assert_any_call("mysqlrouter")
+        _mysql_snap.alias.assert_any_call("mysqlsh")
+        _mysql_snap.alias.assert_any_call("xbcloud")
+        _mysql_snap.alias.assert_any_call("xbstream")
+        _mysql_snap.alias.assert_any_call("xtrabackup")
+        _mysql_snap.alias.assert_any_call("mysqlbinlog")
 
     def test_get_available_memory(self):
         meminfo = (

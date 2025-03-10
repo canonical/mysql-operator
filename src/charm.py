@@ -226,14 +226,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.unit.reboot(now=True)
 
         if self.install_workload():
-            cache = snap.SnapCache()
-            mysql_snap = cache[CHARMED_MYSQL_SNAP_NAME]
-            mysql_snap.alias("mysql")
-            mysql_snap.alias("mysqlrouter")
-            mysql_snap.alias("mysqlsh")
-            mysql_snap.alias("xbcloud")
-            mysql_snap.alias("xbstream")
-            mysql_snap.alias("xtrabackup")
             self.unit.status = WaitingStatus("Waiting to start MySQL")
         else:
             self.unit.status = BlockedStatus("Failed to install and configure MySQL")

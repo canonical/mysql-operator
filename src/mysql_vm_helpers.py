@@ -179,7 +179,7 @@ class MySQL(MySQLBase):
             # install the charmed-mysql snap
             with pathlib.Path("snap_revisions.json").open("r") as file:
                 revision = json.load(file)[platform.machine()]
-            logger.debug(f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {revision}")
+            logger.info(f"Installing {CHARMED_MYSQL_SNAP_NAME} {revision=}")
             charmed_mysql.ensure(snap.SnapState.Present, revision=revision)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
@@ -198,10 +198,24 @@ class MySQL(MySQLBase):
                 logger.debug("Updating charmed-mysql common directory ownership")
                 os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
-            subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
-            subprocess.run(
-                ["snap", "alias", "charmed-mysql.mysqlbinlog", "mysqlbinlog"], check=True
-            )
+            for alias in [
+                "mysql",
+                "mysqlrouter",
+                "mysqlsh",
+                "xbcloud",
+                "xbstream",
+                "mysqlbinlog",
+                "xtrabackup",
+            ]:
+                try:
+                    # TODO: remove try-except once there is a newer incompatible version bump
+                    charmed_mysql.alias(alias)
+                except snap.SnapError:
+                    # CI test uses old snap rev (69) without mysqlbinlog
+                    if alias == "mysqlbinlog":
+                        continue
+                    else:
+                        raise
 
             installed_by_mysql_server_file.touch(exist_ok=True)
         except snap.SnapError:
