@@ -929,7 +929,11 @@ class MySQL(MySQLBase):
         if not selected_snap.present:
             raise SnapServiceOperationError(f"Snap {CHARMED_MYSQL_SNAP_NAME} not installed")
 
-        is_enabled = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["enabled"]
+        try:
+            # TODO: remove try-except once there is a newer incompatible version bump
+            is_enabled = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["enabled"]
+        except KeyError:
+            return False
         is_active = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["active"]
         supposed_to_run = (
             self.charm.unit.is_leader() and "binlogs-collecting" in self.charm.app_peer_data
