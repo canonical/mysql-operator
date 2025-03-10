@@ -1,9 +1,9 @@
 # Audit Logs
 
-The Audit Log plugin allows all login/logout records to be stored in a log file. It is enabled in Charmed MySQL by default.
+The Audit Log plugin allows fine grained configuration for all login/logout, queries or both records to be stored in a log file. It is enabled in Charmed MySQL by default.
 
 ## Overview
-The following is a sample of the audit logs, with format json with login/logout records:
+The following is a sample of the audit logs, with format json with only logins records (default configuration):
 
 ```json
 {"audit_record":{"name":"Quit","record":"6_2024-09-03T01:53:14","timestamp":"2024-09-03T01:53:33Z","connection_id":"992","status":0,"user":"clusteradmin","priv_user":"clusteradmin","os_login":"","proxy_user":"","host":"localhost","ip":"","db":""}}
@@ -23,6 +23,13 @@ It's recommended to integrate the charm with [COS](/t/9900), from where the logs
     juju config mysql plugin-audit-enabled=false
     ```
     Valid value are `false` and `true`. By setting it to false, existing logs are still kept in the `archive_audit` directory.
+
+1. `logs_audit_policy` - Audit log policy:
+
+    ```bash
+    juju config mysql logs_audit_policy=queries
+    ```
+    Valid values are: "all", "logins" (default), "queries"
 
 1. `plugin-audit-strategy` - By default the audit plugin writes logs in asynchronous mode for better performance.
     To ensure logs are written to disk on more timely fashion, this configuration can be set to semi-synchronous mode:

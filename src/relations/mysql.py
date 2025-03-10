@@ -108,7 +108,12 @@ class MySQLRelation(Object):
                     relation_databag[self.charm.unit][key] = value
 
             # Assign the cluster primary's address as the database host
-            primary_address = self.charm._mysql.get_cluster_primary_address()
+            try:
+                primary_address = self.charm._mysql.get_cluster_primary_address()
+            except MySQLGetClusterPrimaryAddressError:
+                logger.debug("First leader elected run, bailing out.")
+                return
+
             if not primary_address:
                 self.charm.unit.status = BlockedStatus(
                     "Failed to retrieve cluster primary address"
