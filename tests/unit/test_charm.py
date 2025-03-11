@@ -248,9 +248,7 @@ class TestCharm(unittest.TestCase):
         "charm.MySQLOperatorCharm.cluster_initialized",
         new_callable=PropertyMock(return_value=True),
     )
-    @patch(
-        "charm.MySQLOperatorCharm.unit_initialized", new_callable=PropertyMock(return_value=True)
-    )
+    @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.get_member_state")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
@@ -258,9 +256,15 @@ class TestCharm(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
     @patch("python_hosts.Hosts.write")
+    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
+    @patch(
+        "hostname_resolution.MySQLMachineHostnameResolution.update_etc_hosts", return_value=True
+    )
     def test_on_update(
         self,
         _,
+        __,
+        ___,
         _snap_service_operation,
         _reboot_from_complete_outage,
         _is_volume_mounted,
@@ -308,13 +312,14 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_called_once()
-        _snap_service_operation.assert_not_called()
+        _snap_service_operation.assert_called()
         _get_cluster_primary_address.assert_called_once()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
         # test instance state = unreachable
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
+        _snap_service_operation.reset_mock()
 
         _reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
@@ -324,6 +329,6 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()
-        _get_cluster_primary_address.assert_called_once()
+        _get_cluster_primary_address.assert_not_called()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))

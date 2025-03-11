@@ -15,8 +15,8 @@ from pytest_operator.plugin import OpsTest
 from .. import juju_, markers
 from ..helpers import (
     get_leader_unit,
-    get_model_logs,
     get_relation_data,
+    get_status_log,
     get_unit_by_index,
 )
 from .high_availability_helpers import (
@@ -143,6 +143,14 @@ async def test_upgrade_to_failling(
 async def test_rollback(ops_test, charm, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
+    relation_data = await get_relation_data(ops_test, MYSQL_APP_NAME, "upgrade")
+    upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
+    upgrading_unit = get_unit_by_index(
+        MYSQL_APP_NAME, application.units, ast.literal_eval(upgrade_stack)[-1]
+    )
+    assert upgrading_unit is not None, "No upgrading unit found"
+    assert upgrading_unit.workload_status == "blocked", "Upgrading unit's status is not blocked"
+
     snap_revisions = pathlib.Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
@@ -174,9 +182,24 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
 
     logger.info("Ensure rollback has taken place")
-    message = "Downgrade is incompatible. Resetting workload"
-    warnings = await get_model_logs(ops_test, log_level="WARNING")
-    assert message in warnings
+
+    status_logs = await get_status_log(ops_test, upgrading_unit.name, 100)
+
+    upgrade_failed_index = -1
+    for index, status_log in enumerate(status_logs):
+        if "upgrade failed. Check logs for rollback instruction" in status_log:
+            upgrade_failed_index = index
+            break
+    assert upgrade_failed_index > -1, "Upgrade failed status log not found"
+
+    post_upgrade_failed_status_logs = status_logs[upgrade_failed_index:]
+
+    upgrade_complete_index = -1
+    for index, status_log in enumerate(post_upgrade_failed_status_logs):
+        if "upgrade completed" in status_log:
+            upgrade_complete_index = index
+            break
+    assert upgrade_complete_index > -1, "Upgrade completed status log not found for rollback"
 
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)

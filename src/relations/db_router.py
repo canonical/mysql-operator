@@ -171,7 +171,7 @@ class DBRouterRelation(Object):
             # Bypass run if no relation
             return
 
-        if not self.charm.unit_initialized:
+        if not self.charm.unit_initialized():
             # Defer run if the unit has not been initialized
             event.defer()
             return
@@ -206,7 +206,7 @@ class DBRouterRelation(Object):
             return
 
         # wait until the unit is initialized
-        if not self.charm.unit_initialized:
+        if not self.charm.unit_initialized():
             event.defer()
             return
 
