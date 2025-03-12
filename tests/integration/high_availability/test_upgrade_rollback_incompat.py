@@ -15,8 +15,8 @@ from pytest_operator.plugin import OpsTest
 from .. import juju_, markers
 from ..helpers import (
     get_leader_unit,
-    get_model_logs,
     get_relation_data,
+    get_status_log,
     get_unit_by_index,
 )
 from .high_availability_helpers import (
@@ -45,14 +45,14 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    charm = await charm_local_build(ops_test, charm)
+    local_charm = await charm_local_build(ops_test, charm)
 
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
 
     async with ops_test.fast_forward("30s"):
         await ops_test.model.deploy(
-            charm,
+            local_charm,
             application_name=MYSQL_APP_NAME,
             num_units=3,
             base="ubuntu@22.04",
@@ -143,6 +143,14 @@ async def test_upgrade_to_failling(
 async def test_rollback(ops_test, charm, continuous_writes) -> None:
     application = ops_test.model.applications[MYSQL_APP_NAME]
 
+    relation_data = await get_relation_data(ops_test, MYSQL_APP_NAME, "upgrade")
+    upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
+    upgrading_unit = get_unit_by_index(
+        MYSQL_APP_NAME, application.units, ast.literal_eval(upgrade_stack)[-1]
+    )
+    assert upgrading_unit is not None, "No upgrading unit found"
+    assert upgrading_unit.workload_status == "blocked", "Upgrading unit's status is not blocked"
+
     snap_revisions = pathlib.Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
@@ -151,7 +159,7 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    charm = await charm_local_build(ops_test, charm, refresh=True)
+    local_charm = await charm_local_build(ops_test, charm, refresh=True)
 
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
@@ -164,7 +172,7 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
 
     sleep(20)
     logger.info("Refresh with previous charm")
-    await application.refresh(path=charm)
+    await application.refresh(path=local_charm)
 
     logger.info("Wait for upgrade to start")
     await ops_test.model.block_until(
@@ -174,9 +182,24 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
 
     logger.info("Ensure rollback has taken place")
-    message = "Downgrade is incompatible. Resetting workload"
-    warnings = await get_model_logs(ops_test, log_level="WARNING", log_lines=300)
-    assert message in warnings
+
+    status_logs = await get_status_log(ops_test, upgrading_unit.name, 100)
+
+    upgrade_failed_index = -1
+    for index, status_log in enumerate(status_logs):
+        if "upgrade failed. Check logs for rollback instruction" in status_log:
+            upgrade_failed_index = index
+            break
+    assert upgrade_failed_index > -1, "Upgrade failed status log not found"
+
+    post_upgrade_failed_status_logs = status_logs[upgrade_failed_index:]
+
+    upgrade_complete_index = -1
+    for index, status_log in enumerate(post_upgrade_failed_status_logs):
+        if "upgrade completed" in status_log:
+            upgrade_complete_index = index
+            break
+    assert upgrade_complete_index > -1, "Upgrade completed status log not found for rollback"
 
     logger.info("Ensure continuous_writes after rollback procedure")
     await ensure_all_units_continuous_writes_incrementing(ops_test)
@@ -214,17 +237,18 @@ async def charm_local_build(ops_test: OpsTest, charm, refresh: bool = False):
 
     update_files = ["snap_revisions.json", "src/upgrade.py"]
 
-    charm = pathlib.Path(shutil.copy(charm, f"local-{pathlib.Path(charm).stem}.charm"))
+    # create a copy of the charm to avoid modifying the original
+    local_charm = pathlib.Path(shutil.copy(charm, f"local-{pathlib.Path(charm).stem}.charm"))
 
     for path in update_files:
         with open(path, "r") as f:
             content = f.read()
 
-        with ZipFile(charm, mode="a") as charm_zip:
+        with ZipFile(local_charm, mode="a") as charm_zip:
             charm_zip.writestr(path, content)
 
     if refresh:
         # when refreshing, return posix path
-        return charm
+        return local_charm
     # when deploying, return prefixed full path
-    return f"local:{charm.resolve()}"
+    return f"local:{local_charm.resolve()}"

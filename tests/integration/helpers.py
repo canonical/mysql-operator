@@ -976,3 +976,22 @@ def get_unit_by_index(app_name: str, units: list, index: int):
     for unit in units:
         if unit.name == f"{app_name}/{index}":
             return unit
+
+
+async def get_status_log(
+    ops_test: OpsTest, unit_name: str, num_logs: Optional[int] = None
+) -> list:
+    """Get the status log for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to retrieve the status log for
+        num_logs: (optional) The number of status logs to retrieve
+    """
+    command = ["show-status-log", unit_name]
+    if num_logs:
+        command.extend(["-n", num_logs])
+
+    return_code, output, _ = await ops_test.juju(*command)
+    assert return_code == 0
+    return output.split("\n")[1:]
