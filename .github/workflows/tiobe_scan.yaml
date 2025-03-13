@@ -37,6 +37,9 @@ jobs:
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
 
+      - name: Add unit venv to PATH
+        run: echo "${GITHUB_WORKSPACE}/.tox/unit/bin" >> "${GITHUB_PATH}"
+
       - name: Move results to necessary folder for TICS
         run: |
           mkdir -p .cover
