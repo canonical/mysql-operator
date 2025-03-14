@@ -3206,11 +3206,8 @@ class MySQLBase(ABC):
             user: the user with which to execute the commands.
             group: the group with which to execute the commands.
         """
-        bucket_url = (
-            f"{s3_parameters['bucket']}/{s3_parameters['path']}binlogs"
-            if s3_parameters["path"][-1] == "/"
-            else f"{s3_parameters['bucket']}/{s3_parameters['path']}/binlogs"
-        )
+        binlogs_path = s3_parameters["path"].rstrip("/")
+        bucket_url = f"{s3_parameters['bucket']}/{binlogs_path}/binlogs"
 
         try:
             return self._execute_commands(

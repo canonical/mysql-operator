@@ -837,9 +837,9 @@ class MySQLBackups(Object):
             )
 
     def get_binlogs_collector_config(self) -> Dict[str, str]:
-        """Update binlogs collector service config file.
+        """Return binlogs collector service config file.
 
-        Returns: whether this operation was successful.
+        Returns: dict of binlogs collector service config
         """
         if not self._s3_integrator_relation_exists:
             logger.error(
@@ -855,11 +855,8 @@ class MySQLBackups(Object):
             )
             return {}
 
-        bucket_url = (
-            f"{s3_parameters['bucket']}/{s3_parameters['path']}binlogs"
-            if not s3_parameters["path"] or s3_parameters["path"][-1] == "/"
-            else f"{s3_parameters['bucket']}/{s3_parameters['path']}/binlogs"
-        )
+        binlogs_path = s3_parameters["path"].rstrip("/")
+        bucket_url = f"{s3_parameters['bucket']}/{binlogs_path}/binlogs"
 
         return {
             "ENDPOINT": _construct_endpoint(s3_parameters),
