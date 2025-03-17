@@ -871,11 +871,13 @@ class MySQLBackups(Object):
         }
 
     def _is_mysql_timestamp(self, timestamp: str) -> bool:
-        # Format is the same as in the mysql-pitr-helper project.
+        """Validate the provided timestamp string."""
         if not re.match(
             r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$",
             timestamp,
         ):
+            # regex validation necessary to enforce format is valid both here
+            # and for the go `mysql-pitr-helper` binary
             return False
         try:
             self._parse_mysql_timestamp(timestamp)
