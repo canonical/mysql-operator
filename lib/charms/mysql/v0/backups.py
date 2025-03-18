@@ -878,6 +878,7 @@ class MySQLBackups(Object):
         ):
             # regex validation necessary to enforce format is valid both here
             # and for the go `mysql-pitr-helper` binary
+            # https://github.com/canonical/mysql-pitr-helper/blob/ed858df5c145b003c9d24223d44b6ea9c7d67888/recoverer/recoverer.go#L194
             return False
         try:
             self._parse_mysql_timestamp(timestamp)
