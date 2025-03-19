@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/stable"
-TIMEOUT = 10 * 60
+TIMEOUT = 15 * 60
 CLUSTER_ADMIN_USER = "clusteradmin"
 CLUSTER_ADMIN_PASSWORD = "clusteradminpassword"
 SERVER_CONFIG_USER = "serverconfig"
