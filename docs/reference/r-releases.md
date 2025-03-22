@@ -1,4 +1,4 @@
-# Release Notes
+# Releases
 
 This page provides high-level overviews of the dependencies and features that are supported by each revision in every stable release.
 
@@ -68,13 +68,12 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 [/note]
 
 <!-- LINKS -->
-[313]: /t/15275
-[312]: /t/15275
-[306]: /t/15275
-[305]: /t/15275
-[240]: /t/14071
-[196]: /t/11883
-[151]: /t/11882
+
+[313]: https://github.com/canonical/mysql-operator/releases/tag/rev312
+[312]: https://github.com/canonical/mysql-operator/releases/tag/rev312
+[240]: https://github.com/canonical/mysql-operator/releases/tag/rev240
+[196]: https://github.com/canonical/mysql-operator/releases/tag/rev196
+[151]: https://github.com/canonical/mysql-operator/releases/tag/rev151
 
 <!--BADGES-->
 [check]: https://img.icons8.com/color/20/checkmark--v1.png

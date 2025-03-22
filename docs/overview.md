@@ -86,11 +86,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-async-removal | [Removal](/t/14174) |
 | 2 | h-contribute | [Contribute](/t/14654) |
 | 1 | reference | [Reference]() |
-| 2 | r-releases | [Release Notes](/t/11881) |
-| 3 | r-revision-312-313 | [Revision 312/313](/t/15275) |
-| 3 | r-revision-240 | [Revision 240](/t/14071) |
-| 3 | r-revision-196 | [Revision 196](/t/11883) |
-| 3 | r-revision-151 | [Revision 151](/t/11882) |
+| 2 | r-releases | [Releases](/t/11881) |
 | 2 | r-system-requirements | [System requirements](/t/11742) |
 | 2 | r-testing | [Testing](/t/11770) |
 | 2 | r-profiles | [Profiles](/t/11973) |
@@ -112,8 +108,13 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 
 [/details]
 
-<!--
+<!--Archived
 | 2 | h-development| [Development](/t/11889) |
 | 3 | h-upgrade-major | [Perform a major upgrade](/t/11746) |
 | 3 | h-rollback-major | [Perform a major rollback](/t/11747) |
+
+| 3 | r-revision-312-313 | [Revision 312/313](/t/15275) |
+| 3 | r-revision-240 | [Revision 240](/t/14071) |
+| 3 | r-revision-196 | [Revision 196](/t/11883) |
+| 3 | r-revision-151 | [Revision 151](/t/11882) |
 -->
