@@ -1,0 +1,275 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:60 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.4    unsupported  01:47:52Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+db1             8.0.41-0ubun...  active      3  mysql                          0  no       
+mysql-router    8.0.41-0ubun...  active      1  mysql-router    dpe/edge     355  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   73  no       
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+db1/0*             active    executing  0        10.218.201.216  3306,33060/tcp  Standby
+db1/1              active    executing  1        10.218.201.34   3306,33060/tcp  
+db1/2              active    executing  2        10.218.201.162  3306,33060/tcp  
+mysql-test-app/0*  active    idle       3        10.218.201.220                  
+  mysql-router/0*  error     idle                10.218.201.220                  hook failed: "backend-database-relation-changed"
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.218.201.216  juju-13ebd2-0  ubuntu@22.04      Running
+1        started  10.218.201.34   juju-13ebd2-1  ubuntu@22.04      Running
+2        started  10.218.201.162  juju-13ebd2-2  ubuntu@22.04      Running
+3        started  10.218.201.220  juju-13ebd2-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:32:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:32:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 01:32:42 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:35:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:35:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:35:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:36:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:36:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:41:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:41:20 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:41:24 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 1
+unit-mysql-router-0: 01:45:52 ERROR unit.mysql-router/0.juju-log backend-database:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 235, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3157, in _on_relation_changed_event
+    getattr(self.on, "endpoints_changed").emit(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 278, in reconcile
+    workload_ = self.get_workload(event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 167, in get_workload
+    if connection_info := self._database_requires.get_connection_info(event=event):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 120, in get_connection_info
+    return CompleteConnectionInformation(interface=self._interface, event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 87, in __init__
+    self.port = endpoint.split(":")[1]
+IndexError: list index out of range
+unit-mysql-router-0: 01:45:53 ERROR juju.worker.uniter.operation hook "backend-database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:45:59 ERROR unit.mysql-router/0.juju-log backend-database:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 235, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3157, in _on_relation_changed_event
+    getattr(self.on, "endpoints_changed").emit(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 278, in reconcile
+    workload_ = self.get_workload(event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 167, in get_workload
+    if connection_info := self._database_requires.get_connection_info(event=event):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 120, in get_connection_info
+    return CompleteConnectionInformation(interface=self._interface, event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 87, in __init__
+    self.port = endpoint.split(":")[1]
+IndexError: list index out of range
+unit-mysql-router-0: 01:46:00 ERROR juju.worker.uniter.operation hook "backend-database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:46:12 ERROR unit.mysql-router/0.juju-log backend-database:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 235, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3157, in _on_relation_changed_event
+    getattr(self.on, "endpoints_changed").emit(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 278, in reconcile
+    workload_ = self.get_workload(event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 167, in get_workload
+    if connection_info := self._database_requires.get_connection_info(event=event):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 120, in get_connection_info
+    return CompleteConnectionInformation(interface=self._interface, event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 87, in __init__
+    self.port = endpoint.split(":")[1]
+IndexError: list index out of range
+unit-mysql-router-0: 01:46:12 ERROR juju.worker.uniter.operation hook "backend-database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:46:33 ERROR unit.mysql-router/0.juju-log backend-database:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 235, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3157, in _on_relation_changed_event
+    getattr(self.on, "endpoints_changed").emit(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 278, in reconcile
+    workload_ = self.get_workload(event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 167, in get_workload
+    if connection_info := self._database_requires.get_connection_info(event=event):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 120, in get_connection_info
+    return CompleteConnectionInformation(interface=self._interface, event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 87, in __init__
+    self.port = endpoint.split(":")[1]
+IndexError: list index out of range
+unit-mysql-router-0: 01:46:33 ERROR juju.worker.uniter.operation hook "backend-database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 01:47:13 ERROR unit.mysql-router/0.juju-log backend-database:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 235, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3157, in _on_relation_changed_event
+    getattr(self.on, "endpoints_changed").emit(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 278, in reconcile
+    workload_ = self.get_workload(event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/abstract_charm.py", line 167, in get_workload
+    if connection_info := self._database_requires.get_connection_info(event=event):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 120, in get_connection_info
+    return CompleteConnectionInformation(interface=self._interface, event=event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/relations/database_requires.py", line 87, in __init__
+    self.port = endpoint.split(":")[1]
+IndexError: list index out of range
+unit-mysql-router-0: 01:47:13 ERROR juju.worker.uniter.operation hook "backend-database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-db1-0: 01:47:26 ERROR unit.db1/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-0/charm/src/mysql_vm_helpers.py", line 761, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-13ebd2-0.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\ncs = dba.get_cluster_set()\ncs.force_primary_cluster('lima')"]' returned non-zero exit status 1.
+unit-db1-0: 01:47:26 ERROR unit.db1/0.juju-log Failed to promote cluster to primary
+unit-db1-0: 01:47:26 ERROR unit.db1/0.juju-log Failed to promote cluster to primary
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-0/charm/src/mysql_vm_helpers.py", line 761, in _run_mysqlsh_script
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-13ebd2-0.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\ncs = dba.get_cluster_set()\ncs.force_primary_cluster('lima')"]' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-0/charm/lib/charms/mysql/v0/mysql.py", line 1625, in promote_cluster_to_primary
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-db1-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-db1-0/charm/src/mysql_vm_helpers.py", line 776, in _run_mysqlsh_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-0/charm/lib/charms/mysql/v0/async_replication.py", line 164, in _on_promote_to_primary
+    self._charm._mysql.promote_cluster_to_primary(cluster_name, force)
+  File "/var/lib/juju/agents/unit-db1-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-db1-0/charm/lib/charms/mysql/v0/mysql.py", line 1633, in promote_cluster_to_primary
+    raise MySQLPromoteClusterToPrimaryError
+charms.mysql.v0.mysql.MySQLPromoteClusterToPrimaryError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
