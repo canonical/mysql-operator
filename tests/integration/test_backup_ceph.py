@@ -389,7 +389,7 @@ async def test_restore_on_new_cluster(
     await rotate_credentials(
         primary_mysql, username=SERVER_CONFIG_USER, password=SERVER_CONFIG_PASSWORD
     )
-    await rotate_credentials(primary_mysql, username=ROOT_PASSWORD, password=ROOT_PASSWORD)
+    await rotate_credentials(primary_mysql, username=ROOT_USER, password=ROOT_PASSWORD)
 
     server_config_credentials = await get_server_config_credentials(primary_mysql)
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
