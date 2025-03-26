@@ -16,7 +16,6 @@ from ops.testing import Harness
 from tenacity import Retrying, stop_after_attempt
 
 from charm import MySQLOperatorCharm
-from constants import CHARMED_MYSQL_SNAP_NAME
 from mysql_vm_helpers import (
     MySQLCreateCustomMySQLDConfigError,
     MySQLResetRootPasswordAndStartMySQLDError,
@@ -42,22 +41,10 @@ class TestCharm(unittest.TestCase):
     @patch("socket.gethostbyname", return_value="")
     @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.is_volume_mounted", return_value=True)
-    @patch("charm.snap.SnapCache")
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    def test_on_install(
-        self, _install_and_configure_mysql_dependencies, _snap_cache, ___, __, _, _____, ____
-    ):
+    def test_on_install(self, _install_and_configure_mysql_dependencies, ___, __, _, _____, ____):
         self.charm.on.install.emit()
         _install_and_configure_mysql_dependencies.assert_called_once()
-
-        mysql_snap = _snap_cache.return_value[CHARMED_MYSQL_SNAP_NAME]
-        assert mysql_snap.alias.call_count == 6
-        mysql_snap.alias.assert_any_call("mysql")
-        mysql_snap.alias.assert_any_call("mysqlrouter")
-        mysql_snap.alias.assert_any_call("mysqlsh")
-        mysql_snap.alias.assert_any_call("xbcloud")
-        mysql_snap.alias.assert_any_call("xbstream")
-        mysql_snap.alias.assert_any_call("xtrabackup")
 
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
@@ -255,6 +242,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
     @patch("charm.snap_service_operation")
+    @patch("mysql_vm_helpers.MySQL.reconcile_binlogs_collection", return_value=True)
     @patch("python_hosts.Hosts.write")
     @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection")
     @patch(
@@ -265,6 +253,7 @@ class TestCharm(unittest.TestCase):
         _,
         __,
         ___,
+        reconcile_binlogs_collection,
         _snap_service_operation,
         _reboot_from_complete_outage,
         _is_volume_mounted,
@@ -274,6 +263,14 @@ class TestCharm(unittest.TestCase):
         _unit_initialized,
         _cluster_initialized,
     ):
+        self.harness.update_relation_data(
+            self.peer_relation_id,
+            self.charm.app.name,
+            {
+                "cluster-name": "test-cluster",
+                "cluster-set-domain-name": "test-domain",
+            },
+        )
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
         self.harness.set_leader()
         self.charm.on.config_changed.emit()

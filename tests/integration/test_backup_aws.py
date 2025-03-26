@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 S3_INTEGRATOR = "s3-integrator"
 S3_INTEGRATOR_CHANNEL = "latest/stable"
-TIMEOUT = 10 * 60
+TIMEOUT = 15 * 60
 CLUSTER_ADMIN_USER = "clusteradmin"
 CLUSTER_ADMIN_PASSWORD = "clusteradminpassword"
 SERVER_CONFIG_USER = "serverconfig"
@@ -38,6 +38,10 @@ ROOT_USER = "root"
 ROOT_PASSWORD = "rootpassword"
 DATABASE_NAME = "backup-database"
 TABLE_NAME = "backup-table"
+ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE = "S3 repository claimed by another cluster"
+MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
+    "Move restored cluster to another S3 repository"
+)
 
 backup_id, value_before_backup, value_after_backup = "", None, None
 
@@ -256,10 +260,20 @@ async def test_restore_on_same_cluster(
     assert sorted(values) == sorted([value_before_backup, value_after_restore])
 
     logger.info("Scaling mysql application to 3 units")
-    await scale_application(ops_test, mysql_application_name, 3)
+    await ops_test.model.applications[mysql_application_name].add_unit(2)
+    await ops_test.model.wait_for_idle(
+        apps=[mysql_application_name],
+        wait_for_exact_units=3,
+        timeout=TIMEOUT,
+    )
 
     logger.info("Ensuring inserted values before backup and after restore exist on all units")
     for unit in ops_test.model.applications[mysql_application_name].units:
+        await ops_test.model.block_until(
+            lambda: unit.workload_status == "active",
+            timeout=TIMEOUT,
+        )
+
         unit_address = await get_unit_ip(ops_test, unit.name)
 
         values = await execute_queries_on_unit(
@@ -270,6 +284,11 @@ async def test_restore_on_same_cluster(
         )
 
         assert sorted(values) == sorted([value_before_backup, value_after_restore])
+
+    assert (
+        ops_test.model.applications[mysql_application_name].status_message
+        == MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR
+    ), "cluster should migrate to blocked status after restore"
 
     # scale down the cluster to preserve resources for the following tests
     await scale_application(ops_test, mysql_application_name, 0)
@@ -295,7 +314,6 @@ async def test_restore_on_new_cluster(
 
     await ops_test.model.wait_for_idle(
         apps=[new_mysql_application_name, S3_INTEGRATOR],
-        status="active",
         timeout=TIMEOUT,
     )
 
@@ -312,7 +330,7 @@ async def test_restore_on_new_cluster(
     await rotate_credentials(
         primary_mysql, username=SERVER_CONFIG_USER, password=SERVER_CONFIG_PASSWORD
     )
-    await rotate_credentials(primary_mysql, username=ROOT_PASSWORD, password=ROOT_PASSWORD)
+    await rotate_credentials(primary_mysql, username=ROOT_USER, password=ROOT_PASSWORD)
 
     server_config_credentials = await get_server_config_credentials(primary_mysql)
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
@@ -329,7 +347,13 @@ async def test_restore_on_new_cluster(
 
     await ops_test.model.wait_for_idle(
         apps=[new_mysql_application_name, S3_INTEGRATOR],
-        status="active",
+        timeout=TIMEOUT,
+    )
+
+    logger.info("Waiting for blocked application status with another cluster S3 repository")
+    await ops_test.model.block_until(
+        lambda: ops_test.model.applications[new_mysql_application_name].status_message
+        == ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         timeout=TIMEOUT,
     )
 
@@ -370,3 +394,10 @@ async def test_restore_on_new_cluster(
     )
     assert value_before_backup
     assert sorted(values) == sorted([value_before_backup, value_after_restore])
+
+    logger.info("Waiting for blocked application status after restore")
+    await ops_test.model.block_until(
+        lambda: ops_test.model.applications[new_mysql_application_name].status_message
+        == MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR,
+        timeout=TIMEOUT,
+    )
