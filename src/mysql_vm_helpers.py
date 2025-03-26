@@ -36,6 +36,7 @@ from typing_extensions import override
 
 from constants import (
     CHARMED_MYSQL,
+    CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_DATA_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
@@ -178,7 +179,7 @@ class MySQL(MySQLBase):
             # install the charmed-mysql snap
             with pathlib.Path("snap_revisions.json").open("r") as file:
                 revision = json.load(file)[platform.machine()]
-            logger.debug(f"Installing {CHARMED_MYSQL_SNAP_NAME} revision {revision}")
+            logger.info(f"Installing {CHARMED_MYSQL_SNAP_NAME} {revision=}")
             charmed_mysql.ensure(snap.SnapState.Present, revision=revision)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
@@ -197,7 +198,24 @@ class MySQL(MySQLBase):
                 logger.debug("Updating charmed-mysql common directory ownership")
                 os.system(f"chown -R {MYSQL_SYSTEM_USER} {CHARMED_MYSQL_COMMON_DIRECTORY}")
 
-            subprocess.run(["snap", "alias", "charmed-mysql.mysql", "mysql"], check=True)
+            for alias in [
+                "mysql",
+                "mysqlrouter",
+                "mysqlsh",
+                "xbcloud",
+                "xbstream",
+                "mysqlbinlog",
+                "xtrabackup",
+            ]:
+                try:
+                    # TODO: remove try-except once there is a newer incompatible version bump
+                    charmed_mysql.alias(alias)
+                except snap.SnapError:
+                    # CI test uses old snap rev (69) without mysqlbinlog
+                    if alias == "mysqlbinlog":
+                        continue
+                    else:
+                        raise
 
             installed_by_mysql_server_file.touch(exist_ok=True)
         except snap.SnapError:
@@ -353,12 +371,6 @@ class MySQL(MySQLBase):
                 mode="w",
                 encoding="utf-8",
             ) as _sql_file:
-                _sql_file.write(
-                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
-                    "FLUSH PRIVILEGES;"
-                )
-                _sql_file.flush()
-
                 try:
                     subprocess.check_output([
                         "sudo",
@@ -370,6 +382,12 @@ class MySQL(MySQLBase):
                     raise MySQLResetRootPasswordAndStartMySQLDError(
                         "Failed to change permissions for temp SQL file"
                     )
+
+                _sql_file.write(
+                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
+                    "FLUSH PRIVILEGES;"
+                )
+                _sql_file.flush()
 
                 _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
                 _custom_config_file.flush()
@@ -410,8 +428,8 @@ class MySQL(MySQLBase):
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
 
-        if check_port and not self.check_mysqlsh_connection():
-            raise MySQLServiceNotRunningError("Connection with mysqlsh not possible")
+        if check_port and not self.check_mysqlcli_connection():
+            raise MySQLServiceNotRunningError("Connection with mysqlcli not possible")
 
         logger.debug("MySQL connection possible")
 
@@ -789,6 +807,7 @@ class MySQL(MySQLBase):
         password: Optional[str] = None,
         timeout: Optional[int] = None,
         exception_as_warning: bool = False,
+        log_errors: bool = True,
     ) -> list:
         """Execute a MySQL script.
 
@@ -804,6 +823,7 @@ class MySQL(MySQLBase):
             password: (optional) password to invoke the mysql cli script with
             timeout: (optional) time before the query should timeout
             exception_as_warning: (optional) whether the exception should be treated as warning
+            log_errors: (optional) whether errors in the output should be logged
         """
         command = [
             CHARMED_MYSQL,
@@ -830,7 +850,8 @@ class MySQL(MySQLBase):
                 if len(stdout) > 1 and "ERROR" in stdout[1]:
                     # some errors will not bubble up from spawned process
                     # but are reported in the stdout
-                    logger.error(stdout[1].strip())
+                    if log_errors:
+                        logger.error(stdout[1].strip())
                     raise MySQLClientError
 
                 # index 0 contains empty \r\n
@@ -892,6 +913,69 @@ class MySQL(MySQLBase):
     def _file_exists(self, path: str) -> bool:
         """Check if file exists."""
         return os.path.exists(path)
+
+    def reconcile_binlogs_collection(
+        self, force_restart: bool = False, ignore_inactive_error: bool = False
+    ) -> bool:
+        """Start or stop binlogs collecting service.
+
+        Based on the "binlogs-collecting" app peer data value and unit leadership.
+
+        Args:
+            force_restart: whether to restart service even if it's already running.
+            ignore_inactive_error: whether to not log an error when the service should be enabled but not active right now.
+
+        Returns: whether the operation was successful.
+        """
+        cache = snap.SnapCache()
+        selected_snap = cache[CHARMED_MYSQL_SNAP_NAME]
+        if not selected_snap.present:
+            raise SnapServiceOperationError(f"Snap {CHARMED_MYSQL_SNAP_NAME} not installed")
+
+        try:
+            # TODO: remove try-except once there is a newer incompatible version bump
+            is_enabled = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["enabled"]
+        except KeyError:
+            return False
+        is_active = selected_snap.services[CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE]["active"]
+        supposed_to_run = (
+            self.charm.unit.is_leader() and "binlogs-collecting" in self.charm.app_peer_data
+        )
+
+        if supposed_to_run:
+            selected_snap.set({
+                f"mysql-pitr-helper-collector.{k.lower().replace('_', '-')}": v
+                for k, v in self.charm.backups.get_binlogs_collector_config().items()
+            })
+        else:
+            selected_snap.unset("mysql-pitr-helper-collector")
+
+        if supposed_to_run and is_enabled and not is_active and not ignore_inactive_error:
+            logger.error("Binlogs collector is enabled but not running")
+            if force_restart:
+                logger.error("Binlogs collector will be restarted due to force_restart option")
+            else:
+                logger.error("Restarting binlogs collector to reanimate unhealthy service")
+
+        if supposed_to_run and is_enabled and not is_active and not force_restart:
+            selected_snap.restart([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE])
+
+        if is_enabled and (force_restart or not supposed_to_run):
+            logger.debug("Disabling binlogs collector")
+            selected_snap.stop([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], disable=True)
+
+        if supposed_to_run and (force_restart or not is_enabled):
+            logger.debug("Enabling binlogs collector")
+            selected_snap.start([CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE], enable=True)
+
+        return True
+
+    def get_cluster_members(self) -> list[str]:
+        """Get cluster members in MySQL MEMBER_HOST format.
+
+        Returns: list of cluster members in MySQL MEMBER_HOST format.
+        """
+        return [host.names[1] for host in self.charm.hostname_resolution._get_host_details()]
 
     @staticmethod
     def write_content_to_file(

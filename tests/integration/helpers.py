@@ -208,6 +208,7 @@ async def execute_queries_on_unit(
     password: str,
     queries: List[str],
     commit: bool = False,
+    raw: bool = False,
 ) -> List:
     """Execute given MySQL queries on a unit.
 
@@ -217,6 +218,7 @@ async def execute_queries_on_unit(
         password: The MySQL password
         queries: A list of queries to execute
         commit: A keyword arg indicating whether there are any writes queries
+        raw: Whether MySQL results are returned as is, rather than converted to Python types.
 
     Returns:
         A list of rows that were potentially queried
@@ -226,6 +228,7 @@ async def execute_queries_on_unit(
         "password": password,
         "host": unit_address,
         "raise_on_warnings": False,
+        "raw": raw,
     }
 
     with MysqlConnector(config, commit) as cursor:
@@ -328,7 +331,7 @@ async def get_model_logs(ops_test: OpsTest, log_level: str, log_lines: int = 100
         "debug-log",
         f"--model={ops_test.model.info.name}",
         f"--level={log_level}",
-        f"--lines={log_lines}",
+        f"--limit={log_lines}",
         "--no-tail",
     )
 
@@ -973,3 +976,22 @@ def get_unit_by_index(app_name: str, units: list, index: int):
     for unit in units:
         if unit.name == f"{app_name}/{index}":
             return unit
+
+
+async def get_status_log(
+    ops_test: OpsTest, unit_name: str, num_logs: Optional[int] = None
+) -> list:
+    """Get the status log for a unit.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit_name: The name of the unit to retrieve the status log for
+        num_logs: (optional) The number of status logs to retrieve
+    """
+    command = ["show-status-log", unit_name]
+    if num_logs:
+        command.extend(["-n", num_logs])
+
+    return_code, output, _ = await ops_test.juju(*command)
+    assert return_code == 0
+    return output.split("\n")[1:]

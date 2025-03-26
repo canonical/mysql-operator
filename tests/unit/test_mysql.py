@@ -13,6 +13,7 @@ from charms.mysql.v0.mysql import (
     MySQLBase,
     MySQLCheckUserExistenceError,
     MySQLClientError,
+    MySQLClusterMetadataExistsError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
@@ -1118,22 +1119,24 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_cluster_metadata_exists(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):
         """Test cluster_metadata_exists method."""
+        query = (
+            "SELECT cluster_name "
+            "FROM mysql_innodb_cluster_metadata.clusters "
+            "WHERE EXISTS ("
+            "SELECT * "
+            "FROM information_schema.schemata "
+            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
+            ")"
+        )
         commands = "\n".join((
-            "result = session.run_sql(\"SHOW DATABASES LIKE 'mysql_innodb_cluster_metadata'\")",
-            "content = result.fetch_all()",
-            "if content:",
-            (
-                '  result = session.run_sql("SELECT cluster_name FROM mysql_innodb_cluster_metadata'
-                f".clusters where cluster_name = '{self.mysql.cluster_name}';\")"
-            ),
-            "  print(bool(result.fetch_one()))",
-            "else:",
-            "  print(False)",
+            f'cursor = session.run_sql("{query}")',
+            "print(cursor.fetch_all())",
         ))
 
-        _run_mysqlsh_script.return_value = "True\n"
+        _run_mysqlsh_script.return_value = f"[{self.mysql.cluster_name}]\n"
 
         self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
         _run_mysqlsh_script.assert_called_once_with(
@@ -1144,10 +1147,32 @@ class TestMySQLBase(unittest.TestCase):
             timeout=60,
             exception_as_warning=True,
         )
+        _run_mysqlcli_script.assert_not_called()
 
         _run_mysqlsh_script.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError
-        self.assertFalse(self.mysql.cluster_metadata_exists("1.2.3.4"))
+        with self.assertRaises(MySQLClusterMetadataExistsError):
+            self.mysql.cluster_metadata_exists("1.2.3.4")
+
+        _run_mysqlsh_script.reset_mock()
+
+        _run_mysqlcli_script.return_value = [[self.mysql.cluster_name]]
+
+        self.assertTrue(self.mysql.cluster_metadata_exists())
+        _run_mysqlsh_script.assert_not_called()
+        _run_mysqlcli_script.assert_called_once_with(
+            (query,),
+            user="root",
+            password="password",
+            timeout=60,
+            exception_as_warning=True,
+            log_errors=False,
+        )
+
+        _run_mysqlcli_script.reset_mock()
+        _run_mysqlcli_script.side_effect = MySQLClientError
+        with self.assertRaises(MySQLClusterMetadataExistsError):
+            self.mysql.cluster_metadata_exists()
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
@@ -2065,6 +2090,8 @@ xtrabackup/location --defaults-file=defaults/config/file
             "loose-audit_log_file": "/var/log/mysql/audit.log",
             "loose-group_replication_paxos_single_leader": "ON",
             "innodb_buffer_pool_chunk_size": "2902458368",
+            "gtid_mode": "ON",
+            "enforce_gtid_consistency": "ON",
         }
         self.maxDiff = None
 
