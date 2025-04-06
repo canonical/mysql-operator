@@ -1,0 +1,30 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.4    unsupported  01:32:44Z
+
+App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql                    blocked    1/3  mysql           8.0/edge     370  no       Failed to initialize MySQL users
+mysql-test-app           waiting    0/1  mysql-test-app  latest/edge   73  no       waiting for machine
+
+Unit              Workload  Agent       Machine  Public address  Ports  Message
+mysql-test-app/0  waiting   allocating  3                               waiting for machine
+mysql/0           waiting   allocating  0                               waiting for machine
+mysql/1*          blocked   executing   1        10.155.212.102         Failed to initialize MySQL users
+mysql/2           waiting   allocating  2        10.155.212.101         waiting for machine
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        down                     juju-b29924-0  ubuntu@22.04      Container started
+1        started  10.155.212.102  juju-b29924-1  ubuntu@22.04      Running
+2        down     10.155.212.101  juju-b29924-2  ubuntu@22.04      Running
+3        down                     juju-b29924-3  ubuntu@22.04      Container started
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:31:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:31:24 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:32:42 ERROR unit.mysql/1.juju-log ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock' (2)
+unit-mysql-1: 01:32:42 ERROR unit.mysql/1.juju-log Failed to configure users for: juju-b29924-1.lxd
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
