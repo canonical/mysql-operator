@@ -16,6 +16,7 @@ For a given release, this table shows:
 
 | Release | MySQL version | Juju version | [TLS encryption](/t/9898)* | [COS monitoring](/t/9900) | [Minor version upgrades](/t/11748) | [Cross-regional async replication](/t/14169) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| [366], [367] | 8.0.41 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [312], [313] | 8.0.39 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [240] | 8.0.36 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [196] | 8.0.34 | `3.1.6+` |  | ![check] | ![check] |  |
@@ -34,6 +35,15 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 > If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info)
 
 
+### Release 366-367
+
+| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
+|[366]  |![check] | | ![check]  |
+|[367] |  | ![check]| ![check] |
+
+[details=Older releases]
+
 ### Release 312-313
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
@@ -41,7 +51,6 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 |[313]  |![check] | | ![check]  |
 |[312] |  | ![check]| ![check] |
 
-[details=Older releases]
 
 ### Release 240
 
@@ -69,6 +78,8 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 <!-- LINKS -->
 
+[367]: https://github.com/canonical/mysql-operator/releases/tag/rev366
+[366]: https://github.com/canonical/mysql-operator/releases/tag/rev366
 [313]: https://github.com/canonical/mysql-operator/releases/tag/rev312
 [312]: https://github.com/canonical/mysql-operator/releases/tag/rev312
 [240]: https://github.com/canonical/mysql-operator/releases/tag/rev240
