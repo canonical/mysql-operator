@@ -1,0 +1,21 @@
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/noble/landscape-client-72
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:30:29Z
+
+App               Version  Status   Scale  Charm             Channel      Rev  Exposed  Message
+landscape-client           unknown      0  landscape-client  latest/edge   72  no       
+mysql-test-app             waiting    0/1  mysql-test-app    latest/edge   73  no       waiting for machine
+
+Unit              Workload  Agent       Machine  Public address  Ports  Message
+mysql-test-app/0  waiting   allocating  0                               waiting for machine
+
+Machine  State    Address  Inst id  Base          AZ  Message
+0        pending           pending  ubuntu@22.04      acquiring LXD image
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
