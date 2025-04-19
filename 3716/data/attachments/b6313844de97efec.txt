@@ -1,0 +1,90 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:121 Get leader unit
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:126 Run pre-upgrade-check action
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:132 Inject dependency fault
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:137 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:140 Wait for upgrade to fail on leader
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:146 Ensure continuous_writes while in failure state
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=363 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=363 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=363 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=1169 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=1172 on unit mysql/2
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=1178 on unit mysql/0
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:149 Re-run pre-upgrade-check action
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:152 Re-refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:154 Wait for upgrade to start
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [idle] waiting: other units upgrading first...
+  mysql/0 [idle] blocked: ready to rollback application
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: starting services...
+  mysql/0 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [executing] maintenance: recovering unit after upgrade
+  mysql/2 [idle] maintenance: upgrade completed
+  mysql/0 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+  mysql/0 [executing] maintenance: stopping services..
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+  mysql/0 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:161 Ensure continuous_writes after rollback procedure
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6844 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6844 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6844 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=7679 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=7687 on unit mysql/2
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=7693 on unit mysql/0
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:44:26Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.41-0ubun...  active      3  mysql                          2  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   73  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.18.207.178                   
+mysql/0*           active    idle   0        10.18.207.80    3306,33060/tcp  
+mysql/1            active    idle   1        10.18.207.237   3306,33060/tcp  Primary
+mysql/2            active    idle   2        10.18.207.181   3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.18.207.80   juju-12fa6f-0  ubuntu@22.04      Running
+1        started  10.18.207.237  juju-12fa6f-1  ubuntu@22.04      Running
+2        started  10.18.207.181  juju-12fa6f-2  ubuntu@22.04      Running
+3        started  10.18.207.178  juju-12fa6f-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:31:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:31:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:31:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:33:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:33:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:33:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:33:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:33:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:33:20 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:33:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:33:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:40:45 ERROR unit.mysql/0.juju-log charms.data_platform_libs.v0.upgrade.VersionError - {'message': 'Versions incompatible, charm 1 can not be upgraded to 2', 'cause': 'Upgrades only supported for specific versions, charm versions satisfying requirement >1', 'resolution': ''}
+unit-mysql-0: 01:40:45 CRITICAL unit.mysql/0.juju-log Upgrade failed, follow the instructions below to rollback:
+    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state
+    2. Run `juju refresh` to the previously deployed charm revision or local charm file
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
