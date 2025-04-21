@@ -1,0 +1,45 @@
+[32mINFO    [0m integration.test_tls:test_tls.py:186 Removing relation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:38:54Z
+
+App                       Version          Status  Scale  Charm                     Channel        Rev  Exposed  Message
+mysql                     8.0.41-0ubun...  active      3  mysql                                      0  no       
+self-signed-certificates                   active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports           Message
+mysql/0                      active    idle   0        10.202.175.109  3306,33060/tcp  
+mysql/1*                     active    idle   1        10.202.175.184  3306,33060/tcp  
+mysql/2                      active    idle   2        10.202.175.125  3306,33060/tcp  
+self-signed-certificates/0*  active    idle   3        10.202.175.26                   
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.202.175.109  juju-52f70d-0  ubuntu@22.04      Running
+1        started  10.202.175.184  juju-52f70d-1  ubuntu@22.04      Running
+2        started  10.202.175.125  juju-52f70d-2  ubuntu@22.04      Running
+3        started  10.202.175.26   juju-52f70d-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:31:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:31:41 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:33:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:33:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:33:10 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:33:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:33:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:33:16 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:36:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:36:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:36:31 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:37:48 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 01:37:50 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 01:37:53 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 01:37:54 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 01:37:55 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 01:37:55 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 01:37:59 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
