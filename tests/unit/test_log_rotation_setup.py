@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 from ops.testing import Harness
 
@@ -23,14 +23,25 @@ class TestLogRotationSetup(unittest.TestCase):
         )
         self.charm = self.harness.charm
 
+    @patch("charm.MySQLOperatorCharm._on_cos_agent_relation_created")
     @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
-    def test_cos_relation_created(self, mock_setup):
+    @patch(
+        "charm.MySQLOperatorCharm._is_peer_data_set", new_callable=PropertyMock, return_value=True
+    )
+    def test_cos_relation_created(self, mock_is_peer_data_set, mock_setup, mock_charm_on_created):
         self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
         mock_setup.assert_called_once_with(3, self.charm.text_logs, False)
+        mock_is_peer_data_set.assert_called_once()
 
+    @patch("charm.MySQLOperatorCharm._on_cos_agent_relation_created")
+    @patch(
+        "charm.MySQLOperatorCharm._is_peer_data_set", new_callable=PropertyMock, return_value=True
+    )
     @patch("pathlib.Path.exists", return_value=True)
     @patch("mysql_vm_helpers.MySQL.setup_logrotate_and_cron")
-    def test_log_syncing(self, mock_setup, mock_exist):
+    def test_log_syncing(
+        self, mock_setup, mock_exist, mock_is_peer_data_set, mock_charm_on_created
+    ):
         self.harness.update_config({"logs_retention_period": "auto"})
         self.harness.add_relation(COS_AGENT_RELATION_NAME, "grafana-agent")
         positions = (
