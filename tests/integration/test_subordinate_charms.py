@@ -29,7 +29,7 @@ async def test_ubuntu_pro(ops_test, charm):
         ops_test.model.deploy(
             UBUNTU_PRO_APP_NAME,
             application_name=UBUNTU_PRO_APP_NAME,
-            channel="latest/edge",
+            channel="latest/stable",
             config={"token": os.environ["UBUNTU_PRO_TOKEN"]},
             base="ubuntu@22.04",
         ),

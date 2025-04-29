@@ -34,8 +34,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 
 | Level | Path | Navlink |
 |---------|---------|-------------|
-| 1 | tutorial | [Tutorial]() |
-| 2 | t-overview | [Overview](/t/9922) |
+| 1 | tutorial | [Tutorial](/t/9922) |
 | 2 | t-set-up | [1. Set up the environment](/t/9924) |
 | 2 | t-deploy | [2. Deploy MySQL](/t/9912) |
 | 2 | t-scale | [3. Scale replicas](/t/9920) |
@@ -43,7 +42,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 2 | t-integrate | [5. Integrate applications](/t/9916) |
 | 2 | t-enable-tls | [6. Enable TLS encryption](/t/9914) |
 | 2 | t-clean-up | [7. Clean up the environment](/t/9910) |
-| 1 | how-to | [How To]() |
+| 1 | how-to | [How-to guides](/t/17233) |
 | 2 | h-setup | [Deploy]() |
 | 3 | h-deploy-sunbeam | [Sunbeam](/t/15986) |
 | 3 | h-deploy-lxd | [LXD](/t/11870) |
@@ -55,7 +54,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-deploy-terraform | [Terraform](/t/14925) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
 | 2 | h-integrate| [Integrate with another application](/t/9902) |
-| 2 | h-external-access | [External access](/t/15801) |
+| 2 | h-external-access | [External network access](/t/15801) |
 | 2 | h-scale | [Scale replicas](/t/9904) |
 | 2 | h-enable-tls | [Enable TLS](/t/9898) |
 | 2 | h-backups | [Back up and restore]() |
@@ -72,38 +71,39 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-upgrade-juju | [Upgrade Juju](/t/14325) |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/11748) |
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/11749) |
-| 2 | h-development| [Development]() |
-| 3 | h-development-integrate | [Integrate awith your charm](/t/11890) |
-| 3 | h-migrate-mysqldump | [Migrate data via mysqldump](/t/11958) |
-| 3 | h-migrate-mydumper | [Migrate data via mydumper](/t/11988) |
-| 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12008) |
-| 3 | h-troubleshooting | [Troubleshooting](/t/11891) |
 | 2 | h-async | [Cross-regional async replication]() |
 | 3 | h-async-deployment | [Deploy](/t/14169) |
 | 3 | h-async-clients | [Clients](/t/14170) |
 | 3 | h-async-failover | [Switchover / Failover](/t/14171) |
 | 3 | h-async-recovery | [Recovery](/t/14172) |
 | 3 | h-async-removal | [Removal](/t/14174) |
+| 2 | h-development| [Development]() |
+| 3 | h-development-integrate | [Integrate with your charm](/t/11890) |
+| 3 | h-migrate-mysqldump | [Migrate data via mysqldump](/t/11958) |
+| 3 | h-migrate-mydumper | [Migrate data via mydumper](/t/11988) |
+| 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12008) |
+| 3 | h-troubleshooting | [Troubleshooting](/t/11891) |
+| 4 | r-sos-report | [SOS report](/t/17245) |
 | 2 | h-contribute | [Contribute](/t/14654) |
-| 1 | reference | [Reference]() |
+| 1 | reference | [Reference](/t/17235) |
 | 2 | r-releases | [Releases](/t/11881) |
 | 2 | r-system-requirements | [System requirements](/t/11742) |
-| 2 | r-testing | [Testing](/t/11770) |
+| 2 | r-testing | [Software testing](/t/11770) |
 | 2 | r-profiles | [Profiles](/t/11973) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/15481) |
 | 2 | r-alert-rules | [Alert rules](/t/15839) |
-| 2 | r-statuses | [Statuses](/t/10624) |
+| 2 | r-statuses | [Charm statuses](/t/10624) |
 | 2 | r-contacts | [Contacts](/t/11867) |
-| 1 | explanation | [Explanation]() |
+| 1 | explanation | [Explanation](/t/17237) |
 | 2 | e-architecture | [Architecture](/t/11756) |
 | 2 | e-interfaces-endpoints | [Interfaces and endpoints](/t/10250) |
-| 2 | e-users | [Users](/t/10789) |
-| 2 | e-security | [Security](/t/16784) |
-| 2 | e-cryptography | [Cryptography](/t/16785) |
-| 2 | e-logs | [Logs](/t/11993) |
-| 3 | e-audit-logs | [Audit Logs](/t/15424) |
 | 2 | e-juju | [Juju](/t/11959) |
 | 2 | e-legacy-charm | [Legacy charm](/t/10788) |
+| 2 | e-users | [Users](/t/10789) |
+| 2 | e-logs | [Logs](/t/11993) |
+| 3 | e-audit-logs | [Audit Logs](/t/15424) |
+| 2 | e-security | [Security](/t/16784) |
+| 3 | e-cryptography | [Cryptography](/t/16785) |
 | 1 | search | [Search](https://canonical.com/data/docs/mysql/iaas) |
 
 [/details]
