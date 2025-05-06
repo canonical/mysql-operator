@@ -134,7 +134,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 87
+LIBPATCH = 88
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -477,6 +477,7 @@ class MySQLCharmBase(CharmBase, ABC):
         self.framework.observe(self.on.get_cluster_status_action, self._get_cluster_status)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
+        self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.recreate_cluster_action, self._recreate_cluster)
 
         # Set in some event handlers in order to avoid passing event down a chain
@@ -577,6 +578,24 @@ class MySQLCharmBase(CharmBase, ABC):
                 "success": False,
                 "message": "Failed to read cluster status.  See logs for more information.",
             })
+
+    def _on_promote_to_primary(self, event: ActionEvent) -> None:
+        """Action for setting this unit as the cluster primary."""
+        if event.params.get("scope") != "unit":
+            return
+
+        if self._mysql.is_unit_primary(self.unit_label):
+            event.set_results({
+                "success": False,
+                "message": "Unit is already primary",
+            })
+            return
+
+        try:
+            self._mysql.set_cluster_primary(self.get_unit_hostname())
+        except MySQLSetClusterPrimaryError:
+            logger.exception("Failed to set cluster primary")
+            event.fail("Failed to change cluster primary. See logs for more information.")
 
     def _recreate_cluster(self, event: ActionEvent) -> None:
         """Action used to recreate the cluster, for special cases."""
