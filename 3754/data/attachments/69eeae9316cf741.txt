@@ -1,0 +1,28 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:31:57Z
+
+App    Version  Status   Scale  Charm  Channel  Rev  Exposed  Message
+mysql           waiting    0/3  mysql             0  no       waiting for machine
+
+Unit     Workload  Agent       Machine  Public address  Ports  Message
+mysql/0  waiting   allocating  0        10.53.238.120          waiting for machine
+mysql/1  waiting   allocating  1        10.53.238.89           waiting for machine
+mysql/2  waiting   allocating  2        10.53.238.232          waiting for machine
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        pending  10.53.238.120  juju-1d595f-0  ubuntu@22.04      Running
+1        pending  10.53.238.89   juju-1d595f-1  ubuntu@22.04      Running
+2        pending  10.53.238.232  juju-1d595f-2  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+controller-0: 01:30:56 ERROR juju.worker.provisioner worker 2: shutting down pool due to error while handling a "start-instance 2" task: catacomb 0xc0007b7260 is dying
+controller-0: 01:30:56 ERROR juju.worker.provisioner worker 0: shutting down pool due to error while handling a "start-instance 0" task: catacomb 0xc0007b7260 is dying
+controller-0: 01:30:59 ERROR juju.worker.firewaller Machine not yet provisioned: machine 2 not provisioned
+controller-0: 01:30:59 ERROR juju.worker.firewaller Machine not yet provisioned: machine 0 not provisioned
+
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
