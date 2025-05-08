@@ -747,6 +747,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         return str(self.peers.data[unit].get("private-address"))
 
+    def update_endpoints(self) -> None:
+        """Update endpoints for the cluster."""
+        self.database_relation._update_endpoints_all_relations(None)
+        self._on_update_status(None)
+
     def _open_ports(self) -> None:
         """Open ports.
 

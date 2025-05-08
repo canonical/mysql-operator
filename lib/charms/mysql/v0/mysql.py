@@ -479,6 +479,9 @@ class MySQLCharmBase(CharmBase, ABC):
         self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.recreate_cluster_action, self._recreate_cluster)
+        self.framework.observe(
+            self.on[PEER].relation_changed, self.check_topology_timestamp_change
+        )
 
         # Set in some event handlers in order to avoid passing event down a chain
         # of methods
@@ -593,6 +596,9 @@ class MySQLCharmBase(CharmBase, ABC):
 
         try:
             self._mysql.set_cluster_primary(self.get_unit_hostname())
+            # Use peer relation to trigger endpoint update
+            # refer to mysql_provider.py
+            self.unit_peer_data.update({"topology-change-timestamp": str(time.time())})
         except MySQLSetClusterPrimaryError:
             logger.exception("Failed to set cluster primary")
             event.fail("Failed to change cluster primary. See logs for more information.")
@@ -637,6 +643,36 @@ class MySQLCharmBase(CharmBase, ABC):
         state, role = self._mysql.get_member_state()
 
         self.unit_peer_data.update({"member-state": state, "member-role": role})
+
+    @abstractmethod
+    def update_endpoints(self) -> None:
+        """Update the endpoints for the cluster."""
+        raise NotImplementedError
+
+    def check_topology_timestamp_change(self, _) -> None:
+        """Check for cluster topology changes and trigger endpoint update if needed.
+
+        Used for trigger endpoint updates for non tipical events like, add/remove unit
+        or update status.
+        """
+        topo_change_set = {
+            self.peers.data[unit].get("topology-change-timestamp") for unit in self.peers.units
+        }
+        topo_change_set.discard(None)
+        if not topo_change_set:
+            # no topology change detected
+            return
+        topo_change = self.unit_peer_data.get("topology-change-timestamp", "0")
+        max_topo_change = max(topo_change_set)  # type: ignore
+        if self.unit.is_leader() and max_topo_change > topo_change:
+            # update endpoints required
+            self.update_endpoints()
+            return
+
+        # sync timestamp and trigger relation changed
+        self.unit_peer_data.update({
+            "topology-change-timestamp": max(max_topo_change, topo_change)
+        })
 
     @property
     def peers(self) -> Optional[ops.model.Relation]:
