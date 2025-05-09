@@ -1,70 +1,73 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-[tool.poetry]
-package-mode = false
-requires-poetry = ">=2.0.0"
+[project]
+name = "mysql-operator"
+version = "0.1.0"
+description = "Machine charm for MySQL following the operator framework"
+readme = "README.md"
+requires-python = ">=3.10"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-ops = "^2.8.0"
-tenacity = "^8.2.2"
-boto3 = "^1.28.23"
-typing_extensions = "^4.7.1"
-jinja2 = "^3.1.2"
-python_hosts = "^1.0.6"
-pexpect = "^4.9.0"
-pyyaml = "^6.0.2"
+[dependency-groups]
+charm = [
+  "boto3 ~= 1.28",
+  "jinja2 ~= 3.1",
+  "jinja2 ~= 3.1",
+  "ops ~= 2.8",
+  "pexpect ~= 4.9",
+  "python_hosts ~= 1.0",
+  "pyyaml ~= 6.0",
+  "tenacity ~= 8.2",
+  "typing_extensions ~= 4.7",
+]
 
+libs = [
+  # data_platform_libs/v0/data_interfaces.py
+  "ops >= 2.0.0",
+  # data_platform_libs/v0/upgrade.py
+  "poetry-core",
+  # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
+  # data_platform_libs/v0/data_models.py requires pydantic ^1.10
+  # grafana_agent/v0/cos_agent.py requires pydantic
+  "pydantic ~= 1.10",
+  # grafana_agent/v0/cos_agent.py
+  "cosl >= 0.0.50",
+  # tempo_coordinator_k8s/v0/charm_tracing.py
+  "opentelemetry-exporter-otlp-proto-http == 1.21.0",
+  # tls_certificates_interface/v2/tls_certificates.py
+  "cryptography >= 42.0.5",
+  "jsonschema",
+]
 
-[tool.poetry.group.charm-libs.dependencies]
-# data_platform_libs/v0/data_interfaces.py
-ops = ">=2.0.0"
-# data_platform_libs/v0/upgrade.py
-poetry-core = "*"
-# data_platform_libs/v0/upgrade.py requires pydantic ^1.10
-# data_platform_libs/v0/data_models.py requires pydantic ^1.10
-# grafana_agent/v0/cos_agent.py requires pydantic
-pydantic = "^1.10"
-# grafana_agent/v0/cos_agent.py
-cosl = ">=0.0.50"
-# tls_certificates_interface/v2/tls_certificates.py
-cryptography = ">=42.0.5"
-jsonschema = "*"
-# tempo_coordinator_k8s/v0/charm_tracing.py
-opentelemetry-exporter-otlp-proto-http = "1.21.0"
+format = [
+  "ruff ~= 0.4",
+]
 
-[tool.poetry.group.format]
-optional = true
+lint = [
+  "codespell ~= 2.2",
+  "ruff ~= 0.4",
+  "shellcheck-py ~= 0.9",
+]
 
-[tool.poetry.group.format.dependencies]
-ruff = "^0.4.5"
+unit = [
+  "coverage[toml] ~= 7.2",
+  "parameterized ~= 0.9",
+  "pytest ~= 7.4",
+  "pytest-mock ~= 3.11",
+]
 
-[tool.poetry.group.lint]
-optional = true
-
-[tool.poetry.group.lint.dependencies]
-ruff = "^0.4.5"
-codespell = "^2.2.5"
-shellcheck-py = "^0.9.0.5"
-
-[tool.poetry.group.unit.dependencies]
-pytest = "^7.4.0"
-pytest-mock = "^3.11.1"
-coverage = { extras = ["toml"], version = "^7.2.7" }
-parameterized = "^0.9.0"
-
-[tool.poetry.group.integration.dependencies]
-pytest = "^7.4.0"
-pytest-operator = "^0.35.0"
-juju = "^3.6.0.0"
-mysql-connector-python = "^9.1.0"
-tenacity = "^8.2.2"
-boto3 = "^1.28.11"
-pyyaml = "^6.0"
-urllib3 = "^1.26.16"
-allure-pytest = "^2.13.2"
-allure-pytest-default-results = "^0.1.2"
+integration = [
+  "allure-pytest ~= 2.13",
+  "allure-pytest-default-results ~= 0.1",
+  "boto3 ~= 1.28",
+  "juju ~= 3.6",
+  "mysql-connector-python ~= 9.1",
+  "pytest ~= 7.4",
+  "pytest-operator ~= 0.35",
+  "pyyaml ~= 6.0",
+  "tenacity ~= 8.2",
+  "urllib3 ~= 1.26",
+]
 
 [tool.coverage.run]
 branch = true
@@ -106,3 +109,6 @@ max-complexity = 10
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.uv]
+no-binary = false
