@@ -64,9 +64,9 @@ async def test_cluster_pause(ops_test: OpsTest, highly_available_cluster, contin
     for unit in all_units:
         unit_ip = await get_unit_ip(ops_test, unit.name)
         config["host"] = unit_ip
-        assert not is_connection_possible(
-            config
-        ), f"❌ connection to unit {unit.name} is still possible"
+        assert not is_connection_possible(config), (
+            f"❌ connection to unit {unit.name} is still possible"
+        )
 
     # restart all instances
     logger.info("Starting all instances")

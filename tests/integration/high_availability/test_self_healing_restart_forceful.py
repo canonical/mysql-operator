@@ -97,9 +97,9 @@ async def test_sst_test(ops_test: OpsTest, highly_available_cluster, continuous_
 
     # verify instance is part of the cluster
     logger.info("Check if instance in cluster")
-    assert await is_unit_in_cluster(
-        primary_unit.name, new_primary_unit
-    ), "❌ Unit not online in the cluster"
+    assert await is_unit_in_cluster(primary_unit.name, new_primary_unit), (
+        "❌ Unit not online in the cluster"
+    )
 
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 

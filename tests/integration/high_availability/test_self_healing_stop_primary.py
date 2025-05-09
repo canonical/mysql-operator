@@ -56,9 +56,9 @@ async def test_replicate_data_on_restart(
     }
 
     # verify that connection is possible
-    assert is_connection_possible(
-        config
-    ), f"❌ Connection to host {primary_unit_ip} is not possible"
+    assert is_connection_possible(config), (
+        f"❌ Connection to host {primary_unit_ip} is not possible"
+    )
 
     # it's necessary to inhibit update-status-hook to stop the service
     # since the charm will restart the service on the hook
@@ -67,9 +67,9 @@ async def test_replicate_data_on_restart(
     await graceful_stop_server(ops_test, primary_unit.name)
 
     # verify that connection is gone
-    assert not is_connection_possible(
-        config
-    ), f"❌ Connection to host {primary_unit_ip} is possible"
+    assert not is_connection_possible(config), (
+        f"❌ Connection to host {primary_unit_ip} is possible"
+    )
 
     # get primary to write to it
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
@@ -89,9 +89,9 @@ async def test_replicate_data_on_restart(
     await ops_test.model.set_config({"update-status-hook-interval": "5m"})
 
     # verify/wait availability
-    assert is_connection_possible(
-        config, retry_if_not_possible=True
-    ), "❌ Connection not possible after restart"
+    assert is_connection_possible(config, retry_if_not_possible=True), (
+        "❌ Connection not possible after restart"
+    )
 
     # read and verify data
     select_data_sql = [
