@@ -67,13 +67,13 @@ async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
 
-    assert len(ls_la_output) == len(
-        log_files
-    ), f"❌ files other than log files exist {ls_la_output}"
+    assert len(ls_la_output) == len(log_files), (
+        f"❌ files other than log files exist {ls_la_output}"
+    )
     directories = [line.split()[-1] for line in ls_la_output]
-    assert sorted(directories) == sorted(
-        log_files
-    ), f"❌ file other than logs files exist: {ls_la_output}"
+    assert sorted(directories) == sorted(log_files), (
+        f"❌ file other than logs files exist: {ls_la_output}"
+    )
 
     logger.info("Executing logrotate")
     return_code, stdout, _ = await ops_test.juju(
@@ -86,13 +86,13 @@ async def test_log_rotation(ops_test: OpsTest, highly_available_cluster) -> None
         ops_test, unit.name, f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/"
     )
 
-    assert len(ls_la_output) == len(
-        log_files + archive_directories
-    ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
+    assert len(ls_la_output) == len(log_files + archive_directories), (
+        f"❌ unexpected files/directories in log directory: {ls_la_output}"
+    )
     directories = [line.split()[-1] for line in ls_la_output]
-    assert sorted(directories) == sorted(
-        log_files + archive_directories
-    ), f"❌ unexpected files/directories in log directory: {ls_la_output}"
+    assert sorted(directories) == sorted(log_files + archive_directories), (
+        f"❌ unexpected files/directories in log directory: {ls_la_output}"
+    )
 
     logger.info("Ensuring log files were rotated")
     for log in set(log_types):
