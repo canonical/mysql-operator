@@ -1,0 +1,35 @@
+[32mINFO    [0m integration.test_saturate_max_connections:test_saturate_max_connections.py:65 Running action to get app connection data
+[32mINFO    [0m integration.test_saturate_max_connections:test_saturate_max_connections.py:74 Creating 10 connections
+[32mINFO    [0m mysql.connector:__init__.py:149 package: mysql.connector.plugins
+[32mINFO    [0m mysql.connector:__init__.py:150 plugin_name: caching_sha2_password
+[32mINFO    [0m mysql.connector:__init__.py:154 AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+[32mINFO    [0m integration.test_saturate_max_connections:test_saturate_max_connections.py:78 Ensure all connections are established
+[32mINFO    [0m integration.test_saturate_max_connections:test_saturate_max_connections.py:84 Ensure no more client connections are possible
+[32mINFO    [0m integration.test_saturate_max_connections:test_saturate_max_connections.py:90 Get cluster status while connections are saturated
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:31:30Z
+
+App    Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+app    0.0.2            active      1  mysql-test-app  latest/edge   73  no       
+mysql  8.0.41-0ubun...  active      1  mysql                          0  no       
+
+Unit      Workload  Agent  Machine  Public address  Ports           Message
+app/0*    active    idle   1        10.249.102.88                   
+mysql/0*  active    idle   0        10.249.102.91   3306,33060/tcp  Primary
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.249.102.91  juju-058676-0  ubuntu@22.04      Running
+1        started  10.249.102.88  juju-058676-1  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:30:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:30:11 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:31:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:31:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-app-0: 01:31:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
