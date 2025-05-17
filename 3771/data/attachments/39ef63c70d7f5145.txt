@@ -1,0 +1,70 @@
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:302 Deploying a new mysql cluster
+[32mINFO    [0m juju.model:model.py:2284 Deploying local:mysql-1
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] waiting: Waiting to start MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:321 Rotating all mysql credentials
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:339 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:353 Waiting for blocked application status with another cluster S3 repository
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:361 Restoring backup_id='2025-05-17T01:36:22Z'
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:366 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:379 Inserting value after restore
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:387 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:398 Waiting for blocked application status after restore
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:49:16Z
+
+App            Version          Status   Scale  Charm          Channel        Rev  Exposed  Message
+another-mysql  8.0.41-0ubun...  blocked      1  mysql                           1  no       Move restored cluster to another S3 repository
+mysql                           blocked      0  mysql                           0  no       Move restored cluster to another S3 repository
+s3-integrator                   active       1  s3-integrator  latest/stable  145  no       
+
+Unit              Workload  Agent      Machine  Public address  Ports           Message
+another-mysql/0*  active    executing  6        10.208.78.214   3306,33060/tcp  Primary
+s3-integrator/0*  active    idle       3        10.208.78.61                    
+
+Machine  State    Address        Inst id        Base          AZ  Message
+3        started  10.208.78.61   juju-4c8cca-3  ubuntu@22.04      Running
+6        started  10.208.78.214  juju-4c8cca-6  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:30:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:30:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:30:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:32:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:32:06 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:32:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:35:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 01:35:19 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 01:39:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:39:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 01:39:26 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-5: 01:39:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:39:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-4: 01:39:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 01:43:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:43:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-mysql-0: 01:43:08 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.test_backup_aws:test_backup_aws.py:75 Cleaning backups from cloud buckets
