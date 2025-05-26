@@ -74,8 +74,9 @@ create-replication:
 
 promote-to-primary:
   description: |
-    Promotes this cluster to become the primary in the cluster-set. Used for safe switchover or failover.
-    Can only be run against the charm leader unit of a standby cluster.
+    Promotes the unit or cluster to become the primary in the cluster or cluster-set, depending on
+    the scope (unit or cluster). Used for safe switchover or failover (cluster scope only).
+    When in cluster scope, can only be run against the charm leader unit of a standby cluster.
   params:
     scope:
       type: string
