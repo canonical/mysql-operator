@@ -30,9 +30,9 @@ def test_cluster_switchover(juju: Juju, highly_available_cluster) -> None:
     switchover_task = juju.run(new_primary_unit, "promote-to-primary", {"scope": "unit"})
     assert switchover_task.status == "completed", "Switchover failed"
 
-    assert get_primary_unit_name(juju, primary_unit) == new_primary_unit, (
-        "Switchover did not succeed"
-    )
+    assert (
+        get_primary_unit_name(juju, primary_unit) == new_primary_unit
+    ), "Switchover did not succeed"
 
 
 def get_primary_unit_name(juju: Juju, mysql_unit) -> Optional[str]:

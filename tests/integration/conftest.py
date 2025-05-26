@@ -46,6 +46,7 @@ def cloud_configs_gcp() -> tuple[dict[str, str], dict[str, str]]:
     }
     return configs, credentials
 
+
 @pytest.fixture(scope="module")
 def juju(request: pytest.FixtureRequest):
     """Pytest fixture that wraps :meth:`jubilant.with_model`.
