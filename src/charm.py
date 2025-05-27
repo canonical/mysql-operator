@@ -649,7 +649,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return socket.getfqdn()
 
     @property
-    def restart_peers(self) -> Optional[ops.model.Relation]:
+    def restart_peers(self) -> Optional[ops.Relation]:
         """Retrieve the peer relation."""
         return self.model.get_relation("restart")
 
