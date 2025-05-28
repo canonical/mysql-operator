@@ -1,0 +1,44 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:60 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.5    unsupported  01:44:56Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+db1             8.0.41-0ubun...  active      3  mysql                          0  no       
+mysql-router    8.0.41-0ubun...  active      1  mysql-router    dpe/edge     972  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   73  no       Last written value=19773
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+db1/0              active    executing  0        10.254.214.245  3306,33060/tcp  
+db1/1*             active    executing  1        10.254.214.205  3306,33060/tcp  Primary
+db1/2              active    executing  2        10.254.214.206                  
+mysql-test-app/0*  active    idle       3        10.254.214.194                  Last written value=19773
+  mysql-router/0*  active    idle                10.254.214.194                  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.254.214.245  juju-9551e6-0  ubuntu@22.04      Running
+1        started  10.254.214.205  juju-9551e6-1  ubuntu@22.04      Running
+2        started  10.254.214.206  juju-9551e6-2  ubuntu@22.04      Running
+3        started  10.254.214.194  juju-9551e6-3  ubuntu@22.04      Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:30:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:30:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 01:30:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:33:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:33:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 01:33:18 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 01:33:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:33:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 01:33:55 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:38:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:38:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:38:54 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 01:38:57 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 2
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
