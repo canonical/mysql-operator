@@ -231,6 +231,10 @@ class MySQLAddInstanceToClusterError(Error):
     """Exception raised when there is an issue add an instance to the MySQL InnoDB cluster."""
 
 
+class MySQLRejoinInstanceToClusterError(Error):
+    """Exception raised when there is an issue rejoining an instance to the MySQL InnoDB cluster."""
+
+
 class MySQLRemoveInstanceRetryError(Error):
     """Exception raised when there is an issue removing an instance.
 
@@ -290,6 +294,10 @@ class MySQLGetClusterEndpointsError(Error):
 
 class MySQLRebootFromCompleteOutageError(Error):
     """Exception raised when there is an issue rebooting from complete outage."""
+
+
+class MySQLForceQuorumFromInstanceError(Error):
+    """Exception raised when there is an issue forcing quorum from an instance."""
 
 
 class MySQLSetInstanceOfflineModeError(Error):
@@ -594,14 +602,28 @@ class MySQLCharmBase(CharmBase, ABC):
             })
             return
 
-        try:
-            self._mysql.set_cluster_primary(self.get_unit_hostname())
-            # Use peer relation to trigger endpoint update
-            # refer to mysql_provider.py
-            self.unit_peer_data.update({"topology-change-timestamp": str(time.time())})
-        except MySQLSetClusterPrimaryError:
-            logger.exception("Failed to set cluster primary")
-            event.fail("Failed to change cluster primary. See logs for more information.")
+        if event.params.get("force"):
+            # Failover
+            try:
+                self._mysql.force_quorum_from_instance()
+            except MySQLForceQuorumFromInstanceError:
+                logger.exception("Failed to force quorum from instance")
+                event.fail("Failed to force quorum from instance. See logs for more information.")
+        else:
+            # Switchover
+            try:
+                self._mysql.set_cluster_primary(self.get_unit_hostname())
+            except MySQLSetClusterPrimaryError:
+                logger.exception("Failed to set cluster primary")
+                event.fail("Failed to change cluster primary. See logs for more information.")
+
+        # Use peer relation to trigger endpoint update
+        # refer to mysql_provider.py
+        self.unit_peer_data.update({"topology-change-timestamp": str(time.time())})
+        event.set_results({
+            "success": True,
+            "message": "Unit is already primary",
+        })
 
     def _recreate_cluster(self, event: ActionEvent) -> None:
         """Action used to recreate the cluster, for special cases."""
@@ -1954,6 +1976,27 @@ class MySQLBase(ABC):
             # always release the lock
             self._release_lock(local_lock_instance, instance_unit_label, UNIT_ADD_LOCKNAME)
 
+    def rejoin_instance_to_cluster(self, *, unit_label: str, from_instance: str) -> None:
+        """Rejoin an instance to the InnoDB cluster."""
+        commands = (
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            f"cluster.rejoin_instance('{unit_label}')",
+        )
+
+        from_instance = from_instance or self.instance_address
+
+        try:
+            logger.debug(f"Rejoining instance {unit_label} to cluster {self.cluster_name}")
+            self._run_mysqlsh_script(
+                "\n".join(commands),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user, from_instance),
+            )
+        except MySQLClientError:
+            logger.error(f"Failed to rejoin instance {unit_label} to cluster {self.cluster_name}")
+            raise MySQLRejoinInstanceToClusterError
+
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
     ) -> bool:
@@ -2081,6 +2124,29 @@ class MySQLBase(ABC):
                 f"Failed to confirm existence of unit {unit_label} in cluster {self.cluster_name}"
             )
             return False
+
+    def instance_belongs_to_cluster(self, unit_label: str) -> bool:
+        """Check if instance belongs to cluster independently of current state.
+
+        Args:
+            unit_label: The label of the unit to check.
+        """
+        query = (
+            "SELECT instance_id FROM mysql_innodb_cluster_metadata.instances WHERE cluster_id ="
+            "(SELECT cluster_id FROM mysql_innodb_cluster_metadata.clusters WHERE cluster_name ="
+            f" '{self.cluster_name}') AND instance_name = '{unit_label}';",
+        )
+
+        try:
+            output = self._run_mysqlcli_script(
+                query, user=self.server_config_user, password=self.server_config_password
+            )
+        except MySQLClientError:
+            logger.debug(
+                "Instance has no cluster metadata, assuming it does not belong to any cluster."
+            )
+            return False
+        return len(output) == 1
 
     @retry(
         wait=wait_fixed(2),
@@ -2276,7 +2342,10 @@ class MySQLBase(ABC):
         wait=wait_random(min=4, max=30),
     )
     def remove_instance(  # noqa: C901
-        self, unit_label: str, lock_instance: Optional[str] = None
+        self,
+        unit_label: str,
+        lock_instance: Optional[str] = None,
+        auto_dissolve: Optional[bool] = True,
     ) -> None:
         """Remove instance from the cluster.
 
@@ -2284,6 +2353,12 @@ class MySQLBase(ABC):
         locks on the cluster primary. There is a retry mechanism for any issues
         obtaining the lock, removing instances/dissolving the cluster, or releasing
         the lock.
+
+        Args:
+            unit_label: The label of the unit to remove.
+            lock_instance: (optional) The instance address to acquire the lock on.
+            auto_dissolve: (optional) Whether to automatically dissolve the cluster
+                if this is the last instance in the cluster.
         """
         remaining_cluster_member_addresses = []
         skip_release_lock = False
@@ -2321,7 +2396,8 @@ class MySQLBase(ABC):
                     self.remove_replica_cluster(self.cluster_name)
                 else:
                     skip_release_lock = True
-                self.dissolve_cluster()
+                if auto_dissolve:
+                    self.dissolve_cluster()
 
             else:
                 # Get remaining cluster member addresses before calling mysqlsh.remove_instance()
@@ -2372,7 +2448,7 @@ class MySQLBase(ABC):
 
     def dissolve_cluster(self) -> None:
         """Dissolve the cluster independently of the unit teardown process."""
-        logger.debug(f"Dissolving cluster {self.cluster_name}")
+        logger.info(f"Dissolving cluster {self.cluster_name}")
         dissolve_cluster_commands = (
             f"cluster = dba.get_cluster('{self.cluster_name}')",
             "cluster.dissolve({'force': 'true'})",
@@ -2793,6 +2869,27 @@ class MySQLBase(ABC):
             )
         except MySQLClientError:
             logger.warning("Failed to start Group Replication for unit")
+
+    def force_quorum_from_instance(self) -> None:
+        """Force quorum from the current instance.
+
+        Recovery for cases where majority loss put the cluster in defunct state.
+        """
+        force_quorum_command = (
+            f"cluster = dba.get_cluster('{self.cluster_name}')",
+            "cluster.force_quorum_using_partition_of()",
+        )
+
+        try:
+            self._run_mysqlsh_script(
+                "\n".join(force_quorum_command),
+                user=self.server_config_user,
+                password=self.server_config_password,
+                host=self.instance_def(self.server_config_user),
+            )
+        except MySQLClientError:
+            logger.error("Failed to force quorum from instance")
+            raise MySQLForceQuorumFromInstanceError
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""

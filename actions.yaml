@@ -75,7 +75,7 @@ create-replication:
 promote-to-primary:
   description: |
     Promotes the unit or cluster to become the primary in the cluster or cluster-set, depending on
-    the scope (unit or cluster). Used for safe switchover or failover (cluster scope only).
+    the scope (unit or cluster). Used for safe switchover or failover.
     When in cluster scope, can only be run against the charm leader unit of a standby cluster.
   params:
     scope:
@@ -85,8 +85,9 @@ promote-to-primary:
       type: boolean
       default: False
       description: |
-        Use force when previous primary is unreachable (failover). Will invalidate previous
-        primary. Only valid for `cluster` scope.
+        For cluster scope, use force when previous primary is unreachable (failover). Will invalidate previous
+        primary.
+        For unit scope, use force to force quorum from the current unit.
 
 recreate-cluster:
   description: |
