@@ -511,6 +511,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         self._mysql.remove_instance(
             unit_label=self.unit_label,
+            auto_dissolve=False,
         )
         self._mysql.add_instance_to_cluster(
             instance_address=self.unit_address,
