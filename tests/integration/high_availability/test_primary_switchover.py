@@ -104,4 +104,5 @@ def get_app_units(juju: Juju, app_name: str) -> set[str]:
 def get_unit_machine(juju: Juju, app_name: str, unit_name: str) -> str:
     """Get the machine name for the given unit."""
     status = juju.status()
-    return status.apps[app_name].units[unit_name].machine
+    machine_id = status.apps[app_name].units[unit_name].machine
+    return status.machines[machine_id].instance_id
