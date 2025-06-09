@@ -786,17 +786,17 @@ class MySQL(MySQLBase):
             # split output to clean mysqlsh garbage
             return output.split("###")[1].strip()
         except subprocess.CalledProcessError as e:
+            self.strip_off_passwords_from_exception(e)
             if exception_as_warning:
                 logger.warning("Failed to execute mysql-shell command")
             else:
-                self.strip_off_passwords_from_exception(e)
                 logger.exception("Failed to execute mysql-shell command")
             raise MySQLClientError
         except subprocess.TimeoutExpired as e:
+            self.strip_off_passwords_from_exception(e)
             if exception_as_warning:
                 logger.warning("MySQL shell command timed out")
             else:
-                self.strip_off_passwords_from_exception(e)
                 logger.exception("MySQL shell command timed out")
             raise TimeoutError
 
