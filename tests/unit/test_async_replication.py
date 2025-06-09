@@ -446,7 +446,10 @@ class TestAsyncRelation(unittest.TestCase):
 
         self.harness.run_action(
             "promote-to-primary",
-            {"cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"]},
+            {
+                "cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"],
+                "scope": "cluster",
+            },
         )
 
         _mysql.promote_cluster_to_primary.assert_called_with(
@@ -460,6 +463,7 @@ class TestAsyncRelation(unittest.TestCase):
             "promote-to-primary",
             {
                 "cluster-set-name": self.charm.app_peer_data["cluster-set-domain-name"],
+                "scope": "cluster",
                 "force": True,
             },
         )
