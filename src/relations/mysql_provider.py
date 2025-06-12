@@ -95,12 +95,12 @@ class MySQLProvider(Object):
         if self.charm.unit.name == event.departing_unit.name:
             return
 
-        # get unit name that departed
-        dep_unit_name = event.departing_unit.name.replace("/", "-")
+        # get unit label that departed
+        dep_unit_label = self.charm.get_unit_label(event.departing_unit)
 
         # defer if the added unit is still in the cluster
-        if self.charm._mysql.is_instance_in_cluster(dep_unit_name):
-            logger.debug(f"Departing unit {dep_unit_name} is still in the cluster!")
+        if self.charm._mysql.is_instance_in_cluster(dep_unit_label):
+            logger.debug(f"Departing unit {dep_unit_label} is still in the cluster!")
             event.defer()
             return
 
@@ -128,8 +128,8 @@ class MySQLProvider(Object):
             logger.debug("Waiting cluster to be initialized")
             return
 
-        # get unit name that joined
-        event_unit_label = event.unit.name.replace("/", "-")
+        # get unit label that joined
+        event_unit_label = self.charm.get_unit_label(event.unit)
 
         # defer if upgrading
         if not self.charm.upgrade.idle:
@@ -158,7 +158,7 @@ class MySQLProvider(Object):
             remote_app (str): The name of the remote application
         """
         try:
-            rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+            rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
 
             # check if endpoints need update
             relation = self.model.get_relation(DB_RELATION_NAME, relation_id)
@@ -230,7 +230,7 @@ class MySQLProvider(Object):
 
         try:
             db_version = self.charm._mysql.get_mysql_version()
-            rw_endpoints, ro_endpoints, _ = self.charm._mysql.get_cluster_endpoints()
+            rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
             self.database.set_database(relation_id, db_name)
             self.database.set_credentials(relation_id, db_user, db_pass)
             self.database.set_endpoints(relation_id, rw_endpoints)

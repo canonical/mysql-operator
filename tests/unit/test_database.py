@@ -23,11 +23,11 @@ class TestDatabase(unittest.TestCase):
 
     @patch("charm.MySQLOperatorCharm.unit_initialized")
     @patch("charm.MySQLOperatorCharm.cluster_initialized", new_callable=PropertyMock)
-    @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
     @patch(
-        "mysql_vm_helpers.MySQL.get_cluster_endpoints",
+        "charm.MySQLOperatorCharm.get_cluster_endpoints",
         return_value=("2.2.2.2:3306", "2.2.2.1:3306,2.2.2.3:3306", ""),
     )
+    @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
     @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
     @patch(
         "relations.mysql_provider.generate_random_password", return_value="super_secure_password"
@@ -36,8 +36,8 @@ class TestDatabase(unittest.TestCase):
         self,
         _generate_random_password,
         _create_application_database_and_scoped_user,
-        _get_cluster_endpoints,
         _get_mysql_version,
+        _get_cluster_endpoints,
         _cluster_initialized,
         _unit_initialized,
     ):

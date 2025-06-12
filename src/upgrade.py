@@ -31,7 +31,7 @@ from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
 from typing_extensions import override
 
-from constants import CHARMED_MYSQL_COMMON_DIRECTORY
+from constants import CHARMED_MYSQL_COMMON_DIRECTORY, PEER
 
 if TYPE_CHECKING:
     from charm import MySQLOperatorCharm
@@ -278,11 +278,11 @@ class MySQLVMUpgrade(DataUpgrade):
         """
         if self.charm._mysql.get_primary_label() != self.charm.unit_label:
             # set the primary to the leader unit for switchover mitigation
-            self.charm._mysql.set_cluster_primary(self.charm.get_unit_address(self.charm.unit))
+            self.charm._mysql.set_cluster_primary(self.charm.unit_address)
 
         # set slow shutdown on all instances
         for unit in self.app_units:
-            unit_address = self.charm.get_unit_address(unit)
+            unit_address = self.charm.get_unit_address(unit, PEER)
             self.charm._mysql.set_dynamic_variable(
                 variable="innodb_fast_shutdown", value="0", instance_address=unit_address
             )
@@ -309,7 +309,7 @@ class MySQLVMUpgrade(DataUpgrade):
             leader_unit_ordinal = self.upgrade_stack[0]
             for unit in self.peer_relation.units:
                 if unit.name == f"{self.charm.app.name}/{leader_unit_ordinal}":
-                    return self.charm.get_unit_address(unit)
+                    return self.charm.get_unit_address(unit, PEER)
             return ""
 
         try:

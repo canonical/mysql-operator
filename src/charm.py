@@ -22,6 +22,8 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.data_platform_libs.v0.s3 import S3Requirer
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider, charm_tracing_config
 from charms.mysql.v0.async_replication import (
+    RELATION_CONSUMER,
+    RELATION_OFFER,
     MySQLAsyncReplicationConsumer,
     MySQLAsyncReplicationOffer,
 )
@@ -80,6 +82,7 @@ from constants import (
     CLUSTER_ADMIN_PASSWORD_KEY,
     CLUSTER_ADMIN_USERNAME,
     COS_AGENT_RELATION_NAME,
+    DB_RELATION_NAME,
     GR_MAX_MEMBERS,
     MONITORING_PASSWORD_KEY,
     MONITORING_USERNAME,
@@ -368,6 +371,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
+        # Update endpoint addresses
+        self.update_endpoint_addresses()
+
         if self._is_unit_waiting_to_join_cluster():
             self.join_unit_to_cluster()
             for port in ["3306", "33060"]:
@@ -405,7 +411,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if leader_unit := _get_leader_unit():
                 try:
                     self._mysql.set_cluster_primary(
-                        new_primary_address=self.get_unit_address(leader_unit)
+                        new_primary_address=self.get_unit_address(leader_unit, PEER)
                     )
                 except MySQLSetClusterPrimaryError:
                     logger.warning("Failed to switch primary to leader unit")
@@ -667,7 +673,22 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     @property
     def unit_address(self) -> str:
         """Returns the unit's address."""
-        return self.get_unit_address(self.unit)
+        return str(self.model.get_binding(PEER).network.bind_address)
+
+    @property
+    def database_address(self) -> str:
+        """Database endpoint address."""
+        return str(self.model.get_binding(DB_RELATION_NAME).network.bind_address)
+
+    @property
+    def replication_offer_address(self) -> str:
+        """Async replication offer endpoint address."""
+        return str(self.model.get_binding(RELATION_OFFER).network.bind_address)
+
+    @property
+    def replication_consumer_address(self) -> str:
+        """Async replication consumer endpoint address."""
+        return str(self.model.get_binding(RELATION_CONSUMER).network.bind_address)
 
     @property
     def text_logs(self) -> list:
@@ -679,6 +700,17 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             text_logs.append("audit")
 
         return text_logs
+
+    def update_endpoint_addresses(self) -> None:
+        """Update ip addresses for relation endpoints on unit peer databag."""
+        logger.debug("Updating relation endpoints addresses")
+
+        self.unit_peer_data.update({
+            f"{PEER}-address": self.unit_address,
+            f"{DB_RELATION_NAME}-address": self.database_address,
+            f"{RELATION_OFFER}-address": self.replication_offer_address,
+            f"{RELATION_CONSUMER}-address": self.replication_consumer_address,
+        })
 
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
@@ -740,12 +772,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
 
-    def get_unit_address(self, unit: Unit) -> str:
+    def get_unit_address(self, unit: Unit, relation_name: str) -> str:
         """Get the IP address of a specific unit."""
-        if unit == self.unit:
-            return str(self.model.get_binding(PEER).network.bind_address)
-
-        return str(self.peers.data[unit].get("private-address"))
+        try:
+            return str(self.peers.data[unit].get(f"{relation_name}-address", ""))
+        except KeyError:
+            return ""
 
     def _open_ports(self) -> None:
         """Open ports.
@@ -823,7 +855,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if self.peers.data[unit].get("member-state") == "online":
                 try:
                     return self._mysql.get_cluster_primary_address(
-                        connect_instance_address=self.get_unit_address(unit)
+                        connect_instance_address=self.get_unit_address(unit, PEER)
                     )
                 except MySQLGetClusterPrimaryAddressError:
                     # try next unit
@@ -834,8 +866,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         Try to join the unit from the primary unit.
         """
-        instance_label = self.unit.name.replace("/", "-")
-        instance_address = self.get_unit_address(self.unit)
+        instance_label = self.unit_label
+        instance_address = self.unit_address
 
         if not self._mysql.is_instance_in_cluster(instance_label):
             # Add new instance to the cluster
@@ -931,7 +963,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         if self.app.planned_units() > 1 and self._mysql.is_unit_primary(self.unit_label):
             try:
-                new_primary = self.get_unit_address(self.peers.units.pop())
+                new_primary = self.get_unit_address(self.peers.units.pop(), PEER)
                 logger.debug(f"Switching primary to {new_primary}")
                 self._mysql.set_cluster_primary(new_primary)
             except MySQLSetClusterPrimaryError:
