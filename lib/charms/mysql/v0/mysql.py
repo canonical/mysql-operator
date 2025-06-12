@@ -663,7 +663,7 @@ class MySQLCharmBase(CharmBase, ABC):
         for unit in self.app_units:
             total_online_cluster_nodes += self._mysql.get_cluster_node_count(
                 from_instance=self.get_unit_address(unit, PEER),
-                node_status=MySQLMemberState["ONLINE"],
+                node_status=MySQLMemberState.ONLINE,
             )
 
         return total_cluster_nodes == 1 and total_online_cluster_nodes == 0
@@ -674,7 +674,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         Fully initialized means that all unit that can be joined are joined.
         """
-        return self._mysql.get_cluster_node_count(node_status=MySQLMemberState["ONLINE"]) == min(
+        return self._mysql.get_cluster_node_count(node_status=MySQLMemberState.ONLINE) == min(
             GR_MAX_MEMBERS, self.app.planned_units()
         )
 

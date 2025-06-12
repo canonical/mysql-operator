@@ -772,12 +772,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if workload_version := self._mysql.get_mysql_version():
             self.unit.set_workload_version(workload_version)
 
-    def get_unit_address(self, unit: Unit, relation_name: str) -> Optional[str]:
+    def get_unit_address(self, unit: Unit, relation_name: str) -> str:
         """Get the IP address of a specific unit."""
         try:
             return str(self.peers.data[unit].get(f"{relation_name}-address", ""))
         except KeyError:
-            return None
+            return ""
 
     def _open_ports(self) -> None:
         """Open ports.
