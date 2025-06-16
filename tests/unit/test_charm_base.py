@@ -10,6 +10,27 @@ from charms.mysql.v0.mysql import MySQLCharmBase, MySQLSecretError
 from ops.testing import Harness
 from parameterized import parameterized
 
+SHORT_CLUSTER_TOPOLOGY = {
+    "mysql-0": {
+        "address": "mysql-0.mysql-endpoints:3306",
+        "memberrole": "secondary",
+        "mode": "r/o",
+        "status": "online",
+    },
+    "mysql-1": {
+        "address": "mysql-1.mysql-endpoints:3306",
+        "memberrole": "primary",
+        "mode": "r/w",
+        "status": "online",
+    },
+    "mysql-2": {
+        "address": "mysql-2.mysql-endpoints:3306",
+        "memberrole": "",
+        "mode": "r/o",
+        "status": "offline",
+    },
+}
+
 
 class TestCharmBase(unittest.TestCase):
     @patch.multiple(MySQLCharmBase, __abstractmethods__=set())
@@ -24,6 +45,23 @@ class TestCharmBase(unittest.TestCase):
         self.charm = self.harness.charm
         self.peer_relation_id = self.harness.add_relation("database-peers", "mysql")
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
+        self.harness.add_relation_unit(self.peer_relation_id, "mysql/2")
+
+    @patch("charm.MySQLCharmBase.get_unit_address")
+    @patch("charm.MySQLCharmBase._mysql")
+    def test_get_cluster_endpoints(self, _mysql, _get_unit_address):
+        """Test get_cluster_endpoints() method."""
+        _mysql.is_cluster_replica.return_value = False
+        _mysql.get_cluster_topology.return_value = SHORT_CLUSTER_TOPOLOGY
+
+        _mocked_address = "mysql-N.mysql-endpoints"
+        _get_unit_address.return_value = _mocked_address
+
+        rw, ro, no = self.charm.get_cluster_endpoints("database-peers")
+
+        self.assertEqual(rw, f"{_mocked_address}:3306")
+        self.assertEqual(ro, f"{_mocked_address}:3306")
+        self.assertEqual(no, f"{_mocked_address}:3306")
 
     def test_get_secret_databag(self):
         self.harness.set_leader()
