@@ -1,0 +1,38 @@
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:198 Scaling mysql application to 1 unit
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:210 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:226 Restoring backup backup_id='2025-06-21T01:35:34Z'
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:231 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:244 Inserting value after restore
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:251 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:262 Scaling mysql application to 3 units
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: agent initialising
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/3 [executing] waiting: Waiting to start MySQL
+  mysql/4 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [executing] waiting: Waiting to join the cluster
+  mysql/4 [executing] waiting: Waiting to join the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [executing] active: 
+  mysql/4 [executing] maintenance: joining the cluster
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:270 Ensuring inserted values before backup and after restore exist on all units
