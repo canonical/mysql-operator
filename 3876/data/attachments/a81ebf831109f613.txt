@@ -1,0 +1,76 @@
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:78 Rebooting mysql/0
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:78 Rebooting mysql/1
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:78 Rebooting mysql/2
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:80 Sleep to allow juju status change
+[32mINFO    [0m integration.test_vm_reboot:test_vm_reboot.py:82 Waiting for the application to become idle
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.7    unsupported  01:37:52Z
+
+App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+mysql  8.0.41-0ubun...  active    2/3  mysql             0  no       
+
+Unit      Workload  Agent      Machine  Public address  Ports           Message
+mysql/0*  error     idle       0        10.117.74.142   3306,33060/tcp  hook failed: "update-status"
+mysql/1   active    executing  1        10.117.74.191   3306,33060/tcp  (start) 
+mysql/2   unknown   lost       2        10.117.74.108   3306,33060/tcp  agent lost, see 'juju show-status-log mysql/2'
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.117.74.142  juju-a63e99-0  ubuntu@22.04      Running
+1        started  10.117.74.191  juju-a63e99-1  ubuntu@22.04      Running
+2        down     10.117.74.108  juju-a63e99-2  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:31:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:31:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:31:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:32:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:32:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:32:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:32:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:32:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:32:47 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 01:37:21 ERROR unit.mysql/0.juju-log Failed to execute MySQL cli command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 845, in _run_mysqlcli_script
+    process.expect("Enter password:")
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/pexpect/spawnbase.py", line 354, in expect
+    return self.expect_list(compiled_pattern_list,
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/pexpect/spawnbase.py", line 383, in expect_list
+    return exp.expect_loop(timeout)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/pexpect/expect.py", line 179, in expect_loop
+    return self.eof(e)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/pexpect/expect.py", line 122, in eof
+    raise exc
+pexpect.exceptions.EOF: End Of File (EOF). Exception style platform.
+<pexpect.pty_spawn.spawn object at 0x7f74d8a4f6a0>
+command: /snap/bin/charmed-mysql.mysql
+args: [b'/snap/bin/charmed-mysql.mysql', b'-u', b'clusteradmin', b'-p', b'-N', b'-B', b'--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock', b'-e', b'SELECT MEMBER_STATE, MEMBER_ROLE, MEMBER_ID, @@server_uuid FROM performance_schema.replication_group_members']
+buffer (last 100 chars): ''
+before (last 100 chars): "destructive (systemd-halt.service has 'start' job queued, but 'stop' is included in transaction).]\r\n"
+after: <class 'pexpect.exceptions.EOF'>
+match: None
+match_index: None
+exitstatus: None
+flag_eof: True
+pid: 2822
+child_fd: 7
+closed: False
+timeout: 10
+delimiter: <class 'pexpect.exceptions.EOF'>
+logfile: None
+logfile_read: None
+logfile_send: None
+maxread: 2000
+ignorecase: False
+searchwindowsize: None
+delaybeforesend: 0.05
+delayafterclose: 0.1
+delayafterterminate: 0.1
+searcher: searcher_re:
+    0: re.compile('Enter password:')
+unit-mysql-0: 01:37:21 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
