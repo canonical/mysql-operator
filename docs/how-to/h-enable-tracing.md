@@ -24,7 +24,7 @@ This feature is available for Charmed MySQL revision 237+ only.
 Enabling tracing with Tempo requires that you:
 - Have deployed a Charmed MySQL application
   - See [How to manage units](https://discourse.charmhub.io/t/charmed-mysql-how-to-manage-units/9904)
-- Have deployed a 'cos-lite' bundle from the `latest/edge` track in a Kubernetes environment
+- Have deployed a 'cos-lite' bundle in a Kubernetes environment
   - See [Getting started on MicroK8s](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
 ---
@@ -79,9 +79,9 @@ juju consume k8s:admin/cos.tempo
 
 <a href="#heading--consume"><h2 id="heading--consume"> Consume interfaces </h2></a>
 
-First, deploy [Grafana Agent](https://charmhub.io/grafana-agent) from the `latest/edge` channel:
+First, deploy [Grafana Agent](https://charmhub.io/grafana-agent) from the `1/stable` channel:
 ```shell
-juju deploy grafana-agent --channel latest/edge
+juju deploy grafana-agent --channel 1/stable
 ```
 
 Then, integrate Grafana Agent with Charmed MySQL:
@@ -105,7 +105,7 @@ SAAS   Status  Store       URL
 tempo  active  k8s         admin/cos.tempo
 
 App            Version          Status   Scale  Charm          Channel      Rev  Exposed  Message
-grafana-agent                   blocked      1  grafana-agent  latest/edge  282  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
+grafana-agent                   blocked      1  grafana-agent  1/stable     452  no       Missing ['grafana-cloud-config']|['grafana-dashboards-provider']|['logging-consumer']|['send-remote-write'] for cos-a...
 mysql          8.0.37-0ubun...  active       1  mysql                         0  no       
 
 Unit                Workload  Agent  Machine  Public address  Ports           Message
