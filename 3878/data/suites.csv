@@ -1,0 +1,113 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Test that endpoints are running.","113366","test_exporter_endpoints","tests.integration.high_availability","Tue Jul 01 01:36:22 UTC 2025","passed","Tue Jul 01 01:38:16 UTC 2025","","test_replication_unit_endpoints","",""
+"Test updating from stable channel.","132120","test_refresh_without_pre_upgrade_check","tests.integration.high_availability","Tue Jul 01 01:35:36 UTC 2025","passed","Tue Jul 01 01:37:48 UTC 2025","","test_upgrade_skip_pre_upgrade_check","",""
+"Simple test to ensure that the mysql and application charms get deployed.","290617","test_build_and_deploy","tests.integration.high_availability","Tue Jul 01 01:30:09 UTC 2025","broken","Tue Jul 01 01:35:00 UTC 2025","","test_upgrade_rollback_incompat","",""
+"The SST test.
+
+    A forceful restart instance with deleted data and without transaction logs (forced clone).
+    ","146634","test_sst_test","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:38:51 UTC 2025","","test_self_healing_restart_forceful","",""
+"Test to restore a backup to the same mysql cluster.","377489","test_restore_on_same_cluster","tests.integration","Tue Jul 01 01:38:05 UTC 2025","passed","Tue Jul 01 01:44:23 UTC 2025","","test_backup_ceph","",""
+"Query database for custom variables.","6390","test_custom_variables","tests.integration.high_availability","Tue Jul 01 01:36:23 UTC 2025","passed","Tue Jul 01 01:36:29 UTC 2025","","test_replication_variables","",""
+"Reboot a single unit and ensure it comes back online.","74034","test_reboot_2_of_3_units","tests.integration","Tue Jul 01 01:36:28 UTC 2025","passed","Tue Jul 01 01:37:42 UTC 2025","","test_vm_reboot","",""
+"Test switchover on primary cluster fail.","0","test_failover","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Relate charms and wait for the expected changes in status.","9903","test_relation_creation","tests.integration.relations","Tue Jul 01 01:35:42 UTC 2025","passed","Tue Jul 01 01:35:51 UTC 2025","","test_relation_mysql_legacy","",""
+"","132552","test_deploy_and_relate_test_app","tests.integration","Tue Jul 01 01:30:11 UTC 2025","passed","Tue Jul 01 01:32:23 UTC 2025","","test_saturate_max_connections","",""
+"Pitr tests.","260360","test_pitr_aws","tests.integration","Tue Jul 01 01:36:46 UTC 2025","passed","Tue Jul 01 01:41:07 UTC 2025","","test_backup_pitr_gcp","",""
+"","8651","test_saturate_max_connections","tests.integration","Tue Jul 01 01:32:23 UTC 2025","passed","Tue Jul 01 01:32:32 UTC 2025","","test_saturate_max_connections","",""
+"","0","test_upgrade_to_failling","tests.integration.high_availability","Tue Jul 01 01:35:00 UTC 2025","skipped","Tue Jul 01 01:35:00 UTC 2025","","test_upgrade_rollback_incompat","",""
+"Remove relation and wait for the expected changes in status.","30078","test_relation_broken","tests.integration.relations","Tue Jul 01 01:50:49 UTC 2025","passed","Tue Jul 01 01:51:19 UTC 2025","","test_database","",""
+"Reboot a single unit and ensure it comes back online.","129055","test_reboot_3_of_3_units","tests.integration","Tue Jul 01 01:37:42 UTC 2025","passed","Tue Jul 01 01:39:51 UTC 2025","","test_vm_reboot","",""
+"Test updating from stable channel.","203823","test_upgrade_from_stable","tests.integration.high_availability","Tue Jul 01 01:36:37 UTC 2025","passed","Tue Jul 01 01:40:01 UTC 2025","","test_upgrade_from_stable","",""
+"Test to restore a backup on a new mysql cluster.","459825","test_restore_on_new_cluster","tests.integration","Tue Jul 01 01:43:59 UTC 2025","passed","Tue Jul 01 01:51:39 UTC 2025","","test_backup_gcp","",""
+"Simple test to ensure that the mysql and application charms get deployed.","614507","test_build_and_deploy","tests.integration.high_availability","Tue Jul 01 01:30:07 UTC 2025","broken","Tue Jul 01 01:40:21 UTC 2025","","test_async_replication","",""
+"","63465","test_landscape_client","tests.integration","Tue Jul 01 01:36:20 UTC 2025","passed","Tue Jul 01 01:37:24 UTC 2025","","test_subordinate_charms","",""
+"Relate charms and wait for the expected changes in status.","0","test_relation_creation_databag","tests.integration.relations","Tue Jul 01 01:37:11 UTC 2025","skipped","Tue Jul 01 01:37:11 UTC 2025","","test_database","",""
+"Build and deploy for AWS.","398348","test_build_and_deploy_gcp","tests.integration","Tue Jul 01 01:30:08 UTC 2025","passed","Tue Jul 01 01:36:46 UTC 2025","","test_backup_pitr_gcp","",""
+"Freeze and unfreeze process and check for auto cluster recovery.","50570","test_freeze_db_process","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:37:16 UTC 2025","","test_self_healing_process_frozen","",""
+"","235252","test_fail_and_rollback","tests.integration.high_availability","Tue Jul 01 01:41:07 UTC 2025","passed","Tue Jul 01 01:45:02 UTC 2025","","test_upgrade","",""
+"Test for cluster data isolation.
+
+    This test creates a new cluster, create a new table on both cluster, write a single record with
+    the application name for each cluster, retrieve and compare these records, asserting they are
+    not the same.
+    ","192024","test_cluster_isolation","tests.integration.high_availability","Tue Jul 01 01:36:32 UTC 2025","passed","Tue Jul 01 01:39:44 UTC 2025","","test_replication_data_isolation","",""
+"Tries deploying an arm64 charm on amd64 host.","115822","test_arm_charm_on_amd_host","tests.integration","Tue Jul 01 01:30:32 UTC 2025","passed","Tue Jul 01 01:32:28 UTC 2025","","test_architecture","",""
+"Test to restore a backup on a new mysql cluster.","402551","test_restore_on_new_cluster","tests.integration","Tue Jul 01 01:43:23 UTC 2025","passed","Tue Jul 01 01:50:06 UTC 2025","","test_backup_aws","",""
+"Test to restore a backup to the same mysql cluster.","386252","test_restore_on_same_cluster","tests.integration","Tue Jul 01 01:36:57 UTC 2025","passed","Tue Jul 01 01:43:23 UTC 2025","","test_backup_aws","",""
+"Test graceful promotion of a standby cluster to primary.","0","test_standby_promotion","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","319516","test_build_and_deploy","tests.integration.relations","Tue Jul 01 01:30:22 UTC 2025","passed","Tue Jul 01 01:35:42 UTC 2025","","test_relation_mysql_legacy","",""
+"Test to create a backup and list backups.","47181","test_backup","tests.integration","Tue Jul 01 01:36:10 UTC 2025","passed","Tue Jul 01 01:36:57 UTC 2025","","test_backup_aws","",""
+"Test to restore a backup to the same mysql cluster.","382219","test_restore_on_same_cluster","tests.integration","Tue Jul 01 01:37:37 UTC 2025","passed","Tue Jul 01 01:43:59 UTC 2025","","test_backup_gcp","",""
+"Relate the database to the application.","41233","test_integrate_with_spaces","tests.integration.spaces","Tue Jul 01 01:37:26 UTC 2025","passed","Tue Jul 01 01:38:07 UTC 2025","","test_spaced_db","",""
+"Remove relation and wait for the expected changes in status.","31164","test_relation_broken","tests.integration.relations","Tue Jul 01 01:35:51 UTC 2025","passed","Tue Jul 01 01:36:23 UTC 2025","","test_relation_mysql_legacy","",""
+"Test refresh back to stable channel.","125421","test_rollback_without_pre_upgrade_check","tests.integration.high_availability","Tue Jul 01 01:37:48 UTC 2025","passed","Tue Jul 01 01:39:53 UTC 2025","","test_upgrade_skip_pre_upgrade_check","",""
+"Build the charm and deploy 1 units to ensure a cluster is formed.","7408","test_build_and_deploy","tests.integration","Tue Jul 01 01:30:03 UTC 2025","passed","Tue Jul 01 01:30:11 UTC 2025","","test_saturate_max_connections","",""
+"Reboot a single unit and ensure it comes back online.","66144","test_reboot_1_of_3_units","tests.integration","Tue Jul 01 01:35:21 UTC 2025","passed","Tue Jul 01 01:36:28 UTC 2025","","test_vm_reboot","",""
+"Deploy the router and the test application.","0","test_deploy_router_and_app","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Relate charms and wait for the expected changes in status.","34827","test_relation_creation","tests.integration.relations","Tue Jul 01 01:37:11 UTC 2025","passed","Tue Jul 01 01:37:46 UTC 2025","","test_database","",""
+"Test to create a backup and list backups.","66328","test_backup","tests.integration","Tue Jul 01 01:36:31 UTC 2025","passed","Tue Jul 01 01:37:37 UTC 2025","","test_backup_gcp","",""
+"Pause test.
+
+    A graceful simultaneous restart of all instances,
+    check primary election after the start, write and read data
+    ","139655","test_cluster_pause","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:38:45 UTC 2025","","test_self_healing_stop_all","",""
+"Simple test to ensure that the mysql and application charms get deployed.","416768","test_deploy_latest","tests.integration.high_availability","Tue Jul 01 01:30:42 UTC 2025","passed","Tue Jul 01 01:37:39 UTC 2025","","test_upgrade","",""
+"Relate the two mysql clusters.","0","test_async_relate","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"","0","test_rollback","tests.integration.high_availability","Tue Jul 01 01:35:00 UTC 2025","skipped","Tue Jul 01 01:35:00 UTC 2025","","test_upgrade_rollback_incompat","",""
+"","359745","test_ubuntu_pro","tests.integration","Tue Jul 01 01:30:20 UTC 2025","passed","Tue Jul 01 01:36:20 UTC 2025","","test_subordinate_charms","",""
+"Test to create a backup and list backups.","47870","test_backup","tests.integration","Tue Jul 01 01:37:17 UTC 2025","passed","Tue Jul 01 01:38:05 UTC 2025","","test_backup_ceph","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","302607","test_build_and_deploy","tests.integration","Tue Jul 01 01:30:24 UTC 2025","passed","Tue Jul 01 01:35:27 UTC 2025","","test_tls","",""
+"Check read-only-endpoints are correctly updated.","783271","test_read_only_endpoints","tests.integration.relations","Tue Jul 01 01:37:46 UTC 2025","passed","Tue Jul 01 01:50:49 UTC 2025","","test_database","",""
+"Deploy the keystone bundle to test the 'shared-db' relation.
+
+    Args:
+        ops_test: The ops test framework
+    ","1406438","test_keystone_bundle_shared_db","tests.integration.relations","Tue Jul 01 01:29:57 UTC 2025","passed","Tue Jul 01 01:53:24 UTC 2025","","test_shared_db","",""
+"Verify rotating tls private keys restarts cluster with new certificates.
+
+    This test rotates tls private keys to randomly generated keys.
+    ","43734","test_rotate_tls_key","tests.integration","Tue Jul 01 01:37:33 UTC 2025","passed","Tue Jul 01 01:38:17 UTC 2025","","test_tls","",""
+"Test to write to primary, and read the same data back from replicas.","0","test_data_replication","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Build and deploy for AWS.","404012","test_build_and_deploy_aws","tests.integration","Tue Jul 01 01:30:06 UTC 2025","passed","Tue Jul 01 01:36:50 UTC 2025","","test_backup_pitr_aws","",""
+"Test for encryption enablement when relation to TLS charm.","124033","test_enable_tls","tests.integration","Tue Jul 01 01:35:29 UTC 2025","passed","Tue Jul 01 01:37:33 UTC 2025","","test_tls","",""
+"Test the log rotation of text files.","28203","test_log_rotation","tests.integration.high_availability","Tue Jul 01 01:37:00 UTC 2025","passed","Tue Jul 01 01:37:28 UTC 2025","","test_replication_logs_rotation","",""
+"Run the create replication and wait for the applications to settle.","0","test_create_replication","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","440664","test_build_and_deploy","tests.integration.spaces","Tue Jul 01 01:30:05 UTC 2025","passed","Tue Jul 01 01:37:26 UTC 2025","","test_spaced_db","",""
+"Relate the database to the application.","590519","test_integrate_with_isolated_space","tests.integration.spaces","Tue Jul 01 01:38:07 UTC 2025","passed","Tue Jul 01 01:47:58 UTC 2025","","test_spaced_db","",""
+"Confirm that data is replicated from the primary node to all the replicas.","15487","test_consistent_data_replication_across_cluster","tests.integration.high_availability","Tue Jul 01 01:36:28 UTC 2025","passed","Tue Jul 01 01:36:44 UTC 2025","","test_replication_data_consistency","",""
+"Test removing and re-relating the two mysql clusters.","0","test_remove_relation_and_relate","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Rotate password and confirm changes.","12308","test_password_rotation_root_user_implicit","tests.integration.relations","Tue Jul 01 01:36:59 UTC 2025","passed","Tue Jul 01 01:37:11 UTC 2025","","test_database","",""
+"Simple test to ensure that the mysql charm gets deployed.","381952","test_build_and_deploy","tests.integration","Tue Jul 01 01:30:55 UTC 2025","passed","Tue Jul 01 01:37:17 UTC 2025","","test_backup_ceph","",""
+"","30166","test_disable_tls","tests.integration","Tue Jul 01 01:38:17 UTC 2025","passed","Tue Jul 01 01:38:47 UTC 2025","","test_tls","",""
+"Test to restore a backup on a new mysql cluster.","444955","test_restore_on_new_cluster","tests.integration","Tue Jul 01 01:44:23 UTC 2025","passed","Tue Jul 01 01:51:48 UTC 2025","","test_backup_ceph","",""
+"Simple test to ensure that the mysql charm gets deployed.","375941","test_build_and_deploy","tests.integration","Tue Jul 01 01:29:54 UTC 2025","passed","Tue Jul 01 01:36:10 UTC 2025","","test_backup_aws","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","292449","test_build_and_deploy","tests.integration","Tue Jul 01 01:30:29 UTC 2025","passed","Tue Jul 01 01:35:21 UTC 2025","","test_vm_reboot","",""
+"Test rejoin invalidated cluster with.","0","test_rejoin_invalidated_cluster","tests.integration.high_availability","Tue Jul 01 01:40:22 UTC 2025","skipped","Tue Jul 01 01:40:22 UTC 2025","","test_async_replication","",""
+"Test that the pre-upgrade-check action runs successfully.","15735","test_pre_upgrade_check","tests.integration.high_availability","Tue Jul 01 01:37:39 UTC 2025","passed","Tue Jul 01 01:37:55 UTC 2025","","test_upgrade","",""
+"Tries deploying an amd64 charm on arm64 host.","0","test_amd_charm_on_arm_host","tests.integration","Tue Jul 01 01:32:28 UTC 2025","skipped","Tue Jul 01 01:32:28 UTC 2025","","test_architecture","",""
+"Ensure connections (with and without ssl) are possible before relating with TLS operator.","2257","test_connection_before_tls","tests.integration","Tue Jul 01 01:35:27 UTC 2025","passed","Tue Jul 01 01:35:29 UTC 2025","","test_tls","",""
+"","184794","test_upgrade_from_edge","tests.integration.high_availability","Tue Jul 01 01:37:57 UTC 2025","passed","Tue Jul 01 01:41:02 UTC 2025","","test_upgrade","",""
+"Deploy the keystone bundle to test the 'db-router' relation.
+
+    Args:
+        ops_test: The ops test framework
+    ","1419097","test_keystone_bundle_db_router","tests.integration.relations","Tue Jul 01 01:29:51 UTC 2025","passed","Tue Jul 01 01:53:31 UTC 2025","","test_db_router","",""
+"Simple test to ensure that the mysql and application charms get deployed.","389473","test_deploy_stable","tests.integration.high_availability","Tue Jul 01 01:29:53 UTC 2025","passed","Tue Jul 01 01:36:23 UTC 2025","","test_upgrade_from_stable","",""
+"Rotate password and confirm changes.","8168","test_password_rotation_silent","tests.integration.relations","Tue Jul 01 01:36:51 UTC 2025","passed","Tue Jul 01 01:36:59 UTC 2025","","test_database","",""
+"Simple test to ensure that the mysql charm gets deployed.","379262","test_build_and_deploy","tests.integration","Tue Jul 01 01:30:11 UTC 2025","passed","Tue Jul 01 01:36:31 UTC 2025","","test_backup_gcp","",""
+"Confirm that a new primary is elected when the current primary is torn down.","301928","test_kill_primary_check_reelection","tests.integration.high_availability","Tue Jul 01 01:37:24 UTC 2025","passed","Tue Jul 01 01:42:25 UTC 2025","","test_replication_reelection","",""
+"The cluster manual re-join test.
+
+    A graceful restart is performed in one of the instances (choosing Primary to make it painful).
+    In order to verify that the instance can come back ONLINE, after disabling automatic re-join
+    ","106846","test_cluster_manual_rejoin","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:38:12 UTC 2025","","test_self_healing_restart_graceful","",""
+"Pitr tests.","332015","test_pitr_aws","tests.integration","Tue Jul 01 01:36:50 UTC 2025","passed","Tue Jul 01 01:42:22 UTC 2025","","test_backup_pitr_aws","",""
+"Stop server, write data, start and validate replication.","143973","test_replicate_data_on_restart","tests.integration.high_availability","Tue Jul 01 01:37:25 UTC 2025","passed","Tue Jul 01 01:39:49 UTC 2025","","test_self_healing_stop_primary","",""
+"Completely cut and restore network.","525273","test_network_cut","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:45:11 UTC 2025","","test_self_healing_network_cut","",""
+"Rotate password and confirm changes.","9243","test_password_rotation","tests.integration.relations","Tue Jul 01 01:36:42 UTC 2025","passed","Tue Jul 01 01:36:51 UTC 2025","","test_database","",""
+"Test that data is preserved during scale up and scale down.","359001","test_scaling_without_data_loss","tests.integration.high_availability","Tue Jul 01 01:36:35 UTC 2025","passed","Tue Jul 01 01:42:34 UTC 2025","","test_replication_scaling","",""
+"Simple test to ensure that the mysql and application charms get deployed.","348641","test_deploy_stable","tests.integration.high_availability","Tue Jul 01 01:29:47 UTC 2025","passed","Tue Jul 01 01:35:36 UTC 2025","","test_upgrade_skip_pre_upgrade_check","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","367413","test_build_and_deploy","tests.integration.relations","Tue Jul 01 01:30:34 UTC 2025","passed","Tue Jul 01 01:36:42 UTC 2025","","test_database","",""
+"Test that the pre-upgrade-check action runs successfully.","14704","test_pre_upgrade_check","tests.integration.high_availability","Tue Jul 01 01:36:23 UTC 2025","passed","Tue Jul 01 01:36:37 UTC 2025","","test_upgrade_from_stable","",""
+"Kill mysqld process and check for auto cluster recovery.","107650","test_kill_db_process","tests.integration.high_availability","Tue Jul 01 01:36:25 UTC 2025","passed","Tue Jul 01 01:38:13 UTC 2025","","test_self_healing_process_killed","",""
+"Test that the pre-upgrade-check action runs successfully.","0","test_pre_upgrade_check","tests.integration.high_availability","Tue Jul 01 01:35:00 UTC 2025","skipped","Tue Jul 01 01:35:00 UTC 2025","","test_upgrade_rollback_incompat","",""
