@@ -1,0 +1,113 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","","test_ubuntu_pro","tests.integration","","unknown","","","test_subordinate_charms","",""
+"Remove relation and wait for the expected changes in status.","","test_relation_broken","tests.integration.relations","","unknown","","","test_database","",""
+"Simple test to ensure that the mysql and application charms get deployed.","","test_deploy_stable","tests.integration.high_availability","","unknown","","","test_upgrade_from_stable","",""
+"Simple test to ensure that the mysql and application charms get deployed.","","test_build_and_deploy","tests.integration.high_availability","","unknown","","","test_upgrade_rollback_incompat","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration.relations","","unknown","","","test_database","",""
+"Simple test to ensure that the mysql charm gets deployed.","","test_build_and_deploy","tests.integration","","unknown","","","test_backup_aws","",""
+"Freeze and unfreeze process and check for auto cluster recovery.","","test_freeze_db_process","tests.integration.high_availability","","unknown","","","test_self_healing_process_frozen","",""
+"Build and deploy for AWS.","","test_build_and_deploy_gcp","tests.integration","","unknown","","","test_backup_pitr_gcp","",""
+"","","test_upgrade_to_failling","tests.integration.high_availability","","unknown","","","test_upgrade_rollback_incompat","",""
+"Remove relation and wait for the expected changes in status.","","test_relation_broken","tests.integration.relations","","unknown","","","test_relation_mysql_legacy","",""
+"Relate the database to the application.","","test_integrate_with_isolated_space","tests.integration.spaces","","unknown","","","test_spaced_db","",""
+"Test updating from stable channel.","","test_refresh_without_pre_upgrade_check","tests.integration.high_availability","","unknown","","","test_upgrade_skip_pre_upgrade_check","",""
+"","","test_fail_and_rollback","tests.integration.high_availability","","unknown","","","test_upgrade","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration","","unknown","","","test_vm_reboot","",""
+"Relate charms and wait for the expected changes in status.","","test_relation_creation","tests.integration.relations","","unknown","","","test_relation_mysql_legacy","",""
+"Rotate password and confirm changes.","","test_password_rotation_root_user_implicit","tests.integration.relations","","unknown","","","test_database","",""
+"Pause test.
+
+    A graceful simultaneous restart of all instances,
+    check primary election after the start, write and read data
+    ","","test_cluster_pause","tests.integration.high_availability","","unknown","","","test_self_healing_stop_all","",""
+"","","test_rollback","tests.integration.high_availability","","unknown","","","test_upgrade_rollback_incompat","",""
+"Deploy the keystone bundle to test the 'db-router' relation.
+
+    Args:
+        ops_test: The ops test framework
+    ","","test_keystone_bundle_db_router","tests.integration.relations","","unknown","","","test_db_router","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration","","unknown","","","test_tls","",""
+"Test for encryption enablement when relation to TLS charm.","","test_enable_tls","tests.integration","","unknown","","","test_tls","",""
+"Test to restore a backup on a new mysql cluster.","","test_restore_on_new_cluster","tests.integration","","unknown","","","test_backup_gcp","",""
+"Test the log rotation of text files.","","test_log_rotation","tests.integration.high_availability","","unknown","","","test_replication_logs_rotation","",""
+"Deploy the router and the test application.","","test_deploy_router_and_app","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Completely cut and restore network.","","test_network_cut","tests.integration.high_availability","","unknown","","","test_self_healing_network_cut","",""
+"Build the charm and deploy 1 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration","","unknown","","","test_saturate_max_connections","",""
+"Ensure connections (with and without ssl) are possible before relating with TLS operator.","","test_connection_before_tls","tests.integration","","unknown","","","test_tls","",""
+"Pitr tests.","","test_pitr_aws","tests.integration","","unknown","","","test_backup_pitr_gcp","",""
+"","","test_deploy_and_relate_test_app","tests.integration","","unknown","","","test_saturate_max_connections","",""
+"","","test_upgrade_from_edge","tests.integration.high_availability","","unknown","","","test_upgrade","",""
+"Check read-only-endpoints are correctly updated.","","test_read_only_endpoints","tests.integration.relations","","unknown","","","test_database","",""
+"Confirm that a new primary is elected when the current primary is torn down.","","test_kill_primary_check_reelection","tests.integration.high_availability","","unknown","","","test_replication_reelection","",""
+"Test to restore a backup to the same mysql cluster.","","test_restore_on_same_cluster","tests.integration","","unknown","","","test_backup_aws","",""
+"Reboot a single unit and ensure it comes back online.","","test_reboot_2_of_3_units","tests.integration","","unknown","","","test_vm_reboot","",""
+"Test to restore a backup to the same mysql cluster.","","test_restore_on_same_cluster","tests.integration","","unknown","","","test_backup_gcp","",""
+"Kill mysqld process and check for auto cluster recovery.","","test_kill_db_process","tests.integration.high_availability","","unknown","","","test_self_healing_process_killed","",""
+"Rotate password and confirm changes.","","test_password_rotation","tests.integration.relations","","unknown","","","test_database","",""
+"Test refresh back to stable channel.","","test_rollback_without_pre_upgrade_check","tests.integration.high_availability","","unknown","","","test_upgrade_skip_pre_upgrade_check","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration.relations","","unknown","","","test_relation_mysql_legacy","",""
+"Build the charm and deploy 3 units to ensure a cluster is formed.","","test_build_and_deploy","tests.integration.spaces","","unknown","","","test_spaced_db","",""
+"Test to write to primary, and read the same data back from replicas.","","test_data_replication","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Relate the two mysql clusters.","","test_async_relate","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Tries deploying an amd64 charm on arm64 host.","","test_amd_charm_on_arm_host","tests.integration","","unknown","","","test_architecture","",""
+"Test to restore a backup to the same mysql cluster.","","test_restore_on_same_cluster","tests.integration","","unknown","","","test_backup_ceph","",""
+"Test that the pre-upgrade-check action runs successfully.","","test_pre_upgrade_check","tests.integration.high_availability","","unknown","","","test_upgrade","",""
+"Test to create a backup and list backups.","","test_backup","tests.integration","","unknown","","","test_backup_gcp","",""
+"Simple test to ensure that the mysql charm gets deployed.","","test_build_and_deploy","tests.integration","","unknown","","","test_backup_ceph","",""
+"Test switchover on primary cluster fail.","","test_failover","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Stop server, write data, start and validate replication.","","test_replicate_data_on_restart","tests.integration.high_availability","","unknown","","","test_self_healing_stop_primary","",""
+"","","test_saturate_max_connections","tests.integration","","unknown","","","test_saturate_max_connections","",""
+"Test rejoin invalidated cluster with.","","test_rejoin_invalidated_cluster","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Pitr tests.","","test_pitr_aws","tests.integration","","unknown","","","test_backup_pitr_aws","",""
+"","","test_landscape_client","tests.integration","","unknown","","","test_subordinate_charms","",""
+"Test to restore a backup on a new mysql cluster.","","test_restore_on_new_cluster","tests.integration","","unknown","","","test_backup_aws","",""
+"Tries deploying an arm64 charm on amd64 host.","","test_arm_charm_on_amd_host","tests.integration","","unknown","","","test_architecture","",""
+"Test that data is preserved during scale up and scale down.","","test_scaling_without_data_loss","tests.integration.high_availability","","unknown","","","test_replication_scaling","",""
+"","","test_disable_tls","tests.integration","","unknown","","","test_tls","",""
+"Deploy the keystone bundle to test the 'shared-db' relation.
+
+    Args:
+        ops_test: The ops test framework
+    ","","test_keystone_bundle_shared_db","tests.integration.relations","","unknown","","","test_shared_db","",""
+"The cluster manual re-join test.
+
+    A graceful restart is performed in one of the instances (choosing Primary to make it painful).
+    In order to verify that the instance can come back ONLINE, after disabling automatic re-join
+    ","","test_cluster_manual_rejoin","tests.integration.high_availability","","unknown","","","test_self_healing_restart_graceful","",""
+"Relate charms and wait for the expected changes in status.","","test_relation_creation_databag","tests.integration.relations","","unknown","","","test_database","",""
+"Relate the database to the application.","","test_integrate_with_spaces","tests.integration.spaces","","unknown","","","test_spaced_db","",""
+"Test for cluster data isolation.
+
+    This test creates a new cluster, create a new table on both cluster, write a single record with
+    the application name for each cluster, retrieve and compare these records, asserting they are
+    not the same.
+    ","","test_cluster_isolation","tests.integration.high_availability","","unknown","","","test_replication_data_isolation","",""
+"Test to restore a backup on a new mysql cluster.","","test_restore_on_new_cluster","tests.integration","","unknown","","","test_backup_ceph","",""
+"Test that the pre-upgrade-check action runs successfully.","","test_pre_upgrade_check","tests.integration.high_availability","","unknown","","","test_upgrade_rollback_incompat","",""
+"Test to create a backup and list backups.","","test_backup","tests.integration","","unknown","","","test_backup_ceph","",""
+"Test that the pre-upgrade-check action runs successfully.","","test_pre_upgrade_check","tests.integration.high_availability","","unknown","","","test_upgrade_from_stable","",""
+"Test removing and re-relating the two mysql clusters.","","test_remove_relation_and_relate","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Test to create a backup and list backups.","","test_backup","tests.integration","","unknown","","","test_backup_aws","",""
+"Simple test to ensure that the mysql and application charms get deployed.","","test_deploy_latest","tests.integration.high_availability","","unknown","","","test_upgrade","",""
+"Run the create replication and wait for the applications to settle.","","test_create_replication","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Simple test to ensure that the mysql and application charms get deployed.","","test_build_and_deploy","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Test that endpoints are running.","","test_exporter_endpoints","tests.integration.high_availability","","unknown","","","test_replication_unit_endpoints","",""
+"Simple test to ensure that the mysql charm gets deployed.","","test_build_and_deploy","tests.integration","","unknown","","","test_backup_gcp","",""
+"Relate charms and wait for the expected changes in status.","","test_relation_creation","tests.integration.relations","","unknown","","","test_database","",""
+"Query database for custom variables.","","test_custom_variables","tests.integration.high_availability","","unknown","","","test_replication_variables","",""
+"The SST test.
+
+    A forceful restart instance with deleted data and without transaction logs (forced clone).
+    ","","test_sst_test","tests.integration.high_availability","","unknown","","","test_self_healing_restart_forceful","",""
+"Reboot a single unit and ensure it comes back online.","","test_reboot_3_of_3_units","tests.integration","","unknown","","","test_vm_reboot","",""
+"Confirm that data is replicated from the primary node to all the replicas.","","test_consistent_data_replication_across_cluster","tests.integration.high_availability","","unknown","","","test_replication_data_consistency","",""
+"Verify rotating tls private keys restarts cluster with new certificates.
+
+    This test rotates tls private keys to randomly generated keys.
+    ","","test_rotate_tls_key","tests.integration","","unknown","","","test_tls","",""
+"Test updating from stable channel.","","test_upgrade_from_stable","tests.integration.high_availability","","unknown","","","test_upgrade_from_stable","",""
+"Rotate password and confirm changes.","","test_password_rotation_silent","tests.integration.relations","","unknown","","","test_database","",""
+"Build and deploy for AWS.","","test_build_and_deploy_aws","tests.integration","","unknown","","","test_backup_pitr_aws","",""
+"Reboot a single unit and ensure it comes back online.","","test_reboot_1_of_3_units","tests.integration","","unknown","","","test_vm_reboot","",""
+"Test graceful promotion of a standby cluster to primary.","","test_standby_promotion","tests.integration.high_availability","","unknown","","","test_async_replication","",""
+"Simple test to ensure that the mysql and application charms get deployed.","","test_deploy_stable","tests.integration.high_availability","","unknown","","","test_upgrade_skip_pre_upgrade_check","",""
