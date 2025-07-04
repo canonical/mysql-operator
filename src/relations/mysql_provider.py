@@ -16,6 +16,7 @@ from charms.mysql.v0.mysql import (
     MySQLGetClusterMembersAddressesError,
     MySQLGetMySQLVersionError,
     MySQLGrantPrivilegesToUserError,
+    MySQLGrantRolesToUserError,
     MySQLRemoveRouterFromMetadataError,
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent, RelationJoinedEvent
@@ -218,15 +219,17 @@ class MySQLProvider(Object):
 
         # get base relation data
         relation_id = event.relation.id
+        app_name = event.app.name
         db_name = event.database
+
         extra_user_roles = []
         if event.extra_user_roles:
             extra_user_roles = event.extra_user_roles.split(",")
+
         # user name is derived from the relation id
         db_user = self._get_username(relation_id)
         db_pass = self._get_or_set_password(event.relation)
-
-        remote_app = event.app.name
+        db_creation = "mysqlrouter" not in extra_user_roles
 
         try:
             db_version = self.charm._mysql.get_mysql_version()
@@ -237,31 +240,24 @@ class MySQLProvider(Object):
             self.database.set_version(relation_id, db_version)
             self.database.set_read_only_endpoints(relation_id, ro_endpoints)
 
-            if "mysqlrouter" in extra_user_roles:
-                self.charm._mysql.create_application_database_and_scoped_user(
-                    db_name,
-                    db_user,
-                    db_pass,
-                    "%",
-                    # MySQL Router charm does not need a new database
-                    create_database=False,
-                )
-                self.charm._mysql.grant_privileges_to_user(
-                    db_user, "%", ["ALL PRIVILEGES"], with_grant_option=True
-                )
-            else:
-                # TODO:
-                # add setup of tls, tls_ca and status
-                self.charm._mysql.create_application_database_and_scoped_user(
-                    db_name, db_user, db_pass, "%"
-                )
+            # TODO:
+            # add setup of tls, tls_ca and status
+            self.charm._mysql.create_application_database_and_scoped_user(
+                db_name,
+                db_user,
+                db_pass,
+                "%",
+                create_database=db_creation,
+            )
+            self.charm._mysql.grant_roles_to_user(db_user, "%", extra_user_roles)
 
-            logger.info(f"Created user for app {remote_app}")
+            logger.info(f"Created user for app {app_name}")
         except (
             MySQLCreateApplicationDatabaseAndScopedUserError,
             MySQLGetMySQLVersionError,
             MySQLGetClusterMembersAddressesError,
             MySQLGrantPrivilegesToUserError,
+            MySQLGrantRolesToUserError,
             MySQLClientError,
         ) as e:
             logger.exception("Failed to set up database relation", exc_info=e)

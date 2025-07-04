@@ -85,6 +85,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Set,
     Tuple,
     Union,
     get_args,
@@ -151,6 +152,15 @@ ADMIN_PORT = 33062
 SECRET_INTERNAL_LABEL = "secret-id"
 SECRET_DELETED_LABEL = "None"
 
+ROLE_DBA = "charmed_dba"
+ROLE_DDL = "charmed_ddl"
+ROLE_DML = "charmed_dml"
+ROLE_READ = "charmed_read"
+ROLE_STATS = "charmed_stats"
+ROLE_BACKUP = "charmed_backup"
+
+ROLE_ROUTER = "mysqlrouter"
+
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 Scopes = Literal["app", "unit"]
@@ -178,8 +188,16 @@ class Error(Exception):
         return "<{}.{}>".format(type(self).__module__, type(self).__name__)
 
 
+class MySQLConfigureMySQLRolesError(Error):
+    """Exception raised when creating a role fails."""
+
+
 class MySQLConfigureMySQLUsersError(Error):
     """Exception raised when creating a user fails."""
+
+
+class MySQLListMySQLRolesError(Error):
+    """Exception raised when there is an issue listing database roles."""
 
 
 class MySQLCheckUserExistenceError(Error):
@@ -273,6 +291,10 @@ class MySQLSetClusterPrimaryError(Error):
 
 class MySQLGrantPrivilegesToUserError(Error):
     """Exception raised when there is an issue granting privileges to user."""
+
+
+class MySQLGrantRolesToUserError(Error):
+    """Exception raised when there is an issue granting roles to user."""
 
 
 class MySQLNoMemberStateError(Error):
@@ -950,6 +972,7 @@ class MySQLBase(ABC):
         self.socket_uri = f"({socket_path})"
         self.cluster_name = cluster_name
         self.cluster_set_name = cluster_set_name
+        self.root_user = ROOT_USERNAME
         self.root_password = root_password
         self.server_config_user = server_config_user
         self.server_config_password = server_config_password
@@ -1050,8 +1073,8 @@ class MySQLBase(ABC):
         # do not enable slow query logs, but specify a log file path in case
         # the admin enables them manually
         config["mysqld"] = {
-            "bind-address": "0.0.0.0",
-            "mysqlx-bind-address": "0.0.0.0",
+            "bind_address": "0.0.0.0",
+            "mysqlx_bind_address": "0.0.0.0",
             "admin_address": self.instance_address,
             "report_host": self.instance_address,
             "max_connections": str(max_connections),
@@ -1067,6 +1090,7 @@ class MySQLBase(ABC):
             "loose-audit_log_file": f"{snap_common}/var/log/mysql/audit.log",
             "gtid_mode": "ON",
             "enforce_gtid_consistency": "ON",
+            "activate_all_roles_on_login": "ON",
         }
 
         if audit_log_enabled:
@@ -1091,51 +1115,138 @@ class MySQLBase(ABC):
             config.write(string_io)
             return string_io.getvalue(), dict(config["mysqld"])
 
-    def configure_mysql_users(self) -> None:
-        """Configure the MySQL users for the instance."""
+    def configure_mysql_router_role(self) -> None:
+        """Configure the MySQL Router role for the instance."""
+        existing_role = self.list_mysql_roles(ROLE_ROUTER)
+        if existing_role:
+            return
+
+        logger.debug(f"Missing MySQL role {ROLE_ROUTER}")
+        configure_role_commands = [
+            f"CREATE ROLE {ROLE_ROUTER}",
+            f"GRANT CREATE USER ON *.* TO {ROLE_ROUTER} WITH GRANT OPTION",
+            f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO {ROLE_ROUTER}",
+            f"GRANT SELECT ON mysql.user TO {ROLE_ROUTER}",
+            f"GRANT SELECT ON performance_schema.replication_group_members TO {ROLE_ROUTER}",
+            f"GRANT SELECT ON performance_schema.replication_group_member_stats TO {ROLE_ROUTER}",
+            f"GRANT SELECT ON performance_schema.global_variables TO {ROLE_ROUTER}",
+        ]
+
+        try:
+            logger.debug(f"Configuring Router role for {self.instance_address}")
+            self._run_mysqlcli_script(
+                configure_role_commands,
+                user=self.root_user,
+                password=self.root_password,
+            )
+        except MySQLClientError:
+            logger.error(f"Failed to configure Router role for {self.instance_address}")
+            raise MySQLConfigureMySQLRolesError
+
+    def configure_mysql_system_roles(self) -> None:
+        """Configure the MySQL system roles for the instance."""
+        role_to_queries = {
+            ROLE_READ: [
+                f"CREATE ROLE {ROLE_READ}",
+                f"GRANT SELECT ON mysql.* TO {ROLE_READ}",
+            ],
+            ROLE_DML: [
+                f"CREATE ROLE {ROLE_DML}",
+                f"GRANT INSERT, DELETE, UPDATE ON mysql.* TO {ROLE_DML}",
+            ],
+            ROLE_STATS: [
+                f"CREATE ROLE {ROLE_STATS}",
+                f"GRANT SELECT ON performance_schema.* TO {ROLE_STATS}",
+                f"GRANT PROCESS, REPLICATION CLIENT ON *.* TO {ROLE_STATS}",
+            ],
+            ROLE_BACKUP: [
+                f"CREATE ROLE {ROLE_BACKUP}",
+                f"GRANT charmed_stats TO {ROLE_BACKUP}",
+                f"GRANT EXECUTE, LOCK TABLES, PROCESS, RELOAD ON *.* TO {ROLE_BACKUP}",
+                f"GRANT BACKUP_ADMIN, CONNECTION_ADMIN ON *.* TO {ROLE_BACKUP}",
+            ],
+            ROLE_DDL: [
+                f"CREATE ROLE {ROLE_DDL}",
+                f"GRANT charmed_read TO {ROLE_DDL}",
+                f"GRANT charmed_dml TO {ROLE_DDL}",
+                f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, SHOW_ROUTINE, SHOW VIEW, INDEX, REFERENCES, TRIGGER, LOCK TABLES ON *.* TO {ROLE_DDL}",
+            ],
+            ROLE_DBA: [
+                f"CREATE ROLE {ROLE_DBA}",
+                f"GRANT charmed_read TO {ROLE_DBA}",
+                f"GRANT charmed_dml TO {ROLE_DBA}",
+                f"GRANT charmed_stats TO {ROLE_DBA}",
+                f"GRANT charmed_backup TO {ROLE_DBA}",
+                f"GRANT charmed_ddl TO {ROLE_DBA}",
+                f"GRANT EVENT, FILE, SHOW DATABASES, SHUTDOWN ON *.* TO {ROLE_DBA}",
+                f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON *.* TO {ROLE_DBA}",
+                f"GRANT AUDIT_ADMIN, CONNECTION_ADMIN, SYSTEM_VARIABLES_ADMIN ON *.* TO {ROLE_DBA}",
+            ],
+        }
+
+        configure_roles_commands = []
+        existing_roles = self.list_mysql_roles("charmed_%")
+
+        for role, queries in role_to_queries.items():
+            if role not in existing_roles:
+                logger.debug(f"Missing MySQL role {role}")
+                configure_roles_commands.extend(queries)
+
+        try:
+            logger.debug(f"Configuring MySQL roles for {self.instance_address}")
+            self._run_mysqlcli_script(
+                configure_roles_commands,
+                user=self.root_user,
+                password=self.root_password,
+            )
+        except MySQLClientError:
+            logger.error(f"Failed to configure roles for {self.instance_address}")
+            raise MySQLConfigureMySQLRolesError
+
+    def configure_mysql_system_users(self) -> None:
+        """Configure the MySQL system users for the instance."""
+        configure_users_commands = [
+            f"UPDATE mysql.user SET authentication_string=null WHERE User='{self.root_user}' and Host='localhost'",
+            f"ALTER USER '{self.root_user}'@'localhost' IDENTIFIED BY '{self.root_password}'",
+            f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
+            f"CREATE USER '{self.monitoring_user}'@'%' IDENTIFIED BY '{self.monitoring_password}' WITH MAX_USER_CONNECTIONS 3",
+            f"CREATE USER '{self.backups_user}'@'%' IDENTIFIED BY '{self.backups_password}'",
+        ]
+
         # SYSTEM_USER and SUPER privileges to revoke from the root users
         # Reference: https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_super
-        privileges_to_revoke = (
-            "SYSTEM_USER",
-            "SYSTEM_VARIABLES_ADMIN",
-            "SUPER",
-            "REPLICATION_SLAVE_ADMIN",
-            "GROUP_REPLICATION_ADMIN",
-            "BINLOG_ADMIN",
-            "SET_USER_ID",
-            "ENCRYPTION_KEY_ADMIN",
-            "VERSION_TOKEN_ADMIN",
-            "CONNECTION_ADMIN",
-        )
-
-        # privileges for the backups user:
-        #   https://docs.percona.com/percona-xtrabackup/8.0/using_xtrabackup/privileges.html#permissions-and-privileges-needed
-        # CONNECTION_ADMIN added to provide it privileges to connect to offline_mode node
-        configure_users_commands = (
-            f"CREATE USER '{self.server_config_user}'@'%' IDENTIFIED BY '{self.server_config_password}'",
+        configure_users_commands.extend([
             f"GRANT ALL ON *.* TO '{self.server_config_user}'@'%' WITH GRANT OPTION",
-            f"CREATE USER '{self.monitoring_user}'@'%' IDENTIFIED BY '{self.monitoring_password}' WITH MAX_USER_CONNECTIONS 3",
-            f"GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO '{self.monitoring_user}'@'%'",
-            f"CREATE USER '{self.backups_user}'@'%' IDENTIFIED BY '{self.backups_password}'",
-            f"GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '{self.backups_user}'@'%'",
-            f"GRANT SELECT ON performance_schema.log_status TO '{self.backups_user}'@'%'",
-            f"GRANT SELECT ON performance_schema.keyring_component_status TO '{self.backups_user}'@'%'",
-            f"GRANT SELECT ON performance_schema.replication_group_members TO '{self.backups_user}'@'%'",
-            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
-            f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}'",
-            f"REVOKE {', '.join(privileges_to_revoke)} ON *.* FROM 'root'@'localhost'",
+            f"GRANT charmed_stats TO '{self.monitoring_user}'@'%'",
+            f"GRANT charmed_backup TO '{self.backups_user}'@'%'",
+            f"REVOKE BINLOG_ADMIN, CONNECTION_ADMIN, ENCRYPTION_KEY_ADMIN, GROUP_REPLICATION_ADMIN, REPLICATION_SLAVE_ADMIN, SET_USER_ID, SUPER, SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, VERSION_TOKEN_ADMIN ON *.* FROM '{self.root_user}'@'localhost'",
             "FLUSH PRIVILEGES",
-        )
+        ])
 
         try:
             logger.debug(f"Configuring MySQL users for {self.instance_address}")
             self._run_mysqlcli_script(
                 configure_users_commands,
+                user=self.root_user,
                 password=self.root_password,
             )
         except MySQLClientError:
             logger.error(f"Failed to configure users for: {self.instance_address}")
             raise MySQLConfigureMySQLUsersError
+
+    def list_mysql_roles(self, name_pattern: str) -> Set[str]:
+        """Returns a set with the MySQL roles."""
+        try:
+            query_commands = (f"SELECT User FROM mysql.user WHERE User LIKE '{name_pattern}'",)
+            output = self._run_mysqlcli_script(
+                query_commands,
+                user=self.root_user,
+                password=self.root_password,
+            )
+            return {row[0] for row in output}
+        except MySQLClientError:
+            logger.error("Failed to list roles")
+            raise MySQLListMySQLRolesError
 
     def _plugin_file_exists(self, plugin_file_name: str) -> bool:
         """Check if the plugin file exists.
@@ -1237,6 +1348,7 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlcli_script(
                 ("select name from mysql.plugin",),
+                user=self.root_user,
                 password=self.root_password,
             )
             return {
@@ -1325,6 +1437,8 @@ class MySQLBase(ABC):
             connect_command = ("shell.connect_to_primary()",)
             create_database_commands = (
                 f'session.run_sql("CREATE DATABASE IF NOT EXISTS `{database_name}`;")',
+                f'session.run_sql("GRANT SELECT ON `{database_name}`.* TO {ROLE_READ};")',
+                f'session.run_sql("GRANT INSERT, DELETE, UPDATE ON `{database_name}`.* TO {ROLE_DML};")',
             )
 
             escaped_user_attributes = json.dumps(attributes).replace('"', r"\"")
@@ -1780,7 +1894,7 @@ class MySQLBase(ABC):
         try:
             output = self._run_mysqlcli_script(
                 (get_clusters_query,),
-                user=ROOT_USERNAME,
+                user=self.root_user,
                 password=self.root_password,
                 timeout=60,
                 exception_as_warning=True,
@@ -2576,28 +2690,23 @@ class MySQLBase(ABC):
 
         return matches.group(1)
 
-    def grant_privileges_to_user(
-        self, username, hostname, privileges, with_grant_option=False
-    ) -> None:
-        """Grants specified privileges to the provided database user."""
-        grant_privileges_commands = (
+    def grant_roles_to_user(self, username: str, hostname: str, roles: List[str]) -> None:
+        """Grants specified roles to the provided database user."""
+        grant_roles_commands = (
             "shell.connect_to_primary()",
-            (
-                f"session.run_sql(\"GRANT {', '.join(privileges)} ON *.* TO '{username}'@'{hostname}'"
-                f'{" WITH GRANT OPTION" if with_grant_option else ""}")'
-            ),
+            f"session.run_sql(\"GRANT {', '.join(roles)} TO '{username}'@'{hostname}'\")",
         )
 
         try:
             self._run_mysqlsh_script(
-                "\n".join(grant_privileges_commands),
+                "\n".join(grant_roles_commands),
                 user=self.server_config_user,
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
         except MySQLClientError as e:
-            logger.warning(f"Failed to grant privileges to user {username}@{hostname}")
-            raise MySQLGrantPrivilegesToUserError(e.message)
+            logger.warning(f"Failed to grant roles to user {username}@{hostname}")
+            raise MySQLGrantRolesToUserError(e.message)
 
     def update_user_password(self, username: str, new_password: str, host: str = "%") -> None:
         """Updates user password in MySQL database."""
@@ -3567,7 +3676,7 @@ class MySQLBase(ABC):
     def _run_mysqlcli_script(
         self,
         script: Union[Tuple[Any, ...], List[Any]],
-        user: str = "root",
+        user: str = ROOT_USERNAME,
         password: Optional[str] = None,
         timeout: Optional[int] = None,
         exception_as_warning: bool = False,
