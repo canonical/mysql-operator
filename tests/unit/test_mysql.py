@@ -1103,21 +1103,6 @@ class TestMySQLBase(unittest.TestCase):
             host="1.1.1.1:33062",
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.is_cluster_replica", return_value=False)
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status", return_value=SHORT_CLUSTER_STATUS)
-    def test_get_cluster_endpoints(self, _, _is_cluster_replica):
-        """Test get_cluster_endpoints() method."""
-        endpoints = self.mysql.get_cluster_endpoints(get_ips=False)
-
-        self.assertEqual(
-            endpoints,
-            (
-                "mysql-k8s-1.mysql-k8s-endpoints:3306",
-                "mysql-k8s-0.mysql-k8s-endpoints:3306",
-                "mysql-k8s-2.mysql-k8s-endpoints:3306",
-            ),
-        )
-
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):

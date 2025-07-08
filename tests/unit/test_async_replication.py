@@ -159,22 +159,25 @@ class TestAsyncRelation(unittest.TestCase):
         self.assertEqual(relation_data["mysql-version"], "8.0.36-0ubuntu0.22.04.1")
 
     @patch(
-        "charm.MySQLOperatorCharm.cluster_initialized",
-        new_callable=PropertyMock(return_value=True),
-    )
-    @patch(
         "charms.mysql.v0.async_replication.MySQLAsyncReplicationOffer.state",
         new_callable=PropertyMock,
     )
+    @patch(
+        "charm.MySQLOperatorCharm.cluster_initialized",
+        new_callable=PropertyMock(return_value=True),
+    )
+    @patch("charm.MySQLOperatorCharm.get_cluster_endpoints")
     @patch("charm.MySQLOperatorCharm._mysql")
-    def test_offer_relation_changed(self, _mysql, _state, _, _cluster_initialized):
+    def test_offer_relation_changed(
+        self, _mysql, _get_cluster_endpoints, _cluster_initialized, _state, _
+    ):
         self.harness.set_leader(True)
         async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
 
         _state.return_value = States.INITIALIZING
 
         # test with donor
-        _mysql.get_cluster_endpoints.return_value = (None, "db2-ro-endpoint", None)
+        _get_cluster_endpoints.return_value = (None, "db2-ro-endpoint", None)
         self.harness.update_relation_data(
             async_primary_relation_id,
             "db2",
@@ -195,7 +198,8 @@ class TestAsyncRelation(unittest.TestCase):
 
         # without donor
         _mysql.reset_mock()
-        _mysql.get_cluster_endpoints.return_value = (None, None, None)
+
+        _get_cluster_endpoints.return_value = (None, None, None)
         self.harness.update_relation_data(
             async_primary_relation_id,
             "db2",

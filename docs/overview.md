@@ -53,6 +53,7 @@ Charmed MySQL is an official distribution of MySQL. It’s an open-source projec
 | 3 | h-deploy-multi-az | [Multi-AZ](/t/15823) |
 | 3 | h-deploy-terraform | [Terraform](/t/14925) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15747) |
+| 3 | h-deploy-spaces | [Juju spaces](/t/18084) |
 | 2 | h-integrate| [Integrate with another application](/t/9902) |
 | 2 | h-external-access | [External network access](/t/15801) |
 | 2 | h-scale | [Scale replicas](/t/9904) |
