@@ -78,7 +78,7 @@ async def test_replicate_data_on_restart(
     )
 
     logger.info("Write to new primary")
-    random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
+    random_chars = await write_random_chars_to_test_table(new_primary_unit)
 
     # restart server on old primary
     logger.info(f"Re starting server on unit {primary_unit.name}")

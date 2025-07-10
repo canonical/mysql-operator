@@ -35,5 +35,5 @@ async def test_custom_variables(ops_test: OpsTest, highly_available_cluster) -> 
         custom_vars["max_connections"] = 100
         for k, v in custom_vars.items():
             logger.info(f"Checking that {k} is set to {v} on {unit.name}")
-            value = await retrieve_database_variable_value(ops_test, unit, k)
+            value = await retrieve_database_variable_value(unit, k)
             assert value == v, f"Variable {k} is not set to {v}"

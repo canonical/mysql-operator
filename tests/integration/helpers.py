@@ -690,11 +690,10 @@ def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
         return False
 
 
-async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit) -> str:
+async def write_random_chars_to_test_table(primary_unit: Unit) -> str:
     """Writes to common test table.
 
     Args:
-        ops_test: The ops test framework instance
         primary_unit: the R/W unit to write the data
     Returns:
         The random chars(str) written to test table.
@@ -723,13 +722,10 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
     return random_chars
 
 
-async def retrieve_database_variable_value(
-    ops_test: OpsTest, unit: Unit, variable_name: str
-) -> str:
+async def retrieve_database_variable_value(unit: Unit, variable_name: str) -> str:
     """Retrieve a database variable value as a string.
 
     Args:
-        ops_test: The ops test framework instance
         unit: The unit to retrieve the variable
         variable_name: The name of the variable to retrieve
     Returns:
@@ -749,10 +745,7 @@ async def retrieve_database_variable_value(
     return output[0]
 
 
-async def get_tls_ca(
-    ops_test: OpsTest,
-    unit_name: str,
-) -> str:
+async def get_tls_ca(ops_test: OpsTest, unit_name: str) -> str:
     """Returns the TLS CA used by the unit.
 
     Args:
