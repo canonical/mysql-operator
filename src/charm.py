@@ -43,6 +43,7 @@ from charms.mysql.v0.mysql import (
     MySQLNoMemberStateError,
     MySQLPluginInstallError,
     MySQLRebootFromCompleteOutageError,
+    MySQLRejoinInstanceToClusterError,
     MySQLSetClusterPrimaryError,
     MySQLUnableToGetMemberStateError,
 )
@@ -497,7 +498,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         It is supposed to be called when the MySQL 8.0.21+ auto-rejoin attempts have been exhausted,
         on an OFFLINE replica that still belongs to the cluster
         """
-        if not self._mysql.is_instance_in_cluster(self.unit_label):
+        if not self._mysql.instance_belongs_to_cluster(self.unit_label):
             logger.warning("Instance does not belong to the cluster. Cannot perform manual rejoin")
             return
 
@@ -506,8 +507,17 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.warning("Instance does not have ONLINE peers. Cannot perform manual rejoin")
             return
 
+        try:
+            self._mysql.rejoin_instance_to_cluster(
+                unit_label=self.unit_label, from_instance=cluster_primary
+            )
+            return
+        except MySQLRejoinInstanceToClusterError:
+            logger.warning("Can't rejoin instance to the cluster. Falling back to remove and add")
+
         self._mysql.remove_instance(
             unit_label=self.unit_label,
+            auto_dissolve=False,
         )
         self._mysql.add_instance_to_cluster(
             instance_address=self.unit_address,
@@ -655,7 +665,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return socket.getfqdn()
 
     @property
-    def restart_peers(self) -> Optional[ops.model.Relation]:
+    def restart_peers(self) -> Optional[ops.Relation]:
         """Retrieve the peer relation."""
         return self.model.get_relation("restart")
 
@@ -778,6 +788,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return str(self.peers.data[unit].get(f"{relation_name}-address", ""))
         except KeyError:
             return ""
+
+    def update_endpoints(self) -> None:
+        """Update endpoints for the cluster."""
+        self.database_relation._update_endpoints_all_relations(None)
+        self._on_update_status(None)
 
     def _open_ports(self) -> None:
         """Open ports.
