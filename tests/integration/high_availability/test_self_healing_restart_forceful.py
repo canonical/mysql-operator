@@ -14,7 +14,6 @@ from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
     get_system_user_password,
-    get_unit_ip,
     graceful_stop_server,
     is_unit_in_cluster,
 )
@@ -70,9 +69,14 @@ async def test_sst_test(ops_test: OpsTest, highly_available_cluster, continuous_
     for unit in all_units:
         if unit.name != primary_unit.name:
             logger.info(f"Purge binlogs on unit {unit.name}")
-            unit_ip = await get_unit_ip(ops_test, unit.name)
+            unit_address = await unit.get_public_address()
+
             await execute_queries_on_unit(
-                unit_ip, SERVER_CONFIG_USERNAME, server_config_password, purge_bin_log_sql, True
+                unit_address,
+                SERVER_CONFIG_USERNAME,
+                server_config_password,
+                purge_bin_log_sql,
+                commit=True,
             )
 
     async with ops_test.fast_forward():

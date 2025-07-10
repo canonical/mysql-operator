@@ -11,6 +11,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import time
 import typing
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -653,6 +654,7 @@ class MySQL(MySQLBase):
 
         try:
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
+            time.sleep(10)
         except (SnapServiceOperationError, MySQLKillSessionError) as e:
             raise MySQLStopMySQLDError(e.message)
 

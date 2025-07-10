@@ -8,7 +8,6 @@ from mysql.connector.errors import OperationalError
 from pytest_operator.plugin import OpsTest
 
 from .connector import create_db_connections
-from .helpers import get_unit_ip
 from .juju_ import run_action
 
 logger = logging.getLogger(__name__)
@@ -61,7 +60,6 @@ async def test_saturate_max_connections(ops_test: OpsTest) -> None:
     app_unit = ops_test.model.applications[TEST_APP_NAME].units[0]
     mysql_unit = ops_test.model.applications[MYSQL_APP_NAME].units[0]
 
-    host_ip = await get_unit_ip(ops_test, mysql_unit.name)
     logger.info("Running action to get app connection data")
     credentials = await run_action(app_unit, "get-client-connection-data")
     if "return-code" in credentials:
@@ -69,7 +67,8 @@ async def test_saturate_max_connections(ops_test: OpsTest) -> None:
         del credentials["return-code"]
     if "Code" in credentials:
         del credentials["Code"]
-    credentials["host"] = host_ip
+
+    credentials["host"] = await mysql_unit.get_public_address()
 
     logger.info(f"Creating {CONNECTIONS} connections")
     connections = create_db_connections(CONNECTIONS, **credentials)

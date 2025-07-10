@@ -16,7 +16,6 @@ from ..helpers import (
     get_controller_machine,
     get_primary_unit_wrapper,
     get_system_user_password,
-    get_unit_ip,
     is_connection_possible,
     is_machine_reachable_from,
     restore_network_for_unit,
@@ -53,19 +52,19 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
 
     logger.info(f"Unit {primary_unit.name} it's on machine {primary_hostname} ✅")
 
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    primary_unit_address = await primary_unit.get_public_address()
     cluster_admin_password = await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME)
 
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
         "password": cluster_admin_password,
-        "host": primary_unit_ip,
+        "host": primary_unit_address,
     }
 
     # verify that connection is possible
     assert is_connection_possible(
         config
-    ), f"❌ Connection to host {primary_unit_ip} is not possible"
+    ), f"❌ Connection to host {primary_unit_address} is not possible"
 
     logger.info(f"Cutting network for {primary_hostname}")
     cut_network_from_unit(primary_hostname)
@@ -90,22 +89,22 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     restore_network_for_unit(primary_hostname)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name)
+    await wait_network_restore(ops_test, primary_unit)
 
     # ensure continuous writes still incrementing for all units
     async with ops_test.fast_forward():
         # wait for the unit to be ready
         for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(10)):
             with attempt:
-                new_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+                new_unit_address = await primary_unit.get_public_address()
                 new_unit_config = {
                     "username": CLUSTER_ADMIN_USERNAME,
                     "password": cluster_admin_password,
-                    "host": new_unit_ip,
+                    "host": new_unit_address,
                 }
 
                 logger.debug(
-                    f"Waiting until connection possible after network restore on {new_unit_ip}"
+                    f"Waiting until connection possible after network restore on {new_unit_address}"
                 )
                 assert is_connection_possible(
                     new_unit_config
