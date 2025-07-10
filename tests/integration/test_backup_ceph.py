@@ -20,7 +20,6 @@ from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
     get_server_config_credentials,
-    get_unit_ip,
     rotate_credentials,
     scale_application,
 )
@@ -260,7 +259,7 @@ async def test_restore_on_same_cluster(
 
     mysql_unit = ops_test.model.units[f"{mysql_application_name}/0"]
     assert mysql_unit
-    mysql_unit_address = await get_unit_ip(ops_test, mysql_unit.name)
+    mysql_unit_address = await mysql_unit.get_public_address()
     server_config_credentials = await get_server_config_credentials(mysql_unit)
 
     select_values_sql = [f"SELECT id FROM `{DATABASE_NAME}`.`{TABLE_NAME}`"]
@@ -333,7 +332,7 @@ async def test_restore_on_same_cluster(
             timeout=TIMEOUT,
         )
 
-        unit_address = await get_unit_ip(ops_test, unit.name)
+        unit_address = await unit.get_public_address()
 
         values = await execute_queries_on_unit(
             unit_address,
@@ -381,7 +380,7 @@ async def test_restore_on_new_cluster(
 
     primary_mysql = ops_test.model.units[f"{new_mysql_application_name}/0"]
     assert primary_mysql
-    primary_unit_address = await get_unit_ip(ops_test, primary_mysql.name)
+    primary_unit_address = await primary_mysql.get_public_address()
 
     await rotate_credentials(
         primary_mysql, username=CLUSTER_ADMIN_USER, password=CLUSTER_ADMIN_PASSWORD

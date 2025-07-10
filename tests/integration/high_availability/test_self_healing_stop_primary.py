@@ -15,7 +15,6 @@ from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
     get_system_user_password,
-    get_unit_ip,
     graceful_stop_server,
     is_connection_possible,
     start_server,
@@ -47,18 +46,18 @@ async def test_replicate_data_on_restart(
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    primary_address = await primary_unit.get_public_address()
 
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
         "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": primary_unit_ip,
+        "host": primary_address,
     }
 
     # verify that connection is possible
     assert is_connection_possible(
         config
-    ), f"❌ Connection to host {primary_unit_ip} is not possible"
+    ), f"❌ Connection to host {primary_address} is not possible"
 
     # it's necessary to inhibit update-status-hook to stop the service
     # since the charm will restart the service on the hook
@@ -69,7 +68,7 @@ async def test_replicate_data_on_restart(
     # verify that connection is gone
     assert not is_connection_possible(
         config
-    ), f"❌ Connection to host {primary_unit_ip} is possible"
+    ), f"❌ Connection to host {primary_address} is possible"
 
     # get primary to write to it
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
@@ -103,7 +102,7 @@ async def test_replicate_data_on_restart(
         for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
             with attempt:
                 output = await execute_queries_on_unit(
-                    primary_unit_ip,
+                    primary_address,
                     SERVER_CONFIG_USERNAME,
                     server_config_password,
                     select_data_sql,

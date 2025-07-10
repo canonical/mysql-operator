@@ -16,7 +16,6 @@ from ..helpers import (
     get_cluster_status,
     get_primary_unit_wrapper,
     get_server_config_credentials,
-    get_unit_ip,
     is_relation_joined,
     scale_application,
 )
@@ -46,7 +45,7 @@ async def get_max_written_value_in_database(
         unit: The MySQL unit on which to execute queries on
         credentials: Database credentials to use
     """
-    unit_address = await get_unit_ip(ops_test, unit.name)
+    unit_address = await unit.get_public_address()
 
     select_max_written_value_sql = [f"SELECT MAX(number) FROM `{DATABASE_NAME}`.`{TABLE_NAME}`;"]
 
@@ -258,7 +257,7 @@ async def insert_data_into_mysql_and_validate_replication(
 
     # insert some data into the new primary and ensure that the writes get replicated
     server_config_credentials = await get_server_config_credentials(primary)
-    primary_address = await get_unit_ip(ops_test, primary.name)
+    primary_address = await primary.get_public_address()
 
     value = generate_random_string(255)
     insert_value_sql = [
@@ -283,7 +282,7 @@ async def insert_data_into_mysql_and_validate_replication(
         for attempt in Retrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
             with attempt:
                 for unit in mysql_units:
-                    unit_address = await get_unit_ip(ops_test, unit.name)
+                    unit_address = await unit.get_public_address()
 
                     output = await execute_queries_on_unit(
                         unit_address,
@@ -314,8 +313,8 @@ async def clean_up_database_and_table(
 
     server_config_credentials = await get_server_config_credentials(mysql_unit)
 
-    primary = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_address = await get_unit_ip(ops_test, primary.name)
+    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
+    primary_address = await primary_unit.get_public_address()
 
     clean_up_database_and_table_sql = [
         f"DROP TABLE IF EXISTS `{database_name}`.`{table_name}`",

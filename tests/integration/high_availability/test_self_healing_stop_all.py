@@ -13,7 +13,6 @@ from constants import CLUSTER_ADMIN_USERNAME
 
 from ..helpers import (
     get_system_user_password,
-    get_unit_ip,
     graceful_stop_server,
     is_connection_possible,
     start_server,
@@ -62,8 +61,7 @@ async def test_cluster_pause(ops_test: OpsTest, highly_available_cluster, contin
 
     # verify connection is not possible to any instance
     for unit in all_units:
-        unit_ip = await get_unit_ip(ops_test, unit.name)
-        config["host"] = unit_ip
+        config["host"] = await unit.get_public_address()
         assert not is_connection_possible(
             config
         ), f"❌ connection to unit {unit.name} is still possible"

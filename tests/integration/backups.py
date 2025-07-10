@@ -10,7 +10,6 @@ from . import juju_
 from .helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
-    get_unit_ip,
     rotate_credentials,
 )
 from .high_availability.high_availability_helpers import (
@@ -111,7 +110,7 @@ async def pitr_operations(
         for unit in ops_test.model.applications[MYSQL_APPLICATION_NAME].units
         if unit.name != primary_unit.name
     ]
-    primary_ip = await get_unit_ip(ops_test, primary_unit.name)
+    primary_ip = await primary_unit.get_public_address()
 
     logger.info("Creating backup")
     results = await juju_.run_action(non_primary_units[0], "create-backup", **{"--wait": "5m"})

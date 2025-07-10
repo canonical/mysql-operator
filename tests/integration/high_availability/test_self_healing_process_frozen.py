@@ -14,7 +14,6 @@ from ..helpers import (
     get_primary_unit_wrapper,
     get_process_pid,
     get_system_user_password,
-    get_unit_ip,
     is_connection_possible,
 )
 from .high_availability_helpers import (
@@ -41,7 +40,7 @@ async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, co
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    primary_address = await primary_unit.get_public_address()
 
     # get running mysqld PID
     pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
@@ -54,11 +53,11 @@ async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, co
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
         "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": primary_unit_ip,
+        "host": primary_address,
     }
 
     # verify that connection is not possible
-    logger.info(f"Verifying that connection to host {primary_unit_ip} is not possible")
+    logger.info(f"Verifying that connection to host {primary_address} is not possible")
     assert not is_connection_possible(config), "❌ Mysqld is not paused"
 
     # unfreeze (CONT signal) mysqld for the unit
@@ -66,7 +65,7 @@ async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, co
     await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-18", pid)
 
     # verify that connection is possible
-    logger.info(f"Verifying that connection to host {primary_unit_ip} is possible")
+    logger.info(f"Verifying that connection to host {primary_address} is possible")
     assert is_connection_possible(config), "❌ Mysqld is paused"
 
     # ensure continuous writes still incrementing for all units

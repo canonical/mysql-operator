@@ -411,25 +411,6 @@ async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
     return raw_hostname.strip()
 
 
-@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: OpsTest, unit_name: str) -> None:
-    """Wait until network is restored.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit
-        old_ip: old registered IP address
-    """
-    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "a")
-    if return_code != 0:
-        raise Exception
-
-    juju_unit_ip = await get_unit_ip(ops_test, unit_name)
-
-    if juju_unit_ip in stdout:
-        raise Exception
-
-
 async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
     """Gracefully stop server.
 
@@ -469,6 +450,23 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
         raise Exception("Failed to start server.")
 
 
+@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
+async def wait_network_restore(ops_test: OpsTest, unit: Unit) -> None:
+    """Wait until network is restored.
+
+    Args:
+        ops_test: The ops test object passed into every test case
+        unit: The unit to wait network for
+    """
+    return_code, stdout, _ = await ops_test.juju("ssh", unit.name, "ip", "a")
+    if return_code != 0:
+        raise Exception
+
+    juju_unit_ip = await unit.get_public_address()
+    if juju_unit_ip in stdout:
+        raise Exception
+
+
 async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
     """Wrapper for getting primary.
 
@@ -491,22 +489,6 @@ async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_exclud
         except DatabaseError:
             continue
     raise ValueError("Primary unit found cannot be retrieved")
-
-
-async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
-    """Wrapper for getting unit ip.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to get the address
-    Returns:
-        The (str) ip of the unit
-    """
-    app_name = unit_name.split("/")[0]
-    unit_num = unit_name.split("/")[1]
-    status = await ops_test.model.get_status()  # noqa: F821
-    address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
-    return address
 
 
 async def get_relation_data(
@@ -650,7 +632,7 @@ async def get_units_ip_addresses(ops_test: OpsTest, app_name: str) -> List[str]:
         a list that contains the hostnames of a given application
     """
     return [
-        await get_unit_ip(ops_test, app_unit.name)
+        await app_unit.get_public_address()
         for app_unit in ops_test.model.applications[app_name].units
     ]
 
@@ -727,11 +709,11 @@ async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit
         ),
     ]
 
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    primary_unit_address = await primary_unit.get_public_address()
     server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
 
     await execute_queries_on_unit(
-        primary_unit_ip,
+        primary_unit_address,
         SERVER_CONFIG_USERNAME,
         server_config_password,
         create_records_sql,
@@ -753,12 +735,15 @@ async def retrieve_database_variable_value(
     Returns:
         The variable value (str)
     """
-    unit_ip = await get_unit_ip(ops_test, unit.name)
+    unit_address = await unit.get_public_address()
     server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
     queries = [f"SELECT @@{variable_name};"]
 
     output = await execute_queries_on_unit(
-        unit_ip, SERVER_CONFIG_USERNAME, server_config_password, queries
+        unit_address,
+        SERVER_CONFIG_USERNAME,
+        server_config_password,
+        queries,
     )
 
     return output[0]

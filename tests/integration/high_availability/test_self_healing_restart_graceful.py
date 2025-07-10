@@ -14,7 +14,6 @@ from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit_wrapper,
     get_system_user_password,
-    get_unit_ip,
     graceful_stop_server,
     is_connection_possible,
     start_server,
@@ -50,7 +49,7 @@ async def test_cluster_manual_rejoin(
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
         "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": await get_unit_ip(ops_test, primary_unit.name),
+        "host": await primary_unit.get_public_address(),
     }
 
     queries = [
