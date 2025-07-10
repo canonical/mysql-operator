@@ -1,0 +1,18 @@
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:137 Inserting value before backup
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:145 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:161 Listing existing backup ids
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:168 Creating backup
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:174 Listing backup ids post backup
+[32mINFO    [0m integration.test_backup_gcp:test_backup_gcp.py:183 Inserting value after backup
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
