@@ -12,7 +12,8 @@ from typing import Dict, List, Set, Tuple
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
     MySQLConfigureRouterUserError,
-    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
     MySQLDeleteUsersForUnitError,
     MySQLGetClusterPrimaryAddressError,
 )
@@ -125,8 +126,8 @@ class DBRouterRelation(Object):
         Raises:
             MySQLCheckUserExistenceError if there is an issue checking a user's existence
             MySQLConfigureRouterUserError if there is an issue configuring the mysqlrouter user
-            MySQLCreateApplicationDatabaseAndScopedUserError if there is an issue creating a
-                user or said user scoped database
+            MySQLCreateApplicationDatabaseError if there is an issue creating the database
+            MySQLCreateApplicationScopedUserError if there is an issue creating the database user
         """
         user_passwords = {}
         requested_user_applications = set()
@@ -142,7 +143,8 @@ class DBRouterRelation(Object):
                         requested_user.username, password, requested_user.hostname, user_unit_name
                     )
                 else:
-                    self.charm._mysql.create_application_database_and_scoped_user(
+                    self.charm._mysql.create_database(requested_user.database)
+                    self.charm._mysql.create_scoped_user(
                         requested_user.database,
                         requested_user.username,
                         password,
@@ -228,7 +230,8 @@ class DBRouterRelation(Object):
         except (
             MySQLCheckUserExistenceError,
             MySQLConfigureRouterUserError,
-            MySQLCreateApplicationDatabaseAndScopedUserError,
+            MySQLCreateApplicationDatabaseError,
+            MySQLCreateApplicationScopedUserError,
         ):
             self.charm.unit.status = BlockedStatus("Failed to create app user or scoped database")
             return
