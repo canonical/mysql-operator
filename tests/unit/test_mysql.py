@@ -147,12 +147,9 @@ class TestMySQLBase(unittest.TestCase):
 
             _expected_configure_role_commands = [
                 f"CREATE ROLE {role}",
-                f"GRANT CREATE USER ON *.* TO {role} WITH GRANT OPTION",
-                f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO {role}",
-                f"GRANT SELECT ON mysql.user TO {role}",
-                f"GRANT SELECT ON performance_schema.replication_group_members TO {role}",
-                f"GRANT SELECT ON performance_schema.replication_group_member_stats TO {role}",
-                f"GRANT SELECT ON performance_schema.global_variables TO {role}",
+                f"GRANT CREATE ON *.* TO {role}",
+                f"GRANT CREATE USER ON *.* TO {role}",
+                f"GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
             ]
 
             self.mysql.configure_mysql_router_roles()
