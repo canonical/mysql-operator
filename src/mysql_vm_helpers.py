@@ -54,6 +54,7 @@ from constants import (
     MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
     ROOT_SYSTEM_USER,
+    ROOT_USERNAME,
     XTRABACKUP_PLUGIN_DIR,
 )
 
@@ -819,7 +820,7 @@ class MySQL(MySQLBase):
     def _run_mysqlcli_script(
         self,
         script: tuple[Any, ...] | list[Any],
-        user: str = "root",
+        user: str = ROOT_USERNAME,
         password: str | None = None,
         timeout: int | None = None,
         exception_as_warning: bool = False,
