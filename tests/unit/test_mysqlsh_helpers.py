@@ -317,8 +317,8 @@ class TestMySQL(unittest.TestCase):
 
         config = "\n".join((
             "[mysqld]",
-            "bind-address = 0.0.0.0",
-            "mysqlx-bind-address = 0.0.0.0",
+            "bind_address = 0.0.0.0",
+            "mysqlx_bind_address = 0.0.0.0",
             "admin_address = 127.0.0.1",
             "report_host = 127.0.0.1",
             "max_connections = 111",
@@ -334,6 +334,7 @@ class TestMySQL(unittest.TestCase):
             "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
             "gtid_mode = ON",
             "enforce_gtid_consistency = ON",
+            "activate_all_roles_on_login = ON",
             "loose-audit_log_format = JSON",
             "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 5678",
@@ -353,39 +354,8 @@ class TestMySQL(unittest.TestCase):
         _open_mock.reset_mock()
         self.mysql.write_mysqld_config()
 
-        config = "\n".join((
-            "[mysqld]",
-            "bind-address = 0.0.0.0",
-            "mysqlx-bind-address = 0.0.0.0",
-            "admin_address = 127.0.0.1",
-            "report_host = 127.0.0.1",
-            "max_connections = 100",
-            "innodb_buffer_pool_size = 20971520",
-            "log_error_services = log_filter_internal;log_sink_internal",
-            "log_error = /var/snap/charmed-mysql/common/var/log/mysql/error.log",
-            "general_log = OFF",
-            "general_log_file = /var/snap/charmed-mysql/common/var/log/mysql/general.log",
-            "loose-group_replication_paxos_single_leader = ON",
-            "slow_query_log_file = /var/snap/charmed-mysql/common/var/log/mysql/slow.log",
-            "binlog_expire_logs_seconds = 604800",
-            "loose-audit_log_policy = LOGINS",
-            "loose-audit_log_file = /var/snap/charmed-mysql/common/var/log/mysql/audit.log",
-            "gtid_mode = ON",
-            "enforce_gtid_consistency = ON",
-            "loose-audit_log_format = JSON",
-            "loose-audit_log_strategy = ASYNCHRONOUS",
-            "innodb_buffer_pool_chunk_size = 1048576",
-            "performance-schema-instrument = 'memory/%=OFF'",
-            "loose-group_replication_message_cache_size = 134217728",
-            "\n",
-        ))
-
         self.assertTrue(
-            call(
-                f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf",
-                "w",
-                encoding="utf-8",
-            )
+            call(f"{MYSQLD_CONFIG_DIRECTORY}/z-custom-mysqld.cnf", "w", encoding="utf-8")
             in _open_mock.mock_calls
         )
 
