@@ -29,10 +29,12 @@ class TestMariaDBRelation(unittest.TestCase):
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
     )
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_maria_db_relation_created(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _get_or_set_password_in_peer_secrets,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
@@ -52,7 +54,10 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.maria_db_relation_id, "other-app/0")
 
         self.assertEqual(_get_or_set_password_in_peer_secrets.call_count, 1)
-        _create_application_database_and_scoped_user.assert_called_once_with(
+        _create_database.assert_called_once_with(
+            "default_database",
+        )
+        _create_scoped_user.assert_called_once_with(
             "default_database",
             "mysql",
             "super_secure_password",
@@ -86,10 +91,12 @@ class TestMariaDBRelation(unittest.TestCase):
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
     )
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_maria_db_relation_created_with_secrets(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _get_or_set_password_in_peer_secrets,
         _get_cluster_primary_address,
         _does_mysql_user_exist,
@@ -109,7 +116,10 @@ class TestMariaDBRelation(unittest.TestCase):
         self.harness.add_relation_unit(self.maria_db_relation_id, "other-app/0")
 
         self.assertEqual(_get_or_set_password_in_peer_secrets.call_count, 1)
-        _create_application_database_and_scoped_user.assert_called_once_with(
+        _create_database.assert_called_once_with(
+            "default_database",
+        )
+        _create_scoped_user.assert_called_once_with(
             "default_database",
             "mysql",
             "super_secure_password",
@@ -146,10 +156,12 @@ class TestMariaDBRelation(unittest.TestCase):
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
     )
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_maria_db_relation_departed(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _get_or_set_password_in_peer_secrets,
         _delete_users_for_unit,
         _get_cluster_primary_address,
