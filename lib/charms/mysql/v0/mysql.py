@@ -1212,12 +1212,13 @@ class MySQLBase(ABC):
             logger.debug(f"Missing MySQL role {role}")
             configure_role_commands = [
                 f"CREATE ROLE {role}",
-                f"GRANT CREATE USER ON *.* TO {role} WITH GRANT OPTION",
-                f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO {role}",
-                f"GRANT SELECT ON mysql.user TO {role}",
-                f"GRANT SELECT ON performance_schema.replication_group_members TO {role}",
-                f"GRANT SELECT ON performance_schema.replication_group_member_stats TO {role}",
-                f"GRANT SELECT ON performance_schema.global_variables TO {role}",
+                f"GRANT CREATE ON *.* TO {role}",
+                f"GRANT CREATE USER ON *.* TO {role}",
+                # The granting of all privileges to the MySQL Router role
+                # can only be restricted when the privileges to the users
+                # created by such role are restricted as well
+                # https://github.com/canonical/mysql-router-operator/blob/main/src/mysql_shell/__init__.py#L134-L136
+                f"GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
             ]
 
             try:
