@@ -625,7 +625,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         # Use peer relation to trigger endpoint update
         # refer to mysql_provider.py
-        self.unit_peer_data.update({"topology-change-timestamp": str(time.time())})
+        self.unit_peer_data.update({"topology-change-timestamp": str(int(time.time()))})
         event.set_results({
             "success": True,
             "message": "Unit is already primary",
@@ -684,14 +684,15 @@ class MySQLCharmBase(CharmBase, ABC):
         or update status.
         """
         topology_change_set = {
-            self.peers.data[unit].get("topology-change-timestamp") for unit in self.peers.units
+            int(self.peers.data[unit]["topology-change-timestamp"])
+            for unit in self.peers.units
+            if self.peers.data[unit].get("topology-change-timestamp")
         }
-        topology_change_set.discard(None)
         if not topology_change_set:
             # no topology change detected
             return
-        topology_change = self.unit_peer_data.get("topology-change-timestamp", "0")
-        max_topology_change = max(topology_change_set)  # type: ignore
+        topology_change = int(self.unit_peer_data.get("topology-change-timestamp", "0"))
+        max_topology_change = max(topology_change_set)
         if self.unit.is_leader() and max_topology_change > topology_change:
             # update endpoints required
             self.update_endpoints()
@@ -699,7 +700,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         # sync timestamp and trigger relation changed
         self.unit_peer_data.update({
-            "topology-change-timestamp": max(max_topology_change, topology_change)
+            "topology-change-timestamp": str(max(max_topology_change, topology_change))
         })
 
     @property
