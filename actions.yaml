@@ -27,6 +27,7 @@ set-password:
       type: string
       description: The username, the default value 'root'.
         Possible values - root, serverconfig, clusteradmin.
+      enum: [root, serverconfig, clusteradmin]
     password:
       type: string
       description: The password will be auto-generated if this option is not specified.
@@ -81,13 +82,17 @@ promote-to-primary:
     scope:
       type: string
       description: Whether to promote a unit or a cluster. Must be set to either `unit` or `cluster`.
+      enum: [unit, cluster]
     force:
       type: boolean
       default: False
       description: |
         For cluster scope, use force when previous primary is unreachable (failover). Will invalidate previous
         primary.
-        For unit scope, use force to force quorum from the current unit.
+        For unit scope, use force to force quorum from the current unit. Note that this operation is DANGEROUS
+        as it can create a split-brain if incorrectly used and should be considered a last resort. Make
+        absolutely sure that there are no partitions of this group that are still operating somewhere in
+        the network, but not accessible from your location
 
 recreate-cluster:
   description: |

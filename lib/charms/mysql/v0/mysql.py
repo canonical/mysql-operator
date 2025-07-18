@@ -608,6 +608,7 @@ class MySQLCharmBase(CharmBase, ABC):
 
         if event.params.get("force"):
             # Failover
+            logger.info("Forcing quorum from instance")
             try:
                 self._mysql.force_quorum_from_instance()
             except MySQLForceQuorumFromInstanceError:
@@ -615,6 +616,7 @@ class MySQLCharmBase(CharmBase, ABC):
                 event.fail("Failed to force quorum from instance. See logs for more information.")
         else:
             # Switchover
+            logger.info("Setting unit as cluster primary")
             try:
                 self._mysql.set_cluster_primary(self.get_unit_hostname())
             except MySQLSetClusterPrimaryError:
@@ -678,26 +680,26 @@ class MySQLCharmBase(CharmBase, ABC):
     def check_topology_timestamp_change(self, _) -> None:
         """Check for cluster topology changes and trigger endpoint update if needed.
 
-        Used for trigger endpoint updates for non tipical events like, add/remove unit
+        Used for trigger endpoint updates for non typical events like, add/remove unit
         or update status.
         """
-        topo_change_set = {
+        topology_change_set = {
             self.peers.data[unit].get("topology-change-timestamp") for unit in self.peers.units
         }
-        topo_change_set.discard(None)
-        if not topo_change_set:
+        topology_change_set.discard(None)
+        if not topology_change_set:
             # no topology change detected
             return
-        topo_change = self.unit_peer_data.get("topology-change-timestamp", "0")
-        max_topo_change = max(topo_change_set)  # type: ignore
-        if self.unit.is_leader() and max_topo_change > topo_change:
+        topology_change = self.unit_peer_data.get("topology-change-timestamp", "0")
+        max_topology_change = max(topology_change_set)  # type: ignore
+        if self.unit.is_leader() and max_topology_change > topology_change:
             # update endpoints required
             self.update_endpoints()
             return
 
         # sync timestamp and trigger relation changed
         self.unit_peer_data.update({
-            "topology-change-timestamp": max(max_topo_change, topo_change)
+            "topology-change-timestamp": max(max_topology_change, topology_change)
         })
 
     @property
@@ -2181,7 +2183,9 @@ class MySQLBase(ABC):
 
         try:
             output = self._run_mysqlcli_script(
-                query, user=self.server_config_user, password=self.server_config_password
+                query,
+                user=self.server_config_user,
+                password=self.server_config_password,
             )
         except MySQLClientError:
             logger.debug(
