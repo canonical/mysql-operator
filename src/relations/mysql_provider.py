@@ -157,6 +157,8 @@ class MySQLProvider(Object):
             relation_id (int): The id of the relation
             remote_app (str): The name of the remote application
         """
+        self.charm.update_endpoint_addresses()
+
         try:
             rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
 
