@@ -148,6 +148,9 @@ class MySQLAsyncReplication(Object):
 
     def _on_promote_to_primary(self, event: ActionEvent) -> None:
         """Promote a standby cluster to primary."""
+        if event.params.get("scope") != "cluster":
+            return
+
         if not self._charm.unit.is_leader():
             event.fail("Only the leader unit can promote a standby cluster")
             return
