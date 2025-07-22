@@ -722,6 +722,18 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             f"{RELATION_CONSUMER}-address": self.replication_consumer_address,
         })
 
+    def update_endpoint_address(self, relation_name: str) -> None:
+        """Update ip address for the provided relation on unit peer databag."""
+        logger.debug(f"Updating {relation_name} endpoint address")
+
+        relation_binding = self.model.get_binding(relation_name)
+        if not relation_binding:
+            return
+
+        self.unit_peer_data.update({
+            f"{relation_name}-address": str(relation_binding.network.bind_address)
+        })
+
     def install_workload(self) -> bool:
         """Exponential backoff retry to install and configure MySQL.
 
