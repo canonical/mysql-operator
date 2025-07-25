@@ -41,7 +41,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
     new_revisions = old_revisions.copy()
-    # TODO: support arm64
+    # TODO: support arm64 & s390x
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
@@ -155,7 +155,7 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     with snap_revisions.open("r") as file:
         old_revisions: dict = json.load(file)
     new_revisions = old_revisions.copy()
-    # TODO: mark as amd64 only or support arm64
+    # TODO: support arm64 & s390x
     new_revisions["x86_64"] = "69"
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
