@@ -28,7 +28,7 @@ from .high_availability.high_availability_helpers import (
 logger = logging.getLogger(__name__)
 
 S3_INTEGRATOR = "s3-integrator"
-S3_INTEGRATOR_CHANNEL = "latest/edge"  # Use edge for s390x
+S3_INTEGRATOR_CHANNEL = "1/edge"  # Use edge for s390x
 TIMEOUT = 10 * 60
 CLUSTER_ADMIN_USER = "clusteradmin"
 CLUSTER_ADMIN_PASSWORD = "clusteradminpassword"
