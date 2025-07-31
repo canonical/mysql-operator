@@ -1,7 +1,4 @@
-
-# Software testing
-
-# Charm Testing reference
+# Charm testing reference
 
 > **:information_source: Hint**: Use [Juju 3](/). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
 
@@ -67,6 +64,4 @@ Please check/deploy the charm [mysql-bundle](https://charmhub.io/mysql-bundle) (
 
 ## Performance test
 Refer to the [sysbench documentation](https://discourse.charmhub.io/t/charmed-sysbench-documentation-home/13945).
-
--------------------------
 

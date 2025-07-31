@@ -1,6 +1,3 @@
-
-# Juju
-
 # Juju 
 
 [Juju](https://juju.is/) is an open source orchestration engine for software operators that enables the deployment, integration and lifecycle management of applications at any scale, on any infrastructure using charms.
@@ -70,7 +67,5 @@ ERROR Charm feature requirements cannot be met:
       - charm requires feature "juju" (version >= 3.1.5) but model currently supports version 3.1.4
 ```
 
-You must then [upgrade to the required Juju version](/how-to-guides/upgrade/upgrade-juju) before proceeding with the charm upgrade.
-
--------------------------
+You must then [upgrade to the required Juju version](/how-to/upgrade/upgrade-juju) before proceeding with the charm upgrade.
 

@@ -1,6 +1,4 @@
 
-# Interfaces and endpoints
-
 # Interfaces/endpoints
 > **:information_source: Hint**: Use [Juju 3](/). Otherwise replace `juju integrate` with `juju relate` for Juju 2.9.
 
@@ -78,6 +76,4 @@ juju deploy mysql --channel 8.0
 juju deploy keystone --series focal
 juju integrate keystone:shared-db mysql:shared-db
 ```
-
--------------------------
 

@@ -1,20 +1,4 @@
-
-# 2. Deploy MySQL
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 2. Deploy MySQL
-
 # Deploy Charmed MySQL
-
-In this section, you will deploy Charmed MySQL, access a unit, and interact with the MySQL databases that exist inside the application.
-
-## Summary
-* [Deploy MySQL](#deploy-mysql)
-* [Access MySQL](#access-mysql)
-  * [Retrieve credentials](#retrieve-credentials)
-  * [ Access MySQL via the `mysql` client](#access-mysql-via-the-mysql-client)
----
-
-## Deploy MySQL
 
 To deploy Charmed MySQL, run the following command:
 ```shell
@@ -144,6 +128,4 @@ Feel free to test out any other MySQL queries.
 >When you’re ready to leave the mysql shell you can just type `exit`. Once you've typed `exit` you will be back in the host of Charmed MySQL (`mysql/0`). Exit this host by once again typing `exit`. Now you will be in your original shell where you first started the tutorial; here you can interact with Juju and LXD.
 
 > Next step: [3. Scale your replicas](/tutorial/3-scale-replicas)
-
--------------------------
 

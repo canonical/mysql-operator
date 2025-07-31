@@ -1,6 +1,3 @@
-
-# Contacts
-
 # Contact
 
 Charmed MySQL is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback.
@@ -19,6 +16,4 @@ Our legacy [Mattermost](https://chat.charmhub.io/charmhub/channels/data-platform
 * [Canonical Data on Launchpad](https://launchpad.net/~data-platform)
 * [Canonical Data on Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) 
 * [Mailing list on Launchpad](https://lists.launchpad.net/data-platform/)
-
--------------------------
 

@@ -1,8 +1,6 @@
 
 # Cryptography
 
-# Cryptography
-
 This document describes the cryptography used by Charmed MySQL.
 
 ## Resource checksums
@@ -62,6 +60,4 @@ An internal user is used for this authentication with its hashed password stored
 Authentication to MySQL Router is based on the [caching_sha2_password auth plugin](https://dev.mysql.com/doc/refman/8.0/en/caching-sha2-pluggable-authentication.html).
 
 Credentials are exchanged via [Juju secrets](https://canonical-juju.readthedocs-hosted.com/en/latest/user/howto/manage-secrets/).
-
--------------------------
 

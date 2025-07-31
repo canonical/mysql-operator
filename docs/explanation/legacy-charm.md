@@ -61,5 +61,3 @@ The "modern charm" (from `8.0/stable`) is stored on [GitHub](https://github.com/
 
 Do you have questions? [Contact us](https://chat.charmhub.io/charmhub/channels/data-platform)!
 
--------------------------
-

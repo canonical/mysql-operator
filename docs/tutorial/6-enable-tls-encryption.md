@@ -1,8 +1,3 @@
-
-# 6. Enable TLS encryption
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 6. Enable TLS encryption
-
 # Enable encryption with TLS
 
 [Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a protocol used to encrypt data exchanged between two applications. Essentially, it secures data transmitted over a network.
@@ -92,8 +87,4 @@ depth=1 CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
 ...
 ```
 The Charmed MySQL application reverted to the placeholder certificate that was created locally during the MySQL server installation.
-
->Next step: [7. Clean up your environment](/)
-
--------------------------
 

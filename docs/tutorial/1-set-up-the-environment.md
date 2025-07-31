@@ -1,8 +1,3 @@
-
-# 1. Set up the environment
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 1. Set up your environment
-
 # Set up your environment
 
 In this first step, you will set up a development environment with the required components for deploying Charmed MySQL.
@@ -10,12 +5,6 @@ In this first step, you will set up a development environment with the required 
 ```{note}
 Before you start, make sure your machine meets the [minimum system requirements](/reference/system-requirements).
 ```
-
-## Summary
-* [Set up Multipass](#set-up-multipass)
-* [Set up Juju](#set-up-juju)
-
----
 
 ## Set up Multipass
 [Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses the [cloud-init](https://cloud-init.io/) standard to install and configure all the necessary parts automatically.
@@ -65,6 +54,4 @@ Model "admin/tutorial" is empty.
 ```
 
 > Next step: [2.  Deploy MySQL](/tutorial/2-deploy-mysql)
-
--------------------------
 

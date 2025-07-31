@@ -1,8 +1,6 @@
 
 # Users
 
-# Charm Users explanations
-
 There are two types of users in MySQL:
 * Internal users (used by charm operator)
 * Relation/integration users (used by related applications)
@@ -142,6 +140,4 @@ mysql> select Host,User,account_locked from mysql.user where User like 'mysql_ro
 
 The charm mainly uses the `serverconfig` user for internal operations. For connections with this user, a special admin port is used (port `33062`), which enables the charm to operate MySQL even when users connections are saturated.
 For further information on the administrative connection, refer to [MySQL docs](https://dev.mysql.com/doc/refman/8.0/en/administrative-connection-interface.html) on the topic.
-
--------------------------
 

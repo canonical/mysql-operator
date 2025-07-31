@@ -1,6 +1,3 @@
-
-# Releases
-
 # Releases
 
 This page provides high-level overviews of the dependencies and features that are supported by each revision in every stable release.
@@ -17,7 +14,7 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [Juju section of the system requirements](/reference/system-requirements) for more details.
 * Support for specific features
 
-| Release | MySQL version | Juju version | [TLS encryption](/how-to-guides/enable-tls)* | [COS monitoring](/how-to-guides/monitoring-cos/enable-monitoring) | [Minor version upgrades](/how-to-guides/upgrade/perform-a-minor-upgrade) | [Cross-regional async replication](/how-to-guides/cross-regional-async-replication/deploy) |
+| Release | MySQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/enable-monitoring) | [Minor version upgrades](/how-to/upgrade/perform-a-minor-upgrade) | [Cross-regional async replication](/how-to/cross-regional-async-replication/deploy) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | [366], [367] | 8.0.41 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [312], [313] | 8.0.39 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
@@ -91,6 +88,4 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 <!--BADGES-->
 [check]: https://img.icons8.com/color/20/checkmark--v1.png
-
--------------------------
 

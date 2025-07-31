@@ -1,6 +1,3 @@
-
-# Audit Logs
-
 # Audit Logs
 
 The Audit Log plugin allows fine grained configuration for all login/logout, queries or both records to be stored in a log file. It is enabled in Charmed MySQL by default.
@@ -16,7 +13,7 @@ The following is a sample of the audit logs, with format json with only logins r
 
 The logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql` directory, and it's rotated
 every minute to the `/var/snap/charmed-mysql/common/var/log/mysql/archive_audit` directory.
-It's recommended to integrate the charm with [COS](/how-to-guides/monitoring-cos/enable-monitoring), from where the logs can be easily persisted and queried using Loki/Grafana.
+It's recommended to integrate the charm with [COS](/how-to/monitoring-cos/enable-monitoring), from where the logs can be easily persisted and queried using Loki/Grafana.
 
 ## Configurations
 
@@ -41,6 +38,4 @@ It's recommended to integrate the charm with [COS](/how-to-guides/monitoring-cos
     juju config mysql plugin-audit-strategy=semi-async
     ```
     Valid values are `async` and `semi-async`.
-
--------------------------
 

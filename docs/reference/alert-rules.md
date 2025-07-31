@@ -1,6 +1,3 @@
-
-# Alert rules
-
 # Alert rules
 
 This page contains a markdown version of the alert rules described in the `mysql-operator` repository.  The following file(s) are the source of truth:
@@ -24,6 +21,4 @@ This page contains a markdown version of the alert rules described in the `mysql
 [info]: https://img.shields.io/badge/info-blue
 [warning]: https://img.shields.io/badge/warning-yellow
 [critical]: https://img.shields.io/badge/critical-red
-
--------------------------
 

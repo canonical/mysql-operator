@@ -1,8 +1,3 @@
-
-# 7. Clean up the environment
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 7. Clean up your environment
-
 # Clean up your environment
 
 In this tutorial we've successfully deployed and accessed MySQL on LXD, added and removed cluster members, added and removed database users, and enabled a layer of security with TLS.
@@ -37,6 +32,4 @@ multipass delete --purge my-vm
 - [Report](https://github.com/canonical/mysql-operator/issues) any problems you encountered.
 - [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
 - [Contribute to the code base](https://github.com/canonical/mysql-operator)
-
--------------------------
 

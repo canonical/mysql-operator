@@ -1,6 +1,3 @@
-
-# Architecture
-
 # Architecture
 
 [MySQL](https://www.mysql.com/) is the world’s most popular open source database. The "[Charmed MySQL](https://charmhub.io/mysql)" is a Juju-based operator to deploy and support MySQL from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/), it is based on the [MySQL Community Edition](https://www.mysql.com/products/community/) using the built-in cluster functionality: [MySQL InnoDB ClusterSet](https://dev.mysql.com/doc/mysql-shell/8.0/en/innodb-clusterset.html).
@@ -43,7 +40,7 @@ The `mysqld` snap service is a main MySQL instance which is normally up and runn
 
 The `mysql-router` snap service used in [Charmed MySQL Router](https://charmhub.io/mysql-router?channel=dpe/edge) only and should be stopped on [Charmed MySQL](https://charmhub.io/mysql) deployments.
 
-All `exporter` services are activated after the relation with [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) only.
+All `exporter` services are activated after the relation with [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) only.
 
 > **:information_source: Note:** it is possible to star/stop/restart snap services manually but it is NOT recommended to avoid a split brain with a charm state machine! Do it with a caution!!!
 
@@ -57,7 +54,7 @@ The snap "charmed-mysql" also ships list of tools used by charm:
 * `charmed-mysql.xtrabackup` - a tool to backup/restore MySQL DB.
 
 The `mysql` and `mysqlsh` are well known and popular tools to manage MySQL.
-The `xtrabackup (xbcloud+xbstream)` used for [MySQL Backups](/how-to-guides/back-up-and-restore/create-a-backup) only to store backups on S3 compatible storage.
+The `xtrabackup (xbcloud+xbstream)` used for [MySQL Backups](/how-to/back-up-and-restore/create-a-backup) only to store backups on S3 compatible storage.
 
 <a name="integrations"></a>
 ## Integrations
@@ -84,15 +81,15 @@ The charm "[MySQL Test App](https://charmhub.io/mysql-test-app)" is a Canonical 
 
 ### Grafana
 
-Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Loki
 
-Loki is an open-source fully-featured logging system. This charms is shipped with support for the [Loki Operator](https://charmhub.io/loki-k8s) to collect the generated logs. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Loki is an open-source fully-featured logging system. This charms is shipped with support for the [Loki Operator](https://charmhub.io/loki-k8s) to collect the generated logs. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Prometheus
 
-Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 <a name="lld"></a>
 ## LLD (Low Level Design)
@@ -134,6 +131,4 @@ mysql           0      45
 s3_helpers      0      4                                                                                                                                                                                                                              
 tls             0      2                                     
 ```
-
--------------------------
 

@@ -18,7 +18,7 @@ Charmed MySQL includes features such as cluster-to-cluster replication, TLS encr
 
 | | |
 |--|--|
-|  [Tutorials](/tutorial/index)</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides](/how-to-guides/scale-replicas) </br> Step-by-step guides covering key operations and common tasks |
+|  [Tutorials](/tutorial/index)</br>  Get started - a hands-on introduction to using Charmed MySQL operator for new users </br> |  [How-to guides](/how-to/scale-replicas) </br> Step-by-step guides covering key operations and common tasks |
 | [Reference](https://charmhub.io/mysql/actions) </br> Technical information - specifications, APIs, architecture | [Explanation](/) </br> Concepts - discussion and clarification of key topics  |
 
 ## Project and community

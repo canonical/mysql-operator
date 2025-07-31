@@ -1,6 +1,3 @@
-
-# Charm statuses
-
 # Charm statuses
 
 ```{caution}
@@ -42,6 +39,4 @@ The charm follows [standard Juju applications statuses](https://juju.is/docs/olm
 | **error** | any | An unhanded internal error happened | Read the message hint. Execute `juju resolve <error_unit/0>` after addressing the root of the error state |
 | **terminated** | any | The unit is gone and will be cleaned by Juju soon | No actions possible |
 | **unknown** | any | Juju doesn't know the charm app/unit status. Possible reason: K8s charm termination in progress. | Manual investigation required if status is permanent |
-
--------------------------
 

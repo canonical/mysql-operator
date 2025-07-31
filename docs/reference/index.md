@@ -1,8 +1,6 @@
 
 # Reference
 
-# Reference
-
 Technical specifications, APIs, release notes, and other reference material for fast lookup.
 
 | Page                      | Description                                       |
@@ -25,8 +23,6 @@ In the tabs at the top of this charm's [CharmHub page](https://charmhub.io/mysql
 | [Configuration](https://charmhub.io/mysql/configuration) | Configuration parameters specific to this charm |
 | [Actions](https://charmhub.io/mysql/actions) | Juju actions supported by this charm |
 
--------------------------
-
 
 ```{toctree}
 :titlesonly:
@@ -35,5 +31,4 @@ In the tabs at the top of this charm's [CharmHub page](https://charmhub.io/mysql
 :hidden:
 
 *
-*/index
 ```

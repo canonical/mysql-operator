@@ -1,6 +1,3 @@
-
-# Profiles
-
 # Profiles
 
 > **Warning:** The feature is currently available in the channel `8.0/candidate` only (revision 186+) and will be released to the channel `8.0/stable` soon.
@@ -41,6 +38,4 @@ Juju constraints can be used together with charm profile:
 ```shell
 juju deploy mysql --constraints cores=8 mem=16G --config profile=testing
 ```
-
--------------------------
 

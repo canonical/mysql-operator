@@ -1,8 +1,3 @@
-
-# 5. Integrate applications
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 5. Integrate with other applications
-
 # Integrate with other applications
 
 [Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for a Charmed MySQL application. 
@@ -159,6 +154,4 @@ juju run data-integrator/leader get-credentials
 You can connect to the database with this new credentials. From here you will see all of your data is still present in the database.
 
 > Next step: [6. Enable TLS encryption](/tutorial/6-enable-tls-encryption)
-
--------------------------
 

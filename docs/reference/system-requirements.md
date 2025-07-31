@@ -1,6 +1,3 @@
-
-# System requirements
-
 # System requirements
 
 The following are the minimum software and hardware requirements to run Charmed PostgreSQL on IAAS/VM.
@@ -31,7 +28,7 @@ The charm supports several Juju releases from [2.9 LTS](https://juju.is/docs/juj
 | ![3.1] | `3.1.6+` | [196]+ |     |
 | ![2.9 LTS] | `2.9.32+` | [151]+ |     |
 
-See the guide [How to upgrade Juju for a new database revision](/how-to-guides/upgrade/upgrade-juju).
+See the guide [How to upgrade Juju for a new database revision](/how-to/upgrade/upgrade-juju).
 
 ### MySQL Group replication requirements
 * In order to integrate with this charm, every table created by the integrated application **must have a primary key**. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
@@ -52,7 +49,7 @@ The charm is based on the [charmed-mysql snap](https://snapcraft.io/charmed-mysq
 
 ## Networking
 * Access to the internet for downloading the required snaps and charms.
-  * For air-gapped environments, see our [offline deployment guide](/how-to-guides/deploy/air-gapped)
+  * For air-gapped environments, see our [offline deployment guide](/how-to/deploy/air-gapped)
 * Only IPv4 is supported at the moment
   * See more information about this limitation in [this Jira issue](https://warthogs.atlassian.net/browse/DPE-4695)
   * [Contact us](/reference/contacts) if you are interested in IPv6!
@@ -69,6 +66,4 @@ The charm is based on the [charmed-mysql snap](https://snapcraft.io/charmed-mysq
 [240]: /
 [196]: /
 [151]: /
-
--------------------------
 

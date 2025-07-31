@@ -1,8 +1,3 @@
-
-# 3. Scale replicas
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 3. Scale your replicas
-
 # Scale your replicas
 
 In this section, you will learn to scale your Charmed MySQL by adding or removing juju units.
@@ -86,6 +81,4 @@ Machine  State    Address         Inst id        Series  AZ  Message
 <!--TODO: What about generic scaling down (without specifying which unit)?-->
 
 > Next step: [4. Manage passwords](/tutorial/4-manage-passwords)
-
--------------------------
 

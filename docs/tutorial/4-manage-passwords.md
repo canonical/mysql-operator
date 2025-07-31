@@ -1,8 +1,3 @@
-
-# 4. Manage passwords
-
-> [Charmed MySQL Tutorial](/tutorial/index) > 4. Manage passwords
-
 # Manage passwords
 
 When we accessed MySQL earlier in this tutorial, we needed to use a password manually. Passwords help to secure our database and are essential for security. Over time, it is a good practice to change the password frequently. 
@@ -65,6 +60,4 @@ username: root
 The root `password` should match whatever you passed in when you entered the command.
 
 > Next step: [5. Integrate with another application](/tutorial/5-integrate-applications)
-
--------------------------
 

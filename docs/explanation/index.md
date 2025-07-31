@@ -1,8 +1,6 @@
 
 # Explanation
 
-# Explanation
-
 Additional context about key concepts behind the MySQL charm.
 
 ## Core concepts and design
@@ -33,8 +31,6 @@ Additional context about key concepts behind the MySQL charm.
 
 [Security]: /explanation/security/index
 [Cryptography]: /explanation/security/cryptography
-
--------------------------
 
 
 ```{toctree}

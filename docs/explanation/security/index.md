@@ -1,6 +1,4 @@
 
-# Security
-
 # Security hardening guide
 
 This document provides an overview of security features and guidance for hardening the security of [Charmed MySQL](https://charmhub.io/mysql) deployments, including setting up and managing a secure environment.
@@ -91,8 +89,6 @@ The Audit log plugin is enabled by default and produces login/logout logs. See t
 
 For details on the cryptography used by Charmed MySQL, see the [Cryptography](https://discourse.charmhub.io/t/charmed-mysql-explanations-cryptography/16785) explanation page.
 
--------------------------
-
 
 ```{toctree}
 :titlesonly:
@@ -101,5 +97,4 @@ For details on the cryptography used by Charmed MySQL, see the [Cryptography](ht
 :hidden:
 
 *
-*/index
 ```

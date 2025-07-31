@@ -1,6 +1,3 @@
-
-# Logs
-
 # Logs
 
 This explanation goes over the types of logging in MySQL and the configuration parameters for log
@@ -178,10 +175,8 @@ for the duration of the event handler.
 
 <!-- LINKS -->
 
-[COS integration]: /how-to-guides/monitoring-cos/enable-monitoring
+[COS integration]: /how-to/monitoring-cos/enable-monitoring
 [Audit Logs explanation]: /explanation/logs/audit-logs
-
--------------------------
 
 
 ```{toctree}
@@ -191,5 +186,4 @@ for the duration of the event handler.
 :hidden:
 
 *
-*/index
 ```
