@@ -5,14 +5,6 @@
 
 Charmed MySQL can be integrated with any charmed application that supports its interfaces. This page provides some guidance and resources for charm developers to develop, integrate, and troubleshoot their charm so that it may connect with MySQL.
 
-## Summary
-* Check supported interfaces 
-* Integrate your charm with MySQL
-* Troubleshooting & testing
-* FAQ
-
----
-
 ## Check supported interfaces
 
 First, we recommend that you check [the supported interfaces](/explanation/interfaces-and-endpoints) of the current charm. You have the option to use modern (preferred) or legacy interfaces. 

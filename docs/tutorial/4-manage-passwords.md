@@ -4,13 +4,6 @@ When we accessed MySQL earlier in this tutorial, we needed to use a password man
 
 This section will go through setting and changing the password for the admin user.
 
-## Summary
-* [Retrieve the root password](#retrieve-the-root-password)
-* [Rotate the root password](#rotate-the-root-password)
-* [Set the root password](#set-the-root-password)
-
----
-
 ## Retrieve the root password
 The root user's password can be retrieved by running the `get-password` action on the Charmed MySQL application:
 ```shell

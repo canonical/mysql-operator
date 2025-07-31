@@ -3,7 +3,7 @@
 
 SoS is an extensible, portable, support data collection tool primarily aimed at Linux distributions and other UNIX-like operating systems.
 
-You can use the [built-in version of SoS](#use-built-in-sos-recommended), or [retrieve the latest version from GitHub](#use-the-latest-sos-plugins-from-git). 
+You can use the [built-in version of SoS](use-built-in-sos-recommended), or [retrieve the latest version from GitHub](use-the-latest-sos-plugins-from-git). 
 
 ```{caution}
 Always review the collected data before sharing it! 
@@ -11,6 +11,7 @@ Always review the collected data before sharing it!
 The generated archive may contain sensitive data. Its content should be reviewed by the originating organization before being passed to any third party.
 ```
 
+(use-built-in-sos-recommended)=
 ## Use built-in SoS (recommended)
 
 ```{caution}
@@ -102,10 +103,10 @@ Run the following command from outside the Juju units:
 ```shell
 sos collect --cluster-type juju --no-local -c "juju.units=<UNIT_A>,<UNIT_B>,<...>" --batch -o system,systemd,snap,charmed_mysql --low-priority
 ```
+(use-the-latest-sos-plugins-from-git)=
+## Use the latest SoS plugins from Git
 
-## Use the latest sos plugins from Git
-
-The latest version of [sos plugins](https://github.com/sosreport/sos/tree/main/sos/report/plugins) can be retrieved from Git easily:
+The latest version of [SoS plugins](https://github.com/sosreport/sos/tree/main/sos/report/plugins) can be retrieved from Git easily:
 ```shell
 git clone https://github.com/sosreport/sos.git
 cd sos

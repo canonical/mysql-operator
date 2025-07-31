@@ -10,7 +10,8 @@ If you are using an earlier version, check the [Juju 3.0 Release Notes](https://
 A MySQL backup can be stored on any S3-compatible storage. S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator).
 
 This guide will teach you how to deploy and configure the s3-integrator charm on Ceph via [RadosGW](https://docs.ceph.com/en/quincy/man/8/radosgw/), send the configuration to a Charmed MySQL application, and update it. 
-> For AWS, see the guide [How to configure S3 for AWS](/)
+
+> For AWS, see the guide [How to configure S3 for AWS](/how-to/back-up-and-restore/configure-s3-aws)
 
 ## Configure s3-integrator
 First, install the MinIO client and create a bucket:

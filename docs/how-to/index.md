@@ -1,6 +1,3 @@
-
-# How-To-Guides
-
 # How-to guides
 
 Key processes and common tasks for managing and using Charmed MySQL on machines.

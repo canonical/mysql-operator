@@ -1,6 +1,6 @@
 # Charm testing reference
 
-> **:information_source: Hint**: Use [Juju 3](/). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
+> **:information_source: Hint**: Use [Juju 3](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
 
 There are [a lot of test types](https://en.wikipedia.org/wiki/Software_testing) available and most of them are well applicable for Charmed MySQL. Here is a list prepared by Canonical:
 

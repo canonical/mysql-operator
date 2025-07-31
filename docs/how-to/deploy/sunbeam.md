@@ -12,12 +12,6 @@ This guide goes through the steps for setting up Sunbeam and deploying Charmed M
   * Recommended: 8 CPU cores, 32GB RAM, 100GB of storage
   * Minimum: See the requirements listed in the [Sunbeam documentation][Single-node guided]
 
-## Steps
-* [Install and bootstrap Sunbeam](#install-and-bootstrap-sunbeam)
-* [Enable OpenStack Images Auto-sync](#enable-openstack-images-auto-sync)
-* [Set up Juju inside an OpenStack bastion](set-up-juju-inside-an-openstack-bastion)
-* [Deploy Charmed MySQL](#deploy-charmed-mysql)
-* [(Optional) Access the OpenStack dashboard](#optional-access-the-openstack-dashboard)
 ---
 
 ## Install and bootstrap Sunbeam

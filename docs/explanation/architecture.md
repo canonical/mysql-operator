@@ -2,7 +2,6 @@
 
 [MySQL](https://www.mysql.com/) is the world’s most popular open source database. The "[Charmed MySQL](https://charmhub.io/mysql)" is a Juju-based operator to deploy and support MySQL from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/), it is based on the [MySQL Community Edition](https://www.mysql.com/products/community/) using the built-in cluster functionality: [MySQL InnoDB ClusterSet](https://dev.mysql.com/doc/mysql-shell/8.0/en/innodb-clusterset.html).
 
-<a name="hld"></a>
 ## HLD (High Level Design)
 
 The charm design leverages on the SNAP “[charmed-mysql](https://snapcraft.io/charmed-mysql)” which is deployed by Juju on the specified VM/MAAS/bare-metal machine based on Ubuntu Jammy/22.04. SNAP allows to run MySQL service(s) in a secure and isolated environment ([strict confinement](https://ubuntu.com/blog/demystifying-snap-confinement)). The installed SNAP:
@@ -56,7 +55,6 @@ The snap "charmed-mysql" also ships list of tools used by charm:
 The `mysql` and `mysqlsh` are well known and popular tools to manage MySQL.
 The `xtrabackup (xbcloud+xbstream)` used for [MySQL Backups](/how-to/back-up-and-restore/create-a-backup) only to store backups on S3 compatible storage.
 
-<a name="integrations"></a>
 ## Integrations
 
 ### MySQL Router
@@ -91,38 +89,38 @@ Loki is an open-source fully-featured logging system. This charms is shipped wit
 
 Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
-<a name="lld"></a>
 ## LLD (Low Level Design)
 
-Please check the charm state machines displayed on [workflow diagrams](/). The low-level logic is mostly common for both VM and K8s charms.
+Please check the charm state machines displayed on [workflow diagrams](https://charmhub.io/mysql-k8s/docs/e-flowcharts). The low-level logic is mostly common for both VM and K8s charms.
 
 <!--- TODO: Describe all possible installations? Cross-model/controller? --->
 
-### Juju Events
+### Juju events
 
 Accordingly to the [Juju SDK](https://juju.is/docs/sdk/event): “an event is a data structure that encapsulates part of the execution context of a charm”.
 
 For this charm, the following events are observed:
 
-1. [on_install](https://juju.is/docs/sdk/install-event): install the snap "charmed-mysql" and perform basic preparations to bootstrap the cluster on the first leader (or join the already configured cluster). 
-2. [leader-elected](https://juju.is/docs/sdk/leader-elected-event): generate all the secrets to bootstrap the cluster.
-3. [leader-settings-changed](https://juju.is/docs/sdk/leader-settings-changed-event): Handle the leader settings changed event.
-4. [start](https://juju.is/docs/sdk/start-event): Init/setting up the cluster node.
-5. [config_changed](https://juju.is/docs/sdk/config-changed-event): usually fired in response to a configuration change using the GUI or CLI. Create and set default cluster and cluster-set names in the peer relation databag (on the leader only).
-6. [update-status](https://juju.is/docs/sdk/update-status-event): Takes care of workload health checks.
+1. [`on_install`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#install): install the snap "charmed-mysql" and perform basic preparations to bootstrap the cluster on the first leader (or join the already configured cluster). 
+2. [`leader-elected`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#leader-elected): generate all the secrets to bootstrap the cluster.
+3. [`leader-settings-changed`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#leader-settings-changed): Handle the leader settings changed event.
+4. [`start`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#start): Init/setting up the cluster node.
+5. [`config_changed`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#config-changed): usually fired in response to a configuration change using the GUI or CLI. Create and set default cluster and cluster-set names in the peer relation databag (on the leader only).
+6. [`update-status`](https://documentation.ubuntu.com/juju/3.6/reference/hook/#update-status): Takes care of workload health checks.
 <!--- 7. database_storage_detaching: TODO: ops? event?
 8. TODO: any other events?
 --->
 
-### Charm Code Overview
+### Charm code overview
 
-The "[src/charm.py](https://github.com/canonical/mysql-operator/blob/main/src/charm.py)" is the default entry point for a charm and has the [MySQLCharmBase](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/mysql.py) Python class which inherits from CharmBase.
+[`src/charm.py`](https://github.com/canonical/postgresql-operator/blob/main/src/charm.py) is the default entry point for a charm and has the [`MySQLCharmBase`](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/mysql.py) Python class which inherits from `CharmBase`.
 
-CharmBase is the base class from which all Charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops) (Python framework for developing charms). See more information in [Charm](https://juju.is/docs/sdk/constructs#charm).
+`CharmBase` is the base class from which all Charms are formed, defined by [Ops](https://ops.readthedocs.io/en/latest/) (Python framework for developing charms). See more information in the [Ops documentation for `CharmBase`](https://ops.readthedocs.io/en/latest/reference/ops.html#ops.CharmBase).
 
 The `__init__` method guarantees that the charm observes all events relevant to its operation and handles them.
 
-The VM and K8s charm flavors shares the codebase via [charm libraries](https://juju.is/docs/sdk/libraries) in '[lib/charms/mysql/v0/](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/)':
+The VM and K8s charm flavors shares the codebase via charm libraries in [`lib/charms/mysql/v0/`](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/):
+
 ```
 charmcraft list-lib mysql
 Library name    API    Patch                                                                                                                                                                                                                          

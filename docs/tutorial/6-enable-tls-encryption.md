@@ -11,17 +11,8 @@ In this section, you will learn how to enable security in your MySQL deployment 
 ```{caution}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
 
-Check [this guide](/) for an overview of the TLS certificates charms available. 
+Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the TLS certificates charms available. 
 ```
-
-## Summary
-- [Enable TLS](#enable-tls)
-  - [Deploy TLS charm](#deploy-tls-charm)
-  - [Integrate with MySQL](#integrate-with-mysql)
-    - [Check the TLS certificate in use](#check-the-tls-certificate-in-use)
-- [Disable TLS ](#disable-tls)
-
----
 
 ## Enable TLS
 To enable TLS on Charmed MySQL, we must deploy the `self-signed-certificates` charm and integrate it with MySQL.

@@ -2,22 +2,13 @@
 
 The following are the minimum software and hardware requirements to run Charmed PostgreSQL on IAAS/VM.
 
-## Summary
-
-* [Software](#software)
-  * [Juju](#juju)
-  * [MySQL Group replication requirements](#mysql-group-replication-requirements)
-* [Hardware](#hardware)
-* [Networking](#networking)
-
----
-
 ## Software
+
 * Ubuntu 22.04 (Jammy) or later
 
 ### Juju
 
-The charm supports several Juju releases from [2.9 LTS](https://juju.is/docs/juju/roadmap#juju-juju-29) onwards. The table below shows which minor versions of each major Juju release are supported by the stable Charmhub releases of MySQL. 
+The charm supports several Juju releases from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9) onwards. The table below shows which minor versions of each major Juju release are supported by the stable Charmhub releases of MySQL. 
 > Always check the [charm release notes](/reference/releases) to find the minimum Juju version for your deployment.
 
 | Juju major release | Supported minor versions | Compatible charm revisions |Comment |
@@ -63,7 +54,7 @@ The charm is based on the [charmed-mysql snap](https://snapcraft.io/charmed-mysq
 [3.6 LTS]: https://img.shields.io/badge/3.6_LTS-%23E95420?label=Juju
 
 <!-- LINKS -->
-[240]: /
-[196]: /
-[151]: /
+[240]: https://github.com/canonical/mysql-operator/releases/tag/rev240
+[196]: https://github.com/canonical/mysql-operator/releases/tag/rev196
+[151]: https://github.com/canonical/mysql-operator/releases/tag/rev151
 

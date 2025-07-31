@@ -7,16 +7,6 @@ The charm currently has audit and error logs enabled by default. All of these fi
 present into a separate dedicated archive folder under the logs directory.
 We do not yet support the rotation of binary logs (binlog, relay log, undo log, redo log, etc).
 
-## Summary
-
-* [Log types](#log-types)
-* [Audit logs](#audit-logs)
-* [Error logs](#error-logs)
-* [Log rotation configuration](#log-rotation-configuration)
-* [High Level Design](#high-level-design)
-
----
-
 ## Log types
 
 The charm stores its logs in `/var/snap/charmed-mysql/common/var/log/mysql`.

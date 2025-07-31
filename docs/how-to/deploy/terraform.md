@@ -8,16 +8,8 @@ The easiest way is to start from [these examples of terraform modules](https://g
 For an in-depth introduction to the Juju Terraform Provider, read [this Discourse post](https://discourse.charmhub.io/t/6939).
 
 ```{note}
-**Note**: Storage support was added in [Juju Terraform Provider version 0.13+](https://github.com/juju/terraform-provider-juju/releases/tag/v0.13.0).
+Storage support was added in [Juju Terraform Provider version 0.13+](https://github.com/juju/terraform-provider-juju/releases/tag/v0.13.0).
 ```
-
-## Summary
-* [Install Terraform tooling](#install-terraform-tooling)
-* [Verify the deployment](#verify-the-deployment)
-* [Apply the deployment](#apply-the-deployment)
-* [Check deployment status](#check-deployment-status)
-* [Clean up](#clean-up)
----
 
 ## Install Terraform tooling
 

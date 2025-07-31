@@ -3,17 +3,6 @@
 
 [Azure](https://azure.com/) is a cloud computing platform developed by Microsoft. It has management, access and development of applications and services to individuals, companies, and governments through its global infrastructure. Access the Azure web console at [portal.azure.com](https://portal.azure.com/).
 
-## Summary
-* [Set up Juju and Azure tooling](#set-up-juju-and-azure-tooling)
-  * [Install Juju and Azure CLI](#install-juju-and-azure-cli)
-  * [Authenticate](#authenticate)
-  * [Bootstrap Juju controller on Azure](#bootstrap-juju-controller)
-* [Deploy charms](#deploy-charms)
-* [Expose database (optional)](#expose-database-optional)
-* [Clean up](#clean-up)
-
----
-
 ## Set up Juju and Azure tooling
 ```{caution}
 **Warning**: The described `Azure interactive` method (with web browser authentication `service-principal-secret-via-browser`) described here is only supported starting Juju 3.6-rc1+!
@@ -48,7 +37,7 @@ Your CLI is up-to-date.
 
 ### Authenticate
 
-Please follow [the official Juju Azure documentation](https://juju.is/docs/juju/microsoft-azure) and check [the extra explanation about possible options](/). Choose the authentication method which fits you best. 
+Please follow [the official Juju Azure documentation](https://juju.is/docs/juju/microsoft-azure) and check [How to use Juju with Microsoft Azure](https://discourse.charmhub.io/t/how-to-use-juju-with-microsoft-azure/15219) for more information. Choose the authentication method which fits you best. 
 
 We are describing here the currently recommended `interactive` method with web browser authentication `service-principal-secret-via-browser`. This method does not require logging in with the Azure CLI locally, but it **requires an Azure subscription**.
 

@@ -14,12 +14,6 @@ An InnoDB Cluster usually runs in a single-primary mode, with one primary instan
 To enable high availability in a production environment, replicas should be hosted on different servers to [maintain isolation](https://canonical.com/blog/database-high-availability).
 ```
 
-## Summary
-* [Add replicas](#add-replicas)
-* [Remove replicas](#remove-replicas)
-
----
-
 Currently, your deployment has only one [juju unit](https://juju.is/docs/juju/unit), known in juju as the leader unit.  For each MySQL replica, a new juju unit (non-leader) is created. All units are members of the same database cluster.
 
 ## Add replicas

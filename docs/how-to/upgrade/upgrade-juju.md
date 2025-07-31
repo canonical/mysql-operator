@@ -1,21 +1,9 @@
-
-# Upgrade Juju
-
 # Upgrade Juju for a new database revision
 
 This guide contains instructions to perform a patch or major/minor Juju upgrade to a controller and model containing a database charm. 
 
 For more background about Juju upgrades in the context of database charms, check  [Explanation > Juju > Juju upgrades](/explanation/juju).
 
-## Summary
-
-* [**Patch version upgrade**](#patch-upgrade)
-* [**Major/minor version upgrade**](#major-minor-upgrade)
-  * [Commands summary](#major-minor-summary)
-  * [Example](#major-minor-example)
-* [Resources](#resources)
-
----
 
 ## Patch version upgrade
 A [PATCH](https://semver.org/#summary) Juju upgrade (e.g. Juju `3.1.5` → `3.1.8`) can be easily applied in-place.

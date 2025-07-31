@@ -9,26 +9,18 @@ This guide will take you through deploying a MySQL cluster on GCE using 3 availa
 
 ```{note}
 This documentation assumes that your cloud supports and provides availability zones concepts. This is enabled by default on EC2/GCE and supported by LXD/MicroCloud.
-
-See the [Additional resources](#additional-resources) section for more details about AZ on specific clouds.
 ```
-
-## Summary
-* [Set up GCE on Google Cloud](#set-up-gce-on-google-cloud)
-* [Deploy MySQL with Juju zones constraints](#deploy-mysql-with-juju-zones-constraints)
-  * [Simulation: A node gets drained](#simulation-a-node-gets-drained)
-* [Additional resources](#additional-resources)
----
 
 ## Set up GCE on Google Cloud
 
 Let's deploy the [MySQL Cluster on GKE (us-east4)](/tutorial/2-deploy-mysql) using all 3 zones there (`us-east4-a`, `us-east4-b`, `us-east4-c`) and make sure all pods always sits in the dedicated zones only.
 
 ```{caution}
-**Warning**: Creating the following GKE resources may cost you money - be sure to monitor your GCloud costs.
+Creating the following GKE resources may cost you money - be sure to monitor your GCloud costs.
 ```
 
-Log into Google Cloud and [bootstrap GCE on Google Cloud](/):
+Log into Google Cloud and [bootstrap GCE on Google Cloud](/how-to/deploy/gce):
+
 ```shell
 gcloud auth login
 gcloud iam service-accounts keys create sa-private-key.json  --iam-account=juju-gce-account@[your-gcloud-project-12345].iam.gserviceaccount.com
@@ -52,6 +44,7 @@ juju deploy mysql -n 3 \
 ```
 
 After a successful deployment, `juju status` will show an active application:
+
 ```shell
 Model    Controller  Cloud/Region     Version    SLA          Timestamp
 mymodel  gce         google/us-east1  3.6-rc1.1  unsupported  00:59:53+02:00

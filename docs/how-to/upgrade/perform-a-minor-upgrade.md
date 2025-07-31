@@ -33,12 +33,13 @@ It is recommended to deploy your application in conjunction with [Charmed MySQL 
 
 ## Summary of the upgrade steps
 
-1. [**Collect**](#step-1-collect) all necessary pre-upgrade information. It will be necessary for the rollback (if requested). Do not skip this step!
-2. [**Prepare**](#step-2-prepare) the Charmed MySQL application for the in-place upgrade
-3. [**Upgrade**](#step-3-upgrade). Once started all units in a cluster will be executed sequentially. The upgrade will be aborted (paused) if the unit upgrade has failed.
-4. Consider a [**rollback**](#step-4-rollback-optional) in case of disaster. Please inform and include us in your case scenario troubleshooting to trace the source of the issue and prevent it in the future. [Contact us](https://chat.charmhub.io/charmhub/channels/data-platform)!
-5. [Post-upgrade **check**](#step-5-check). Make sure all units are in a healthy state.
+1. [**Collect**](step-1-collect) all necessary pre-upgrade information. It will be necessary for the rollback (if requested). Do not skip this step!
+2. [**Prepare**](step-2-prepare) the Charmed MySQL application for the in-place upgrade
+3. [**Upgrade**](step-3-upgrade). Once started all units in a cluster will be executed sequentially. The upgrade will be aborted (paused) if the unit upgrade has failed.
+4. Consider a [**rollback**](step-4-rollback-optional) in case of disaster. Please inform and include us in your case scenario troubleshooting to trace the source of the issue and prevent it in the future. [Contact us](/reference/contacts)!
+5. [Post-upgrade **check**](step-5-check). Make sure all units are in a healthy state.
 
+(step-1-collect)=
 ## Step 1: Collect
 
 ```{note}
@@ -69,6 +70,7 @@ Machine  State    Address         Inst id         Series  AZ  Message
 
 For this example, the current revision is `182`. Store it safely to use in case of rollback!
 
+(step-2-prepare)=
 ## Step 2: Prepare
 
 Before running the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command, it’s necessary to run the `pre-upgrade-check` action against the leader unit:
@@ -89,19 +91,25 @@ unit-mysql-10:
 
 The action will configure the charm to minimize the amount of primary switchover, among other preparations for a safe upgrade process. After successful execution, the charm is ready to be upgraded.
 
+(step-3-upgrade)=
 ## Step 3: Upgrade
 
 Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process.
 
 Example with channel selection
+
 ```shell
 juju refresh mysql --channel 8.0/edge
 ```
+
 Example with specific revision selection
+
 ```shell
 juju refresh mysql --revision=183
 ```
+
 Example with a local charm file
+
 ```shell
 juju refresh mysql --path ./mysql_ubuntu-22.04-amd64.charm
 ```
@@ -161,6 +169,7 @@ Each unit should recover shortly after the upgrade, but time can vary depending 
 **Incompatible charm revisions or dependencies will halt the process.**
 After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the upgrade process, the upgrade process will be halted and enter a failure state.
 
+(step-4-rollback-optional)=
 ## Step 4: Rollback (optional)
 
 The step must be skipped if the upgrade went well! 
@@ -169,6 +178,7 @@ If there was an issue with the upgrade, even if the underlying MySQL cluster con
 
 > See: [How to perform a minor rollback](/how-to/upgrade/perform-a-minor-rollback) 
 
+(step-5-check)=
 ## Step 5: Check
 
 Future improvements are [planned](https://warthogs.atlassian.net/browse/DPE-2621) to check the state of a cluster on a low level. 

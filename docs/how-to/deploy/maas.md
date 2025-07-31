@@ -5,18 +5,7 @@ This guide aims to provide a quick start to deploying Charmed MySQL on MAAS. It 
 
 If you want to deploy MySQL on MAAS in a **production environment**, refer to the official [Bootstrap MAAS Tutorial](https://maas.io/docs/tutorial-bootstrapping-maas) followed by the [Charmed MySQL Tutorial](/tutorial/2-deploy-mysql).
 
-## Summary
- * [Bootstrap a Multipass VM](#bootstrap-multipass-vm)
- * [Configure MAAS](#configure-maas)
- * [Register MAAS with Juju](#register-maas-juju)
- * [Deploy Charmed MySQL on MAAS](#deploy-mysql-maas)
- * [Test Charmed MySQL deployment](#test-mysql)
- * [Clean up the environment](#clean-up)
-
-For further details and explanation about each step, remember you can refer to the [original tutorial](https://discourse.maas.io/t/5360). 
-
----
- ## Bootstrap a Multipass VM
+## Bootstrap a Multipass VM
 
 Install Multipass and launch a VM:
 ```shell
@@ -27,7 +16,7 @@ wget -qO- https://raw.githubusercontent.com/canonical/maas-multipass/main/maas.y
 ```
 > The wget command provides a [cloud-init](https://github.com/canonical/maas-multipass/blob/main/maas.yml) file that will set up the VM's LXD and MAAS environment.
 
- ## Configure MAAS
+## Configure MAAS
 
 **1.** Find your MAAS IP with
 ```shell
@@ -72,7 +61,7 @@ The LXD machine will be up and running after the images downloading and sync is 
 multipass exec maas -- sudo maas apikey --username admin
 ```
 
- ## Register MAAS with Juju
+## Register MAAS with Juju
 
 **1.** Enter the Multipass shell and install juju:
 ```shell
@@ -143,7 +132,7 @@ Machine  State    Address     Inst id       Base          AZ       Message
 
 Check the [Testing](/reference/software-testing) reference to test your deployment.
 
- ## Clean up the environment
+## Clean up the environment
 To stop your VM, run: 
 ```shell
 multipass stop maas

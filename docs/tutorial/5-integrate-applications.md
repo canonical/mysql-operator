@@ -6,14 +6,6 @@ Integrations automatically create a username, password, and database for the des
 
 In this section, you will learn how to integrate your Charmed MySQL with another application (charmed or not) via the Data Integrator charm. 
 
-## Summary
-* [Deploy `data-integrator`](#deploy-data-integrator)
-* [Integrate with MySQL](#integrate-with-mysql)
-* [Access the integrated database](#access-the-integrated-database)
-* [Remove the user](#remove-the-user)
-
----
-
 ## Deploy `data-integrator`
 
 In this tutorial, we will relate to the [Data Integrator charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users. It automatically provides credentials and endpoints that are needed to connect with a charmed database application.
@@ -98,6 +90,7 @@ ok: "True"
 ```
 > Note that your hostnames, usernames, and passwords will be different.
 
+(access-the-integrated-database)=
 ## Access the integrated database
 
 Use `endpoints`, `username`, `password` from above to connect newly created database `test-database` on MySQL server:
@@ -123,14 +116,17 @@ The newly created database `test-database` is also available on all other MySQL 
 When you integrate two applications, Charmed MySQL automatically sets up a new user and database for you. Note the database name we specified when we first deployed the `data-integrator` charm: `--config database-name=test-database`.
 
 ## Remove the user
+
 To remove the user, remove the integration. Removing the integration automatically removes the user that was created when the integration was created. 
 
 To remove the integration, run the following command:
+
 ```shell
 juju remove-relation mysql data-integrator
 ```
 
-Try to connect to the same MySQL you just used in the previous section ([Access the related database](#access-the-related-database)):
+Try to connect to the same MySQL you just used in the previous section ([Access the integrated database](access-the-integrated-database)):
+
 ```shell
 mysql -h 10.234.188.135 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
 ```

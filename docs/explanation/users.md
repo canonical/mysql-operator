@@ -6,7 +6,6 @@ There are two types of users in MySQL:
 * Relation/integration users (used by related applications)
   * Extra user roles (if default permissions are not enough)
 
-<a name="internal-users"></a>
 ## Internal users explanations:
 
 The operator uses the following internal DB users:
@@ -44,8 +43,9 @@ mysql> select Host,User,account_locked from mysql.user;
 **Note**: it is forbidden to use/manage described above users! They are dedicated to the operators logic!
 Please use [data-integrator](https://charmhub.io/mysql/docs/t-integrations) charm to generate/manage/remove an external credentials.
 
-It is allowed to rotate passwords for *internal* users using action 'set-password'
-```shell
+It is allowed to rotate passwords for *internal* users using action `set-password`
+
+```text
 > juju show-action mysql set-password
 Change the system user's password, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
 
@@ -61,7 +61,7 @@ username:
 
 For example, to generate a new random password for *internal* user:
 
-```shell
+```text
 > juju run-action --wait mysql/leader set-password username=clusteradmin
 unit-mysql-3:
   ...
@@ -95,7 +95,6 @@ unit-mysql-3:
 ```
 **Note**: the action `set-password` must be executed on juju leader unit (to update peer relation data with new value).
 
-<a name="relation-users"></a>
 ## Relation/integration users explanations:
 
 The operator created a dedicated user for every application related/integrated with database.
@@ -133,9 +132,6 @@ mysql> select Host,User,account_locked from mysql.user where User like 'mysql_ro
 > juju relate mysql myclientapp
 ```
 
-
-
-<a name="admin-port"></a>
 ### Admin Port User Access
 
 The charm mainly uses the `serverconfig` user for internal operations. For connections with this user, a special admin port is used (port `33062`), which enables the charm to operate MySQL even when users connections are saturated.

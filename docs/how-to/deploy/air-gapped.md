@@ -18,13 +18,14 @@ Canonical does not prescribe how you should set up your specific air-gapped envi
 
 ## Air-gapped setup summary
 
-[1\. Export snaps and charms](#1-export-snaps-and-charms) <br>
-[2\. Transfer binary blobs](#2-transfer-binary-blobs) <br>
+[1\. Export snaps and charms](1-export-snaps-and-charms) <br>
+[2\. Transfer binary blobs](2-transfer-the-binary-blobs) <br>
 [3\. Import snaps and charms](3-import-snaps-and-charms) <br>
-[4\. Deploy MySQL](#4-deploy-mysql)
+[4\. Deploy MySQL](4-deploy-mysql)
 
 ## Air-gapped day-to-day example
 
+(1-export-snaps-and-charms)=
 ### 1. Export snaps and charms
 Exporting VM SNAPs and Charms and  are currently independent processes. The `store-admin` tool is designed to simplify the process. 
 
@@ -93,6 +94,7 @@ canonical-livepatch: /home/ubuntu/snap/store-admin/common/export/canonical-livep
 ```
 </details>
 
+(2-transfer-the-binary-blobs)=
 ### 2. Transfer the binary blobs 
 
 Transfer the binary blobs using the way of your choice into the air-gapped environment.
@@ -105,6 +107,7 @@ cp /media/usb/*.tar.gz /var/snap/snap-store-proxy/common/charms-to-push/
 ```
 > **Note**: always check [checksum](https://en.wikipedia.org/wiki/Checksum) for the transferred blobs!
 
+(3-import-snaps-and-charms)=
 ### 3. Import snaps and charms
 
  Import the [snap](https://documentation.ubuntu.com/snap-store-proxy/en/airgap/#importing-pushing-snaps) and [charm](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages) blobs into local air-gapped CharmHub:
@@ -117,6 +120,7 @@ sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms
 ```
 > **Note**: when [re-importing](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages) charms or importing other revisions, make sure to provide the `--push-channel-map`.
 
+(4-deploy-mysql)=
 ### 4. Deploy MySQL
 
  Deploy and operate Juju charms normally:

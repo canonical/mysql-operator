@@ -11,11 +11,6 @@ See also:
 
 This page aims to provide some context on some of the inner workings of Juju that affect this charm.
 
-## Summary
-* [Breaking changes between Juju 2.8.x and 3.x](#breaking-changes)
-* [Juju upgrades](#upgrades)
-
----
 ## Breaking changes between Juju 2.9.x and 3.x
 
 As this charm documentation is written for Juju 3.x, users of 2.9.x will encounter noteworthy changes when following the instructions. This section explains those changes.
@@ -52,9 +47,9 @@ This section is based on the [OpenStack guide.](https://docs.openstack.org/charm
 ```
 
 ## Juju  upgrades
-Newly released charm revisions might require a new [Juju version](/). This is usually because the new revision requires new Juju features, e.g. [Juju secrets](https://juju.is/docs/juju/secret).
+Newly released charm revisions might require a new Juju version. This is usually because the new revision requires new Juju features, e.g. [Juju secrets](https://juju.is/docs/juju/secret).
 
-Information about Juju requirements will be clearly indicated in the charm's [release notes](/) and in the repository's [metadata.yaml](https://github.com/canonical/mysql-operator/blob/14c06ff88c4e564cd6d098aa213bd03e78e84b52/metadata.yaml#L72-L80) file.
+Information about Juju requirements will be clearly indicated in the charm's [release notes](/reference/releases) and in the repository's [metadata.yaml](https://github.com/canonical/mysql-operator/blob/14c06ff88c4e564cd6d098aa213bd03e78e84b52/metadata.yaml#L72-L80) file.
 
 When upgrading your database charm with <code>juju refresh</code>, Juju checks that its version is compatible with the target revision. If not, it stops the upgrade and prevents further changes to keep the installation safe. 
 

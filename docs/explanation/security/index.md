@@ -24,7 +24,7 @@ Charmed MySQL can be deployed on top of several clouds and virtualisation layers
 ### Juju 
 
 Juju is the component responsible for orchestrating the entire lifecycle, from deployment to Day 2 operations. For more information on Juju security hardening, see the
-[Juju security page](/) and the [How to harden your deployment](https://juju.is/docs/juju/harden-your-deployment) guide.
+[Juju security page](https://discourse.charmhub.io/t/juju-security/15684) and the [How to harden your deployment](https://juju.is/docs/juju/harden-your-deployment) guide.
 
 #### Cloud credentials
 

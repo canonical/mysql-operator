@@ -7,7 +7,8 @@
 If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
 ```
 
-Charmed MySQL backup can be stored on any S3 compatible storage. The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm for **[AWS S3](https://aws.amazon.com/s3/)** (click [here](/) to backup on Ceph via RadosGW):
+Charmed MySQL backup can be stored on any S3 compatible storage. The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm for **[AWS S3](https://aws.amazon.com/s3/)** (click [here](/how-to/back-up-and-restore/configure-s3-radosgw) to backup on Ceph via RadosGW):
+
 ```shell
 juju deploy s3-integrator
 juju run s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here>
@@ -17,6 +18,7 @@ juju config s3-integrator \
     path="/mysql-test" \
     region="us-west-2"
 ```
+
 ```{note} 
 The amazon S3 endpoint must be specified as `s3.<region>.amazonaws.com ` within the first 24 hours of creating the bucket. For older buckets, the endpoint `s3.amazonaws.com` can be used.
 
@@ -24,6 +26,7 @@ See [this post](https://repost.aws/knowledge-center/s3-http-307-response) for mo
 ```
 
 To pass these configurations to Charmed MySQL, relate the two applications:
+
 ```shell
 juju integrate s3-integrator mysql
 ```

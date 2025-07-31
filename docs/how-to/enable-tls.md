@@ -11,10 +11,9 @@ This guide will show how to enable TLS using the [`self-signed-certificates` ope
 ```{caution}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
 
-Check [this guide](/) for an overview of the TLS certificates charms available. 
+Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the TLS certificates charms available. 
 ```
 
----
 
 ## Enable TLS
 

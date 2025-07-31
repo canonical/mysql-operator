@@ -1,4 +1,3 @@
-
 # Explanation
 
 Additional context about key concepts behind the MySQL charm.

@@ -1,13 +1,11 @@
-
-# Upgrade
-
 # Upgrade
 
 This section contains documentation about performing upgrades (and rollbacks) on:
-* [MySQL Server (workload)](#mysql-upgrades-workload)
+* [MySQL Server (workload)](mysql-upgrades)
 * [Juju version](#juju-upgrades)
 
-## MySQL upgrades (workload)
+(mysql-upgrades)=
+## MySQL upgrades
 There are two types of in-place workload upgrades:
 * **Major upgrades** -  E.g. MySQL `8.0` -> MySQL `9.0`
   * *Not supported*
@@ -20,7 +18,7 @@ This charm only supports in-place **minor** upgrades.
 
 To upgrade to a major MySQL version, one must install a new cluster separately and migrate the data from the old to the new installation. This documentation will be updated with the migration instructions when a new MySQL version becomes available.
 ```
-
+(juju-upgrades)=
 ## Juju upgrades
 
 New revisions of the charm may require that you do a major or minor Juju upgrade.

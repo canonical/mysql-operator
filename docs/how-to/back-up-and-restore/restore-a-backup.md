@@ -22,14 +22,6 @@ To restore a backup that was made from the a *different* cluster, (i.e. cluster 
   * 369+ for `arm64`
   * 368+ for `amd64`
 
-## Summary
-
-* [List backups](#list-backups)
-* [Point-in-time recovery](#point-in-time-recovery)
-* [Restore backup](#restore-backup)
-
----
-
 ## List backups
 
 To view the available backups to restore you can enter the command `list-backups`:

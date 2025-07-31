@@ -15,15 +15,6 @@ This guide shows how to integrate Charmed MySQL with both charmed and non-charme
 
 > For developer information about how to integrate your own charmed application with MySQL, see [Development > How to integrate with your charm](/how-to/development/integrate-with-your-charm).
 
-## Summary
-* [Integrate with a charmed application](#integrate-with-a-charmed-application)
-  * [Modern interface](#modern-interface)
-  * [Legacy interface](#legacy-interface)
-* [Integrate with a non-charmed application](#integrate-with-a-non-charmed-application)
-* [Rotate application passwords](#rotate-application-passwords)
-
----
-
 ## Integrate with a charmed application
 
 Integrations with charmed applications are supported via the [`mysql_client`](https://github.com/canonical/charm-relation-interfaces/blob/main/interfaces/mysql_client/v0/README.md) interface, and the legacy `mysql` interface.

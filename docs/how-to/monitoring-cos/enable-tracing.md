@@ -2,17 +2,11 @@
 # Enable tracing
 
 ```{note}
-**Note**: All commands are written for `juju >= v3.1`
+All commands are written for `juju >= v3.1`
 
 If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
 ```
 This guide contains the steps to enable tracing with [Grafana Tempo](https://grafana.com/docs/tempo/latest/) for your MySQL application. 
-
-To summarize:
-* [Deploy the Tempo charm in a COS K8s environment](#deploy)
-* [Offer interfaces for cross-model integrations](#offer)
-* [Consume and integrate cross-model integrations](#consume)
-* [View MySQL traces on Grafana](#view)
 
 
 ```{caution}
