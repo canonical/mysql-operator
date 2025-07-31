@@ -135,6 +135,9 @@ mysql> select Host,User,account_locked from mysql.user where User like 'mysql_ro
 > juju relate mysql myclientapp
 ```
 
+
+
+<a name="admin-port"></a>
 ### Admin Port User Access
 
 The charm mainly uses the `serverconfig` user for internal operations. For connections with this user, a special admin port is used (port `33062`), which enables the charm to operate MySQL even when users connections are saturated.

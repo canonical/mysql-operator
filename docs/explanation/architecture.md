@@ -94,10 +94,10 @@ Loki is an open-source fully-featured logging system. This charms is shipped wit
 
 Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
 
+<a name="lld"></a>
 ## LLD (Low Level Design)
 
-<!--- TODO:Replace link when MySQL K8s is published --->
-Please check the charm state machines displayed on [workflow diagrams](https://discourse.charmhub.io/t/charmed-mysql-k8s-explanation-charm-lifecycle-flowcharts/10031). The low-level logic is mostly common for both VM and K8s charms.
+Please check the charm state machines displayed on [workflow diagrams](/). The low-level logic is mostly common for both VM and K8s charms.
 
 <!--- TODO: Describe all possible installations? Cross-model/controller? --->
 

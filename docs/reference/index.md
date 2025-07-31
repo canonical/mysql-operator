@@ -36,3 +36,4 @@ In the tabs at the top of this charm's [CharmHub page](https://charmhub.io/mysql
 
 *
 */index
+```

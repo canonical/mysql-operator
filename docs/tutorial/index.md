@@ -40,8 +40,7 @@ While this tutorial intends to guide you as you deploy Charmed MySQL for the fir
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
 :hidden:
 
 *
-*/index
+```
