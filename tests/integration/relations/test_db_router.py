@@ -5,7 +5,6 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, List
 
 import pytest
 import yaml
@@ -27,7 +26,7 @@ FAST_WAIT_TIMEOUT = 30 * 60
 
 
 async def check_successful_keystone_migration(
-    ops_test: OpsTest, server_config_credentials: Dict
+    ops_test: OpsTest, server_config_credentials: dict
 ) -> None:
     """Checks that the keystone application is successfully migrated in mysql.
 
@@ -66,9 +65,9 @@ async def check_successful_keystone_migration(
 
 async def check_keystone_users_existence(
     ops_test: OpsTest,
-    server_config_credentials: Dict[str, str],
-    users_that_should_exist: List[str],
-    users_that_should_not_exist: List[str],
+    server_config_credentials: dict[str, str],
+    users_that_should_exist: list[str],
+    users_that_should_not_exist: list[str],
 ) -> None:
     """Checks that keystone users exist in the database.
 

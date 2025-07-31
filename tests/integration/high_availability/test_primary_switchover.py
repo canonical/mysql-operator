@@ -3,7 +3,6 @@
 
 import logging
 from subprocess import run
-from typing import Optional
 
 import pytest
 from jubilant import Juju, all_active
@@ -75,7 +74,7 @@ def test_cluster_failover_after_majority_loss(juju: Juju, highly_available_clust
     assert get_primary_unit_name(juju, primary_unit) == unit_to_promote, "Failover failed"
 
 
-def get_primary_unit_name(juju: Juju, mysql_unit) -> Optional[str]:
+def get_primary_unit_name(juju: Juju, mysql_unit) -> str | None:
     """Get the current primary node of the cluster."""
     cluster_status_task = juju.run(mysql_unit, "get-cluster-status")
     assert cluster_status_task.status == "completed", "Failed to retrieve cluster status"
@@ -86,7 +85,7 @@ def get_primary_unit_name(juju: Juju, mysql_unit) -> Optional[str]:
             return label.replace("-", "/")
 
 
-def get_app_name(juju: Juju, charm_name: str) -> Optional[str]:
+def get_app_name(juju: Juju, charm_name: str) -> str | None:
     """Get the application name for the given charm."""
     status = juju.status()
     for app, value in status.apps.items():

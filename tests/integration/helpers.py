@@ -8,7 +8,6 @@ import secrets
 import string
 import subprocess
 import tempfile
-from typing import Dict, List, Optional, Set
 
 import juju.unit
 import yaml
@@ -133,7 +132,7 @@ async def get_primary_unit(
     return primary_unit
 
 
-async def get_server_config_credentials(unit: Unit) -> Dict:
+async def get_server_config_credentials(unit: Unit) -> dict:
     """Helper to run an action to retrieve server config credentials.
 
     Args:
@@ -145,7 +144,7 @@ async def get_server_config_credentials(unit: Unit) -> Dict:
     return await juju_.run_action(unit, "get-password", username=SERVER_CONFIG_USERNAME)
 
 
-async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
+async def fetch_credentials(unit: Unit, username: str = None) -> dict:
     """Helper to run an action to fetch credentials.
 
     Args:
@@ -159,7 +158,7 @@ async def fetch_credentials(unit: Unit, username: str = None) -> Dict:
     return await juju_.run_action(unit, "get-password", username=username)
 
 
-async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> Dict:
+async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> dict:
     """Helper to run an action to rotate credentials.
 
     Args:
@@ -176,7 +175,7 @@ async def rotate_credentials(unit: Unit, username: str = None, password: str = N
         return await juju_.run_action(unit, "set-password", username=username, password=password)
 
 
-async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
+async def get_legacy_mysql_credentials(unit: Unit) -> dict:
     """Helper to run an action to retrieve legacy mysql config credentials.
 
     Args:
@@ -189,7 +188,7 @@ async def get_legacy_mysql_credentials(unit: Unit) -> Dict:
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(5), reraise=True)
-async def get_system_user_password(unit: Unit, user: str) -> Dict:
+async def get_system_user_password(unit: Unit, user: str) -> dict:
     """Helper to run an action to retrieve system user password.
 
     Args:
@@ -206,10 +205,10 @@ async def execute_queries_on_unit(
     unit_address: str,
     username: str,
     password: str,
-    queries: List[str],
+    queries: list[str],
     commit: bool = False,
     raw: bool = False,
-) -> List:
+) -> list:
     """Execute given MySQL queries on a unit.
 
     Args:
@@ -271,7 +270,7 @@ def is_relation_broken(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
 
 @retry(stop=stop_after_attempt(30), wait=wait_fixed(5), reraise=True)
 def is_connection_possible(
-    credentials: Dict, *, retry_if_not_possible=False, **extra_opts
+    credentials: dict, *, retry_if_not_possible=False, **extra_opts
 ) -> bool:
     """Test a connection to a MySQL server.
 
@@ -544,7 +543,7 @@ async def get_relation_data(
     return relation_data
 
 
-def get_read_only_endpoints(relation_data: list) -> Set[str]:
+def get_read_only_endpoints(relation_data: list) -> set[str]:
     """Returns the read-only-endpoints from the relation data.
 
     Args:
@@ -573,8 +572,8 @@ def get_read_only_endpoints(relation_data: list) -> Set[str]:
 
 
 async def get_leader_unit(
-    ops_test: Optional[OpsTest], app_name: str, model: Optional[Model] = None
-) -> Optional[Unit]:
+    ops_test: OpsTest | None, app_name: str, model: Model | None = None
+) -> Unit | None:
     """Get the leader unit of a given application.
 
     Args:
@@ -593,7 +592,7 @@ async def get_leader_unit(
     return leader_unit
 
 
-def get_read_only_endpoint_ips(relation_data: list) -> List[str]:
+def get_read_only_endpoint_ips(relation_data: list) -> list[str]:
     """Returns the read-only-endpoint hostnames from the relation data.
 
     Args:
@@ -640,7 +639,7 @@ async def remove_leader_unit(ops_test: OpsTest, application_name: str):
         )
 
 
-async def get_units_ip_addresses(ops_test: OpsTest, app_name: str) -> List[str]:
+async def get_units_ip_addresses(ops_test: OpsTest, app_name: str) -> list[str]:
     """Retrieves hostnames of given application units.
 
     Args:
@@ -810,12 +809,12 @@ async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> st
         return None
 
 
-async def get_cluster_status(unit: Unit, cluster_set: Optional[bool] = False) -> Dict:
+async def get_cluster_status(unit: Unit, cluster_set: bool | None = False) -> dict:
     """Get the cluster status by running the get-cluster-status action.
 
     Args:
-        ops_test: The ops test framework
         unit: The unit on which to execute the action on
+        cluster_set: Whether to get the cluster-set instead
 
     Returns:
         A dictionary representing the cluster status
@@ -978,9 +977,7 @@ def get_unit_by_index(app_name: str, units: list, index: int):
             return unit
 
 
-async def get_status_log(
-    ops_test: OpsTest, unit_name: str, num_logs: Optional[int] = None
-) -> list:
+async def get_status_log(ops_test: OpsTest, unit_name: str, num_logs: int | None = None) -> list:
     """Get the status log for a unit.
 
     Args:
