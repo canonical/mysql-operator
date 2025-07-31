@@ -8,7 +8,6 @@ import subprocess
 from asyncio import gather
 from pathlib import Path
 from time import sleep
-from typing import Optional
 
 import pytest
 import yaml
@@ -34,7 +33,7 @@ MINUTE = 60
 
 
 @pytest.fixture(scope="module")
-def first_model(ops_test: OpsTest) -> Optional[Model]:
+def first_model(ops_test: OpsTest) -> Model | None:
     """Return the first model."""
     first_model = ops_test.model
     return first_model

@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import typing
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable
 
 import jinja2
 import pexpect
@@ -436,8 +436,8 @@ class MySQL(MySQLBase):
     def execute_backup_commands(  # type: ignore
         self,
         s3_directory: str,
-        s3_parameters: Dict[str, str],
-    ) -> Tuple[str, str]:
+        s3_parameters: dict[str, str],
+    ) -> tuple[str, str]:
         """Executes commands to create a backup."""
         return super().execute_backup_commands(
             s3_directory,
@@ -465,13 +465,13 @@ class MySQL(MySQLBase):
     def retrieve_backup_with_xbcloud(  # type: ignore
         self,
         backup_id: str,
-        s3_parameters: Dict[str, str],
+        s3_parameters: dict[str, str],
         temp_restore_directory: str = CHARMED_MYSQL_COMMON_DIRECTORY,
         xbcloud_location: str = CHARMED_MYSQL_XBCLOUD_LOCATION,
         xbstream_location: str = CHARMED_MYSQL_XBSTREAM_LOCATION,
         user=ROOT_SYSTEM_USER,
         group=ROOT_SYSTEM_USER,
-    ) -> Tuple[str, str, str]:
+    ) -> tuple[str, str, str]:
         """Retrieve the provided backup with xbcloud."""
         return super().retrieve_backup_with_xbcloud(
             backup_id,
@@ -483,7 +483,7 @@ class MySQL(MySQLBase):
             group,
         )
 
-    def prepare_backup_for_restore(self, backup_location: str) -> Tuple[str, str]:
+    def prepare_backup_for_restore(self, backup_location: str) -> tuple[str, str]:
         """Prepare the download backup for restore with xtrabackup --prepare."""
         return super().prepare_backup_for_restore(
             backup_location,
@@ -504,7 +504,7 @@ class MySQL(MySQLBase):
     def restore_backup(
         self,
         backup_location: str,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """Restore the provided prepared backup."""
         # TODO: remove workaround for changing permissions and ownership of data
         # files once restore backup commands can be run with snap_daemon user
@@ -572,13 +572,13 @@ class MySQL(MySQLBase):
 
     def _execute_commands(
         self,
-        commands: List[str],
+        commands: list[str],
         bash: bool = False,
         user: str = None,
         group: str = None,
-        env_extra: Dict = {},
-        stream_output: Optional[str] = None,
-    ) -> Tuple[str, str]:
+        env_extra: dict = {},
+        stream_output: str | None = None,
+    ) -> tuple[str, str]:
         """Execute commands on the server where mysql is running.
 
         Args:
@@ -802,10 +802,10 @@ class MySQL(MySQLBase):
 
     def _run_mysqlcli_script(
         self,
-        script: Union[Tuple[Any, ...], List[Any]],
+        script: tuple[Any, ...] | list[Any],
         user: str = "root",
-        password: Optional[str] = None,
-        timeout: Optional[int] = None,
+        password: str | None = None,
+        timeout: int | None = None,
         exception_as_warning: bool = False,
         log_errors: bool = True,
     ) -> list:
@@ -1001,7 +1001,7 @@ class MySQL(MySQLBase):
         os.chmod(path, mode=permission)
 
     @staticmethod
-    def fetch_error_log() -> Optional[str]:
+    def fetch_error_log() -> str | None:
         """Fetch the mysqld error log."""
         if os.path.exists(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log"):
             # can be empty if just rotated
