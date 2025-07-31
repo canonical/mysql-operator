@@ -15,7 +15,6 @@ import random
 import socket
 import subprocess
 from time import sleep
-from typing import Optional
 
 import ops
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
@@ -400,7 +399,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
-        def _get_leader_unit() -> Optional[Unit]:
+        def _get_leader_unit() -> Unit | None:
             """Get the leader unit."""
             for unit in self.peers.units:
                 if self.peers.data[unit]["leader"] == "true":
@@ -630,7 +629,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     # =======================
 
     @property
-    def tracing_endpoint(self) -> Optional[str]:
+    def tracing_endpoint(self) -> str | None:
         """Otlp http endpoint for charm instrumentation."""
         return self.tracing_endpoint_config
 
@@ -665,7 +664,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return socket.getfqdn()
 
     @property
-    def restart_peers(self) -> Optional[ops.Relation]:
+    def restart_peers(self) -> ops.Relation | None:
         """Retrieve the peer relation."""
         return self.model.get_relation("restart")
 
@@ -673,7 +672,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in blocked state and should not run any operations."""
         return self.unit_peer_data.get("member-state") == "waiting"
 
-    def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
+    def get_unit_hostname(self, unit_name: str | None = None) -> str:
         """Get the hostname of the unit."""
         if unit_name:
             unit = self.model.get_unit(unit_name)
@@ -876,7 +875,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             and self.cluster_initialized
         )
 
-    def _get_primary_from_online_peer(self) -> Optional[str]:
+    def _get_primary_from_online_peer(self) -> str | None:
         """Get the primary address from an online peer."""
         for unit in self.peers.units:
             if self.peers.data[unit].get("member-state") == "online":
