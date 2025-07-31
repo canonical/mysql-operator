@@ -24,7 +24,7 @@ import yaml
 #
 # TODO: Update with the official name of your project or product
 
-project = "Documentation starter pack"
+project = "Charmed MySQL"
 author = "Canonical Ltd."
 
 
@@ -70,7 +70,7 @@ copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = "https://canonical-starter-pack.readthedocs-hosted.com/"
+# ogp_site_url = "https://canonical-starter-pack.readthedocs-hosted.com/"
 
 
 # Preview name of the documentation website
@@ -106,7 +106,7 @@ html_context = {
     # TODO: If there's no such website,
     #       remove the {{ product_page }} link from the page header template
     #       (usually .sphinx/_templates/header.html; also, see README.rst).
-    "product_page": "documentation.ubuntu.com",
+    "product_page": "canonical.com/data/mysql",
     # Product tag image; the orange part of your logo, shown in the page header
     #
     # TODO: To add a tag image, uncomment and update as needed.
@@ -117,37 +117,38 @@ html_context = {
     #
     # NOTE: If set, adding ':discourse: 123' to an .rst file
     #       will add a link to Discourse topic 123 at the bottom of the page.
-    "discourse": "https://discourse.ubuntu.com",
+    "discourse": "https://discourse.charmhub.io",
     # Your Mattermost channel URL
     #
     # TODO: Change to your Mattermost channel URL or leave empty.
-    "mattermost": "https://chat.canonical.com/canonical/channels/documentation",
+    "mattermost": "",
     # Your Matrix channel URL
     #
     # TODO: Change to your Matrix channel URL or leave empty.
-    "matrix": "https://matrix.to/#/#documentation:ubuntu.com",
+    "matrix": "https://matrix.to/#/#charmhub-data-platform:ubuntu.com",
     # Your documentation GitHub repository URL
     #
     # TODO: Change to your documentation GitHub repository URL or leave empty.
     #
     # NOTE: If set, links for viewing the documentation source files
     #       and creating GitHub issues are added at the bottom of each page.
-    "github_url": "https://github.com/canonical/sphinx-docs-starter-pack",
+    "github_url": "https://github.com/canonical/mysql-operator",
     # Docs branch in the repo; used in links for viewing the source files
     #
     # TODO: To customise the branch, uncomment and update as needed.
     'repo_default_branch': 'main',
     # Docs location in the repo; used in links for viewing the source files
-    #
-
-
-    # TODO: To customise the directory, uncomment and update as needed.
     "repo_folder": "/docs/",
+
+    # Docs location in the repo; used in links for viewing the source files
+    "repo_folder": "/docs/",
+
     # TODO: To enable or disable the Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
-    # "sequential_nav": "both",
+    "sequential_nav": "none",
+
     # TODO: To enable listing contributors on individual pages, set to True
-    "display_contributors": False,
+    "display_contributors": True,
 
     # Required for feedback button    
     'github_issues': 'enabled',
@@ -160,9 +161,9 @@ html_context = {
 # - https://launchpad.net/example
 # - https://git.launchpad.net/example
 #
-# html_theme_options = {
-# 'source_edit_link': 'https://github.com/canonical/sphinx-docs-starter-pack',
-# }
+html_theme_options = {
+'source_edit_link': 'https://github.com/canonical/mysql-operator',
+}
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
 #
@@ -177,7 +178,7 @@ html_context = {
 
 # Base URL of RTD hosted project
 
-html_baseurl = 'https://canonical-starter-pack.readthedocs-hosted.com/'
+html_baseurl = 'https://canonical-charmed-mysql.readthedocs-hosted.com/'
 
 # URL scheme. Add language and version scheme elements.
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
@@ -213,13 +214,9 @@ sitemap_show_lastmod = True
 # NOTE: If undefined, set to None, or empty,
 #       the sphinx_reredirects extension will be disabled.
 
-redirects = {
-    'reference/doc-cheat-sheet-myst/': '/reference/myst-syntax-reference',
-    'reference/doc-cheat-sheet/': '/reference/rst-syntax-reference',
-    'reference/style-guide-myst/': '/reference/myst-syntax-reference',
-    'reference/style-guide/': '/reference/rst-syntax-reference',
-}
+# redirects = {}
 
+# rediraffe_redirects = "redirects.txt"
 
 ###########################
 # Link checker exceptions #
@@ -253,8 +250,10 @@ linkcheck_retries = 3
 # NOTE: By default, the following MyST extensions are enabled:
 #       substitution, deflist, linkify
 
-# myst_enable_extensions = set()
+myst_enable_extensions = set()
 
+# Enables MyST references via standard anchors
+myst_heading_anchors = 3
 
 # Custom Sphinx extensions; see
 # https://www.sphinx-doc.org/en/master/usage/extensions/index.html
@@ -285,7 +284,6 @@ extensions = [
 # Excludes files or directories from processing
 
 exclude_patterns = [
-    "doc-cheat-sheet*",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
@@ -353,6 +351,4 @@ if os.path.exists('./reuse/substitutions.yaml'):
 
 # Add configuration for intersphinx mapping
 
-intersphinx_mapping = {
-    'starter-pack': ('https://canonical-example-product-documentation.readthedocs-hosted.com/en/latest', None)
-}
+# intersphinx_mapping = {}
