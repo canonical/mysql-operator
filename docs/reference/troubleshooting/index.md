@@ -1,6 +1,3 @@
-
-# Troubleshooting
-
 # Troubleshooting
 
 > :warning: **WARNING**: at the moment, there is NO ability to [pause operator](https://warthogs.atlassian.net/browse/DPE-2545)!<br/>Make sure your activity will not interfere with the operator itself!
@@ -152,8 +149,6 @@ ubuntu@juju-6692b6-0:~$
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
-:hidden:
 
-*
+SoS report <sos-report>
 ```

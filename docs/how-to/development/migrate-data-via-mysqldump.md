@@ -1,12 +1,3 @@
-
-# Migrate data via mysqldump
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-For more information, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # Migrate database data via `mysqldump`
 
 This document describes database **data** migration only!

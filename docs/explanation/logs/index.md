@@ -172,8 +172,6 @@ for the duration of the event handler.
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
-:hidden:
 
-*
+Audit logs <audit-logs>
 ```

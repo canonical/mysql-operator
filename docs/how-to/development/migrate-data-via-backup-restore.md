@@ -1,7 +1,4 @@
-
 # Migrate data via backup/restore
-
-# DB data migration using ‘backup/restore’
 
 > :information_source: **Tip**: use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
 

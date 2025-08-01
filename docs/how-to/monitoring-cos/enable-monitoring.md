@@ -1,12 +1,3 @@
-
-# Enable monitoring
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # How to enable monitoring (COS)
 
 This guide will show you how to deploy and configure the [COS Lite bundle](https://charmhub.io/cos-lite) to monitor your deployment with Grafana.

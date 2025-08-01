@@ -93,8 +93,7 @@ For details on the cryptography used by Charmed MySQL, see the [Cryptography](ht
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
 :hidden:
 
-*
+cryptography
 ```
