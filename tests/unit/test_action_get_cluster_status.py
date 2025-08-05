@@ -76,6 +76,23 @@ def test_get_cluster_status_action_failure(harness):
         harness.charm._get_cluster_status(evt)
 
         # It should report failure and never set_results
+        evt.fail.assert_called_once()
+        args, _ = evt.fail.call_args
+        assert "Failed to read cluster status" in args[0]
+
+        evt.set_results.assert_not_called()
+
+
+def test_get_cluster_status_action_none_return(harness):
+    """When the backend returns None (no error), the action should fail."""
+    rel = harness.add_relation("database-peers", "database-peers")
+    harness.update_relation_data(rel, harness.charm.app.name, {"cluster-name": "my-cluster"})
+
+    fake = FakeMySQLBackend(response=None)  # Simulate silent failure
+    with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
+        evt = make_event()
+        harness.charm._get_cluster_status(evt)
+
         evt.fail.assert_called_once_with(
             "Failed to read cluster status. See logs for more information."
         )
