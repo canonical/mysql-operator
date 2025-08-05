@@ -113,7 +113,7 @@ For this charm, the following events are observed:
 
 ### Charm code overview
 
-[`src/charm.py`](https://github.com/canonical/postgresql-operator/blob/main/src/charm.py) is the default entry point for a charm and has the [`MySQLCharmBase`](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/mysql.py) Python class which inherits from `CharmBase`.
+[`src/charm.py`](https://github.com/canonical/mysql-operator/blob/main/src/charm.py) is the default entry point for a charm and has the [`MySQLCharmBase`](https://github.com/canonical/mysql-operator/blob/main/lib/charms/mysql/v0/mysql.py) Python class which inherits from `CharmBase`.
 
 `CharmBase` is the base class from which all Charms are formed, defined by [Ops](https://ops.readthedocs.io/en/latest/) (Python framework for developing charms). See more information in the [Ops documentation for `CharmBase`](https://ops.readthedocs.io/en/latest/reference/ops.html#ops.CharmBase).
 
