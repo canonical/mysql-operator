@@ -194,7 +194,7 @@ class TestMySQLBase(unittest.TestCase):
             # Charmed DDL queries
             f"CREATE ROLE {ROLE_DDL}",
             f"GRANT charmed_dml TO {ROLE_DDL}",
-            f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, SHOW_ROUTINE, SHOW VIEW, INDEX, REFERENCES, TRIGGER, LOCK TABLES ON *.* TO {ROLE_DDL}",
+            f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, SHOW_ROUTINE, SHOW VIEW, TRIGGER ON *.* TO {ROLE_DDL}",
         ]
 
         self.mysql.configure_mysql_system_roles()
@@ -363,12 +363,15 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_create_scoped_user_commands = "\n".join((
             "shell.connect_to_primary()",
-            'session.run_sql("CREATE DATABASE IF NOT EXISTS `test-database`;")',
-            'session.run_sql("GRANT SELECT ON `test-database`.* TO charmed_read;")',
-            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test-database`.* TO charmed_dml;")',
+            'session.run_sql("CREATE DATABASE IF NOT EXISTS `test_database`;")',
+            'session.run_sql("GRANT SELECT ON `test_database`.* TO charmed_read;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO charmed_dml;")',
+            'session.run_sql("CREATE ROLE IF NOT EXISTS `charmed_dba_test_database`;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO charmed_dba_test_database;")',
+            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO charmed_dba_test_database;")',
         ))
 
-        self.mysql.create_database("test-database")
+        self.mysql.create_database("test_database")
 
         self.assertEqual(_run_mysqlsh_script.call_count, 1)
         self.assertEqual(
@@ -392,21 +395,27 @@ class TestMySQLBase(unittest.TestCase):
             self.mysql.create_database("test_database")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_database_invalid(self, _run_mysqlsh_script):
+        """Test failure to create an invalid application database."""
+        with self.assertRaises(MySQLCreateApplicationDatabaseError):
+            self.mysql.create_database("extremely_extra_long_database_name")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_create_application_scoped_user(self, _run_mysqlsh_script):
         """Test the successful execution of create_application_scoped_user."""
         _run_mysqlsh_script.return_value = ""
 
         _expected_create_scoped_user_commands = "\n".join((
             "shell.connect_to_primary()",
-            'session.run_sql("CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY \'test-password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
-            'session.run_sql("GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;")',
-            'session.run_sql("GRANT ALL PRIVILEGES ON `test-database`.* TO `test-username`@`1.1.1.1`;")',
+            'session.run_sql("CREATE USER `test_username`@`1.1.1.1` IDENTIFIED BY \'test_password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
+            'session.run_sql("GRANT USAGE ON *.* TO `test_username`@`1.1.1.1`;")',
+            'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
         ))
 
         self.mysql.create_scoped_user(
-            "test-database",
-            "test-username",
-            "test-password",
+            "test_database",
+            "test_username",
+            "test_password",
             "1.1.1.1",
             unit_name="app/0",
         )
@@ -443,9 +452,9 @@ class TestMySQLBase(unittest.TestCase):
         """Test failure to create an invalid application scoped user."""
         with self.assertRaises(MySQLCreateApplicationScopedUserError):
             self.mysql.create_scoped_user(
-                "test-database",
-                "test-username",
-                "test-password",
+                "test_database",
+                "test_username",
+                "test_password",
                 "1.1.1.1",
                 unit_name="app/0",
                 extra_roles=[ROLE_BACKUP],

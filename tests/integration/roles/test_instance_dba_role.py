@@ -3,18 +3,20 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import logging
 from pathlib import Path
 
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from . import juju_
-from .helpers import (
+from .. import juju_
+from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit,
-    get_server_config_credentials,
 )
+
+logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
@@ -46,7 +48,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_charmed_dba_role(ops_test: OpsTest):
-    """Test the DBA predefined role."""
+    """Test the instance-level DBA role."""
     await ops_test.model.applications[INTEGRATOR_APP_NAME].set_config({
         "database-name": "charmed_dba_database",
         "extra-user-roles": "charmed_dba",
@@ -59,12 +61,15 @@ async def test_charmed_dba_role(ops_test: OpsTest):
     mysql_unit = ops_test.model.applications[DATABASE_APP_NAME].units[0]
     primary_unit = await get_primary_unit(ops_test, mysql_unit, DATABASE_APP_NAME)
     primary_unit_address = await primary_unit.get_public_address()
-    server_config_credentials = await get_server_config_credentials(primary_unit)
 
+    data_integrator_unit = ops_test.model.applications[INTEGRATOR_APP_NAME].units[0]
+    results = await juju_.run_action(data_integrator_unit, "get-credentials")
+
+    logger.info("Checking that the instance-level DBA role can create new databases")
     await execute_queries_on_unit(
         primary_unit_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
+        results["mysql"]["username"],
+        results["mysql"]["password"],
         ["CREATE DATABASE IF NOT EXISTS test"],
         commit=True,
     )
@@ -72,6 +77,7 @@ async def test_charmed_dba_role(ops_test: OpsTest):
     data_integrator_unit = ops_test.model.applications[INTEGRATOR_APP_NAME].units[0]
     results = await juju_.run_action(data_integrator_unit, "get-credentials")
 
+    logger.info("Checking that the instance-level DBA role can see all databases")
     rows = await execute_queries_on_unit(
         primary_unit_address,
         results["mysql"]["username"],

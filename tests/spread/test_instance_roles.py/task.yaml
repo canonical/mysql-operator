@@ -1,6 +1,6 @@
-summary: test_predefined_roles.py
+summary: test_instance_roles.py
 environment:
-  TEST_MODULE: test_predefined_roles.py
+  TEST_MODULE: roles/test_instance_roles.py
 execute: |
   tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
 artifacts:

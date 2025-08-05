@@ -152,6 +152,7 @@ ROLE_DML = "charmed_dml"
 ROLE_READ = "charmed_read"
 ROLE_STATS = "charmed_stats"
 ROLE_BACKUP = "charmed_backup"
+ROLE_MAX_LENGTH = 32
 
 # TODO:
 #   Remove legacy role when migrating to MySQL 8.4
@@ -1251,7 +1252,7 @@ class MySQLBase(ABC):
             ROLE_DDL: [
                 f"CREATE ROLE {ROLE_DDL}",
                 f"GRANT charmed_dml TO {ROLE_DDL}",
-                f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, SHOW_ROUTINE, SHOW VIEW, INDEX, REFERENCES, TRIGGER, LOCK TABLES ON *.* TO {ROLE_DDL}",
+                f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, SHOW_ROUTINE, SHOW VIEW, TRIGGER ON *.* TO {ROLE_DDL}",
             ],
             ROLE_DBA: [
                 f"CREATE ROLE {ROLE_DBA}",
@@ -1259,7 +1260,7 @@ class MySQLBase(ABC):
                 f"GRANT charmed_stats TO {ROLE_DBA}",
                 f"GRANT charmed_backup TO {ROLE_DBA}",
                 f"GRANT charmed_ddl TO {ROLE_DBA}",
-                f"GRANT EVENT, FILE, SHOW DATABASES, SHUTDOWN ON *.* TO {ROLE_DBA}",
+                f"GRANT EVENT, SHOW DATABASES, SHUTDOWN ON *.* TO {ROLE_DBA}",
                 f"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON *.* TO {ROLE_DBA}",
                 f"GRANT AUDIT_ADMIN, CONNECTION_ADMIN, SYSTEM_VARIABLES_ADMIN ON *.* TO {ROLE_DBA}",
             ],
@@ -1501,16 +1502,30 @@ class MySQLBase(ABC):
 
     def create_database(self, database: str) -> None:
         """Create an application database."""
+        role_name = f"charmed_dba_{database}"
+
+        if len(database) >= ROLE_MAX_LENGTH:
+            logger.error(f"Failed to create application database {database}")
+            raise MySQLCreateApplicationDatabaseError("Name longer than 32 characters")
+        if len(role_name) >= ROLE_MAX_LENGTH:
+            logger.warning(f"Pruning application database role name {role_name}")
+            role_name = role_name[:ROLE_MAX_LENGTH]
+
         create_database_commands = (
             "shell.connect_to_primary()",
             f'session.run_sql("CREATE DATABASE IF NOT EXISTS `{database}`;")',
             f'session.run_sql("GRANT SELECT ON `{database}`.* TO {ROLE_READ};")',
             f'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `{database}`.* TO {ROLE_DML};")',
         )
+        create_dba_role_commands = (
+            f'session.run_sql("CREATE ROLE IF NOT EXISTS `{role_name}`;")',
+            f'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `{database}`.* TO {role_name};")',
+            f'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `{database}`.* TO {role_name};")',
+        )
 
         try:
             self._run_mysqlsh_script(
-                "\n".join(create_database_commands),
+                "\n".join(create_database_commands + create_dba_role_commands),
                 user=self.server_config_user,
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
@@ -1530,9 +1545,15 @@ class MySQLBase(ABC):
         extra_roles: list[str] | None = None,
     ) -> None:
         """Create an application user scoped to the created database."""
+        if extra_roles is not None and set(extra_roles) & FORBIDDEN_EXTRA_ROLES:
+            logger.error(f"Invalid extra user roles: {extra_roles}")
+            raise MySQLCreateApplicationScopedUserError("invalid role(s) for extra user roles")
+
         attributes = {}
         if unit_name is not None:
-            attributes["unit_name"] = unit_name
+            attributes = {"unit_name": unit_name}
+        if extra_roles is not None:
+            extra_roles = ", ".join(extra_roles)
 
         create_scoped_user_attributes = json.dumps(attributes).replace('"', r"\"")
         create_scoped_user_commands = (
@@ -1540,13 +1561,9 @@ class MySQLBase(ABC):
             f"session.run_sql(\"CREATE USER `{username}`@`{hostname}` IDENTIFIED BY '{password}' ATTRIBUTE '{create_scoped_user_attributes}';\")",
         )
 
-        if extra_roles and set(extra_roles) & FORBIDDEN_EXTRA_ROLES:
-            logger.error(f"Invalid extra user roles: {', '.join(extra_roles)}")
-            raise MySQLCreateApplicationScopedUserError("invalid role(s) for extra user roles")
-
         if extra_roles:
             grant_scoped_user_commands = (
-                f"session.run_sql(\"GRANT {','.join(extra_roles)} TO `{username}`@`{hostname}`;\")",
+                f'session.run_sql("GRANT {extra_roles} TO `{username}`@`{hostname}`;")',
             )
         else:
             # Legacy behaviour when no explicit roles were assigned to users

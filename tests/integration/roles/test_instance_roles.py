@@ -11,8 +11,8 @@ import yaml
 from mysql.connector.errors import ProgrammingError
 from pytest_operator.plugin import OpsTest
 
-from . import juju_
-from .helpers import (
+from .. import juju_
+from ..helpers import (
     execute_queries_on_unit,
     get_primary_unit,
     get_server_config_credentials,
@@ -62,7 +62,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_charmed_read_role(ops_test: OpsTest):
-    """Test the charmed_read predefined role."""
+    """Test the instance-level charmed_read role."""
     await ops_test.model.applications[f"{INTEGRATOR_APP_NAME}1"].set_config({
         "database-name": "charmed_read_database",
         "extra-user-roles": "charmed_read",
@@ -143,7 +143,7 @@ async def test_charmed_read_role(ops_test: OpsTest):
 
 @pytest.mark.abort_on_fail
 async def test_charmed_dml_role(ops_test: OpsTest):
-    """Test the charmed_dml role."""
+    """Test the instance-level charmed_dml role."""
     await ops_test.model.applications[f"{INTEGRATOR_APP_NAME}1"].set_config({
         "database-name": "charmed_dml_database",
         "extra-user-roles": "",
