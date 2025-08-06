@@ -1,8 +1,10 @@
 # Troubleshooting
 
-> :warning: **WARNING**: at the moment, there is NO ability to [pause operator](https://warthogs.atlassian.net/browse/DPE-2545)!<br/>Make sure your activity will not interfere with the operator itself!
+```{warning}
+At the moment, there is NO ability to [pause operator](https://warthogs.atlassian.net/browse/DPE-2545)!<br/>Make sure your activity will not interfere with the operator itself!
+```
 
-Ensure you went into the real issue which requires the manual activity. Run `juju status` and check the [list of charm statuses](/reference/charm-statuses) and recommended activities there.
+Ensure you went into the real issue, which requires manual activity. Run `juju status` and check the [list of charm statuses](/reference/charm-statuses) and recommended activities there.
 
 ## Logs
 
@@ -126,7 +128,9 @@ username: root
 ```
 Continue troubleshooting your DB/SQL related issues from here.
 
-> :warning: **WARNING**: please do NOT manage users, credentials, databases, schema directly to avoid a split bran situation with the operator and/or related (integrated) applications.
+```{warning}
+Please do NOT manage users, credentials, databases, schema directly to avoid a split bran situation with the operator and/or related (integrated) applications.
+```
 
 It is NOT recommended to restart services directly as it might create a split brain situation with operator internal state. If you see the problem with a unit, consider to [remove failing unit and add-new-unit](/tutorial/3-scale-replicas) to recover the cluster state.
 
@@ -135,7 +139,9 @@ Also, feel free to improve this document!
 
 ## Installing extra software:
 
-> :warning: **WARNING**: please do NOT install any additionally software as it may affect the stability and produce anomalies which is hard to troubleshoot and fix! Otherwise always remove manually installed components at the end of troubleshooting. Keep the house clean!
+```{warning}
+Please do NOT install any additionally software as it may affect the stability and produce anomalies which is hard to troubleshoot and fix! Otherwise always remove manually installed components at the end of troubleshooting. Keep the house clean!
+```
 
 Sometimes it is necessary to install some extra troubleshooting software. Use the common approach:
 ```shell

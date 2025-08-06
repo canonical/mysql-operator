@@ -1,6 +1,4 @@
-
 # Interfaces/endpoints
-> **:information_source: Hint**: Use [Juju 3](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022). Otherwise replace `juju integrate` with `juju relate` for Juju 2.9.
 
 Charmed MySQL VM supports modern `mysql_client` and legacy `mysql`, `mysql-shared`, `mysql-router` interfaces (in a backward compatible mode).
 

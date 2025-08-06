@@ -17,7 +17,7 @@ juju deploy mysql --config profile=testing
 
 ## Config change
 
-> :warning: **Note**: Pre-deployed application profile change is [planned](https://warthogs.atlassian.net/browse/DPE-2404) but currently is NOT supported.
+> **Note**: Pre-deployed application profile change is [planned](https://warthogs.atlassian.net/browse/DPE-2404) but currently is NOT supported.
 
 To change the profile, use `juju config` ([see all charm configs](https://charmhub.io/mysql/configure#profile)):
 ```shell

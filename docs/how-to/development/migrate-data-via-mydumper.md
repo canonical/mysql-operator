@@ -1,6 +1,8 @@
 # Migrate data via mydumper
 
-> :information_source: **Tip**: use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
+```{note}
+Use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
+```
 
 The [mydumper](https://github.com/mydumper/mydumper) tool is a powerful MySQL logical data-migration tool, including:
 

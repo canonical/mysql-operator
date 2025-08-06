@@ -42,7 +42,9 @@ There is a minor difference in commands for each of the legacy charms, but the g
 
 Before the data migration check all [limitations of the modern Charmed MySQL](/reference/system-requirements) charm!<br/>Please check [your application compatibility](/explanation/legacy-charm) with Charmed MySQL before migrating production data from legacy charm!
 
-> :warning: Always perform the migration in a test environment before performing it in production!
+```{warning}
+Always perform the migration in a test environment before performing it in production!
+```
 
 ## Prerequisites
 
