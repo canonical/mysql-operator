@@ -1,7 +1,4 @@
-
 # Removal
-
-# Removal of Async replication
 
 ## Pre-requisites
 

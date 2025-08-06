@@ -1,13 +1,6 @@
-
 # Enable tracing
 
-```{note}
-All commands are written for `juju >= v3.1`
-
-If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
 This guide contains the steps to enable tracing with [Grafana Tempo](https://grafana.com/docs/tempo/latest/) for your MySQL application. 
-
 
 ```{caution}
 **Warning:** This is feature is in development. It is **not recommended** for production environments. 
@@ -33,10 +26,10 @@ juju switch <k8s_controller_name>:<cos_model_name>
 ```
 
 Then, deploy the dependencies of Tempo following [this tutorial](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489). In particular, we would want to:
-- Deploy the minio charm
+- Deploy the MinIO charm
 - Deploy the s3 integrator charm
-- Add a bucket in minio using a python script
-- Configure s3 integrator with the minio credentials
+- Add a bucket in MinIO using a python script
+- Configure s3 integrator with the MinIO credentials
 
 Finally, deploy and integrate with Tempo HA in [a monolithic setup](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489#deploy-monolithic-setup).
 

@@ -1,7 +1,4 @@
-
 # Migrate data via backup/restore
-
-# DB data migration using ‘backup/restore’
 
 > :information_source: **Tip**: use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
 
@@ -22,5 +19,5 @@ The approach:
 * perform all the necessary tests to make sure your application accepted new DB.
 * schedule and perform the final production migration re-using the last steps above.
 
-Do you have questions? [Contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you are interested in such a data migration!
+Do you have questions? [Contact us](/reference/contacts) if you are interested in such a data migration!
 

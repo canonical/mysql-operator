@@ -1,12 +1,3 @@
-
-# Migrate data via mysqldump
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-For more information, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # Migrate database data via `mysqldump`
 
 This document describes database **data** migration only!
@@ -36,8 +27,8 @@ The list of MariaDB/MySQL **legacy VM charms**:
 
 * [MariaDB](https://charmhub.io/mariadb)
 * [Percona Cluster](https://charmhub.io/percona-cluster)
-* [MySQL Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)
-* <s>[OSM MariaDB K8s](https://charmhub.io/charmed-osm-mariadb-k8s)</s> (K8s flavour, use [separate manual](https://charmhub.io/mysql-k8s/docs/h-develop-mysqldump))
+* [MySQL InnoDB Cluster](https://charmhub.io/mysql-innodb-cluster)
+* <s>[OSM MariaDB K8s](https://charmhub.io/charmed-osm-mariadb-k8s)</s> (K8s flavour, use [separate manual](https://charmhub.io/mysql-k8s/docs/h-migrate-mysqldump))
 
 There is a minor difference in commands for each of the legacy charms, but the general logic is common:
 
@@ -61,7 +52,7 @@ Before the data migration check all [limitations of the modern Charmed MySQL](/r
 - `mysql-client` on client machine (install by running `sudo apt install mysql-client`).
 
 ```{caution}
-Most legacy database charms support old Ubuntu series only, while Juju 3.x does [NOT support](https://discourse.charmhub.io/t/roadmap-releases/5064#juju-3-0-0---22-oct-2022) Ubuntu Bionic.
+Most legacy database charms support old Ubuntu series only, while Juju 3.x does [NOT support](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022) Ubuntu Bionic.
 
 It is recommended to use the latest stable revision of the charm on Ubuntu Jammy and Juju 3.x
 ```
@@ -218,6 +209,4 @@ juju remove-application --destroy-storage < mariadb | percona-cluster | mysql-in
 ## Links
 
 Database data migration is also possible using [`mydumper`](/how-to/development/migrate-data-via-mydumper).
-
-> :tipping_hand_man: This manual based on [Kubeflow DB migration guide](https://github.com/canonical/bundle-kubeflow/blob/main/docs/db-migration-guide.md).
 

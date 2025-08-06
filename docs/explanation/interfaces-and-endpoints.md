@@ -12,7 +12,7 @@ This charm provides modern [‘mysql_client’ ](https://github.com/canonical/ch
 
 ### Modern `mysql_client` interface (`database` endpoint):
 
-Adding a relation is accomplished with `juju integrate` via endpoint `database`. Read more about [Juju relations (integrations)](https://juju.is/docs/olm/relations). Example:
+Adding a relation is accomplished with `juju integrate` via endpoint `database`. Read more about [Juju relations (integrations)](https://documentation.ubuntu.com/juju/3.6/reference/relation/). Example:
 
 ```shell
 # Deploy Charmed MySQL cluster with 3 nodes
@@ -40,11 +40,11 @@ Find all details about default and extra DB user roles in “[Charm Users explan
 
 **Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided. Check the legacy interface implementation limitations in the "[Legacy charm](/explanation/legacy-charm)" document.
 
-This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://juju.is/docs/olm/cross-model-integration).
+This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model).
 
 ### `mysql` interface (`mysql` endpoint)
 
-It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://juju.is/docs/olm/cross-model-integration):
+It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model):
 
 ```shell
 juju deploy mysql --channel 8.0
@@ -65,7 +65,7 @@ juju integrate mysql-router keystone
 juju integrate mysql:db-router mysql-router:db-router
 ```
 
-**Note:** pay attention to deploy identical [series](https://juju.is/docs/olm/deploy-an-application-with-a-specific-series) for `keystone` and `mysql-router` applications (due to the [subordinate](https://juju.is/docs/sdk/charm-types#subordinate-charms) charm nature of `mysql-router`).
+**Note:** pay attention to deploy identical [series/base](https://documentation.ubuntu.com/juju/3.6/reference/machine/#machine-base) for `keystone` and `mysql-router` applications (due to the [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate) charm nature of `mysql-router`).
 
 ### `mysql-shared` interface (`shared-db` endpoint)
 
