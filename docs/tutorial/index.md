@@ -178,7 +178,7 @@ mysql/0*  active    idle   1        10.234.188.135  3306,33060/tcp  Primary
 ...
 ```
 
-### Access MySQL via the `mysql` client
+### Interact with MySQL
 
 To access the unit hosting Charmed MySQL, one could normally use the following command:
 
@@ -209,6 +209,7 @@ mysql -h 127.0.0.1 -uroot -p<password>
 ```
 
 As an example, using the password we obtained earlier:
+
 ```{terminal}
 :input: mysql -h 127.0.0.1 -uroot -pyWJjs2HccOmqFMshyRcwWnjF
 :user: ubuntu
@@ -301,12 +302,12 @@ Machine  State    Address         Inst id        Series  AZ  Message
 ```
 
 ```{note}
-The maximum number of Charmed MySQL units in a single Juju application is 9. This is a limitation of MySQL group replication. 
+The maximum possible number of Charmed MySQL units in a single Juju application is 9. This is a limitation of MySQL group replication. 
 
 Read more about all limitations in the [official MySQL documentation](https://dev.mysql.com/doc/refman/8.0/en/group-replication-limitations.html).
 ```
 
-### Remove replicas
+### Remove units
 
 Removing a unit from the application scales down the replicas. 
 
@@ -322,7 +323,7 @@ To remove the replica hosted on the unit `mysql/2` enter:
 
 You’ll know that the replica was successfully removed when you no longer see them in the `juju status` output:
 
-```shell
+```text
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.5.2    unsupported  23:46:43+01:00
 
@@ -340,8 +341,6 @@ Machine  State    Address         Inst id        Series  AZ  Message
 <!--TODO: What about generic scaling down (without specifying which unit)?-->
 
 
-
-
 ## Integrate with other applications
 
 [Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), also known as "relations", are the easiest way to create a user for MySQL. 
@@ -350,25 +349,21 @@ Integrations automatically create a username, password, and database for the des
 
 In this tutorial, we will relate to the [data integrator charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users. It automatically provides credentials and endpoints that are needed to connect with a charmed database application.
 
-To deploy the Data Integrator charm we can use the command `juju deploy` we have learned above:
+To deploy `data-integrator` and associate it to a new database called `test-database`:
 
-To deploy `data-integrator`, run
+```{terminal}
+:input: juju deploy data-integrator --config database-name=test-database
+:user: ubuntu
+:host: my-vm
 
-```shell
-juju deploy data-integrator --config database-name=test-database
-```
-
-Example output:
-```shell
 Located charm "data-integrator" in charm-hub, revision 13
 Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 in channel edge on jammy
 ```
 
-Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications.
-```shell
-Model     Controller  Cloud/Region         Version  SLA          Timestamp
-tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:07:00+01:00
+Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications:
 
+```shell
+...
 App              Version          Status   Scale  Charm            Channel     Rev  Exposed  Message
 data-integrator                   blocked      1  data-integrator  stable     13    no       Please relate the data-integrator with the desired product
 mysql            8.0.32-0ubun...  active       2  mysql            8.0/stable  147  no
@@ -377,24 +372,22 @@ Unit                Workload  Agent  Machine  Public address  Ports  Message
 data-integrator/1*  blocked   idle   4        10.234.188.85          Please relate the data-integrator with the desired product
 mysql/0*            active    idle   0        10.234.188.135         Primary
 mysql/1             active    idle   1        10.234.188.214
-
-Machine  State    Address         Inst id        Series  AZ  Message
-0        started  10.234.188.135  juju-ff9064-0  jammy       Running
-1        started  10.234.188.214  juju-ff9064-1  jammy       Running
-4        started  10.234.188.85   juju-ff9064-4  jammy       Running
+...
 ```
 
-### Integrate with MySQL
-
-Now that the `data-integrator` charm has been set up, we can relate it to MySQL. This will automatically create a username, password, and database for `data-integrator`.
+Now that the `data-integrator` charm has been set up, we can relate it to MySQL. This will automatically create a username, password, and database for `data-integrator`:
 
 Relate the two applications with:
-```shell
-juju integrate data-integrator mysql
+
+```{terminal}
+:input: juju integrate data-integrator mysql
+:user: ubuntu
+:host: my-vm
 ```
 
-Wait for `juju status --watch 1s` to show all applications/units as `active`:
-```shell
+Wait for `juju status` to show all applications/units as `active`:
+
+```text
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:10:27+01:00
 
@@ -413,12 +406,13 @@ Machine  State    Address         Inst id        Series  AZ  Message
 4        started  10.234.188.85   juju-ff9064-4  jammy       Running
 ```
 
-To retrieve the username, password and database name, run the command
-```shell
-juju run data-integrator/leader get-credentials
-```
-Example output:
-```yaml
+To retrieve the username, password and database name, run the `get-credentials` Juju action:
+
+```{terminal}
+:input: juju run data-integrator/leader get-credentials
+:user: ubuntu
+:host: my-vm
+
 mysql:
   database: test-database
   endpoints: 10.234.188.135:3306
@@ -428,14 +422,18 @@ mysql:
   version: 8.0.32-0ubuntu0.22.04.2
 ok: "True"
 ```
-> Note that your hostnames, usernames, and passwords will be different.
 
 (access-the-integrated-database)=
 ### Access the integrated database
 
 Use `endpoints`, `username`, `password` from above to connect newly created database `test-database` on MySQL server:
-```shell
-> mysql -h 10.234.188.135 -P 3306 -urelation-4 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
+
+```{terminal}
+:scroll:
+:input: mysql -h 10.234.188.135 -P 3306 -urelation-4 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
+:user: ubuntu
+:host: my-vm
+
 +--------------------+
 | Database           |
 +--------------------+
@@ -444,8 +442,13 @@ Use `endpoints`, `username`, `password` from above to connect newly created data
 ```
 
 The newly created database `test-database` is also available on all other MySQL cluster members:
-```shell
-> mysql -h 10.234.188.214 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
+
+```{terminal}
+:scroll:
+:input: mysql -h 10.234.188.214 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
+:user: ubuntu
+:host: my-vm
+
 +--------------------+
 | Database           |
 +--------------------+
@@ -453,43 +456,47 @@ The newly created database `test-database` is also available on all other MySQL 
 +--------------------+
 ```
 
-When you integrate two applications, Charmed MySQL automatically sets up a new user and database for you. Note the database name we specified when we first deployed the `data-integrator` charm: `--config database-name=test-database`.
+You've successfully set up a new user and database by integrating your Charmed MySQL app with the Data Integrator app. 
 
 ### Remove the user
 
-To remove the user, remove the integration. Removing the integration automatically removes the user that was created when the integration was created. 
+Removing the integration automatically removes the user that was created when the integration was created.
+
 
 To remove the integration, run the following command:
 
-```shell
-juju remove-relation mysql data-integrator
+
+```{terminal}
+:input: juju remove-relation mysql data-integrator
+:user: ubuntu
+:host: my-vm
 ```
 
-Try to connect to the same MySQL you just used in the previous section ([Access the integrated database](access-the-integrated-database)):
+Try to connect to the same MySQL you just used in the [previous section](access-the-integrated-database), you'll get an error message:
 
-```shell
-mysql -h 10.234.188.135 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
-```
+```{terminal}
+:scroll:
+:input: mysql -h 10.234.188.135 -P 3306 -urelation-5 -pNZWCNOyfSElJW0u6bnQDOWAA -e "show databases"
+:user: ubuntu
+:host: my-vm
 
-This will output an error message, since the user no longer exists.
-```shell
+
 ERROR 1045 (28000): Access denied for user 'relation-5'@'_gateway.lxd' (using password: YES)
 ```
-This is expected, as `juju remove-relation mysql-k8s data-integrator` also removes the user.
 
-> **Note**: Data remains on the server at this stage.
+This is expected, since the user no longer exists after removing the integration. However, note that **data remains on the server** at this stage.
 
 To create a user again, re-integrate the applications:
-```shell
-juju integrate data-integrator mysql
-```
-Re-integrating generates a new user and password. Obtain these credentials as before, with the `get-credentials` action:
-```shell
-juju run data-integrator/leader get-credentials
-```
-You can connect to the database with this new credentials. From here you will see all of your data is still present in the database.
 
-> Next step: [6. Enable TLS encryption](/tutorial/6-enable-tls-encryption)
+```{terminal}
+:scroll:
+:input: juju integrate data-integrator mysql
+:user: ubuntu
+:host: my-vm
+```
+Re-integrating generates a new user and password. You can obtain these credentials as before, with the `get-credentials` action, and connect to the database with this new credentials. 
+
+From here you will see all of your data is still present in the database.
 
 ## Enable encryption with TLS
 
@@ -497,9 +504,7 @@ You can connect to the database with this new credentials. From here you will se
 
 Typically, enabling TLS internally within a highly available database or between a highly available database and client/server applications requires a high level of expertise. This has all been encoded into Charmed MySQL so that configuring TLS requires minimal effort on your end.
 
-TLS is enabled by integrating Charmed MySQL with the [Self Signed Certificates Charm](https://charmhub.io/self-signed-certificates). This charm centralises TLS certificate management consistently and handles operations like providing, requesting, and renewing TLS certificates.
-
-In this section, you will learn how to enable security in your MySQL deployment using TLS encryption.
+TLS is enabled by integrating Charmed MySQL with the [Self-signed certificates charm](https://charmhub.io/self-signed-certificates). This charm centralises TLS certificate management consistently and handles operations like providing, requesting, and renewing TLS certificates.
 
 ```{caution}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
@@ -507,17 +512,18 @@ In this section, you will learn how to enable security in your MySQL deployment 
 Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the TLS certificates charms available. 
 ```
 
-### Enable TLS
-To enable TLS on Charmed MySQL, we must deploy the `self-signed-certificates` charm and integrate it with MySQL.
+Before enabling TLS on Charmed MySQL, we must deploy the `self-signed-certificates` charm:
 
-#### Deploy TLS charm
-Deploy the `self-signed-certificates` TLS charm with the following command:
-```shell
-juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
+```{terminal}
+:scroll:
+:input: juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
+:user: ubuntu
+:host: my-vm
 ```
 
 Wait until `self-signed-certificates` is up and active, using `juju status --watch 1s` to monitor its progress:
-```shell
+
+```text
 Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.5.2    unsupported  00:40:42+01:00
 
@@ -536,41 +542,51 @@ Machine  State    Address         Inst id        Series  AZ  Message
 6        started  10.234.188.19   juju-ff9064-6  focal       Running
 ```
 
-#### Integrate with MySQL
-
 To enable TLS on Charmed MySQL, integrate the two applications:
-```shell
-juju integrate mysql self-signed-certificates
+
+```{terminal}
+:scroll:
+:input: juju integrate mysql self-signed-certificates
+:user: ubuntu
+:host: my-vm
 ```
+
 MySQL is now using TLS certificate generated by the `self-signed-certificates` charm.
 
-##### Check the TLS certificate in use
 Use `openssl` to connect to MySQL and check the TLS certificate in use:
-```shell
-> openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
+
+```{terminal}
+:scroll:
+:input: openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
+:user: ubuntu
+:host: my-vm
+
 ...
 depth=1 C = US, CN = self-signed-certificates-operator
 ...
 ```
 
-### Disable TLS
 To remove the external TLS and return to the locally generate one, remove the integration from the applications:
-```shell
-juju remove-relation mysql self-signed-certificates
+
+```{terminal}
+:input: juju remove-relation mysql self-signed-certificates
+:user: ubuntu
+:host: my-vm
 ```
 
 If you once again check the TLS certificates in use via the OpenSSL client, you will see something similar to the output below:
 
-```shell
-> openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
-```
+```{terminal}
+:input: openssl s_client -starttls mysql -connect 10.234.188.135:3306 | grep Issuer
+:user: ubuntu
+:host: my-vm
 
-```shell
 ...
 depth=1 CN = MySQL_Server_8.0.32_Auto_Generated_CA_Certificate
 ...
 ```
-The Charmed MySQL application reverted to the placeholder certificate that was created locally during the MySQL server installation.
+
+The Charmed MySQL application reverted to the placeholder certificate that was created locally during the MySQL Server installation.
 
 ## Clean up your environment
 
@@ -578,27 +594,31 @@ In this tutorial we've successfully deployed and accessed MySQL on LXD, added an
 
 You may now keep your MySQL deployment running and write to the database, or remove it entirely using the steps in this page.
 
-### Stop your virtual machine
-If you'd like to keep your environment for later, simply stop your VM with
-```shell
-multipass stop my-vm
+If you'd like to keep your environment for later, simply stop your VM with:
+
+```{terminal}
+:input: multipass stop my-vm
+:user: user
+:host: my-pc
 ```
 
-### Delete your virtual machine
 If you're done with testing and would like to free up resources on your machine, you can remove the VM entirely.
 
 ```{caution}
-**Warning**: When you remove VM as shown below, you will lose all the data in MySQL and any other applications inside Multipass VM! 
+When you remove VM as shown below, you will lose all the data in MySQL and any other applications inside Multipass VM! 
 
 For more information, see the docs for [`multipass delete`](https://multipass.run/docs/delete-command).
 ```
 
-**Delete your VM and its data** by running
-```shell
-multipass delete --purge my-vm
+**Delete your VM and its data** by running:
+
+```{terminal}
+:input: multipass delete --purge my-vm
+:user: user
+:host: my-pc
 ```
 
-### Next Steps
+### Next steps
 
 - Run [Charmed MySQL on Kubernetes](https://github.com/canonical/mysql-k8s-operator).
 - Check out our Charmed offerings of [PostgreSQL](https://charmhub.io/postgresql?channel=14) and [Kafka](https://charmhub.io/kafka?channel=edge).
