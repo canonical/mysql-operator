@@ -1445,7 +1445,7 @@ class MySQLBase(ABC):
         If the value of the attribute is a string, include single quotes in the string.
         (e.g. "'bar'")
         """
-        # Variablees come from the charm
+        # Variables come from the charm
         return [
             (
                 "session.run_sql(\"SELECT IFNULL(CONCAT('DROP USER ', GROUP_CONCAT(QUOTE(USER),"  # noqa: S608
