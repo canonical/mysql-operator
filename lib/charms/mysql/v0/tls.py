@@ -34,10 +34,6 @@ from charms.tls_certificates_interface.v2.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from ops.charm import ActionEvent
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
-
 from constants import (
     MYSQL_DATA_DIR,
     TLS_RELATION,
@@ -45,12 +41,15 @@ from constants import (
     TLS_SSL_CERT_FILE,
     TLS_SSL_KEY_FILE,
 )
+from ops.charm import ActionEvent
+from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 logger = logging.getLogger(__name__)
 
 LIBID = "eb73947deedd4380a3a90d527e0878eb"
 LIBAPI = 0
-LIBPATCH = 9
+LIBPATCH = 10
 
 SCOPE = "unit"
 

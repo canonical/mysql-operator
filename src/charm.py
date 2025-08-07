@@ -429,7 +429,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
 
-    def _handle_non_online_instance_status(self, state) -> bool:  # noqa: C901
+    def _handle_non_online_instance_status(self, state) -> bool:
         """Helper method to handle non-online instance statuses.
 
         Invoked from the update status event handler.

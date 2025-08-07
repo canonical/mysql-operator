@@ -87,16 +87,6 @@ from typing import (
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
-from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
-from ops.model import Unit
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_fixed,
-    wait_random,
-)
-
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
@@ -114,6 +104,15 @@ from constants import (
     SECRET_KEY_FALLBACKS,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
+)
+from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
+from ops.model import Unit
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
 )
 from utils import generate_random_password
 
@@ -165,12 +164,12 @@ class Error(Exception):
 
     def __repr__(self):
         """String representation of the Error class."""
-        return "<{}.{} {}>".format(type(self).__module__, type(self).__name__, self.args)
+        return f"<{type(self).__module__}.{type(self).__name__} {self.args}>"
 
     @property
     def name(self):
         """Return a string representation of the model plus class."""
-        return "<{}.{}>".format(type(self).__module__, type(self).__name__)
+        return f"<{type(self).__module__}.{type(self).__name__}>"
 
 
 class MySQLConfigureMySQLUsersError(Error):
@@ -711,11 +710,9 @@ class MySQLCharmBase(CharmBase, ABC):
 
         for unit in self.app_units:
             try:
-                if unit != self.unit and self._mysql.cluster_metadata_exists(
+                if (unit != self.unit and self._mysql.cluster_metadata_exists(
                     self.get_unit_address(unit, PEER)
-                ):
-                    return True
-                elif self._mysql.cluster_metadata_exists():
+                )) or self._mysql.cluster_metadata_exists():
                     return True
             except MySQLClusterMetadataExistsError:
                 pass

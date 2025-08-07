@@ -503,7 +503,7 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
     """
     app_name = unit_name.split("/")[0]
     unit_num = unit_name.split("/")[1]
-    status = await ops_test.model.get_status()  # noqa: F821
+    status = await ops_test.model.get_status()
     address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
     return address
 

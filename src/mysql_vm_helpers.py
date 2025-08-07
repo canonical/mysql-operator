@@ -12,7 +12,8 @@ import shutil
 import subprocess
 import tempfile
 import typing
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import jinja2
 import pexpect
@@ -320,7 +321,7 @@ class MySQL(MySQLBase):
         # days * minutes/day = amount of rotated files to keep
         logs_rotations = logs_retention_period * 1440
 
-        with open("templates/logrotate.j2", "r") as file:
+        with open("templates/logrotate.j2") as file:
             template = jinja2.Template(file.read())
 
         logrotate_conf_content = template.render(
@@ -338,7 +339,7 @@ class MySQL(MySQLBase):
             config_path, logrotate_conf_content, owner="root", permission=0o644
         )
 
-        with open("templates/run_log_rotation.sh.j2", "r") as file:
+        with open("templates/run_log_rotation.sh.j2") as file:
             template = jinja2.Template(file.read())
 
         logrotation_script_content = template.render(
@@ -363,59 +364,58 @@ class MySQL(MySQLBase):
             suffix=".cnf",
             mode="w+",
             encoding="utf-8",
-        ) as _custom_config_file:
-            with tempfile.NamedTemporaryFile(
-                dir=CHARMED_MYSQL_COMMON_DIRECTORY,
-                prefix="alter-root-user.",
-                suffix=".sql",
-                mode="w",
-                encoding="utf-8",
-            ) as _sql_file:
-                try:
-                    subprocess.check_output([
-                        "sudo",
-                        "chown",
-                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                        _sql_file.name,
-                    ])
-                except subprocess.CalledProcessError:
-                    raise MySQLResetRootPasswordAndStartMySQLDError(
-                        "Failed to change permissions for temp SQL file"
-                    )
-
-                _sql_file.write(
-                    f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
-                    "FLUSH PRIVILEGES;"
+        ) as _custom_config_file, tempfile.NamedTemporaryFile(
+            dir=CHARMED_MYSQL_COMMON_DIRECTORY,
+            prefix="alter-root-user.",
+            suffix=".sql",
+            mode="w",
+            encoding="utf-8",
+        ) as _sql_file:
+            try:
+                subprocess.check_output([
+                    "sudo",
+                    "chown",
+                    f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                    _sql_file.name,
+                ])
+            except subprocess.CalledProcessError:
+                raise MySQLResetRootPasswordAndStartMySQLDError(
+                    "Failed to change permissions for temp SQL file"
                 )
-                _sql_file.flush()
 
-                _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
-                _custom_config_file.flush()
+            _sql_file.write(
+                f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
+                "FLUSH PRIVILEGES;"
+            )
+            _sql_file.flush()
 
-                try:
-                    subprocess.check_output([
-                        "sudo",
-                        "chown",
-                        f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
-                        _custom_config_file.name,
-                    ])
-                except subprocess.CalledProcessError:
-                    raise MySQLResetRootPasswordAndStartMySQLDError(
-                        "Failed to change permissions for custom mysql config"
-                    )
+            _custom_config_file.write(f"[mysqld]\ninit_file = {_sql_file.name}")
+            _custom_config_file.flush()
 
-                try:
-                    snap_service_operation(
-                        CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
-                    )
-                except SnapServiceOperationError:
-                    raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
+            try:
+                subprocess.check_output([
+                    "sudo",
+                    "chown",
+                    f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
+                    _custom_config_file.name,
+                ])
+            except subprocess.CalledProcessError:
+                raise MySQLResetRootPasswordAndStartMySQLDError(
+                    "Failed to change permissions for custom mysql config"
+                )
 
-                try:
-                    # Do not try to connect over port as we may not have configured user/passwords
-                    self.wait_until_mysql_connection(check_port=False)
-                except MySQLServiceNotRunningError:
-                    raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
+            try:
+                snap_service_operation(
+                    CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start"
+                )
+            except SnapServiceOperationError:
+                raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
+
+            try:
+                # Do not try to connect over port as we may not have configured user/passwords
+                self.wait_until_mysql_connection(check_port=False)
+            except MySQLServiceNotRunningError:
+                raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
 
     @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
     def wait_until_mysql_connection(self, check_port: bool = True) -> None:
@@ -1005,7 +1005,7 @@ class MySQL(MySQLBase):
         """Fetch the mysqld error log."""
         if os.path.exists(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log"):
             # can be empty if just rotated
-            with open(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log", "r") as fd:
+            with open(f"{CHARMED_MYSQL_COMMON_DIRECTORY}/var/log/mysql/error.log") as fd:
                 return fd.read()
 
     @staticmethod

@@ -59,7 +59,7 @@ class IPAddressObserver(Object):
         logger.info("Starting IP address observer process")
 
         juju_command = (
-            os.path.exists("/usr/bin/juju-run") and "/usr/bin/juju-run" or "/usr/bin/juju-exec"
+            (os.path.exists("/usr/bin/juju-run") and "/usr/bin/juju-run") or "/usr/bin/juju-exec"
         )
 
         # We need to trick Juju into thinking that we are not running

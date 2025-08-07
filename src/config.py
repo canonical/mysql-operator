@@ -50,7 +50,7 @@ class MySQLConfig:
 
         cp = configparser.ConfigParser(interpolation=None)
 
-        with open(self.config_file_path, "r") as config_file:
+        with open(self.config_file_path) as config_file:
             cp.read_file(config_file)
 
         return dict(cp["mysqld"])

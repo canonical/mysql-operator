@@ -75,7 +75,7 @@ class LogRotationSetup(Object):
             logger.debug(not_started_msg)
             return
 
-        with open(positions_file, "r") as pos_fd:
+        with open(positions_file) as pos_fd:
             positions = yaml.safe_load(pos_fd.read())
 
         if sync_files := positions.get("positions"):

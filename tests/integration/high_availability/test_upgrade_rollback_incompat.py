@@ -205,12 +205,12 @@ async def test_rollback(ops_test, charm, continuous_writes) -> None:
     await ensure_all_units_continuous_writes_incrementing(ops_test)
 
 
-class InjectFailure(object):
+class InjectFailure:
     def __init__(self, path: str, original_str: str, replace_str: str):
         self.path = path
         self.original_str = original_str
         self.replace_str = replace_str
-        with open(path, "r") as file:
+        with open(path) as file:
             self.original_content = file.read()
 
     def __enter__(self):
@@ -241,7 +241,7 @@ async def charm_local_build(ops_test: OpsTest, charm, refresh: bool = False):
     local_charm = pathlib.Path(shutil.copy(charm, f"local-{pathlib.Path(charm).stem}.charm"))
 
     for path in update_files:
-        with open(path, "r") as f:
+        with open(path) as f:
             content = f.read()
 
         with ZipFile(local_charm, mode="a") as charm_zip:

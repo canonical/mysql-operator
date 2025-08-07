@@ -1282,7 +1282,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_nproc_commands = ["nproc"]
         _expected_tmp_dir_commands = (
-            "mktemp --directory /tmp/base/directory/xtra_backup_XXXX".split()
+            ["mktemp", "--directory", "/tmp/base/directory/xtra_backup_XXXX"]
         )
         _expected_xtrabackup_commands = [
             "/xtrabackup/location --defaults-file=/defaults/file.cnf",
@@ -1394,7 +1394,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         _execute_commands.assert_called_once_with(
-            "find /temp/base/directory -wholename /temp/base/directory/xtra_backup_* -delete".split(),
+            ["find", "/temp/base/directory", "-wholename", "/temp/base/directory/xtra_backup_*", "-delete"],
             user="test_user",
             group="test_group",
         )
@@ -1445,7 +1445,7 @@ class TestMySQLBase(unittest.TestCase):
 
         _expected_nproc_commands = ["nproc"]
         _expected_temp_dir_commands = (
-            "mktemp --directory mysql/data/directory/#mysql_sst_XXXX".split()
+            ["mktemp", "--directory", "mysql/data/directory/#mysql_sst_XXXX"]
         )
         _expected_retrieve_backup_commands = [
             "xbcloud/location get",
@@ -1586,14 +1586,7 @@ class TestMySQLBase(unittest.TestCase):
             group="test-group",
         )
 
-        _expected_prepare_backup_command = """
-xtrabackup/location --prepare
-        --use-memory=1234
-        --no-version-check
-        --rollback-prepared-trx
-        --xtrabackup-plugin-dir=xtrabackup/plugin/dir
-        --target-dir=backup/location
-""".split()
+        _expected_prepare_backup_command = ["xtrabackup/location", "--prepare", "--use-memory=1234", "--no-version-check", "--rollback-prepared-trx", "--xtrabackup-plugin-dir=xtrabackup/plugin/dir", "--target-dir=backup/location"]
 
         _get_innodb_buffer_pool_parameters.assert_called_once()
         _get_available_memory.assert_called_once()
@@ -1698,16 +1691,7 @@ xtrabackup/location --prepare
             group="test-group",
         )
 
-        _expected_commands = """
-xtrabackup/location --defaults-file=defaults/config/file
-        --defaults-group=mysqld
-        --datadir=mysql/data/directory
-        --no-version-check
-        --move-back
-        --force-non-empty-directories
-        --xtrabackup-plugin-dir=xtrabackup/plugin/directory
-        --target-dir=backup/location
-""".split()
+        _expected_commands = ["xtrabackup/location", "--defaults-file=defaults/config/file", "--defaults-group=mysqld", "--datadir=mysql/data/directory", "--no-version-check", "--move-back", "--force-non-empty-directories", "--xtrabackup-plugin-dir=xtrabackup/plugin/directory", "--target-dir=backup/location"]
 
         _execute_commands.assert_called_once_with(
             _expected_commands,
@@ -1746,7 +1730,7 @@ xtrabackup/location --defaults-file=defaults/config/file
             group="test-group",
         )
 
-        _expected_commands = "find mysql/data/directory -wholename mysql/data/directory/#mysql_sst_* -delete".split()
+        _expected_commands = ["find", "mysql/data/directory", "-wholename", "mysql/data/directory/#mysql_sst_*", "-delete"]
 
         _execute_commands.assert_called_once_with(
             _expected_commands,

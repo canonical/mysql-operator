@@ -25,7 +25,7 @@ def compare_dictionaries(dict1: dict, dict2: dict) -> set:
     different_keys = set()
 
     # exiting keys with different values
-    for key in dict1.keys():
+    for key in dict1:
         if key in dict2 and dict1[key] != dict2[key]:
             different_keys.add(key)
 
