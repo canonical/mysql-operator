@@ -40,9 +40,9 @@ async def test_kill_db_process(
     primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
 
     # ensure all units in the cluster are online
-    assert await ensure_n_online_mysql_members(
-        ops_test, 3
-    ), "The deployed mysql application is not fully online"
+    assert await ensure_n_online_mysql_members(ops_test, 3), (
+        "The deployed mysql application is not fully online"
+    )
 
     # get running mysqld PID
     pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)

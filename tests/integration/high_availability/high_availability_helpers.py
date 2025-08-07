@@ -364,8 +364,8 @@ async def ensure_all_units_continuous_writes_incrementing(
                         ops_test, unit, server_config_credentials
                     )
                     logger.info(f"{max_written_value=} on unit {unit.name}")
-                    assert (
-                        max_written_value > last_max_written_value
-                    ), "Continuous writes not incrementing"
+                    assert max_written_value > last_max_written_value, (
+                        "Continuous writes not incrementing"
+                    )
 
                     last_max_written_value = max_written_value
