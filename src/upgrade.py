@@ -56,7 +56,8 @@ def get_mysql_dependencies_model() -> MySQLVMDependenciesModel:
 def set_cron_daemon(action: str) -> None:
     """Start/stop the cron daemon."""
     logger.debug(f"{action}ing cron daemon")
-    subprocess.run(["systemctl", action, "cron"], check=True)
+    # Subprocess call is hardcoded in the charm
+    subprocess.run(["/usr/bin/systemctl", action, "cron"], check=True)  # noqa: S603
 
 
 class MySQLVMUpgrade(DataUpgrade):

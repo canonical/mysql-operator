@@ -406,9 +406,7 @@ class MySQLAsyncReplicationOffer(MySQLAsyncReplication):
             # transitional state between relation created and setup_action
             return False
 
-        if self.state not in [States.READY, States.UNINITIALIZED]:
-            return False
-        return True
+        return self.state in [States.READY, States.UNINITIALIZED]
 
     @property
     def secret(self) -> Secret | None:
@@ -429,7 +427,7 @@ class MySQLAsyncReplicationOffer(MySQLAsyncReplication):
 
     def _on_create_replication(self, event: ActionEvent):
         """Promote the offer side to primary on initial setup."""
-        if not self._charm.app_peer_data.get("async-ready") == "true":
+        if self._charm.app_peer_data.get("async-ready") != "true":
             event.fail("Relation created but not ready")
             return
 
@@ -882,7 +880,7 @@ class MySQLAsyncReplicationConsumer(MySQLAsyncReplication):
         # set waiting state to inhibit auto recovery, only when not already set
         if self._charm.unit.is_leader():
             return
-        if not self._charm.unit_peer_data.get("member-state") == "waiting":
+        if self._charm.unit_peer_data.get("member-state") != "waiting":
             self._charm.unit_peer_data["member-state"] = "waiting"
             self._charm.unit.status = WaitingStatus("waiting replica cluster be configured")
 

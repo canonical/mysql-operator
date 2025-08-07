@@ -177,7 +177,7 @@ async def test_backup(ops_test: OpsTest, charm, cloud_configs, cloud_credentials
     output = results["backups"]
     new_backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
-    assert sorted(new_backup_ids) == sorted(backup_ids + [backup_id])
+    assert sorted(new_backup_ids) == sorted([*backup_ids, backup_id])
 
     # insert data into cluster after backup
     logger.info("Inserting value after backup")

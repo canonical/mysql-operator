@@ -124,7 +124,7 @@ async def get_primary_unit(
     for k, v in results["status"]["defaultreplicaset"]["topology"].items():
         if v["memberrole"] == "primary" and v["status"] == "online":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
-            primary_unit = [unit for unit in units if unit.name == unit_name][0]
+            primary_unit = next(unit for unit in units if unit.name == unit_name)
             break
 
     if not primary_unit:
@@ -144,7 +144,7 @@ async def get_server_config_credentials(unit: Unit) -> dict:
     return await juju_.run_action(unit, "get-password", username=SERVER_CONFIG_USERNAME)
 
 
-async def fetch_credentials(unit: Unit, username: str = None) -> dict:
+async def fetch_credentials(unit: Unit, username: str | None = None) -> dict:
     """Helper to run an action to fetch credentials.
 
     Args:
@@ -158,7 +158,9 @@ async def fetch_credentials(unit: Unit, username: str = None) -> dict:
     return await juju_.run_action(unit, "get-password", username=username)
 
 
-async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> dict:
+async def rotate_credentials(
+    unit: Unit, username: str | None = None, password: str | None = None
+) -> dict:
     """Helper to run an action to rotate credentials.
 
     Args:
@@ -687,10 +689,10 @@ async def get_controller_machine(ops_test: OpsTest) -> str:
 
     controller = yaml.safe_load(raw_controller.strip())
 
-    return [
+    return next(
         machine.get("instance-id")
         for machine in controller[ops_test.controller_name]["controller-machines"].values()
-    ][0]
+    )
 
 
 def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:

@@ -187,10 +187,7 @@ class MySQLTLS(Object):
     # =======================
     def _request_certificate(self, param: str | None):
         """Request a certificate to TLS Certificates Operator."""
-        if param is None:
-            key = generate_private_key()
-        else:
-            key = self._parse_tls_file(param)
+        key = generate_private_key() if param is None else self._parse_tls_file(param)
 
         csr = generate_csr(
             private_key=key,
