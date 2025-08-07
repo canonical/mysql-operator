@@ -253,7 +253,7 @@ def list_backups_in_s3_path(s3_parameters: dict) -> list[tuple[str, str]]:
             # set a more meaningful error message.
             if e.response["Error"]["Code"] == "NoSuchBucket":
                 message = f"Bucket {s3_parameters['bucket']} does not exist"
-                setattr(e, "message", message)
+                e.message = message
                 raise
         except (KeyError, AttributeError):
             pass

@@ -248,9 +248,7 @@ class MySQLBackups(Object):
             event.set_results({"backups": self._format_backups_list(backups)})
         except Exception as e:
             error_message = (
-                getattr(e, "message")
-                if hasattr(e, "message")
-                else "Failed to retrieve backup ids from S3"
+                e.message if hasattr(e, "message") else "Failed to retrieve backup ids from S3"
             )
             logger.error(error_message)
             event.fail(error_message)

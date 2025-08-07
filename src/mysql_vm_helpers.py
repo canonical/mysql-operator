@@ -225,10 +225,10 @@ class MySQL(MySQLBase):
             logger.exception("Failed to install snaps")
             # reraise SnapError exception so the caller can retry
             raise
-        except (subprocess.CalledProcessError, snap.SnapNotFoundError, Exception):
+        except (subprocess.CalledProcessError, snap.SnapNotFoundError, Exception) as e:
             logger.exception("Failed to install and configure MySQL dependencies")
             # other exceptions are not retried
-            raise MySQLInstallError
+            raise MySQLInstallError from e
 
     @staticmethod
     def uninstall_mysql() -> None:
@@ -262,9 +262,9 @@ class MySQL(MySQLBase):
                         return int(line.split()[1]) * 1024
 
             raise MySQLGetAvailableMemoryError
-        except OSError:
+        except OSError as e:
             logger.error("Failed to query system memory")
-            raise MySQLGetAvailableMemoryError
+            raise MySQLGetAvailableMemoryError from e
 
     def write_mysqld_config(self) -> dict:
         """Create custom mysql config file.
@@ -288,9 +288,9 @@ class MySQL(MySQLBase):
                 binlog_retention_days=self.charm.config.binlog_retention_days,
                 experimental_max_connections=self.charm.config.experimental_max_connections,
             )
-        except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError):
+        except (MySQLGetAvailableMemoryError, MySQLGetAutoTuningParametersError) as e:
             logger.exception("Failed to get available memory or auto tuning parameters")
-            raise MySQLCreateCustomMySQLDConfigError
+            raise MySQLCreateCustomMySQLDConfigError from e
 
         # create the mysqld config directory if it does not exist
         pathlib.Path(MYSQLD_CONFIG_DIRECTORY).mkdir(mode=0o755, parents=True, exist_ok=True)
@@ -385,10 +385,10 @@ class MySQL(MySQLBase):
                     f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
                     _sql_file.name,
                 ])
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as e:
                 raise MySQLResetRootPasswordAndStartMySQLDError(
                     "Failed to change permissions for temp SQL file"
-                )
+                ) from e
 
             _sql_file.write(
                 f"ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.root_password}';\n"
@@ -407,21 +407,23 @@ class MySQL(MySQLBase):
                     f"{MYSQL_SYSTEM_USER}:{ROOT_SYSTEM_USER}",
                     _custom_config_file.name,
                 ])
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as e:
                 raise MySQLResetRootPasswordAndStartMySQLDError(
                     "Failed to change permissions for custom mysql config"
-                )
+                ) from e
 
             try:
                 snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "start")
-            except SnapServiceOperationError:
-                raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld")
+            except SnapServiceOperationError as e:
+                raise MySQLResetRootPasswordAndStartMySQLDError("Failed to restart mysqld") from e
 
             try:
                 # Do not try to connect over port as we may not have configured user/passwords
                 self.wait_until_mysql_connection(check_port=False)
-            except MySQLServiceNotRunningError:
-                raise MySQLResetRootPasswordAndStartMySQLDError("mysqld service not running")
+            except MySQLServiceNotRunningError as e:
+                raise MySQLResetRootPasswordAndStartMySQLDError(
+                    "mysqld service not running"
+                ) from e
 
     @retry(reraise=True, stop=stop_after_delay(120), wait=wait_fixed(5))
     def wait_until_mysql_connection(self, check_port: bool = True) -> None:
@@ -525,9 +527,9 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             logger.exception("Failed to change data directory permissions before restoring")
-            raise MySQLRestoreBackupError
+            raise MySQLRestoreBackupError from e
 
         stdout, stderr = super().restore_backup(
             backup_location,
@@ -565,11 +567,11 @@ class MySQL(MySQLBase):
                 capture_output=True,
                 text=True,
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             logger.exception(
                 "Failed to change data directory permissions or ownership after restoring"
             )
-            raise MySQLRestoreBackupError
+            raise MySQLRestoreBackupError from e
 
         return (stdout, stderr)
 
@@ -587,7 +589,7 @@ class MySQL(MySQLBase):
         bash: bool = False,
         user: str | None = None,
         group: str | None = None,
-        env_extra: dict = {},
+        env_extra: dict | None = None,
         stream_output: str | None = None,
     ) -> tuple[str, str]:
         """Execute commands on the server where mysql is running.
@@ -604,6 +606,7 @@ class MySQL(MySQLBase):
 
         Raises: MySQLExecError if there was an error executing the commands
         """
+        env_extra = env_extra if env_extra else {}
         stdout = stderr = ""
         env = os.environ.copy()
         if env_extra:
@@ -666,7 +669,7 @@ class MySQL(MySQLBase):
         try:
             snap_service_operation(CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "stop")
         except (SnapServiceOperationError, MySQLKillSessionError) as e:
-            raise MySQLStopMySQLDError(e.message)
+            raise MySQLStopMySQLDError(e.message) from e
 
     def start_mysqld(self) -> None:
         """Starts the mysqld process."""
@@ -684,7 +687,7 @@ class MySQL(MySQLBase):
             if isinstance(e, MySQLServiceNotRunningError):
                 logger.exception("Failed to start mysqld")
 
-            raise MySQLStartMySQLDError(e.message)
+            raise MySQLStartMySQLDError(e.message) from e
 
     def restart_mysqld(self) -> None:
         """Restarts the mysqld process."""
@@ -705,9 +708,9 @@ class MySQL(MySQLBase):
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to truncate the MySQL host cache")
-            raise MySQLFlushHostCacheError
+            raise MySQLFlushHostCacheError from e
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
@@ -727,9 +730,9 @@ class MySQL(MySQLBase):
             snap_service_operation(
                 CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "start"
             )
-        except snap.SnapError:
+        except snap.SnapError as e:
             logger.exception("An exception occurred when setting up mysqld-exporter.")
-            raise MySQLExporterConnectError("Error setting up mysqld-exporter")
+            raise MySQLExporterConnectError("Error setting up mysqld-exporter") from e
 
     def stop_mysql_exporter(self) -> None:
         """Stop the mysqld exporter."""
@@ -737,9 +740,9 @@ class MySQL(MySQLBase):
             snap_service_operation(
                 CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_EXPORTER_SERVICE, "stop"
             )
-        except snap.SnapError:
+        except snap.SnapError as e:
             logger.exception("An exception occurred when stopping mysqld-exporter")
-            raise MySQLExporterConnectError("Error stopping mysqld-exporter")
+            raise MySQLExporterConnectError("Error stopping mysqld-exporter") from e
 
     def restart_mysql_exporter(self) -> None:
         """Restart the mysqld exporter."""
@@ -804,14 +807,14 @@ class MySQL(MySQLBase):
                 logger.warning("Failed to execute mysql-shell command")
             else:
                 logger.exception("Failed to execute mysql-shell command")
-            raise MySQLClientError
+            raise MySQLClientError from e
         except subprocess.TimeoutExpired as e:
             self.strip_off_passwords_from_exception(e)
             if exception_as_warning:
                 logger.warning("MySQL shell command timed out")
             else:
                 logger.exception("MySQL shell command timed out")
-            raise TimeoutError
+            raise TimeoutError from e
 
     def _run_mysqlcli_script(
         self,
@@ -880,14 +883,14 @@ class MySQL(MySQLBase):
             else:
                 self.strip_off_passwords_from_exception(e)
                 logger.exception("MySQL cli command timed out")
-            raise TimeoutError
+            raise TimeoutError from e
         except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError) as e:
             if exception_as_warning:
                 logger.warning("Failed to execute MySQL cli command")
             else:
                 self.strip_off_passwords_from_exception(e)
                 logger.exception("Failed to execute MySQL cli command")
-            raise MySQLClientError
+            raise MySQLClientError from e
 
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.
@@ -1095,7 +1098,7 @@ def snap_service_operation(snapname: str, service: str, operation: str) -> bool:
         else:
             selected_snap.stop(services=[service], disable=True)
             return not selected_snap.services[service]["active"]
-    except snap.SnapError:
+    except snap.SnapError as e:
         error_message = f"Failed to run snap service operation, snap={snapname}, service={service}, operation={operation}"
         logger.exception(error_message)
-        raise SnapServiceOperationError(error_message)
+        raise SnapServiceOperationError(error_message) from e

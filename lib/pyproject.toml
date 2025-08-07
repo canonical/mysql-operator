@@ -11,7 +11,7 @@ line-length = 99
 
 [tool.ruff.lint]
 explicit-preview-rules = true
-select = ["A", "E", "W", "F", "C", "N", "D", "I", "CPY001", "RUF", "S", "SIM", "UP", "TC"]
+select = ["A", "E", "W", "F", "C", "N", "D", "I", "B", "CPY001", "RUF", "S", "SIM", "UP", "TC"]
 ignore = [
   "D107", # Ignore D107 Missing docstring in __init__
   "E501", # Ignore E501 Line too long

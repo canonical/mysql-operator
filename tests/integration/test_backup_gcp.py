@@ -270,7 +270,8 @@ async def test_restore_on_same_cluster(
     logger.info("Ensuring inserted values before backup and after restore exist on all units")
     for unit in ops_test.model.applications[mysql_application_name].units:
         await ops_test.model.block_until(
-            lambda: unit.workload_status == "active",
+            # Awaitied insed the loop
+            lambda: unit.workload_status == "active",  # noqa: B023
             timeout=TIMEOUT,
         )
 
