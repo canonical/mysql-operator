@@ -7,7 +7,7 @@ Use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migr
 This Charmed MySQL operator is able to restore [it's own backups](/how-to/back-up-and-restore/restore-a-backup) stored on [S3-compatible storage](/how-to/back-up-and-restore/configure-s3-aws). The same restore approach is applicable to restore [foreign backups](/how-to/back-up-and-restore/migrate-a-cluster) made by different Charmed MySQL installation or even another MySQL charms. The backup have to be created manually using Percona XtraBackup!
 
 ```{warning}
-Canonical Data team describes here the general approach and does NOT support nor guarantees the restoration results. Always test migration in LAB before performing it in Production!
+Canonical Data team describes here the general approach and does NOT support nor guarantees the restoration results. Always test migration in a test environment before performing it in Production!
 ```
 
 Before the data migration check all [limitations of the modern Charmed MySQL](/reference/system-requirements) charm!
