@@ -85,7 +85,7 @@ class DBRouterRelation(Object):
         application_names = {
             key.split("_")[0]
             for key in db_router_databag
-            if "_" in key and "username" == key.split("_")[1]
+            if "_" in key and key.split("_")[1] == "username"
         }
 
         for application_name in application_names:

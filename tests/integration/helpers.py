@@ -124,7 +124,7 @@ async def get_primary_unit(
     for k, v in results["status"]["defaultreplicaset"]["topology"].items():
         if v["memberrole"] == "primary" and v["status"] == "online":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
-            primary_unit = [unit for unit in units if unit.name == unit_name][0]
+            primary_unit = next(unit for unit in units if unit.name == unit_name)
             break
 
     if not primary_unit:
@@ -144,7 +144,7 @@ async def get_server_config_credentials(unit: Unit) -> dict:
     return await juju_.run_action(unit, "get-password", username=SERVER_CONFIG_USERNAME)
 
 
-async def fetch_credentials(unit: Unit, username: str = None) -> dict:
+async def fetch_credentials(unit: Unit, username: str | None = None) -> dict:
     """Helper to run an action to fetch credentials.
 
     Args:
@@ -158,7 +158,9 @@ async def fetch_credentials(unit: Unit, username: str = None) -> dict:
     return await juju_.run_action(unit, "get-password", username=username)
 
 
-async def rotate_credentials(unit: Unit, username: str = None, password: str = None) -> dict:
+async def rotate_credentials(
+    unit: Unit, username: str | None = None, password: str | None = None
+) -> dict:
     """Helper to run an action to rotate credentials.
 
     Args:
@@ -445,8 +447,8 @@ async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
             with attempt:
                 if await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
-    except RetryError:
-        raise Exception("Failed to gracefully stop server.")
+    except RetryError as e:
+        raise Exception("Failed to gracefully stop server.") from e
 
 
 async def start_server(ops_test: OpsTest, unit_name: str) -> None:
@@ -464,8 +466,8 @@ async def start_server(ops_test: OpsTest, unit_name: str) -> None:
             with attempt:
                 if not await get_process_pid(ops_test, unit_name, "mysqld"):
                     raise Exception
-    except RetryError:
-        raise Exception("Failed to start server.")
+    except RetryError as e:
+        raise Exception("Failed to start server.") from e
 
 
 async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
@@ -503,7 +505,7 @@ async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
     """
     app_name = unit_name.split("/")[0]
     unit_num = unit_name.split("/")[1]
-    status = await ops_test.model.get_status()  # noqa: F821
+    status = await ops_test.model.get_status()
     address = status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["public-address"]
     return address
 
@@ -565,8 +567,8 @@ def get_read_only_endpoints(relation_data: list) -> set[str]:
                     continue
                 for ep in read_only_endpoint_field.split(","):
                     read_only_endpoints.add(ep)
-        except json.JSONDecodeError:
-            raise ValueError("Relation data are not valid JSON.")
+        except json.JSONDecodeError as e:
+            raise ValueError("Relation data are not valid JSON.") from e
 
     return read_only_endpoints
 
@@ -687,10 +689,10 @@ async def get_controller_machine(ops_test: OpsTest) -> str:
 
     controller = yaml.safe_load(raw_controller.strip())
 
-    return [
+    return next(
         machine.get("instance-id")
         for machine in controller[ops_test.controller_name]["controller-machines"].values()
-    ][0]
+    )
 
 
 def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
@@ -960,8 +962,8 @@ async def stop_running_flush_mysql_cronjobs(ops_test: OpsTest, unit_name: str) -
             with attempt:
                 if await get_process_pid(ops_test, unit_name, "logrotate"):
                     raise Exception
-    except RetryError:
-        raise Exception("Failed to stop the flush_mysql_logs logrotate process.")
+    except RetryError as e:
+        raise Exception("Failed to stop the flush_mysql_logs logrotate process.") from e
 
 
 def get_unit_by_index(app_name: str, units: list, index: int):

@@ -543,7 +543,9 @@ class TestMySQL(unittest.TestCase):
 
         self.mysql.install_and_configure_mysql_dependencies()
 
-        _check_call.assert_called_once_with(["charmed-mysql.mysqlsh", "--help"], stderr=-1)
+        _check_call.assert_called_once_with(
+            ["/snap/bin/charmed-mysql.mysqlsh", "--help"], stderr=-1
+        )
 
         assert _mysql_snap.alias.call_count == 7
         _mysql_snap.alias.assert_any_call("mysql")
@@ -568,9 +570,11 @@ class TestMySQL(unittest.TestCase):
         with patch("builtins.open", mock_open(read_data=meminfo)):
             self.assertEqual(self.mysql.get_available_memory(), 16475635712)
 
-        with patch("builtins.open", mock_open(read_data="")):
-            with self.assertRaises(MySQLGetAvailableMemoryError):
-                self.mysql.get_available_memory()
+        with (
+            patch("builtins.open", mock_open(read_data="")),
+            self.assertRaises(MySQLGetAvailableMemoryError),
+        ):
+            self.mysql.get_available_memory()
 
     @patch("shutil.rmtree")
     @patch("os.makedirs")

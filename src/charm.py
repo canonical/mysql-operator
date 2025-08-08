@@ -378,7 +378,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.join_unit_to_cluster()
             for port in ["3306", "33060"]:
                 try:
-                    subprocess.check_call(["open-port", f"{port}/tcp"])
+                    # TODO use set_ports instead
+                    subprocess.check_call(["open-port", f"{port}/tcp"])  # noqa: S603 S607
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
@@ -429,7 +430,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
 
-    def _handle_non_online_instance_status(self, state) -> bool:  # noqa: C901
+    def _handle_non_online_instance_status(self, state) -> bool:
         """Helper method to handle non-online instance statuses.
 
         Invoked from the update status event handler.
@@ -926,7 +927,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
                 # add random delay to mitigate collisions when multiple units are joining
                 # due the difference between the time we test for locks and acquire them
-                sleep(random.uniform(0, 1.5))
+                # Not used for cryptographic puropse
+                sleep(random.uniform(0, 1.5))  # noqa: S311
 
                 if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):
                     self.unit.status = WaitingStatus("waiting to join the cluster.")

@@ -8,6 +8,7 @@ import configparser
 import logging
 import os
 import re
+from typing import ClassVar
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
 from charms.mysql.v0.mysql import MAX_CONNECTIONS_FLOOR
@@ -20,7 +21,7 @@ class MySQLConfig:
     """Configuration."""
 
     # Static config requires workload restart
-    static_config = {
+    static_config: ClassVar[set[str]] = {
         "innodb_buffer_pool_size",
         "innodb_buffer_pool_chunk_size",
         "group_replication_message_cache_size",
@@ -50,7 +51,7 @@ class MySQLConfig:
 
         cp = configparser.ConfigParser(interpolation=None)
 
-        with open(self.config_file_path, "r") as config_file:
+        with open(self.config_file_path) as config_file:
             cp.read_file(config_file)
 
         return dict(cp["mysqld"])

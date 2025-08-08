@@ -9,7 +9,6 @@ import pathlib
 import zipfile
 from pathlib import Path
 from shutil import copy
-from typing import Union
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -166,11 +165,11 @@ async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
 
 
 async def inject_dependency_fault(
-    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+    ops_test: OpsTest, application_name: str, charm_file: str | Path
 ) -> None:
     """Inject a dependency fault into the mysql charm."""
     # Open dependency.json and load current charm version
-    with open("src/dependency.json", "r") as dependency_file:
+    with open("src/dependency.json") as dependency_file:
         current_charm_version = json.load(dependency_file)["charm"]["version"]
 
     # query running dependency to overwrite with incompatible version

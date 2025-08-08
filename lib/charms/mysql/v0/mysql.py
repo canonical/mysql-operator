@@ -87,16 +87,6 @@ from typing import (
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
-from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
-from ops.model import Unit
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_fixed,
-    wait_random,
-)
-
 from constants import (
     BACKUPS_PASSWORD_KEY,
     BACKUPS_USERNAME,
@@ -114,6 +104,15 @@ from constants import (
     SECRET_KEY_FALLBACKS,
     SERVER_CONFIG_PASSWORD_KEY,
     SERVER_CONFIG_USERNAME,
+)
+from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
+from ops.model import Unit
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+    wait_random,
 )
 from utils import generate_random_password
 
@@ -143,8 +142,9 @@ MAX_CONNECTIONS_FLOOR = 10
 MIM_MEM_BUFFERS = 200 * BYTES_1MiB
 ADMIN_PORT = 33062
 
-SECRET_INTERNAL_LABEL = "secret-id"
-SECRET_DELETED_LABEL = "None"
+# Labels are not confidential
+SECRET_INTERNAL_LABEL = "secret-id"  # noqa: S105
+SECRET_DELETED_LABEL = "None"  # noqa: S105
 
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
@@ -165,12 +165,12 @@ class Error(Exception):
 
     def __repr__(self):
         """String representation of the Error class."""
-        return "<{}.{} {}>".format(type(self).__module__, type(self).__name__, self.args)
+        return f"<{type(self).__module__}.{type(self).__name__} {self.args}>"
 
     @property
     def name(self):
         """Return a string representation of the model plus class."""
-        return "<{}.{}>".format(type(self).__module__, type(self).__name__)
+        return f"<{type(self).__module__}.{type(self).__name__}>"
 
 
 class MySQLConfigureMySQLUsersError(Error):
@@ -711,11 +711,10 @@ class MySQLCharmBase(CharmBase, ABC):
 
         for unit in self.app_units:
             try:
-                if unit != self.unit and self._mysql.cluster_metadata_exists(
-                    self.get_unit_address(unit, PEER)
-                ):
-                    return True
-                elif self._mysql.cluster_metadata_exists():
+                if (
+                    unit != self.unit
+                    and self._mysql.cluster_metadata_exists(self.get_unit_address(unit, PEER))
+                ) or self._mysql.cluster_metadata_exists():
                     return True
             except MySQLClusterMetadataExistsError:
                 pass
@@ -911,11 +910,13 @@ class MySQLCharmBase(CharmBase, ABC):
 
         # NOTE: here we purposefully search both in secrets and in databag by using
         # the fetch_my_relation_field instead of peer_relation_data(scope).get_secrets().
-        if not (value := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key)):
-            if key in SECRET_KEY_FALLBACKS:
-                value = self.peer_relation_data(scope).fetch_my_relation_field(
-                    peers.id, SECRET_KEY_FALLBACKS[key]
-                )
+        if (
+            not (value := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key))
+            and key in SECRET_KEY_FALLBACKS
+        ):
+            value = self.peer_relation_data(scope).fetch_my_relation_field(
+                peers.id, SECRET_KEY_FALLBACKS[key]
+            )
         return value
 
     def set_secret(self, scope: Scopes, key: str, value: str | None) -> None:
@@ -964,7 +965,8 @@ class MySQLCharmBase(CharmBase, ABC):
             A hash based on a random string.
         """
         random_characters = generate_random_password(10)
-        return hashlib.md5(random_characters.encode("utf-8")).hexdigest()
+        # TODO Should we be using md5 here?
+        return hashlib.md5(random_characters.encode("utf-8")).hexdigest()  # noqa: S324
 
 
 class MySQLMemberState(str, enum.Enum):
@@ -1130,8 +1132,9 @@ class MySQLBase(ABC):
         # do not enable slow query logs, but specify a log file path in case
         # the admin enables them manually
         config["mysqld"] = {
-            "bind-address": "0.0.0.0",
-            "mysqlx-bind-address": "0.0.0.0",
+            # All interfaces bind expected
+            "bind-address": "0.0.0.0",  # noqa: S104
+            "mysqlx-bind-address": "0.0.0.0",  # noqa: S104
             "admin_address": self.instance_address,
             "report_host": self.instance_address,
             "max_connections": str(max_connections),
@@ -1213,9 +1216,9 @@ class MySQLBase(ABC):
                 configure_users_commands,
                 password=self.root_password,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to configure users for: {self.instance_address}")
-            raise MySQLConfigureMySQLUsersError
+            raise MySQLConfigureMySQLUsersError from e
 
     def _plugin_file_exists(self, plugin_file_name: str) -> bool:
         """Check if the plugin file exists.
@@ -1272,9 +1275,9 @@ class MySQLBase(ABC):
                     user=self.server_config_user,
                     password=self.server_config_password,
                 )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to install {plugin=}")  # type: ignore
-            raise MySQLPluginInstallError
+            raise MySQLPluginInstallError from e
         except MySQLGetVariableError:
             # workaround for config changed triggered after failed upgrade
             # the check fails for charms revisions not using admin address
@@ -1306,11 +1309,11 @@ class MySQLBase(ABC):
                     user=self.server_config_user,
                     password=self.server_config_password,
                 )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(
                 f"Failed to uninstall {plugin=}",  # type: ignore
             )
-            raise MySQLPluginInstallError
+            raise MySQLPluginInstallError from e
 
     def _get_installed_plugins(self) -> set[str]:
         """Return a set of explicitly installed plugins."""
@@ -1329,7 +1332,8 @@ class MySQLBase(ABC):
     def does_mysql_user_exist(self, username: str, hostname: str) -> bool:
         """Checks if a mysql user already exists."""
         user_existence_commands = (
-            f"select user from mysql.user where user = '{username}' and host = '{hostname}'",
+            # Vars generated by the charm
+            f"select user from mysql.user where user = '{username}' and host = '{hostname}'",  # noqa: S608
         )
 
         try:
@@ -1339,9 +1343,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
             )
             return len(output) == 1
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to check for existence of mysql user {username}@{hostname}")
-            raise MySQLCheckUserExistenceError()
+            raise MySQLCheckUserExistenceError() from e
 
     def configure_mysqlrouter_user(
         self, username: str, password: str, hostname: str, unit_name: str
@@ -1382,9 +1386,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to configure mysqlrouter {username=}")
-            raise MySQLConfigureRouterUserError
+            raise MySQLConfigureRouterUserError from e
 
     def create_application_database_and_scoped_user(
         self,
@@ -1430,7 +1434,7 @@ class MySQLBase(ABC):
             logger.error(
                 f"Failed to create application database {database_name} and scoped user {username}@{hostname}"
             )
-            raise MySQLCreateApplicationDatabaseAndScopedUserError(e.message)
+            raise MySQLCreateApplicationDatabaseAndScopedUserError(e.message) from e
 
     @staticmethod
     def _get_statements_to_delete_users_with_attribute(
@@ -1441,9 +1445,10 @@ class MySQLBase(ABC):
         If the value of the attribute is a string, include single quotes in the string.
         (e.g. "'bar'")
         """
+        # Variables come from the charm
         return [
             (
-                "session.run_sql(\"SELECT IFNULL(CONCAT('DROP USER ', GROUP_CONCAT(QUOTE(USER),"
+                "session.run_sql(\"SELECT IFNULL(CONCAT('DROP USER ', GROUP_CONCAT(QUOTE(USER),"  # noqa: S608
                 " '@', QUOTE(HOST))), 'SELECT 1') INTO @sql FROM INFORMATION_SCHEMA.USER_ATTRIBUTES"
                 f" WHERE ATTRIBUTE->'$.{attribute_name}'={attribute_value}\")"
             ),
@@ -1457,9 +1462,10 @@ class MySQLBase(ABC):
     ) -> list[RouterUser]:
         """Get users for related MySQL Router unit."""
         relation_user = f"relation-{relation_id}"
+        # Variables come from the charm
         command = [
             (
-                "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "
+                "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "  # noqa: S608
                 f"INFORMATION_SCHEMA.USER_ATTRIBUTES WHERE ATTRIBUTE->'$.created_by_user'='{relation_user}' "
                 f"AND ATTRIBUTE->'$.created_by_juju_unit'='{mysql_router_unit_name}'\")"
             ),
@@ -1476,7 +1482,7 @@ class MySQLBase(ABC):
             logger.error(
                 f"Failed to get MySQL Router users for relation {relation_id} and unit {mysql_router_unit_name}"
             )
-            raise MySQLGetRouterUsersError(e.message)
+            raise MySQLGetRouterUsersError(e.message) from e
         rows = json.loads(output)
         return [RouterUser(username=row[0], router_id=row[1]) for row in rows]
 
@@ -1497,7 +1503,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error(f"Failed to query and delete users for unit {unit_name}")
-            raise MySQLDeleteUsersForUnitError(e.message)
+            raise MySQLDeleteUsersForUnitError(e.message) from e
 
     def delete_users_for_relation(self, username: str) -> None:
         """Delete users for a relation."""
@@ -1519,7 +1525,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error(f"Failed to delete {username=}")
-            raise MySQLDeleteUsersForRelationError(e.message)
+            raise MySQLDeleteUsersForRelationError(e.message) from e
 
     def delete_user(self, username: str) -> None:
         """Delete user."""
@@ -1536,7 +1542,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error(f"Failed to delete user {username}")
-            raise MySQLDeleteUserError(e.message)
+            raise MySQLDeleteUserError(e.message) from e
 
     def remove_router_from_cluster_metadata(self, router_id: str) -> None:
         """Remove MySQL Router from InnoDB Cluster metadata."""
@@ -1553,7 +1559,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error(f"Failed to remove router from metadata with ID {router_id}")
-            raise MySQLRemoveRouterFromMetadataError(e.message)
+            raise MySQLRemoveRouterFromMetadataError(e.message) from e
 
     def set_dynamic_variable(
         self,
@@ -1579,9 +1585,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user, instance_address),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to set {variable=} to {value=}")
-            raise MySQLSetVariableError
+            raise MySQLSetVariableError from e
 
     def get_variable_value(self, variable: str) -> str:
         """Get the value of a variable."""
@@ -1597,9 +1603,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to get value for {variable=}")
-            raise MySQLGetVariableError
+            raise MySQLGetVariableError from e
 
         rows = json.loads(output)
         return rows[0][1]
@@ -1631,9 +1637,9 @@ class MySQLBase(ABC):
                 host=self.instance_def(self.server_config_user),
             )
             self.wait_until_mysql_connection()
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to configure instance {self.instance_address}")
-            raise MySQLConfigureInstanceError
+            raise MySQLConfigureInstanceError from e
 
     def create_cluster(self, unit_label: str) -> None:
         """Create an InnoDB cluster with Group Replication enabled."""
@@ -1656,9 +1662,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to create cluster on instance: {self.instance_address}")
-            raise MySQLCreateClusterError
+            raise MySQLCreateClusterError from e
 
     def create_cluster_set(self) -> None:
         """Create a cluster set for the cluster on cluster primary."""
@@ -1718,7 +1724,7 @@ class MySQLBase(ABC):
                 host=self.instance_def(self.server_config_user),
                 exception_as_warning=log_exception,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             if method == "auto":
                 logger.warning(
                     "Failed to create replica cluster with auto method, fallback to clone method"
@@ -1732,7 +1738,7 @@ class MySQLBase(ABC):
                 )
             else:
                 logger.error("Failed to create replica cluster")
-                raise MySQLCreateReplicaClusterError
+                raise MySQLCreateReplicaClusterError from e
 
     def promote_cluster_to_primary(self, cluster_name: str, force: bool = False) -> None:
         """Promote a cluster to become the primary cluster on the cluster set."""
@@ -1758,9 +1764,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to promote cluster to primary")
-            raise MySQLPromoteClusterToPrimaryError
+            raise MySQLPromoteClusterToPrimaryError from e
 
     def fence_writes(self) -> None:
         """Fence writes on the primary cluster."""
@@ -1776,9 +1782,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to fence writes on cluster")
-            raise MySQLFencingWritesError
+            raise MySQLFencingWritesError from e
 
     def unfence_writes(self) -> None:
         """Unfence writes on the primary cluster and reset read_only flag."""
@@ -1795,9 +1801,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to resume writes on primary cluster")
-            raise MySQLFencingWritesError
+            raise MySQLFencingWritesError from e
 
     def is_cluster_writes_fenced(self) -> bool | None:
         """Check if the cluster is fenced against writes."""
@@ -1849,11 +1855,11 @@ class MySQLBase(ABC):
                     timeout=60,
                     exception_as_warning=True,
                 )
-            except MySQLClientError:
+            except MySQLClientError as e:
                 logger.warning(f"Failed to check if cluster metadata exists {from_instance=}")
                 raise MySQLClusterMetadataExistsError(
                     f"Failed to check if cluster metadata exists {from_instance=}"
-                )
+                ) from e
 
             return self.cluster_name in output
 
@@ -1866,9 +1872,11 @@ class MySQLBase(ABC):
                 exception_as_warning=True,
                 log_errors=False,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.warning("Failed to check if local cluster metadata exists")
-            raise MySQLClusterMetadataExistsError("Failed to check if cluster metadata exists")
+            raise MySQLClusterMetadataExistsError(
+                "Failed to check if cluster metadata exists"
+            ) from e
 
         cluster_names = [entry[0].strip() for entry in output]
         return self.cluster_name in cluster_names
@@ -1891,9 +1899,9 @@ class MySQLBase(ABC):
             )
 
             logger.info(f"Rejoined {cluster_name=}")
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to rejoin cluster")
-            raise MySQLRejoinClusterError
+            raise MySQLRejoinClusterError from e
 
     def remove_replica_cluster(self, replica_cluster_name: str, force: bool = False) -> None:
         """Remove a replica cluster from the cluster-set."""
@@ -1914,19 +1922,20 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to remove replica cluster")
-            raise MySQLRemoveReplicaClusterError
+            raise MySQLRemoveReplicaClusterError from e
 
     def initialize_juju_units_operations_table(self) -> None:
         """Initialize the mysql.juju_units_operations table using the serverconfig user."""
+        # Variables come from the charm
         initialize_table_commands = (
             "DROP TABLE IF EXISTS mysql.juju_units_operations",
             "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor "
             "varchar(20), status varchar(20), primary key(task))",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', "
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_TEARDOWN_LOCKNAME}', '', "  # noqa: S608
             "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
-            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_ADD_LOCKNAME}', '', "
+            f"INSERT INTO mysql.juju_units_operations values ('{UNIT_ADD_LOCKNAME}', '', "  # noqa: S608
             "'not-started') ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
         )
 
@@ -1940,9 +1949,9 @@ class MySQLBase(ABC):
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to initialize mysql.juju_units_operations table with error")
-            raise MySQLInitializeJujuOperationsTableError
+            raise MySQLInitializeJujuOperationsTableError from e
 
     def add_instance_to_cluster(
         self,
@@ -1995,12 +2004,12 @@ class MySQLBase(ABC):
                 exception_as_warning=log_exception,
             )
 
-        except MySQLClientError:
+        except MySQLClientError as e:
             if method == "clone":
                 logger.error(
                     f"Failed to add {instance_address=} to {self.cluster_name=} on {self.instance_address=}",
                 )
-                raise MySQLAddInstanceToClusterError
+                raise MySQLAddInstanceToClusterError from e
 
             logger.debug(
                 f"Cannot add {instance_address=} to {self.cluster_name=} with recovery {method=}. Trying method 'clone'"
@@ -2033,9 +2042,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user, from_instance),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to rejoin instance {unit_label} to cluster {self.cluster_name}")
-            raise MySQLRejoinInstanceToClusterError
+            raise MySQLRejoinInstanceToClusterError from e
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
@@ -2128,7 +2137,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error("Error rescanning the cluster")
-            raise MySQLRescanClusterError(e.message)
+            raise MySQLRescanClusterError(e.message) from e
 
     def is_instance_in_cluster(self, unit_label: str) -> bool:
         """Confirm if instance is in the cluster."""
@@ -2171,8 +2180,9 @@ class MySQLBase(ABC):
         Args:
             unit_label: The label of the unit to check.
         """
+        # Variables come from the charm
         query = (
-            "SELECT instance_id FROM mysql_innodb_cluster_metadata.instances WHERE cluster_id ="
+            "SELECT instance_id FROM mysql_innodb_cluster_metadata.instances WHERE cluster_id ="  # noqa: S608
             "(SELECT cluster_id FROM mysql_innodb_cluster_metadata.clusters WHERE cluster_name ="
             f" '{self.cluster_name}') AND instance_name = '{unit_label}';",
         )
@@ -2281,8 +2291,9 @@ class MySQLBase(ABC):
         if not node_status:
             query = "SELECT COUNT(*) FROM performance_schema.replication_group_members"
         else:
+            # Variable comes from the charm
             query = (
-                "SELECT COUNT(*) FROM performance_schema.replication_group_members"
+                "SELECT COUNT(*) FROM performance_schema.replication_group_members"  # noqa: S608
                 f" WHERE member_state = '{node_status.value.upper()}'"
             )
         size_commands = (
@@ -2413,35 +2424,33 @@ class MySQLBase(ABC):
             logger.warning(
                 f"Failed to acquire lock and remove instance {self.instance_address} with error {e.message}"
             )
-            raise MySQLRemoveInstanceRetryError(e.message)
+            raise MySQLRemoveInstanceRetryError(e.message) from e
         finally:
             # There is no need to release the lock if single cluster was dissolved
-            if skip_release_lock:
-                return
-
-            try:
-                if not lock_instance:
-                    if len(remaining_cluster_member_addresses) == 0:
-                        raise MySQLRemoveInstanceRetryError(
-                            "No remaining instance to query cluster primary from."
-                        )
-
-                    # Retrieve the cluster primary's address again (in case the old primary is
-                    # scaled down)
-                    # Release the lock by making a request to this primary member's address
-                    lock_instance = self.get_cluster_primary_address(
-                        connect_instance_address=remaining_cluster_member_addresses[0]
-                    )
+            if not skip_release_lock:
+                try:
                     if not lock_instance:
-                        raise MySQLRemoveInstanceError(
-                            "Unable to retrieve the address of the cluster primary"
-                        )
+                        if len(remaining_cluster_member_addresses) == 0:
+                            raise MySQLRemoveInstanceRetryError(
+                                "No remaining instance to query cluster primary from."
+                            )
 
-                self._release_lock(lock_instance, unit_label, UNIT_TEARDOWN_LOCKNAME)
-            except MySQLClientError as e:
-                # Raise an error that does not lead to a retry of this method
-                logger.error(f"Failed to release lock on {unit_label}")
-                raise MySQLRemoveInstanceError(e.message)
+                        # Retrieve the cluster primary's address again (in case the old primary is
+                        # scaled down)
+                        # Release the lock by making a request to this primary member's address
+                        lock_instance = self.get_cluster_primary_address(
+                            connect_instance_address=remaining_cluster_member_addresses[0]
+                        )
+                        if not lock_instance:
+                            raise MySQLRemoveInstanceError(
+                                "Unable to retrieve the address of the cluster primary"
+                            )
+
+                    self._release_lock(lock_instance, unit_label, UNIT_TEARDOWN_LOCKNAME)
+                except MySQLClientError as e:
+                    # Raise an error that does not lead to a retry of this method
+                    logger.error(f"Failed to release lock on {unit_label}")
+                    raise MySQLRemoveInstanceError(e.message) from e
 
     def dissolve_cluster(self) -> None:
         """Dissolve the cluster independently of the unit teardown process."""
@@ -2463,13 +2472,14 @@ class MySQLBase(ABC):
             f"Attempting to acquire lock {lock_name} on {primary_address} for unit {unit_label}"
         )
 
+        # Variables generated from the charm
         acquire_lock_commands = (
             (
-                f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='{unit_label}',"
+                f"session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='{unit_label}',"  # noqa: S608
                 f" status='in-progress' WHERE task='{lock_name}' AND executor='';\")"
             ),
             (
-                'acquired_lock = session.run_sql("SELECT count(*) FROM mysql.juju_units_operations'
+                'acquired_lock = session.run_sql("SELECT count(*) FROM mysql.juju_units_operations'  # noqa: S608
                 f" WHERE task='{lock_name}' AND executor='{unit_label}';\").fetch_one()[0]"
             ),
             "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
@@ -2495,8 +2505,9 @@ class MySQLBase(ABC):
         """Releases a lock in the mysql.juju_units_operations table."""
         logger.debug(f"Releasing {lock_name=} @{primary_address=} for {unit_label=}")
 
+        # Variables generated by the charm
         release_lock_commands = (
-            "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"
+            "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started'"  # noqa: S608
             f" WHERE task='{lock_name}' AND executor='{unit_label}';\")",
             "print(r.get_affected_items_count())",
         )
@@ -2564,7 +2575,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.warning("Failed to get cluster primary addresses")
-            raise MySQLGetClusterPrimaryAddressError(e.message)
+            raise MySQLGetClusterPrimaryAddressError(e.message) from e
         matches = re.search(r"<PRIMARY_ADDRESS>(.+)</PRIMARY_ADDRESS>", output)
 
         if not matches:
@@ -2593,7 +2604,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.warning("Failed to get cluster set global primary addresses")
-            raise MySQLGetClusterPrimaryAddressError(e.message)
+            raise MySQLGetClusterPrimaryAddressError(e.message) from e
         matches = re.search(r"<PRIMARY_ADDRESS>(.+)</PRIMARY_ADDRESS>", output)
 
         if not matches:
@@ -2647,7 +2658,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error("Failed to set cluster primary")
-            raise MySQLSetClusterPrimaryError(e.message)
+            raise MySQLSetClusterPrimaryError(e.message) from e
 
     def verify_server_upgradable(self, instance: str | None = None) -> None:
         """Wrapper for API check_for_server_upgrade."""
@@ -2682,8 +2693,8 @@ class MySQLBase(ABC):
             if result["errorCount"] == 0:
                 return
             raise MySQLServerNotUpgradableError(result.get("summary"))
-        except MySQLClientError:
-            raise MySQLServerNotUpgradableError("Failed to check for server upgrade")
+        except MySQLClientError as e:
+            raise MySQLServerNotUpgradableError("Failed to check for server upgrade") from e
 
     def get_mysql_version(self) -> str | None:
         """Get the running mysqld version."""
@@ -2703,7 +2714,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.warning("Failed to get workload version")
-            raise MySQLGetMySQLVersionError(e.message)
+            raise MySQLGetMySQLVersionError(e.message) from e
 
         matches = re.search(r"<VERSION>(.+)</VERSION>", output)
 
@@ -2733,7 +2744,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.warning(f"Failed to grant privileges to user {username}@{hostname}")
-            raise MySQLGrantPrivilegesToUserError(e.message)
+            raise MySQLGrantPrivilegesToUserError(e.message) from e
 
     def update_user_password(self, username: str, new_password: str, host: str = "%") -> None:
         """Updates user password in MySQL database."""
@@ -2754,9 +2765,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user, instance_address),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to update user password for user {username}")
-            raise MySQLCheckUserExistenceError
+            raise MySQLCheckUserExistenceError from e
 
     @retry(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(GET_MEMBER_STATE_TIME))
     def get_member_state(self) -> tuple[str, str]:
@@ -2773,9 +2784,9 @@ class MySQLBase(ABC):
                 password=self.cluster_admin_password,
                 timeout=10,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to get member state: mysqld daemon is down")
-            raise MySQLUnableToGetMemberStateError
+            raise MySQLUnableToGetMemberStateError from e
 
         # output is like:
         # [('ONLINE',
@@ -2893,9 +2904,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to force quorum from instance")
-            raise MySQLForceQuorumFromInstanceError
+            raise MySQLForceQuorumFromInstanceError from e
 
     def reboot_from_complete_outage(self) -> None:
         """Wrapper for reboot_cluster_from_complete_outage command."""
@@ -2912,7 +2923,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.error("Failed to reboot cluster")
-            raise MySQLRebootFromCompleteOutageError(e.message)
+            raise MySQLRebootFromCompleteOutageError(e.message) from e
 
     def hold_if_recovering(self) -> None:
         """Hold execution if member is recovering."""
@@ -2938,9 +2949,9 @@ class MySQLBase(ABC):
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to set instance state to offline_mode {mode}")
-            raise MySQLSetInstanceOfflineModeError
+            raise MySQLSetInstanceOfflineModeError from e
 
     def set_instance_option(self, option: str, value: Any) -> None:
         """Sets an instance option."""
@@ -2956,9 +2967,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error(f"Failed to set option {option} with value {value}")
-            raise MySQLSetInstanceOptionError
+            raise MySQLSetInstanceOptionError from e
 
     def offline_mode_and_hidden_instance_exists(self) -> bool:
         """Indicates whether an instance exists in offline_mode and hidden from router."""
@@ -2976,9 +2987,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to query offline mode instances")
-            raise MySQLOfflineModeAndHiddenInstanceExistsError
+            raise MySQLOfflineModeAndHiddenInstanceExistsError from e
 
         matches = re.search(r"<OFFLINE_MODE_INSTANCES>(.*)</OFFLINE_MODE_INSTANCES>", output)
 
@@ -3028,9 +3039,11 @@ class MySQLBase(ABC):
                 innodb_buffer_pool_chunk_size,
                 group_replication_message_cache,
             )
-        except Exception:
+        except Exception as e:
             logger.error("Failed to compute innodb buffer pool parameters")
-            raise MySQLGetAutoTuningParametersError("Error computing buffer pool parameters")
+            raise MySQLGetAutoTuningParametersError(
+                "Error computing buffer pool parameters"
+            ) from e
 
     def get_max_connections(self, available_memory: int) -> int:
         """Calculate max_connections parameter for the instance."""
@@ -3070,14 +3083,14 @@ class MySQLBase(ABC):
         try:
             nproc, _ = self._execute_commands(nproc_command)
             tmp_dir, _ = self._execute_commands(make_temp_dir_command, user=user, group=group)
-        except MySQLExecError:
+        except MySQLExecError as e:
             logger.error("Failed to execute commands prior to running backup")
-            raise MySQLExecuteBackupCommandsError
-        except Exception:
+            raise MySQLExecuteBackupCommandsError from e
+        except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
             # a bad state due to pre-backup operations
             logger.error("Failed unexpectedly to execute commands prior to running backup")
-            raise MySQLExecuteBackupCommandsError
+            raise MySQLExecuteBackupCommandsError from e
 
         # TODO: remove flags --no-server-version-check
         # when MySQL and XtraBackup versions are in sync
@@ -3126,14 +3139,14 @@ class MySQLBase(ABC):
                 },
                 stream_output="stderr",
             )
-        except MySQLExecError:
+        except MySQLExecError as e:
             logger.error("Failed to execute backup commands")
-            raise MySQLExecuteBackupCommandsError
-        except Exception:
+            raise MySQLExecuteBackupCommandsError from e
+        except Exception as e:
             # Catch all other exceptions to prevent the database being stuck in
             # a bad state due to pre-backup operations
             logger.error("Failed unexpectedly to execute backup commands")
-            raise MySQLExecuteBackupCommandsError
+            raise MySQLExecuteBackupCommandsError from e
 
     def delete_temp_backup_directory(
         self,
@@ -3156,10 +3169,10 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to delete temp backup directory")
-            raise MySQLDeleteTempBackupDirectoryError(e.message)
-        except Exception:
+            raise MySQLDeleteTempBackupDirectoryError(e.message) from e
+        except Exception as e:
             logger.error("Failed to delete temp backup directory")
-            raise MySQLDeleteTempBackupDirectoryError
+            raise MySQLDeleteTempBackupDirectoryError from e
 
     def retrieve_backup_with_xbcloud(
         self,
@@ -3187,7 +3200,7 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to execute commands prior to running xbcloud get")
-            raise MySQLRetrieveBackupWithXBCloudError(e.message)
+            raise MySQLRetrieveBackupWithXBCloudError(e.message) from e
 
         retrieve_backup_command = [
             f"{xbcloud_location} get",
@@ -3225,10 +3238,10 @@ class MySQLBase(ABC):
             return (stdout, stderr, tmp_dir)
         except MySQLExecError as e:
             logger.error("Failed to retrieve backup")
-            raise MySQLRetrieveBackupWithXBCloudError(e.message)
-        except Exception:
+            raise MySQLRetrieveBackupWithXBCloudError(e.message) from e
+        except Exception as e:
             logger.error("Failed to retrieve backup")
-            raise MySQLRetrieveBackupWithXBCloudError
+            raise MySQLRetrieveBackupWithXBCloudError from e
 
     def prepare_backup_for_restore(
         self,
@@ -3244,7 +3257,7 @@ class MySQLBase(ABC):
                 self.get_available_memory()
             )
         except MySQLGetAutoTuningParametersError as e:
-            raise MySQLPrepareBackupForRestoreError(e.message)
+            raise MySQLPrepareBackupForRestoreError(e.message) from e
 
         prepare_backup_command = [
             xtrabackup_location,
@@ -3268,10 +3281,10 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to prepare backup for restore")
-            raise MySQLPrepareBackupForRestoreError(e.message)
-        except Exception:
+            raise MySQLPrepareBackupForRestoreError(e.message) from e
+        except Exception as e:
             logger.error("Failed to prepare backup for restore")
-            raise MySQLPrepareBackupForRestoreError
+            raise MySQLPrepareBackupForRestoreError from e
 
     def empty_data_files(
         self,
@@ -3301,10 +3314,10 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to empty data directory in prep for backup restore")
-            raise MySQLEmptyDataDirectoryError(e.message)
-        except Exception:
+            raise MySQLEmptyDataDirectoryError(e.message) from e
+        except Exception as e:
             logger.error("Failed to empty data directory in prep for backup restore")
-            raise MySQLEmptyDataDirectoryError
+            raise MySQLEmptyDataDirectoryError from e
 
     def restore_backup(
         self,
@@ -3339,10 +3352,10 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to restore backup")
-            raise MySQLRestoreBackupError(e.message)
-        except Exception:
+            raise MySQLRestoreBackupError(e.message) from e
+        except Exception as e:
             logger.error("Failed to restore backup")
-            raise MySQLRestoreBackupError
+            raise MySQLRestoreBackupError from e
 
     def restore_pitr(
         self,
@@ -3392,10 +3405,10 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.exception("Failed to restore pitr")
-            raise MySQLRestorePitrError(e.message)
-        except Exception:
+            raise MySQLRestorePitrError(e.message) from e
+        except Exception as e:
             logger.exception("Failed to restore pitr")
-            raise MySQLRestorePitrError
+            raise MySQLRestorePitrError from e
 
     def delete_temp_restore_directory(
         self,
@@ -3424,7 +3437,7 @@ class MySQLBase(ABC):
             )
         except MySQLExecError as e:
             logger.error("Failed to remove temp backup directory")
-            raise MySQLDeleteTempRestoreDirectoryError(e.message)
+            raise MySQLDeleteTempRestoreDirectoryError(e.message) from e
 
     @abstractmethod
     def _execute_commands(
@@ -3433,7 +3446,7 @@ class MySQLBase(ABC):
         bash: bool = False,
         user: str | None = None,
         group: str | None = None,
-        env_extra: dict = {},
+        env_extra: dict | None = None,
         stream_output: str | None = None,
     ) -> tuple[str, str]:
         """Execute commands on the server where MySQL is running."""
@@ -3461,9 +3474,9 @@ class MySQLBase(ABC):
                 user=self.server_config_user,
                 password=self.server_config_password,
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to set custom TLS configuration")
-            raise MySQLTLSSetupError("Failed to set custom TLS configuration")
+            raise MySQLTLSSetupError("Failed to set custom TLS configuration") from e
 
     def kill_unencrypted_sessions(self) -> None:
         """Kill non local, non system open unencrypted connections."""
@@ -3485,9 +3498,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to kill external sessions")
-            raise MySQLKillSessionError
+            raise MySQLKillSessionError from e
 
     def kill_client_sessions(self) -> None:
         """Kill non local, non system open unencrypted connections."""
@@ -3509,9 +3522,9 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-        except MySQLClientError:
+        except MySQLClientError as e:
             logger.error("Failed to kill external sessions")
-            raise MySQLKillSessionError
+            raise MySQLKillSessionError from e
 
     def check_mysqlcli_connection(self) -> bool:
         """Checks if it is possible to connect to the server with mysqlcli."""
@@ -3605,7 +3618,8 @@ class MySQLBase(ABC):
         if not input_string:
             return ""
         stripped_input = input_string
-        hidden_pass = "*****"
+        # Not an actual pass
+        hidden_pass = "*****"  # noqa: S105
         for password in self.passwords:
             stripped_input = stripped_input.replace(password, hidden_pass)
         if "IDENTIFIED" in input_string:
@@ -3646,7 +3660,7 @@ class MySQLBase(ABC):
             )
         except MySQLClientError as e:
             logger.warning("Failed to get current group replication id", exc_info=e)
-            raise MySQLGetGroupReplicationIDError(e.message)
+            raise MySQLGetGroupReplicationIDError(e.message) from e
 
         matches = re.search(r"<ID>(.+)</ID>", output)
 

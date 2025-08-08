@@ -117,7 +117,7 @@ class TestCharmBase(unittest.TestCase):
         assert (
             self.harness.get_relation_data(self.peer_relation_id, entity).get("password") is None
         )
-        self.charm.get_secret(scope, "password") == "test-password"
+        assert self.charm.get_secret(scope, "password") == "test-password"
 
         self.charm.set_secret(scope, "password", None)
         assert "password" not in self.harness.get_relation_data(self.peer_relation_id, entity)
@@ -227,4 +227,4 @@ class TestCharmBase(unittest.TestCase):
             self.harness.charm.get_unit_hostname()
 
         with self.assertRaises(NotImplementedError):
-            self.harness.charm._mysql
+            _ = self.harness.charm._mysql
