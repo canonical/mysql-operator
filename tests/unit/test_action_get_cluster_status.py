@@ -37,7 +37,7 @@ def make_event():
     evt = Mock(spec=ActionEvent)
     evt.set_results = Mock()
     evt.fail = Mock()
-    evt.params = {}  # ensure .params.get() won’t AttributeError
+    evt.params = {}  # ensure .params.get() won't AttributeError
     return evt
 
 
