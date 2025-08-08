@@ -30,7 +30,12 @@ The "modern" charm provides temporary support for the legacy interfaces:
 
 * **proper migration**: migrate the application to the new interface "[`mysql_client`](https://github.com/canonical/charm-relation-interfaces)". The application will connect MySQL using "[`data_interfaces`](https://charmhub.io/data-platform-libs/libraries/data_interfaces)" library from "[`data-platform-libs`](https://github.com/canonical/data-platform-libs/)" via endpoint `database`.
 
-**Warning**: NO in-place upgrades possible! Legacy charm cannot be upgraded to Operator-framework-based one. To move DB data, the second/modern DB application must be launched nearby and data should be copied from "legacy" application to the "modern" one. Canonical Data Platform team will prepare the copy&paste guide. Please [contact us](/reference/contacts) if you need migration instructions.
+```{caution}
+In-place upgrades from the legacy charm to the modern, Ops-based charm are **not supported**.
+
+
+To migrate database data, the legacy and modern MySQL charms must both be running simultaneously. The data can then be copied from the legacy application to the modern one. Please [contact us](/reference/contacts) if you need help with data migration.
+```
 
 ## How to deploy old "legacy" mysql charm
 
