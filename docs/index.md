@@ -25,7 +25,7 @@ This is a **IAAS/VM** operator. To deploy on Kubernetes, see [Charmed MySQL K8s]
 
 Charmed MySQL is an official distribution of MySQL. It’s an open-source project that welcomes community contributions, suggestions, fixes and constructive feedback.
 - [Read our Code of Conduct](https://ubuntu.com/community/code-of-conduct)
-- [Join the Discourse forum](https://charmhub.io/tag/mysql)
+- [Join the Discourse forum](https://discourse.charmhub.io/tag/mysql)
 - [Contribute](https://github.com/canonical/mysql-operator/blob/main/CONTRIBUTING.md) and report [issues](https://github.com/canonical/mysql-operator/issues/new/choose)
 - Explore [Canonical Data Fabric solutions](https://canonical.com/data)
 - [Contacts us](/reference/contacts) for all further questions

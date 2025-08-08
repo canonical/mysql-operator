@@ -140,7 +140,7 @@ Now you can run
 to create a new model to deploy workloads.
 ```
 
-You can check the [Azure instances availability](https://portal.azure.com/#browse/Microsoft.Compute%2FVirtualMachines):
+You can check the [Azure instances availability](https://portal.azure.com/#browse/Microsoft.Compute/VirtualMachines):
 
 ![image|689x313](upload://bB5lCMIHtL1KToftKQVv7z86aoi.png)
 
@@ -213,7 +213,7 @@ If it is necessary to access the database from outside of Azure, open the Azure 
 ```shell
 juju expose mysql
 ```
-> Be wary that [opening ports to the public is risky](https://www.beyondtrust.com/blog/entry/what-is-an-open-port-what-are-the-security-implications).
+> Be wary that opening ports to the public is risky.
 
 Once exposed, you can connect your database using the same credentials as above. This time use the Azure VM public IP assigned to the MySQL instance. You can see this with `juju status`:
 ```shell

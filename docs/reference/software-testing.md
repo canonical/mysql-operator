@@ -1,7 +1,5 @@
 # Charm testing reference
 
-> **:information_source: Hint**: Use [Juju 3](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022). Otherwise replace `juju run ...` with `juju run-action --wait ...` for Juju 2.9.
-
 There are [a lot of test types](https://en.wikipedia.org/wiki/Software_testing) available and most of them are well applicable for Charmed MySQL. Here is a list prepared by Canonical:
 
 * Smoke test
@@ -12,9 +10,9 @@ There are [a lot of test types](https://en.wikipedia.org/wiki/Software_testing) 
 
 ## Smoke test
 
-[u]Complexity[/u]: trivial<br/>
-[u]Speed[/u]: fast<br/>
-[u]Goal[/u]: ensure basic functionality works over short amount of time.
+Complexity: trivial
+Speed: fast
+Goal: ensure basic functionality works over short amount of time.
 
 [Setup an Juju 3.x environment](/tutorial/1-set-up-the-environment), deploy DB with test application and start "continuous write" test:
 ```shell
@@ -36,12 +34,12 @@ watch -n1 -x juju ssh mysql/leader "mysql -h 127.0.0.1 -uroot -p${password} -e \
 
 # Watch the counter is growing!
 ```
-[u]Expected results[/u]:
+Expected results:
 
 * mysql-test-app continuously inserts records in database `continuous_writes_database` table `data`.
 * the counters (amount of records in table) are growing on all cluster members
 
-[u]Hints[/u]:
+Hints:
 ```shell
 # Stop "continuous write" test
 juju run mysql-test-app/leader stop-continuous-writes

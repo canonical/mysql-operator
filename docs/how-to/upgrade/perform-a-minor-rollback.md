@@ -4,7 +4,7 @@
 ```{note}
 **Note**: All commands are written for `juju >= v.3.0`
 
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
+If you are using an earlier version, check the [Juju 3.0 Release Notes](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022).
 ```
 **Example**: MySQL 8.0.34 -> MySQL 8.0.33<br/>
 (including charm revision bump: e.g Revision 43 -> Revision 42)

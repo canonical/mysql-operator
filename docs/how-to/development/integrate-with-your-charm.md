@@ -1,6 +1,3 @@
-
-# Integrate with your charm
-
 # How to integrate a database with your charm
 
 Charmed MySQL can be integrated with any charmed application that supports its interfaces. This page provides some guidance and resources for charm developers to develop, integrate, and troubleshoot their charm so that it may connect with MySQL.
@@ -17,14 +14,14 @@ Most existing charms currently use [ops-lib-pgsql](https://github.com/canonical/
 ## Integrate your charm with MySQL
 
 > See also: 
-> * [Juju documentation | Integration](https://juju.is/docs/juju/integration)
+> * [Juju documentation | Integration](https://documentation.ubuntu.com/juju/3.6/reference/relation/)
 > * [Juju documentation | Integrate your charm with PostgreSQL](https://juju.is/docs/sdk/integrate-your-charm-with-postgresql)
 
 Refer to [mysql-test-app](https://github.com/canonical/mysql-test-app) as a practical example of implementing data-platform-libs interfaces to integrate a charm with Charmed MySQL.
 
 ## Troubleshooting and testing
 * To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://juju.is/docs/sdk/debug-a-charm)
-* To troubleshoot Charmed MySQL, see the [Troubleshooting](/how-to/development/troubleshooting/index) page.
+* To troubleshoot Charmed MySQL, see the [Troubleshooting](/reference/troubleshooting/index) page.
 * To test the charm, check the [Testing](/reference/software-testing) reference
 
 ## FAQ

@@ -75,7 +75,7 @@ The image below is an example of the OpenStack dashboard view (bastion + juju co
 <!-- LABELS-->
 [Tutorial]: /tutorial/index
 [Single-node guided]: https://microstack.run/docs/single-node-guided
-[Accessing the OpenStack dashboard]: https://microstack.run/docs/dashboard
-[Images Sync]: https://microstack.run/docs/images
-[Manage workloads with Juju]: https://microstack.run/docs/juju-workloads
+[Accessing the OpenStack dashboard]: https://canonical-openstack.readthedocs-hosted.com/en/latest/how-to/misc/using-the-openstack-dashboard/
+[Images Sync]: https://canonical-openstack.readthedocs-hosted.com/en/latest/how-to/features/images-sync/
+[Manage workloads with Juju]: https://canonical-openstack.readthedocs-hosted.com/en/latest/how-to/misc/manage-workloads-with-juju/
 

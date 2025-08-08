@@ -1,4 +1,3 @@
-
 # Users
 
 There are two types of users in MySQL:
@@ -10,11 +9,11 @@ There are two types of users in MySQL:
 
 The operator uses the following internal DB users:
 
-* `root` - the [initial/default](https://charmhub.io/mysql/docs/t-manage-passwords) MySQL user. Used for very initial bootstrap and restricted to local access.
+* `root` - the [initial/default](/tutorial/4-manage-passwords) MySQL user. Used for very initial bootstrap and restricted to local access.
 * `clusteradmin` - the user to manage replication in the MySQL InnoDB ClusterSet.
 * `serverconfig` - the user that operates MySQL instances.
-* `monitoring` - the user for [COS integration](https://charmhub.io/mysql/docs/h-enable-monitoring).
-* `backups` - the user to [perform/list/restore backups](https://charmhub.io/mysql/docs/h-create-and-list-backups).
+* `monitoring` - the user for [COS integration](/how-to/monitoring-cos/enable-monitoring).
+* `backups` - the user to [perform/list/restore backups](/how-to/back-up-and-restore/create-a-backup).
 * `mysql_innodb_cluster_#######` - the [internal recovery users](https://dev.mysql.com/doc/mysql-shell/8.0/en/innodb-cluster-user-accounts.html#mysql-innodb-cluster-users-created) which enable connections between the servers in the cluster. Dedicated user created for each Juju unit/InnoDB Cluster member.
 * `mysql_innodb_cs_#######` - the internal recovery user which enable connections between MySQl InnoDB Clusters in ClusterSet. One user is created for entire MySQL ClusterSet.
 
@@ -41,7 +40,7 @@ mysql> select Host,User,account_locked from mysql.user;
 10 rows in set (0.00 sec)
 ```
 **Note**: it is forbidden to use/manage described above users! They are dedicated to the operators logic!
-Please use [data-integrator](https://charmhub.io/mysql/docs/t-integrations) charm to generate/manage/remove an external credentials.
+Please use the [data-integrator](https://charmhub.io/data-integrator) charm to generate/manage/remove an external credentials.
 
 It is allowed to rotate passwords for *internal* users using action `set-password`
 
