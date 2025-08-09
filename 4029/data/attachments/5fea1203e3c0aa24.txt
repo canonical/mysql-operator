@@ -1,0 +1,421 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:48 Deploying mysql and scaling to 3 units
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:51 Deploying mysql-test-app
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:54 Relating mysql with mysql-test-app
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju run --model testing --format json mysql/2 get-cluster-status
+[32mINFO    [0m root:test_primary_switchover.py:51 Current primary unit: mysql/2
+[32mINFO    [0m root:test_primary_switchover.py:57 Unit selected for promotion: mysql/1
+[32mINFO    [0m root:test_primary_switchover.py:59 Rebooting all but one unit to simulate majority loss...
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju run --model testing --format json mysql/1 promote-to-primary --params /root/snap/juju/common/tmp0vc9xwpp
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju model-config --model testing update-status-hook-interval=15s
+[32mINFO    [0m root:test_primary_switchover.py:71 Waiting for all units to become active after switchover...
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
++ .model.name = 'testing'
++ .model.type = 'iaas'
++ .model.controller = 'concierge-lxd'
++ .model.cloud = 'localhost'
++ .model.version = '3.6.8'
++ .model.region = 'localhost'
++ .model.model_status.current = 'available'
++ .machines['0'].juju_status.current = 'started'
++ .machines['0'].juju_status.version = '3.6.8'
++ .machines['0'].hostname = 'juju-576ce1-0'
++ .machines['0'].dns_name = '10.100.123.3'
++ .machines['0'].ip_addresses[0] = '10.100.123.3'
++ .machines['0'].instance_id = 'juju-576ce1-0'
++ .machines['0'].machine_status.current = 'running'
++ .machines['0'].machine_status.message = 'Running'
++ .machines['0'].modification_status.current = 'applied'
++ .machines['0'].base.name = 'ubuntu'
++ .machines['0'].base.channel = '22.04'
++ .machines['0'].network_interfaces['eth0'].ip_addresses[0] = '10.100.123.3'
++ .machines['0'].network_interfaces['eth0'].mac_address = '00:16:3e:e9:cd:ff'
++ .machines['0'].network_interfaces['eth0'].is_up = True
++ .machines['0'].network_interfaces['eth0'].gateway = '10.100.123.1'
++ .machines['0'].network_interfaces['eth0'].space = 'alpha'
++ .machines['0'].constraints = 'arch=amd64'
++ .machines['0'].hardware = 'arch=amd64 cores=0 mem=0M virt-type=container'
++ .machines['1'].juju_status.current = 'started'
++ .machines['1'].juju_status.version = '3.6.8'
++ .machines['1'].hostname = 'juju-576ce1-1'
++ .machines['1'].dns_name = '10.100.123.124'
++ .machines['1'].ip_addresses[0] = '10.100.123.124'
++ .machines['1'].instance_id = 'juju-576ce1-1'
++ .machines['1'].machine_status.current = 'running'
++ .machines['1'].machine_status.message = 'Running'
++ .machines['1'].modification_status.current = 'applied'
++ .machines['1'].base.name = 'ubuntu'
++ .machines['1'].base.channel = '22.04'
++ .machines['1'].network_interfaces['eth0'].ip_addresses[0] = '10.100.123.124'
++ .machines['1'].network_interfaces['eth0'].mac_address = '00:16:3e:1f:48:a9'
++ .machines['1'].network_interfaces['eth0'].is_up = True
++ .machines['1'].network_interfaces['eth0'].gateway = '10.100.123.1'
++ .machines['1'].network_interfaces['eth0'].space = 'alpha'
++ .machines['1'].constraints = 'arch=amd64'
++ .machines['1'].hardware = 'arch=amd64 cores=0 mem=0M virt-type=container'
++ .machines['2'].juju_status.current = 'down'
++ .machines['2'].juju_status.message = 'agent is not communicating with the server'
++ .machines['2'].juju_status.version = '3.6.8'
++ .machines['2'].hostname = 'juju-576ce1-2'
++ .machines['2'].dns_name = '10.100.123.254'
++ .machines['2'].ip_addresses[0] = '10.100.123.254'
++ .machines['2'].instance_id = 'juju-576ce1-2'
++ .machines['2'].machine_status.current = 'running'
++ .machines['2'].machine_status.message = 'Running'
++ .machines['2'].modification_status.current = 'applied'
++ .machines['2'].base.name = 'ubuntu'
++ .machines['2'].base.channel = '22.04'
++ .machines['2'].network_interfaces['eth0'].ip_addresses[0] = '10.100.123.254'
++ .machines['2'].network_interfaces['eth0'].mac_address = '00:16:3e:81:27:e8'
++ .machines['2'].network_interfaces['eth0'].is_up = True
++ .machines['2'].network_interfaces['eth0'].gateway = '10.100.123.1'
++ .machines['2'].network_interfaces['eth0'].space = 'alpha'
++ .machines['2'].constraints = 'arch=amd64'
++ .machines['2'].hardware = 'arch=amd64 cores=0 mem=0M virt-type=container'
++ .machines['3'].juju_status.current = 'started'
++ .machines['3'].juju_status.version = '3.6.8'
++ .machines['3'].hostname = 'juju-576ce1-3'
++ .machines['3'].dns_name = '10.100.123.12'
++ .machines['3'].ip_addresses[0] = '10.100.123.12'
++ .machines['3'].instance_id = 'juju-576ce1-3'
++ .machines['3'].machine_status.current = 'running'
++ .machines['3'].machine_status.message = 'Running'
++ .machines['3'].modification_status.current = 'applied'
++ .machines['3'].base.name = 'ubuntu'
++ .machines['3'].base.channel = '22.04'
++ .machines['3'].network_interfaces['eth0'].ip_addresses[0] = '10.100.123.12'
++ .machines['3'].network_interfaces['eth0'].mac_address = '00:16:3e:93:14:4e'
++ .machines['3'].network_interfaces['eth0'].is_up = True
++ .machines['3'].network_interfaces['eth0'].gateway = '10.100.123.1'
++ .machines['3'].network_interfaces['eth0'].space = 'alpha'
++ .machines['3'].constraints = 'arch=amd64'
++ .machines['3'].hardware = 'arch=amd64 cores=0 mem=0M virt-type=container'
++ .apps['mysql'].charm = 'local:mysql-0'
++ .apps['mysql'].charm_origin = 'local'
++ .apps['mysql'].charm_name = 'mysql'
++ .apps['mysql'].charm_rev = 0
++ .apps['mysql'].exposed = False
++ .apps['mysql'].base.name = 'ubuntu'
++ .apps['mysql'].base.channel = '22.04'
++ .apps['mysql'].app_status.current = 'active'
++ .apps['mysql'].relations['database'][0].related_app = 'mysql-test-app'
++ .apps['mysql'].relations['database'][0].interface = 'mysql_client'
++ .apps['mysql'].relations['database'][0].scope = 'global'
++ .apps['mysql'].relations['database-peers'][0].related_app = 'mysql'
++ .apps['mysql'].relations['database-peers'][0].interface = 'mysql_peers'
++ .apps['mysql'].relations['database-peers'][0].scope = 'global'
++ .apps['mysql'].relations['restart'][0].related_app = 'mysql'
++ .apps['mysql'].relations['restart'][0].interface = 'rolling_op'
++ .apps['mysql'].relations['restart'][0].scope = 'global'
++ .apps['mysql'].relations['upgrade'][0].related_app = 'mysql'
++ .apps['mysql'].relations['upgrade'][0].interface = 'upgrade'
++ .apps['mysql'].relations['upgrade'][0].scope = 'global'
++ .apps['mysql'].units['mysql/0'].workload_status.current = 'active'
++ .apps['mysql'].units['mysql/0'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql'].units['mysql/0'].juju_status.version = '3.6.8'
++ .apps['mysql'].units['mysql/0'].leader = True
++ .apps['mysql'].units['mysql/0'].machine = '0'
++ .apps['mysql'].units['mysql/0'].open_ports[0] = '3306/tcp'
++ .apps['mysql'].units['mysql/0'].open_ports[1] = '33060/tcp'
++ .apps['mysql'].units['mysql/0'].public_address = '10.100.123.3'
++ .apps['mysql'].units['mysql/1'].workload_status.current = 'active'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/1'].juju_status.version = '3.6.8'
++ .apps['mysql'].units['mysql/1'].machine = '1'
++ .apps['mysql'].units['mysql/1'].open_ports[0] = '3306/tcp'
++ .apps['mysql'].units['mysql/1'].open_ports[1] = '33060/tcp'
++ .apps['mysql'].units['mysql/1'].public_address = '10.100.123.124'
++ .apps['mysql'].units['mysql/2'].workload_status.current = 'unknown'
++ .apps['mysql'].units['mysql/2'].workload_status.message = "agent lost, see 'juju show-status-log mysql/2'"
++ .apps['mysql'].units['mysql/2'].juju_status.current = 'lost'
++ .apps['mysql'].units['mysql/2'].juju_status.message = 'agent is not communicating with the server'
++ .apps['mysql'].units['mysql/2'].juju_status.version = '3.6.8'
++ .apps['mysql'].units['mysql/2'].machine = '2'
++ .apps['mysql'].units['mysql/2'].open_ports[0] = '3306/tcp'
++ .apps['mysql'].units['mysql/2'].open_ports[1] = '33060/tcp'
++ .apps['mysql'].units['mysql/2'].public_address = '10.100.123.254'
++ .apps['mysql'].version = '8.0.42-0ubuntu0.22.04.2'
++ .apps['mysql'].endpoint_bindings[''] = 'alpha'
++ .apps['mysql'].endpoint_bindings['certificates'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['cos-agent'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['database'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['database-peers'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['db-router'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['mysql'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['replication'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['replication-offer'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['restart'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['s3-parameters'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['shared-db'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['tracing'] = 'alpha'
++ .apps['mysql'].endpoint_bindings['upgrade'] = 'alpha'
++ .apps['mysql-test-app'].charm = 'mysql-test-app'
++ .apps['mysql-test-app'].charm_origin = 'charmhub'
++ .apps['mysql-test-app'].charm_name = 'mysql-test-app'
++ .apps['mysql-test-app'].charm_rev = 82
++ .apps['mysql-test-app'].exposed = False
++ .apps['mysql-test-app'].base.name = 'ubuntu'
++ .apps['mysql-test-app'].base.channel = '22.04'
++ .apps['mysql-test-app'].charm_channel = 'latest/edge'
++ .apps['mysql-test-app'].app_status.current = 'active'
++ .apps['mysql-test-app'].relations['application-peers'][0].related_app = 'mysql-test-app'
++ .apps['mysql-test-app'].relations['application-peers'][0].interface = 'application-peers'
++ .apps['mysql-test-app'].relations['application-peers'][0].scope = 'global'
++ .apps['mysql-test-app'].relations['database'][0].related_app = 'mysql'
++ .apps['mysql-test-app'].relations['database'][0].interface = 'mysql_client'
++ .apps['mysql-test-app'].relations['database'][0].scope = 'global'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.current = 'active'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].juju_status.current = 'idle'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].juju_status.version = '3.6.8'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].leader = True
++ .apps['mysql-test-app'].units['mysql-test-app/0'].machine = '3'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].public_address = '10.100.123.12'
++ .apps['mysql-test-app'].version = '0.0.2'
++ .apps['mysql-test-app'].endpoint_bindings[''] = 'alpha'
++ .apps['mysql-test-app'].endpoint_bindings['application-peers'] = 'alpha'
++ .apps['mysql-test-app'].endpoint_bindings['database'] = 'alpha'
++ .apps['mysql-test-app'].endpoint_bindings['mysql'] = 'alpha'
++ .storage.storage['database/0'].kind = 'filesystem'
++ .storage.storage['database/0'].status.current = 'attached'
++ .storage.storage['database/0'].persistent = False
++ .storage.storage['database/0'].life = 'alive'
++ .storage.storage['database/0'].attachments.units['mysql/0'].machine = '0'
++ .storage.storage['database/0'].attachments.units['mysql/0'].location = '/var/snap/charmed-mysql/common'
++ .storage.storage['database/0'].attachments.units['mysql/0'].life = 'alive'
++ .storage.storage['database/1'].kind = 'filesystem'
++ .storage.storage['database/1'].status.current = 'attached'
++ .storage.storage['database/1'].persistent = False
++ .storage.storage['database/1'].life = 'alive'
++ .storage.storage['database/1'].attachments.units['mysql/1'].machine = '1'
++ .storage.storage['database/1'].attachments.units['mysql/1'].location = '/var/snap/charmed-mysql/common'
++ .storage.storage['database/1'].attachments.units['mysql/1'].life = 'alive'
++ .storage.storage['database/2'].kind = 'filesystem'
++ .storage.storage['database/2'].status.current = 'attached'
++ .storage.storage['database/2'].persistent = False
++ .storage.storage['database/2'].life = 'alive'
++ .storage.storage['database/2'].attachments.units['mysql/2'].machine = '2'
++ .storage.storage['database/2'].attachments.units['mysql/2'].location = '/var/snap/charmed-mysql/common'
++ .storage.storage['database/2'].attachments.units['mysql/2'].life = 'alive'
++ .storage.filesystems['0/0'].size = 73325
++ .storage.filesystems['0/0'].provider_id = '0/0'
++ .storage.filesystems['0/0'].storage = 'database/0'
++ .storage.filesystems['0/0'].attachments.machines['0'].mount_point = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['0/0'].attachments.machines['0'].read_only = False
++ .storage.filesystems['0/0'].attachments.machines['0'].life = 'alive'
++ .storage.filesystems['0/0'].attachments.units['mysql/0'].machine = '0'
++ .storage.filesystems['0/0'].attachments.units['mysql/0'].location = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['0/0'].attachments.units['mysql/0'].life = 'alive'
++ .storage.filesystems['0/0'].pool = 'rootfs'
++ .storage.filesystems['0/0'].life = 'alive'
++ .storage.filesystems['0/0'].status.current = 'attached'
++ .storage.filesystems['1/1'].size = 73325
++ .storage.filesystems['1/1'].provider_id = '1/1'
++ .storage.filesystems['1/1'].storage = 'database/1'
++ .storage.filesystems['1/1'].attachments.machines['1'].mount_point = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['1/1'].attachments.machines['1'].read_only = False
++ .storage.filesystems['1/1'].attachments.machines['1'].life = 'alive'
++ .storage.filesystems['1/1'].attachments.units['mysql/1'].machine = '1'
++ .storage.filesystems['1/1'].attachments.units['mysql/1'].location = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['1/1'].attachments.units['mysql/1'].life = 'alive'
++ .storage.filesystems['1/1'].pool = 'rootfs'
++ .storage.filesystems['1/1'].life = 'alive'
++ .storage.filesystems['1/1'].status.current = 'attached'
++ .storage.filesystems['2/2'].size = 73325
++ .storage.filesystems['2/2'].provider_id = '2/2'
++ .storage.filesystems['2/2'].storage = 'database/2'
++ .storage.filesystems['2/2'].attachments.machines['2'].mount_point = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['2/2'].attachments.machines['2'].read_only = False
++ .storage.filesystems['2/2'].attachments.machines['2'].life = 'alive'
++ .storage.filesystems['2/2'].attachments.units['mysql/2'].machine = '2'
++ .storage.filesystems['2/2'].attachments.units['mysql/2'].location = '/var/snap/charmed-mysql/common'
++ .storage.filesystems['2/2'].attachments.units['mysql/2'].life = 'alive'
++ .storage.filesystems['2/2'].pool = 'rootfs'
++ .storage.filesystems['2/2'].life = 'alive'
++ .storage.filesystems['2/2'].status.current = 'attached'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .machines['2'].juju_status.current = 'down'
+- .machines['2'].juju_status.message = 'agent is not communicating with the server'
++ .machines['2'].juju_status.current = 'started'
+- .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/1'].juju_status.message = 'running commands'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/2'].workload_status.current = 'unknown'
+- .apps['mysql'].units['mysql/2'].workload_status.message = "agent lost, see 'juju show-status-log mysql/2'"
+- .apps['mysql'].units['mysql/2'].juju_status.current = 'lost'
+- .apps['mysql'].units['mysql/2'].juju_status.message = 'agent is not communicating with the server'
++ .apps['mysql'].units['mysql/2'].workload_status.current = 'active'
++ .apps['mysql'].units['mysql/2'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/2'].juju_status.message = 'running start hook'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running start hook'
++ .apps['mysql'].units['mysql/1'].workload_status.message = 'Primary'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running start hook'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-relation-changed hook for mysql-test-app/0'
+- .apps['mysql'].units['mysql/1'].juju_status.message = 'running commands'
++ .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/0'
+- .apps['mysql'].units['mysql/2'].workload_status.current = 'active'
++ .apps['mysql'].units['mysql/2'].workload_status.current = 'maintenance'
++ .apps['mysql'].units['mysql/2'].workload_status.message = 'offline'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-relation-changed hook for mysql-test-app/0'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql-test-app'].app_status.message = 'Last written value=4930'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=4930'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].workload_status.current = 'active'
+- .apps['mysql'].units['mysql/0'].juju_status.current = 'executing'
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql'].units['mysql/0'].workload_status.current = 'error'
++ .apps['mysql'].units['mysql/0'].workload_status.message = 'hook failed: "database-peers-relation-changed"'
++ .apps['mysql'].units['mysql/0'].juju_status.current = 'idle'
+- .apps['mysql'].units['mysql/1'].juju_status.current = 'executing'
+- .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/0'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].workload_status.current = 'error'
+- .apps['mysql'].units['mysql/0'].workload_status.message = 'hook failed: "database-peers-relation-changed"'
+- .apps['mysql'].units['mysql/0'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/0'].workload_status.current = 'active'
++ .apps['mysql'].units['mysql/0'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
+- .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
+- .apps['mysql'].units['mysql/2'].juju_status.message = 'running start hook'
++ .apps['mysql'].units['mysql/2'].juju_status.message = 'running database-relation-changed hook for mysql-test-app/0'
+- .apps['mysql-test-app'].app_status.message = 'Last written value=4930'
++ .apps['mysql-test-app'].app_status.message = 'Last written value=5753'
+- .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=4930'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=5753'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/1'].juju_status.current = 'executing'
+- .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
+- .apps['mysql'].units['mysql/2'].juju_status.message = 'running database-relation-changed hook for mysql-test-app/0'
++ .apps['mysql'].units['mysql/2'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
+- .apps['mysql'].units['mysql/2'].juju_status.current = 'executing'
+- .apps['mysql'].units['mysql/2'].juju_status.message = 'running database-peers-relation-changed hook for mysql/1'
++ .apps['mysql'].units['mysql/2'].juju_status.current = 'idle'
+- .apps['mysql-test-app'].app_status.message = 'Last written value=5753'
+- .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=5753'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/1'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/1'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
+- .apps['mysql'].units['mysql/2'].workload_status.current = 'maintenance'
+- .apps['mysql'].units['mysql/2'].workload_status.message = 'offline'
++ .apps['mysql'].units['mysql/2'].workload_status.current = 'active'
++ .apps['mysql-test-app'].app_status.message = 'Last written value=6924'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=6924'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/1'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
++ .apps['mysql'].units['mysql/1'].juju_status.message = 'running commands'
+- .apps['mysql'].units['mysql/2'].juju_status.current = 'idle'
++ .apps['mysql'].units['mysql/2'].juju_status.current = 'executing'
++ .apps['mysql'].units['mysql/2'].juju_status.message = 'running commands'
+[32mINFO    [0m jubilant.wait:_juju.py:973 wait: status changed:
+- .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-peers-relation-changed hook for mysql/2'
++ .apps['mysql'].units['mysql/0'].juju_status.message = 'running database-relation-changed hook for mysql-test-app/0'
+- .apps['mysql-test-app'].app_status.message = 'Last written value=6924'
++ .apps['mysql-test-app'].app_status.message = 'Last written value=7963'
+- .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=6924'
++ .apps['mysql-test-app'].units['mysql-test-app/0'].workload_status.message = 'Last written value=7963'
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju run --model testing --format json mysql/2 get-cluster-status
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.8    unsupported  01:51:13Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   82  no       Last written value=7963
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle       3        10.100.123.12                   Last written value=7963
+mysql/0*           active    executing  0        10.100.123.3    3306,33060/tcp  
+mysql/1            active    executing  1        10.100.123.124  3306,33060/tcp  Primary
+mysql/2            active    idle       2        10.100.123.254  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.100.123.3    juju-576ce1-0  ubuntu@22.04      Running
+1        started  10.100.123.124  juju-576ce1-1  ubuntu@22.04      Running
+2        started  10.100.123.254  juju-576ce1-2  ubuntu@22.04      Running
+3        started  10.100.123.12   juju-576ce1-3  ubuntu@22.04      Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:43:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:43:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:45:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:45:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:45:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:45:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:45:12 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:48:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:48:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:48:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 01:50:20 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 795, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-576ce1-1.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\ncluster.rejoin_instance('mysql-2')"]' returned non-zero exit status 1.
+unit-mysql-2: 01:50:20 ERROR unit.mysql/2.juju-log Failed to rejoin instance mysql-2 to cluster test_cluster
+unit-mysql-0: 01:50:27 ERROR unit.mysql/0.juju-log database-peers:0: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 1011, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 693, in check_topology_timestamp_change
+    self.update_endpoints()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 806, in update_endpoints
+    self.database_relation._update_endpoints_all_relations(None)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 79, in _update_endpoints_all_relations
+    self._update_endpoints(relation.id, relation.app.name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 163, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 877, in get_cluster_endpoints
+    address = f"{self.get_unit_address(unit_labels[k], relation_name)}:3306"
+KeyError: 'juju-576ce1-2.lxd:3306'
+unit-mysql-0: 01:50:27 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:228 cli: juju debug-log --model testing --limit 1000
