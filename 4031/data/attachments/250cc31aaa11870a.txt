@@ -1,0 +1,37 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:95 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:341 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:483 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=606 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=611 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=616 on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:100 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:103 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:109 Wait for upgrade to complete
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] waiting: other units upgrading first...
+  mysql/2 [executing] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: other units upgrading first...
+  mysql/1 [executing] maintenance: stopping services..
+  mysql/2 [executing] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: starting services...
+  mysql/1 [idle] maintenance: upgrade completed
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:114 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:341 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:483 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=6769 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=6769 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=6769 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=7434 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=7441 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:366 max_written_value=7449 on unit mysql/2
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
