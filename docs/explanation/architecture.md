@@ -41,9 +41,9 @@ The `mysql-router` snap service used in [Charmed MySQL Router](https://charmhub.
 
 All `exporter` services are activated after the relation with [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) only.
 
-> **:information_source: Note:** it is possible to star/stop/restart snap services manually but it is NOT recommended to avoid a split brain with a charm state machine! Do it with a caution!!!
+> **Note:** it is possible to star/stop/restart snap services manually but it is NOT recommended to avoid a split brain with a charm state machine! Do it with a caution!!!
 
-> **:warning: Important:** all snap resources must be executed under the special user `snapd_daemon` only!
+> **Important:** all snap resources must be executed under the special user `snapd_daemon` only!
 
 The snap "charmed-mysql" also ships list of tools used by charm:
 * `charmed-mysql.mysql` (alias `mysql`) - mysql client to connect `mysqld`.

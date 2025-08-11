@@ -29,7 +29,7 @@ Machine  State    Address         Inst id        Base          AZ  Message
 
 > To exit the screen with `juju status --watch 1s`, enter `Ctrl+C`.
 
-You can also watch juju logs with the [`juju debug-log`](https://juju.is/docs/juju/juju-debug-log) command. More info on logging in the [juju logs documentation](https://juju.is/docs/olm/juju-logs).
+You can also watch juju logs with the [`juju debug-log`](https://juju.is/docs/juju/juju-debug-log) command. More info on logging in the [juju logs documentation](https://documentation.ubuntu.com/juju/3.6/reference/log/#log).
 
 ## Access MySQL
 ```{caution}

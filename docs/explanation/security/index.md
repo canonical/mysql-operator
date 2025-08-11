@@ -17,14 +17,14 @@ Charmed MySQL can be deployed on top of several clouds and virtualisation layers
 | Cloud              | Security guides                                                                                                                                                                                                                                                                                                                                   |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | OpenStack | [OpenStack Security Guide](https://docs.openstack.org/security-guide/)                                                                                                                                                                                                                                                                    |
-| AWS           | [Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html#access-keys-and-secret-access-keys) | 
+| AWS           | [Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html) | 
 | Azure              | [Azure security best practices and patterns](https://learn.microsoft.com/en-us/azure/security/fundamentals/best-practices-and-patterns), [Managed identities for Azure resource](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/)                                                     |
 | GCP         |  [Google security overview](https://cloud.google.com/kubernetes-engine/docs/concepts/security-overview), [Harden your cluster's security](https://cloud.google.com/kubernetes-engine/docs/concepts/security-overview)                                                    |
 
 ### Juju 
 
 Juju is the component responsible for orchestrating the entire lifecycle, from deployment to Day 2 operations. For more information on Juju security hardening, see the
-[Juju security page](https://discourse.charmhub.io/t/juju-security/15684) and the [How to harden your deployment](https://juju.is/docs/juju/harden-your-deployment) guide.
+[Juju security page](https://documentation.ubuntu.com/juju/latest/explanation/juju-security/index.html) and the [How to harden your deployment](https://documentation.ubuntu.com/juju/3.6/howto/manage-your-deployment/#harden-your-deployment) guide.
 
 #### Cloud credentials
 
@@ -63,7 +63,7 @@ Charmed MySQL operator and Charmed MySQL Router operator install a pinned revisi
 
 New versions (revisions) of charmed operators can be released to upgrade workloads, the operator's code, or both. It is important to refresh the charm regularly to make sure the workload is as secure as possible.
 
-For more information on upgrading the charm, see the [How to upgrade MySQL](https://canonical.com/data/docs/mysql/iaas/h-upgrade) and [How to upgrade MySQL Router](https://charmhub.io/mysql-router/docs/h-upgrade-intro?channel=dpe/edge) guides, as well as the [Release notes](https://canonical.com/data/docs/mysql/iaas/r-releases).
+For more information on upgrading the charm, see the [How to upgrade MySQL](https://canonical.com/data/docs/mysql/iaas/h-upgrade) and [How to upgrade MySQL Router](https://charmhub.io/mysql-router/docs/h-upgrade?channel=dpe/edge) guides, as well as the [Release notes](https://canonical.com/data/docs/mysql/iaas/r-releases).
 
 ### Encryption
 
@@ -93,8 +93,7 @@ For details on the cryptography used by Charmed MySQL, see the [Cryptography](ht
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
 :hidden:
 
-*
+cryptography
 ```

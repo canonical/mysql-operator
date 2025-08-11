@@ -1,4 +1,3 @@
-
 # How to deploy on MAAS
 
 This guide aims to provide a quick start to deploying Charmed MySQL on MAAS. It summarizes the instructions from the [Build a MAAS and LXD environment with Multipass Tutorial](https://discourse.maas.io/t/5360) to set up and tear down a **playground environment**.
@@ -108,7 +107,7 @@ Add the flags `--credential` if you registered several MAAS credentials, and `--
 juju bootstrap --constraints tags=juju maas-cloud maas-controller
 ```
 
-# Deploy Charmed MySQL on MAAS
+## Deploy Charmed MySQL on MAAS
 ```shell
 juju add-model mysql maas-cloud
 juju deploy mysql --channel 8.0/candidate # MAAS supported since charm revision 234+
@@ -128,7 +127,7 @@ Machine  State    Address     Inst id       Base          AZ       Message
 1        started  10.10.10.7  pumped-racer  ubuntu@22.04  default  Deployed
 ```
 
-# Test your Charmed MySQL deployment
+## Test your Charmed MySQL deployment
 
 Check the [Testing](/reference/software-testing) reference to test your deployment.
 

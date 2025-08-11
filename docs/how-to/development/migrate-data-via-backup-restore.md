@@ -1,13 +1,14 @@
-
 # Migrate data via backup/restore
 
-# DB data migration using ‘backup/restore’
-
-> :information_source: **Tip**: use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
+```{note}
+Use ['mysqldump' manual](/how-to/development/migrate-data-via-mysqldump) to migrate [legacy charms](/explanation/legacy-charm) data.
+```
 
 This Charmed MySQL operator is able to restore [it's own backups](/how-to/back-up-and-restore/restore-a-backup) stored on [S3-compatible storage](/how-to/back-up-and-restore/configure-s3-aws). The same restore approach is applicable to restore [foreign backups](/how-to/back-up-and-restore/migrate-a-cluster) made by different Charmed MySQL installation or even another MySQL charms. The backup have to be created manually using Percona XtraBackup!
 
-> :warning: Canonical Data team describes here the general approach and does NOT support nor guaranties the restoration results. Always test migration in LAB before performing it in Production!
+```{warning}
+Canonical Data team describes here the general approach and does NOT support nor guarantees the restoration results. Always test migration in a test environment before performing it in Production!
+```
 
 Before the data migration check all [limitations of the modern Charmed MySQL](/reference/system-requirements) charm!
 Please check [your application compatibility](/explanation/legacy-charm) with Charmed MySQL before migrating production data from legacy charm!
@@ -22,5 +23,5 @@ The approach:
 * perform all the necessary tests to make sure your application accepted new DB.
 * schedule and perform the final production migration re-using the last steps above.
 
-Do you have questions? [Contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you are interested in such a data migration!
+Do you have questions? [Contact us](/reference/contacts) if you are interested in such a data migration!
 

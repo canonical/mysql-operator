@@ -1,5 +1,4 @@
-
-# Deploy Async replication
+# Deploy async replication
 
 The following table shows the source and target controller/model combinations that are currently supported:
 

@@ -1,7 +1,4 @@
-
 # Switchover / Failover
-
-# Switchover / Failover of Async replication
 
 ## Pre-requisites
 

@@ -3,41 +3,32 @@
 Additional context about key concepts behind the MySQL charm.
 
 ## Core concepts and design
-* [Architecture]
-* [Interfaces and endpoints]
-* [Juju]
-* [Legacy charm]
-
-## Operational concepts
-* [Users]
-* [Logs]
-  * [Audit logs]
-
-## Security and hardening
-* [Security hardening guide][Security]
-  * [Cryptography]
-
-<!-- Links -->
-
-[Architecture]: /explanation/architecture
-[Interfaces and endpoints]: /explanation/interfaces-and-endpoints
-[Juju]: /explanation/juju
-[Legacy charm]: /explanation/legacy-charm
-
-[Users]: /explanation/users
-[Logs]: /explanation/logs/index
-[Audit logs]: /explanation/logs/audit-logs
-
-[Security]: /explanation/security/index
-[Cryptography]: /explanation/security/cryptography
-
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
-:hidden:
 
-*
-*/index
+Architecture <architecture>
+Interfaces and endpoints <interfaces-and-endpoints>
+Juju <juju>
+Legacy charm <legacy-charm>
+```
+
+## Operational concepts
+
+```{toctree}
+:titlesonly:
+:maxdepth: 2
+
+Users <users>
+Logs <logs/index>
+```
+
+## Security and hardening
+
+```{toctree}
+:titlesonly:
+:maxdepth: 2
+
+Security <security/index>
 ```

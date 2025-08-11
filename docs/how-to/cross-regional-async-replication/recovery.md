@@ -1,7 +1,4 @@
-
 # Recovery
-
-# Recovery of Async replication
 
 ## Pre-requisites
 Make sure both `Rome` and `Lisbon` Clusters are deployed using the [Async Deployment manual](/how-to/cross-regional-async-replication/deploy)!

@@ -10,9 +10,9 @@ Canonical does not prescribe how you should set up your specific air-gapped envi
 
 * A VM/hardware resources available for Juju.
 * DNS is configured to the local nameservers.
-* [Juju is configured](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#configure-juju) to use local air-gapped services.
+* [Juju is configured](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#configure-juju) to use local air-gapped services.
 * The [`store-admin`](https://snapcraft.io/store-admin) tool is installed and configured.
-* [Air-gapped CharmHub](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/) is installed and running.
+* [Air-gapped CharmHub](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub) is installed and running.
 * [Air-gapped Snap Store Proxy](https://documentation.ubuntu.com/snap-store-proxy/) is installed and running.
 * Local APT and LXD Images caches are reachable.
 
@@ -33,8 +33,8 @@ Future improvements are planned to the `store-admin` tool so that it could poten
 
 #### Charms
  The necessary charm(s) can be exported as bundle or independently (charm-by-charm). See the Snap Proxy documentation:
-* [Offline Charmhub configuration > Export charm bundle](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#export-charm-bundles)
-* [Offline Charmhub configuration > Export charms](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#export-charms)
+* [Offline Charmhub configuration > Export charm bundle](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#export-charm-bundles)
+* [Offline Charmhub configuration > Export charms](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#export-charms)
 
 The bundle export example:
 
@@ -69,7 +69,7 @@ Successfully exported charm bundle mysql-bundle: /home/ubuntu/snap/store-admin/c
 </details>
 
 #### SNAPs
-Usually charms require SNAPs (and some manually pin them). For the manual SNAP exports, follow the official Snap Store Proxy documentation: [Offline Charmhub configuration > Export SNAP](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#export-snap-resources). Data team is shipping the mapping [snap.yaml](https://github.com/canonical/mysql-bundle/blob/main/releases/latest/) to the published [bundle.yaml](https://github.com/canonical/mysql-bundle/blob/main/releases/latest/):
+Usually charms require SNAPs (and some manually pin them). For the manual SNAP exports, follow the official Snap Store Proxy documentation: [Offline Charmhub configuration > Export SNAP](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#export-snap-resources). Data team is shipping the mapping [snap.yaml](https://github.com/canonical/mysql-bundle/blob/main/releases/latest/) to the published [bundle.yaml](https://github.com/canonical/mysql-bundle/blob/main/releases/latest/):
 
 > **Warning**: always use snap.yaml and bundle.yaml from the same Git commit (to match each other)!
 
@@ -110,7 +110,7 @@ cp /media/usb/*.tar.gz /var/snap/snap-store-proxy/common/charms-to-push/
 (3-import-snaps-and-charms)=
 ### 3. Import snaps and charms
 
- Import the [snap](https://documentation.ubuntu.com/snap-store-proxy/en/airgap/#importing-pushing-snaps) and [charm](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages) blobs into local air-gapped CharmHub:
+ Import the [snap](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap/#importing-pushing-snaps) and [charm](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#import-packages) blobs into local air-gapped CharmHub:
 
 > **Note**: when importing machine charms that depend on a snap for functionality, you must first manually import the required snap.
 ```shell
@@ -118,7 +118,7 @@ sudo snap-store-proxy push-snap /var/snap/snap-store-proxy/common/snaps-to-push/
 
 sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms-to-push/mysql-bundle-20241003T104903.tar.gz
 ```
-> **Note**: when [re-importing](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages) charms or importing other revisions, make sure to provide the `--push-channel-map`.
+> **Note**: when [re-importing](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#import-packages) charms or importing other revisions, make sure to provide the `--push-channel-map`.
 
 (4-deploy-mysql)=
 ### 4. Deploy MySQL
@@ -137,8 +137,8 @@ Use [the official release notes](/reference/releases) as a reference.
 
 * https://docs.ubuntu.com/snap-store-proxy/en/airgap
 * https://documentation.ubuntu.com/snap-store-proxy/
-* https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/
+* https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub
 * https://ubuntu.com/kubernetes/docs/install-offline
-* [Charmed Kubeflow > Install in an airgapped environment](https://charmed-kubeflow.io/docs/install-in-airgapped-environment)
+* [Charmed Kubeflow > Install in an air-gapped environment](https://documentation.ubuntu.com/charmed-kubeflow/how-to/install/install-air-gapped/)
 *  [Wikipedia > Air gap (networking)](https://en.wikipedia.org/wiki/Air_gap_(networking))
 
