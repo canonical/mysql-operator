@@ -507,9 +507,18 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.warning("Instance does not have ONLINE peers. Cannot perform manual rejoin")
             return
 
+        if self._mysql.are_locks_acquired(from_instance=cluster_primary):
+            logger.info("waiting: cluster lock is held")
+            return
+        # add random delay to mitigate collisions when multiple units are rejoining
+        # due the difference between the time we test for locks and acquire them
+        # Not used for cryptographic purpose
+        sleep(random.uniform(0, 1.5))  # noqa: S311
         try:
             self._mysql.rejoin_instance_to_cluster(
-                unit_label=self.unit_label, from_instance=cluster_primary
+                unit_address=self.unit_fqdn,
+                unit_label=self.unit_label,
+                from_instance=cluster_primary,
             )
             return
         except MySQLRejoinInstanceToClusterError:
@@ -585,7 +594,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if not self._handle_non_online_instance_status(state):
             return
 
-        if self.unit.is_leader():
+        if self.unit.is_leader() and state == "online":
             try:
                 primary_address = self._mysql.get_cluster_primary_address()
             except MySQLGetClusterPrimaryAddressError:
@@ -927,7 +936,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
                 # add random delay to mitigate collisions when multiple units are joining
                 # due the difference between the time we test for locks and acquire them
-                # Not used for cryptographic puropse
+                # Not used for cryptographic purpose
                 sleep(random.uniform(0, 1.5))  # noqa: S311
 
                 if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):

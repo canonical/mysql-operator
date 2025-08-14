@@ -127,7 +127,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 91
+LIBPATCH = 92
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -2025,17 +2025,33 @@ class MySQLBase(ABC):
             # always release the lock
             self._release_lock(local_lock_instance, instance_unit_label, UNIT_ADD_LOCKNAME)
 
-    def rejoin_instance_to_cluster(self, *, unit_label: str, from_instance: str) -> None:
-        """Rejoin an instance to the InnoDB cluster."""
+    def rejoin_instance_to_cluster(
+        self, *, unit_address: str, unit_label: str, from_instance: str
+    ) -> None:
+        """Rejoin an instance to the InnoDB cluster.
+
+        Args:
+            unit_address: The address of the unit to rejoin.
+            unit_label: The label of the unit to rejoin.
+            from_instance: The instance from which to rejoin the cluster.
+        """
+        options = {"password": self.server_config_password}
         commands = (
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            f"cluster.rejoin_instance('{unit_label}')",
+            f"cluster.rejoin_instance('{self.instance_def(self.server_config_user, unit_address)}',"
+            f"{options})",
         )
 
         from_instance = from_instance or self.instance_address
+        if not self._acquire_lock(
+            from_instance,
+            unit_label,
+            UNIT_ADD_LOCKNAME,
+        ):
+            raise MySQLLockAcquisitionError("Lock not acquired")
 
         try:
-            logger.debug(f"Rejoining instance {unit_label} to cluster {self.cluster_name}")
+            logger.debug(f"Rejoining instance {unit_address} to cluster {self.cluster_name}")
             self._run_mysqlsh_script(
                 "\n".join(commands),
                 user=self.server_config_user,
@@ -2043,8 +2059,13 @@ class MySQLBase(ABC):
                 host=self.instance_def(self.server_config_user, from_instance),
             )
         except MySQLClientError as e:
-            logger.error(f"Failed to rejoin instance {unit_label} to cluster {self.cluster_name}")
+            logger.error(
+                f"Failed to rejoin instance {unit_address} to cluster {self.cluster_name}"
+            )
             raise MySQLRejoinInstanceToClusterError from e
+        finally:
+            # always release the lock
+            self._release_lock(from_instance, unit_label, UNIT_ADD_LOCKNAME)
 
     def is_instance_configured_for_innodb(
         self, instance_address: str, instance_unit_label: str
@@ -2892,9 +2913,11 @@ class MySQLBase(ABC):
 
         Recovery for cases where majority loss put the cluster in defunct state.
         """
+        instance_definition = self.instance_def(self.server_config_user)
         force_quorum_command = (
             f"cluster = dba.get_cluster('{self.cluster_name}')",
-            "cluster.force_quorum_using_partition_of()",
+            f"cluster.force_quorum_using_partition_of('{self.server_config_user}@"
+            f"{instance_definition}','{self.server_config_password}')",
         )
 
         try:
@@ -2902,7 +2925,7 @@ class MySQLBase(ABC):
                 "\n".join(force_quorum_command),
                 user=self.server_config_user,
                 password=self.server_config_password,
-                host=self.instance_def(self.server_config_user),
+                host=instance_definition,
             )
         except MySQLClientError as e:
             logger.error("Failed to force quorum from instance")

@@ -9,6 +9,8 @@ from jubilant import Juju, all_active
 
 from ..markers import juju3
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @juju3
 @pytest.mark.abort_on_fail
@@ -56,13 +58,30 @@ def test_cluster_failover_after_majority_loss(juju: Juju, highly_available_clust
 
     logging.info(f"Unit selected for promotion: {unit_to_promote}")
 
-    logging.info("Rebooting all but one unit to simulate majority loss...")
-    for unit in [non_primary_units.pop(), primary_unit]:
-        machine_name = get_unit_machine(juju, app_name, unit)
-        run(["lxc", "restart", machine_name], check=True)
+    logging.info("Kill all but one unit to simulate majority loss...")
+    units_to_kill = [non_primary_units.pop(), primary_unit]
+    machine_name = []
+    for unit in units_to_kill:
+        machine_name.append(get_unit_machine(juju, app_name, unit))
+
+    run(["lxc", "restart", "--force", machine_name[0], machine_name[1]], check=True)
+
+    juju.model_config({"update-status-hook-interval": "45s"})
+    logging.info("Waiting to settle in error state")
+    juju.wait(
+        lambda status: status.apps[app_name].units[unit_to_promote].workload_status.current
+        == "active"
+        and status.apps[app_name].units[units_to_kill[0]].workload_status.message == "offline"
+        and status.apps[app_name].units[units_to_kill[1]].workload_status.message == "offline",
+        timeout=60 * 15,
+        delay=15,
+    )
 
     failover_task = juju.run(
-        unit_to_promote, "promote-to-primary", {"scope": "unit", "force": True}
+        unit_to_promote,
+        "promote-to-primary",
+        {"scope": "unit", "force": True},
+        wait=600,
     )
 
     juju.model_config({"update-status-hook-interval": "15s"})
