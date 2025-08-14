@@ -598,11 +598,11 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             try:
                 primary_address = self._mysql.get_cluster_primary_address()
             except MySQLGetClusterPrimaryAddressError:
-                self.unit.status = MaintenanceStatus("Unable to query cluster primary")
-                return
+                primary_address = None
 
             if not primary_address:
-                self.unit.status = MaintenanceStatus("Unable to find cluster primary")
+                logger.error("Cluster nas primary. Check cluster status on online units.")
+                self.app.status = MaintenanceStatus("Cluster has no primary.")
                 return
 
             if "s3-block-message" in self.app_peer_data:
