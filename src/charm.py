@@ -601,7 +601,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 primary_address = None
 
             if not primary_address:
-                logger.error("Cluster nas primary. Check cluster status on online units.")
+                logger.error("Cluster has no primary. Check cluster status on online units.")
                 self.app.status = MaintenanceStatus("Cluster has no primary.")
                 return
 
