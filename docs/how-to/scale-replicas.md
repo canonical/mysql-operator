@@ -39,7 +39,7 @@ To change the frequency of the `update-status` hook, run
 ```shell
 juju model-config update-status-hook-interval=<time(s/m/h)>
 ```
-<!--Note that this hook executes a read query to PostgreSQL. On a production level server, this should be configured to occur at a frequency that doesn't overload the server with read requests. Similarly, the hook should not be configured at too quick of a frequency, as this can delay other hooks from running. -->
+<!--Note that this hook executes a read query to MySQL. On a production level server, this should be configured to occur at a frequency that doesn't overload the server with read requests. Similarly, the hook should not be configured at too quick of a frequency, as this can delay other hooks from running. -->
 ```
 
 ## Scale replicas on an existing application

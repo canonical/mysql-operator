@@ -9,7 +9,7 @@ There are two types of users in MySQL:
 
 The operator uses the following internal DB users:
 
-* `root` - the [initial/default](/tutorial/4-manage-passwords) MySQL user. Used for very initial bootstrap and restricted to local access.
+* `root` - the initial/default MySQL user. Used for very initial bootstrap and restricted to local access.
 * `clusteradmin` - the user to manage replication in the MySQL InnoDB ClusterSet.
 * `serverconfig` - the user that operates MySQL instances.
 * `monitoring` - the user for [COS integration](/how-to/monitoring-cos/enable-monitoring).
