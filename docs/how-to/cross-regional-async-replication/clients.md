@@ -1,9 +1,11 @@
 # Clients
 
 ## Pre-requisites
+
 Make sure both `Rome` and `Lisbon` Clusters are deployed using the [Async Deployment manual](/how-to/cross-regional-async-replication/deploy)!
 
-## Offer and consume DB endpoints
+## Offer and consume database endpoints
+
 ```shell
 juju switch rome
 juju offer db1:database db1-database
@@ -17,6 +19,7 @@ juju consume lisbon.db2-database
 ```
 
 ## Internal Juju app/clients
+
 ```shell
 juju switch app
 
@@ -28,6 +31,7 @@ juju relate mysql-router db1-database
 ```
 
 ## External Juju clients
+
 ```shell
 juju switch app
 

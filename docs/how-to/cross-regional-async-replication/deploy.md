@@ -11,6 +11,7 @@ The following table shows the source and target controller/model combinations th
 ## Deploy
 
 Deploy two MySQL Clusters, named `Rome` and `Lisbon`:
+
 ```shell
 juju add-model rome    # 1st cluster location: Rome
 juju add-model lisbon  # 2nd cluster location: Lisbon
@@ -23,18 +24,20 @@ juju deploy mysql db2 --channel=8.0/edge --config profile=testing --config clust
 ```
 
 ```{caution}
-**Note**: remove profile configuration for production deployments. Check [Profiles](/reference/profiles) for documentation.
+Remove profile configuration for production deployments. Check [Profiles](/reference/profiles) for documentation.
 ```
 
 ## Offer
 
 Offer asynchronous replication on the Primary cluster (Rome):
+
 ```shell
 juju switch rome
 juju offer db1:replication-offer replication-offer
 ```
 
 (Optional) Offer asynchronous replication on StandBy cluster (Lisbon), for the future:
+
 ```shell
 juju switch lisbon
 juju offer db2:replication-offer replication-offer
@@ -43,6 +46,7 @@ juju offer db2:replication-offer replication-offer
 ## Consume
 
 Consume asynchronous replication on planned `StandBy` cluster (Lisbon):
+
 ```shell
 juju switch lisbon
 juju consume rome.replication-offer
@@ -58,6 +62,7 @@ juju run db1/leader create-replication
 ```
 
 (Optional) Consume asynchronous replication on the current `Primary` (Rome), for the future:
+
 ```shell
 juju switch rome
 juju consume lisbon.replication-offer
@@ -66,10 +71,12 @@ juju consume lisbon.replication-offer
 ## Status
 
 Run the `get-cluster-status` action with the `cluster-set=True` flag: 
+
 ```shell
 juju run -m rome db1/0 get-cluster-status cluster-set=True
 ```
 Results:
+
 ```shell
 status:
   clusters:
@@ -90,12 +97,15 @@ success: "True"
 ```
 
 ## Scaling
+
 The two clusters works independently, this means that it's possible to independently scaling in/out each cluster without much hassle, e.g.:
+
 ```shell
 juju add-unit db1 -n 2 -m rome
 
 juju add-unit db2 -n 2 -m lisbon
 ```
+
 ```{caution}
 **Note**: The scaling is possible before and after the asynchronous replication established/created.
 ```

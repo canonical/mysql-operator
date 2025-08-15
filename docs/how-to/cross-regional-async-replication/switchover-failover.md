@@ -6,29 +6,28 @@ Make sure both `Rome` and `Lisbon` Clusters are deployed using the [Async Deploy
 
 ## Switchover (safe)
 
-Assuming `Rome` is currently `Primary` and you want to promote `Lisbon` to be new primary<br/>(`Rome` will be converted to `StandBy` member):
+Assuming `Rome` is currently `Primary` and you want to promote `Lisbon` to be new primary:
 
 ```shell
-
 juju run -m lisbon db2/leader promote-to-primary
-
 ```
+
+`Rome` will be converted to `StandBy` member.
 
 ## Failover (forced)
 
-```{caution}
+```{danger}
+This is a **dangerous** operation which can cause a split-brain situation. 
 
-**Warning**: this is a **dangerous** operation which can cause the split-brain situation. It should be executed if Primary cluster is no longer exist (lost) ONLY! Otherwise please use safe switchover procedure above!
-
+It should ONLY be executed if Primary cluster is no longer exist (i.e. it is lost). Otherwise please use the safe switchover procedure described above!
 ```
 
 Assuming `Rome` was a `Primary` (before we lost the cluster `Rome`) and you want to promote `Lisbon` to be the new primary:
 
 ```shell
-
 juju run -m lisbon db2/leader promote-to-primary force=True
-
 ```
 
-> **Warning**: The `force` will cause the old primary to be invalidated.
-
+```{caution}
+`force=True` will cause the old primary to be invalidated.
+```

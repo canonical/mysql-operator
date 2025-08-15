@@ -1,11 +1,5 @@
+# How to perform a minor rollback
 
-# Perform a minor rollback
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022).
-```
 **Example**: MySQL 8.0.34 -> MySQL 8.0.33<br/>
 (including charm revision bump: e.g Revision 43 -> Revision 42)
 
@@ -18,6 +12,7 @@ Even if the underlying MySQL cluster continue to work, it’s important to roll 
 ```
 
 ## Summary of the rollback steps
+
 1. **Prepare** the Charmed MySQL application for the in-place rollback.
 2. **Roll back**. Once started, all units in a cluster will be executed sequentially. The rollback will be aborted (paused) if the unit rollback has failed.
 3. **Check**. Make sure the charm and cluster are in healthy state again.

@@ -11,7 +11,7 @@ AWS EC2 <aws-ec2>
 GCE <gce>
 Azure <azure>
 Multi-AZ <multi-az>
-Air-gapped <air-gapped>
 Terraform <terraform>
+Air-gapped <air-gapped>
 Juju spaces <juju-spaces>
 ```

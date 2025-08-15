@@ -1,13 +1,4 @@
-
-# Perform a minor upgrade
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022).
-```
-
-# Perform a minor upgrade
+# How to perform a minor upgrade
 
 **Example**: MySQL 8.0.33 -> MySQL 8.0.34<br/>
 (including charm revision bump: e.g. Revision 193 -> Revision 196)
@@ -15,6 +6,7 @@ If you are using an earlier version, check the [Juju 3.0 Release Notes](https://
 This is part of the [Upgrade section](/how-to/upgrade/index). Refer to the landing page for more information and an overview of the content.
 
 ## Important information
+
 We strongly recommend to **NOT** perform any other extraordinary operations on a Charmed MySQL cluster while upgrading. These may be (but not limited to) the following:
 
 1. Adding or removing units

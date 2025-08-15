@@ -181,7 +181,7 @@ mysql/0*  active    idle   1        10.234.188.135  3306,33060/tcp  Primary
 
 ### Interact with MySQL
 
-To access the unit hosting Charmed MySQL, one could normally use the following command:
+To access the unit hosting Charmed MySQL in production, one would normally use the following command:
 
 ```shell
 mysql -h <ip_address> -u<username> -p<password>
@@ -340,8 +340,6 @@ Machine  State    Address         Inst id        Series  AZ  Message
 0        started  10.234.188.135  juju-ff9064-0  jammy       Running
 1        started  10.234.188.214  juju-ff9064-1  jammy       Running
 ```
-<!--TODO: What about generic scaling down (without specifying which unit)?-->
-
 
 ## Integrate with other applications
 
@@ -364,7 +362,7 @@ Deploying "data-integrator" from charm-hub charm "data-integrator", revision 3 i
 
 Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications:
 
-```shell
+```text
 ...
 App              Version          Status   Scale  Charm            Channel     Rev  Exposed  Message
 data-integrator                   blocked      1  data-integrator  stable     13    no       Please relate the data-integrator with the desired product
@@ -464,9 +462,7 @@ You've successfully set up a new user and database by integrating your Charmed M
 
 Removing the integration automatically removes the user that was created when the integration was created.
 
-
 To remove the integration, run the following command:
-
 
 ```{terminal}
 :input: juju remove-relation mysql data-integrator

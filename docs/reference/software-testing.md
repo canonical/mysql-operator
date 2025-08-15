@@ -14,7 +14,7 @@ Complexity: trivial
 Speed: fast
 Goal: ensure basic functionality works over short amount of time.
 
-[Set up an Juju 3 environment](/tutorial/index), deploy a database with a test application and start "continuous write" test:
+Create a Juju model for testing, deploy a database with a test application and start the "continuous write" test:
 
 ```shell
 juju add-model smoke-test

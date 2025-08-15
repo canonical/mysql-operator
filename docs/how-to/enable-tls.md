@@ -1,19 +1,12 @@
-
 # How to enable TLS encryption
 
-```{note}
-**Note**: All commands are written for `juju >= v.3.1`
-
-If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022).
-```
-This guide will show how to enable TLS using the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator) as an example.
+This guide describes how to enable TLS using the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator) as an example.
 
 ```{caution}
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
 
 Check [this guide](https://discourse.charmhub.io/t/11664) for an overview of the TLS certificates charms available. 
 ```
-
 
 ## Enable TLS
 
