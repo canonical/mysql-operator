@@ -7,7 +7,7 @@ This guide goes through the steps for setting up Sunbeam and deploying Charmed M
 
 ## Prerequisites
 * A physical or virtual machine running Ubuntu 22.04+
-  * If you'd like to follow this guide in an isolated test environment, you can [launch a Multipass](/tutorial/1-set-up-the-environment) instance.
+  * If you'd like to follow this guide in an isolated test environment, you can [launch a Multipass](create-multipass-vm) instance.
 * Hardware requirements depend on planned deployment size.
   * Recommended: 8 CPU cores, 32GB RAM, 100GB of storage
   * Minimum: See the requirements listed in the [Sunbeam documentation][Single-node guided]

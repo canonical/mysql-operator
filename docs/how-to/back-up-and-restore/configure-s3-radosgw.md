@@ -37,7 +37,7 @@ juju config s3-integrator \
 
 ## Integrate with Charmed MySQL
 
-To pass these configurations to Charmed PostgreSQL, integrate the two applications:
+To pass these configurations to Charmed MySQL, integrate the two applications:
 ```shell
 juju integrate s3-integrator mysql
 ```

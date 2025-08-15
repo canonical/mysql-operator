@@ -1,6 +1,6 @@
 # System requirements
 
-The following are the minimum software and hardware requirements to run Charmed PostgreSQL on IAAS/VM.
+The following are the minimum software and hardware requirements to run Charmed MySQL on IAAS/VM.
 
 ## Software
 
