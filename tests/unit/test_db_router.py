@@ -7,7 +7,8 @@ from unittest.mock import call, patch
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
     MySQLConfigureRouterUserError,
-    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
 )
 from ops.model import BlockedStatus
 from ops.testing import Harness
@@ -33,10 +34,12 @@ class TestDBRouter(unittest.TestCase):
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="2.2.2.2")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_db_router_relation_changed(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _configure_mysqlrouter_user,
         _does_mysql_user_exist,
         _get_cluster_primary_address,
@@ -86,7 +89,10 @@ class TestDBRouter(unittest.TestCase):
         _configure_mysqlrouter_user.assert_called_once_with(
             "mysqlrouteruser", "super_secure_password", "1.1.1.3", "app/0"
         )
-        _create_application_database_and_scoped_user.assert_called_once_with(
+        _create_database.assert_called_once_with(
+            "keystone_database",
+        )
+        _create_scoped_user.assert_called_once_with(
             "keystone_database",
             "keystone_user",
             "super_secure_password",
@@ -122,10 +128,12 @@ class TestDBRouter(unittest.TestCase):
     @patch("relations.db_router.generate_random_password", return_value="super_secure_password")
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
     @patch("mysql_vm_helpers.MySQL.configure_mysqlrouter_user")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_db_router_relation_changed_exceptions(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _configure_mysqlrouter_user,
         _does_mysql_user_exist,
         _generate_random_password,
@@ -184,10 +192,8 @@ class TestDBRouter(unittest.TestCase):
 
         _configure_mysqlrouter_user.reset_mock()
 
-        # test an exception while creating the application database and scoped user
-        _create_application_database_and_scoped_user.side_effect = (
-            MySQLCreateApplicationDatabaseAndScopedUserError
-        )
+        # test an exception while creating the application database
+        _create_database.side_effect = MySQLCreateApplicationDatabaseError
         self.harness.update_relation_data(
             self.db_router_relation_id,
             "app/0",
@@ -202,4 +208,24 @@ class TestDBRouter(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
-        _create_application_database_and_scoped_user.reset_mock()
+        _create_database.reset_mock()
+        _create_scoped_user.reset_mock()
+
+        # test an exception while creating the application scoped user
+        _create_scoped_user.side_effect = MySQLCreateApplicationScopedUserError
+        self.harness.update_relation_data(
+            self.db_router_relation_id,
+            "app/0",
+            {
+                "MRUP_database": "keystone_database",
+                "MRUP_hostname": "1.1.1.2",
+                "MRUP_username": "keystone_user",
+                "mysqlrouter_hostname": "1.1.1.3",
+                "mysqlrouter_username": "mysqlrouteruser",
+            },
+        )
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+
+        _create_database.reset_mock()
+        _create_scoped_user.reset_mock()

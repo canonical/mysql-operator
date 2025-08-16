@@ -28,14 +28,16 @@ class TestDatabase(unittest.TestCase):
         return_value=("2.2.2.2:3306", "2.2.2.1:3306,2.2.2.3:3306", ""),
     )
     @patch("mysql_vm_helpers.MySQL.get_mysql_version", return_value="8.0.29-0ubuntu0.20.04.3")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     @patch(
         "relations.mysql_provider.generate_random_password", return_value="super_secure_password"
     )
     def test_database_requested(
         self,
         _generate_random_password,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _get_mysql_version,
         _get_cluster_endpoints,
         _cluster_initialized,
@@ -82,6 +84,7 @@ class TestDatabase(unittest.TestCase):
         )
 
         _generate_random_password.assert_called_once()
-        _create_application_database_and_scoped_user.assert_called_once()
+        _create_database.assert_called_once()
+        _create_scoped_user.assert_called_once()
         _get_cluster_endpoints.assert_called_once()
         _get_mysql_version.assert_called_once()
