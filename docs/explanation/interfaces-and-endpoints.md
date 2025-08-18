@@ -1,16 +1,20 @@
-# Interfaces/endpoints
+# Interfaces and endpoints
 
 Charmed MySQL VM supports modern `mysql_client` and legacy `mysql`, `mysql-shared`, `mysql-router` interfaces (in a backward compatible mode).
 
-**Note:** do NOT integrate (relate) both modern and legacy interfaces simultaneously.
+```{caution}
+Do NOT integrate (relate) both modern and legacy interfaces simultaneously.
+```
 
 ## Modern relations
 
-This charm provides modern [‘mysql_client’ ](https://github.com/canonical/charm-relation-interfaces)interface. Applications can easily connect MySQL using [‘data_interfaces’](https://charmhub.io/data-platform-libs/libraries/data_interfaces) library from [‘data-platform-libs’](https://github.com/canonical/data-platform-libs/).
+This charm provides the modern [`mysql_client`](https://github.com/canonical/charm-relation-interfaces)interface. Applications can easily connect MySQL using [`data_interfaces`](https://charmhub.io/data-platform-libs/libraries/data_interfaces) library from [`data-platform-libs`](https://github.com/canonical/data-platform-libs/).
 
-### Modern `mysql_client` interface (`database` endpoint):
+### Modern `mysql_client` interface (`database` endpoint)
 
-Adding a relation is accomplished with `juju integrate` via endpoint `database`. Read more about [Juju relations (integrations)](https://documentation.ubuntu.com/juju/3.6/reference/relation/). Example:
+Adding a [Juju relation](https://documentation.ubuntu.com/juju/3.6/reference/relation/) is accomplished with `juju integrate` via endpoint `database`.
+
+Example:
 
 ```shell
 # Deploy Charmed MySQL cluster with 3 nodes
@@ -30,13 +34,17 @@ juju status --relations
 # > mysql:database      mysql-test-app:database  mysql_client  regular
 ```
 
-Find all details about default and extra DB user roles in “[Charm Users explanations](/explanation/users)”.
+See details about database user roles in [](/explanation/users).
 
-**Note:** In order to integrate with this charm, every table created by the integrated application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
+```{note}
+In order to integrate with this charm, every table created by the integrated application must have a primary key. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
+```
 
 ## Legacy relations
 
-**Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided. Check the legacy interface implementation limitations in the "[Legacy charm](/explanation/legacy-charm)" document.
+**Legacy relations are deprecated and will be discontinued** in future releases. Usage should be avoided. 
+
+Check the legacy interface implementation limitations in [](/explanation/legacy-charm).
 
 This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model).
 
@@ -63,7 +71,11 @@ juju integrate mysql-router keystone
 juju integrate mysql:db-router mysql-router:db-router
 ```
 
-**Note:** pay attention to deploy identical [series/base](https://documentation.ubuntu.com/juju/3.6/reference/machine/#machine-base) for `keystone` and `mysql-router` applications (due to the [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate) charm nature of `mysql-router`).
+```{note}
+Make sure to deploy identical [series/base](https://documentation.ubuntu.com/juju/3.6/reference/machine/#machine-base) for `keystone` and `mysql-router` applications.
+
+This is necessary due to the [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate) charm nature of `mysql-router`.
+```
 
 ### `mysql-shared` interface (`shared-db` endpoint)
 

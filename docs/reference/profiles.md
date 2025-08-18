@@ -1,39 +1,41 @@
 # Profiles
 
-> **Warning:** The feature is currently available in the channel `8.0/candidate` only (revision 186+) and will be released to the channel `8.0/stable` soon.
-
-Charmed MySQL resource utilization depends on the chosen profile:
+Charmed MySQL's usage of resources depends on the chosen profile:
 
 ```shell
-juju deploy mysql --config profile=testing
+juju deploy mysql --config profile=<profile>
 ```
 
 ## Profile values
 
-|Value|Description|Tech details|
+| Value | Description | Details |
 | --- | --- | ----- |
 |`production`<br>(default)|[Maximum performance]| ~75% of [unit] memory granted for MySQL<br/>`max_connections`= [RAM / 12MiB] (max safe value)|
 |`testing`|[Minimal resource usage]| `innodb_buffer_pool_size` = 20MB<br/> `innodb_buffer_pool_chunk_size`=1MB<br/> `group_replication_message_cache_size`=128MB<br/>`max_connections`=100<br/> `performance-schema-instrument`='memory/%=OFF' |
 
-## Config change
+You can also see all MySQL charm configuration options on [Charmhub](https://charmhub.io/mysql/configure#profile).
 
-> **Note**: Pre-deployed application profile change is [planned](https://warthogs.atlassian.net/browse/DPE-2404) but currently is NOT supported.
+## Change profile
 
-To change the profile, use `juju config` ([see all charm configs](https://charmhub.io/mysql/configure#profile)):
+<!--TODO: check if done.
+**Note**: Pre-deployed application profile change is [planned](https://warthogs.atlassian.net/browse/DPE-2404) but currently is NOT supported. -->
+
+To change the profile, use the [`juju config` command](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/config/). For example:
+
 ```shell
 juju deploy mysql --config profile=testing && \
 juju config mysql profile=production
 ```
 
-## Juju Constraints
+## Juju constraints
 
-[Juju constraints](https://juju.is/docs/juju/constraint) allows RAM/CPU limits for [Juju units](https://juju.is/docs/juju/unit):
+[Juju constraints](https://juju.is/docs/juju/constraint) allows setting RAM/CPU limits for [units](https://juju.is/docs/juju/unit):
 
 ```shell
 juju deploy mysql --constraints cores=8 mem=16G
 ```
 
-Juju constraints can be used together with charm profile:
+Juju constraints can be set together with the charm profile:
 
 ```shell
 juju deploy mysql --constraints cores=8 mem=16G --config profile=testing

@@ -1,33 +1,31 @@
-
 # SoS report
 
 SoS is an extensible, portable, support data collection tool primarily aimed at Linux distributions and other UNIX-like operating systems.
 
-You can use the [built-in version of SoS](use-built-in-sos-recommended), or [retrieve the latest version from GitHub](use-the-latest-sos-plugins-from-git). 
+You can use the [built-in version of SoS](use-built-in-sos-recommended), or [retrieve the latest version from GitHub](use-the-latest-sos-plugins-from-git).
 
-```{caution}
-Always review the collected data before sharing it! 
+If the newly built-in SoS plugin for [charmed_mysql](https://github.com/sosreport/sos/blob/main/sos/report/plugins/charmed_mysql.py) is missing on your installation, consider updating the [`sosreport`](http://packages.ubuntu.com/sosreport) apt package to version 4.10+ or use the latest SoS plugins from Git (described below).
 
+```{warning}
 The generated archive may contain sensitive data. Its content should be reviewed by the originating organization before being passed to any third party.
 ```
 
 (use-built-in-sos-recommended)=
 ## Use built-in SoS (recommended)
 
-```{caution}
-The newly created SOS plugin [charmed_mysql](https://github.com/sosreport/sos/blob/main/sos/report/plugins/charmed_mysql.py) might still be missing on your installation, consider to update [sosreport](http://packages.ubuntu.com/sosreport) apt  package to version 4.10+ or use the latest sos plugins from Git (described below).
-```
-
-Charmed MySQL shipped with built-in [SoS](https://github.com/sosreport/sos) reporting tool. You can use it to collect logs on a specific unit or multiple units at once.
+Charmed MySQL ships with built-in [SoS](https://github.com/sosreport/sos) reporting tool. You can use it to collect logs on a specific unit or multiple units at once.
 
 ### Collect logs on one unit
 
 To generate the troubleshooting report archiving all logs simply call `sos report` inside the relevant Juju unit:
+
 ```shell
 juju ssh mysql/0
 > sudo sos report -o system,systemd,snap,charmed_mysql --low-priority
 ```
+
 As a result, the archive will all logs will be generated and can be shared with your support representative:
+
 ```shell
 ...
 Your sos report has been generated and saved in:
@@ -40,11 +38,13 @@ Your sos report has been generated and saved in:
 ```
 
 Use `juju scp` to copy logs from Juju unit to localhost:
+
 ```shell
 juju scp mysql/0:/tmp/sosreport-juju-d4c067-1-2025-04-07-chdmwlz.tar.xz .
 ```
 
-[details="Example output"]
+<details><summary>Example output</summary>
+
 ```shell
 juju ssh mysql/0
 
@@ -93,11 +93,11 @@ ubuntu@juju-d4c067-1:~$ exit
 
 juju scp mysql/0:/tmp/sosreport-juju-d4c067-1-2025-04-07-qntyqpz.tar.xz .
 ```
-[/details]
+</details>
 
 ### Collect logs from several units
 
-The sos tool allows you to collect logs from several Juju units (replace <UNIT_A/B/...> labels with proper Juju unit like `mysql/0`).
+The SoS tool allows you to collect logs from several Juju units (replace <UNIT_A/B/...> labels with proper Juju unit like `mysql/0`).
 
 Run the following command from outside the Juju units:
 ```shell
@@ -107,6 +107,7 @@ sos collect --cluster-type juju --no-local -c "juju.units=<UNIT_A>,<UNIT_B>,<...
 ## Use the latest SoS plugins from Git
 
 The latest version of [SoS plugins](https://github.com/sosreport/sos/tree/main/sos/report/plugins) can be retrieved from Git easily:
+
 ```shell
 git clone https://github.com/sosreport/sos.git
 cd sos
@@ -114,6 +115,7 @@ sudo ./bin/sos report -­a
 ```
 
 The output will be the same to the example above providing archive with all logs as above:
+
 ```shell
 Your sos report has been generated and saved in:
 	/tmp/sosreport-juju-d4c067-1-2025-04-07-egosqmi.tar.xz
