@@ -51,7 +51,7 @@ Always perform the migration in a test environment before performing it in produ
 
 - Client machine with access to deployed legacy charm
 - Juju 2.9 or later
-  - See the [Juju explanation](explanation/juju) for more details
+  - See the [Juju explanation](/explanation/juju) for more details
 - Enough storage in the cluster to support backup/restore of the databases
 - `mysql-client` on client machine (install by running `sudo apt install mysql-client`)
 
