@@ -54,7 +54,7 @@ class TestDBRouter(unittest.TestCase):
             self.db_router_relation_id, self.harness.charm.app
         )
         db_router_relation = self.charm.model.get_relation("db-router")
-        app_unit = list(db_router_relation.units)[0]
+        app_unit = next(iter(db_router_relation.units))
 
         self.assertEqual(db_router_relation_databag, {})
         self.assertEqual(db_router_relation.data.get(app_unit), {})
@@ -142,7 +142,7 @@ class TestDBRouter(unittest.TestCase):
             self.db_router_relation_id, self.harness.charm.app
         )
         db_router_relation = self.charm.model.get_relation("db-router")
-        app_unit = list(db_router_relation.units)[0]
+        app_unit = next(iter(db_router_relation.units))
 
         self.assertEqual(db_router_relation_databag, {})
         self.assertEqual(db_router_relation.data.get(app_unit), {})

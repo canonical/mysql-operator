@@ -310,7 +310,7 @@ class TestCharm(unittest.TestCase):
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_called()
-        _get_cluster_primary_address.assert_called_once()
+        _get_cluster_primary_address.assert_not_called()
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
         # test instance state = unreachable

@@ -65,7 +65,7 @@ async def test_scaling_without_data_loss(ops_test: OpsTest, highly_available_clu
     async with ops_test.fast_forward("60s"):
         await scale_application(ops_test, app, 4)
 
-    added_unit = [unit for unit in application.units if unit.name not in old_unit_names][0]
+    added_unit = next(unit for unit in application.units if unit.name not in old_unit_names)
 
     # Ensure that all units have the above inserted data
     select_data_sql = [

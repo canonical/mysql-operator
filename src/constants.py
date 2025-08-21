@@ -14,11 +14,15 @@ LEGACY_DB_ROUTER = "db-router"
 LEGACY_DB_SHARED = "shared-db"
 LEGACY_MYSQL = "mysql"
 DB_RELATION_NAME = "database"
-ROOT_PASSWORD_KEY = "root-password"
-SERVER_CONFIG_PASSWORD_KEY = "server-config-password"
-CLUSTER_ADMIN_PASSWORD_KEY = "cluster-admin-password"
-MONITORING_PASSWORD_KEY = "monitoring-password"
-BACKUPS_PASSWORD_KEY = "backups-password"
+
+
+# Labels are not confidential
+ROOT_PASSWORD_KEY = "root-password"  # noqa: S105
+SERVER_CONFIG_PASSWORD_KEY = "server-config-password"  # noqa: S105
+CLUSTER_ADMIN_PASSWORD_KEY = "cluster-admin-password"  # noqa: S105
+MONITORING_PASSWORD_KEY = "monitoring-password"  # noqa: S105
+BACKUPS_PASSWORD_KEY = "backups-password"  # noqa: S105
+
 TLS_RELATION = "certificates"
 TLS_SSL_CA_FILE = "custom-ca.pem"
 TLS_SSL_KEY_FILE = "custom-server-key.pem"

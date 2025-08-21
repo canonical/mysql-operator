@@ -15,7 +15,6 @@ import random
 import socket
 import subprocess
 from time import sleep
-from typing import Optional
 
 import ops
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
@@ -379,7 +378,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.join_unit_to_cluster()
             for port in ["3306", "33060"]:
                 try:
-                    subprocess.check_call(["open-port", f"{port}/tcp"])
+                    # TODO use set_ports instead
+                    subprocess.check_call(["open-port", f"{port}/tcp"])  # noqa: S603 S607
                 except subprocess.CalledProcessError:
                     logger.exception(f"failed to open port {port}")
 
@@ -400,7 +400,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if not self._mysql.is_instance_in_cluster(self.unit_label):
             return
 
-        def _get_leader_unit() -> Optional[Unit]:
+        def _get_leader_unit() -> Unit | None:
             """Get the leader unit."""
             for unit in self.peers.units:
                 if self.peers.data[unit]["leader"] == "true":
@@ -430,7 +430,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # Inform other hooks of current status
         self.unit_peer_data["unit-status"] = "removing"
 
-    def _handle_non_online_instance_status(self, state) -> bool:  # noqa: C901
+    def _handle_non_online_instance_status(self, state) -> bool:
         """Helper method to handle non-online instance statuses.
 
         Invoked from the update status event handler.
@@ -507,9 +507,19 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             logger.warning("Instance does not have ONLINE peers. Cannot perform manual rejoin")
             return
 
+        # add random delay to mitigate collisions when multiple units are rejoining
+        # due the difference between the time we test for locks and acquire them
+        # Not used for cryptographic purpose
+        sleep(random.uniform(0, 1.5))  # noqa: S311
+
+        if self._mysql.are_locks_acquired(from_instance=cluster_primary):
+            logger.info("waiting: cluster lock is held")
+            return
         try:
             self._mysql.rejoin_instance_to_cluster(
-                unit_label=self.unit_label, from_instance=cluster_primary
+                unit_address=self.unit_fqdn,
+                unit_label=self.unit_label,
+                from_instance=cluster_primary,
             )
             return
         except MySQLRejoinInstanceToClusterError:
@@ -585,15 +595,15 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if not self._handle_non_online_instance_status(state):
             return
 
-        if self.unit.is_leader():
+        if self.unit.is_leader() and state == "online":
             try:
                 primary_address = self._mysql.get_cluster_primary_address()
             except MySQLGetClusterPrimaryAddressError:
-                self.unit.status = MaintenanceStatus("Unable to query cluster primary")
-                return
+                primary_address = None
 
             if not primary_address:
-                self.unit.status = MaintenanceStatus("Unable to find cluster primary")
+                logger.error("Cluster has no primary. Check cluster status on online units.")
+                self.app.status = MaintenanceStatus("Cluster has no primary.")
                 return
 
             if "s3-block-message" in self.app_peer_data:
@@ -630,7 +640,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
     # =======================
 
     @property
-    def tracing_endpoint(self) -> Optional[str]:
+    def tracing_endpoint(self) -> str | None:
         """Otlp http endpoint for charm instrumentation."""
         return self.tracing_endpoint_config
 
@@ -665,7 +675,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         return socket.getfqdn()
 
     @property
-    def restart_peers(self) -> Optional[ops.Relation]:
+    def restart_peers(self) -> ops.Relation | None:
         """Retrieve the peer relation."""
         return self.model.get_relation("restart")
 
@@ -673,7 +683,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in blocked state and should not run any operations."""
         return self.unit_peer_data.get("member-state") == "waiting"
 
-    def get_unit_hostname(self, unit_name: Optional[str] = None) -> str:
+    def get_unit_hostname(self, unit_name: str | None = None) -> str:
         """Get the hostname of the unit."""
         if unit_name:
             unit = self.model.get_unit(unit_name)
@@ -876,7 +886,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             and self.cluster_initialized
         )
 
-    def _get_primary_from_online_peer(self) -> Optional[str]:
+    def _get_primary_from_online_peer(self) -> str | None:
         """Get the primary address from an online peer."""
         for unit in self.peers.units:
             if self.peers.data[unit].get("member-state") == "online":
@@ -927,7 +937,8 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
                 # add random delay to mitigate collisions when multiple units are joining
                 # due the difference between the time we test for locks and acquire them
-                sleep(random.uniform(0, 1.5))
+                # Not used for cryptographic purpose
+                sleep(random.uniform(0, 1.5))  # noqa: S311
 
                 if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):
                     self.unit.status = WaitingStatus("waiting to join the cluster.")
