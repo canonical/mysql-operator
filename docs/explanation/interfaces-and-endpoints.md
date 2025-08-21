@@ -46,7 +46,7 @@ In order to integrate with this charm, every table created by the integrated app
 
 Check the legacy interface implementation limitations in [](/explanation/legacy-charm).
 
-This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model).
+This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `mysql-router`. They were used in some legacy charms in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model-relation).
 
 ### `mysql` interface (`mysql` endpoint)
 
@@ -74,7 +74,7 @@ juju integrate mysql:db-router mysql-router:db-router
 ```{note}
 Make sure to deploy identical [series/base](https://documentation.ubuntu.com/juju/3.6/reference/machine/#machine-base) for `keystone` and `mysql-router` applications.
 
-This is necessary due to the [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate) charm nature of `mysql-router`.
+This is necessary due to the [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate-charm) charm nature of `mysql-router`.
 ```
 
 ### `mysql-shared` interface (`shared-db` endpoint)
