@@ -50,7 +50,7 @@ This charm supports several legacy interfaces, e.g. `mysql`, `mysql-shared`, `my
 
 ### `mysql` interface (`mysql` endpoint)
 
-It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model):
+It was a popular interface used by some legacy charms (e.g. "[MariaDB](https://charmhub.io/mariadb)", "[OSM MariaDB](https://charmhub.io/charmed-osm-mariadb-k8s)", "[Percona Cluster](https://charmhub.io/percona-cluster)" and "[Mysql Innodb Cluster](https://charmhub.io/mysql-innodb-cluster)"), often in [cross-model relations](https://documentation.ubuntu.com/juju/3.6/reference/relation/#cross-model-relation):
 
 ```shell
 juju deploy mysql --channel 8.0
