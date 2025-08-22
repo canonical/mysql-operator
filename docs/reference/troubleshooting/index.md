@@ -11,21 +11,25 @@ Ensure you went into the real issue, which requires manual activity. Run `juju s
 Please be familiar with [Juju logs concepts](https://juju.is/docs/juju/log) and learn [how to manage Juju logs](https://juju.is/docs/juju/manage-logs).
 
 Always check the Juju logs before troubleshooting further:
+
 ```shell
 juju debug-log --replay --tail
 ```
 
 Focus on `ERRORS` (normally there should be none):
+
 ```shell
 juju debug-log --replay | grep -c ERROR
 ```
 
 Consider to enable `DEBUG` log level IF you are troubleshooting wired charm behavior:
+
 ```shell
 juju model-config 'logging-config=<root>=INFO;unit=DEBUG'
 ```
 
 The MySQL logs are located inside SNAP:
+
 ```shell
 > ls -la /var/snap/charmed-mysql/common/var/log/*
 
@@ -44,18 +48,21 @@ The MySQL logs are located inside SNAP:
 Check the operator [architecture](/explanation/architecture) first to be familiar with SNAP content, operator building blocks and running Juju units.
 
 To enter the unit, use:
+
 ```shell
 juju ssh mysql/0 bash
 ```
 
 Make sure the SNAP `charmed-mysql` if installed and functional:
+
 ```shell
 ubuntu@juju-6692b6-0:~$ sudo snap list charmed-mysql
 Name           Version  Rev  Tracking       Publisher        Notes
 charmed-mysql  8.0.34   69   latest/stable  dataplatformbot  held
 ```
 
-From here you can make sure all snap (systemd) services are running: 
+From here you can make sure all snap (systemd) services are running:
+
 ```shell
 ubuntu@juju-6692b6-0# sudo snap services
 Service                            Startup   Current   Notes
@@ -107,6 +114,7 @@ ubuntu@juju-6692b6-0:~$
 The list of running SNAP/Systemd services will depends on configured (enabled) [COS integration](/how-to/monitoring-cos/enable-monitoring) and/or [Backup](/how-to/back-up-and-restore/create-a-backup) functionality. The SNAP service `charmed-mysql.mysqld` must always be active and currently running (the Linux processes `snapd`, `mysqld_safe` and `mysqld`).
 
 To connect inside the MySQL, check the [charm users concept](/explanation/users) and request `root` credentials to use `mysql`:
+
 ```shell
 > juju run mysql/leader get-password username=root
 password: I6ToMBOJKEPKwQG5wwUpuCcg
@@ -126,6 +134,7 @@ username: root
 > +-------------------------------+
 > ...
 ```
+
 Continue troubleshooting your DB/SQL related issues from here.
 
 ```{warning}
@@ -137,13 +146,14 @@ It is NOT recommended to restart services directly as it might create a split br
 As a last resort, [contact us](/reference/contacts) If you cannot determinate the source of your issue.
 Also, feel free to improve this document!
 
-## Installing extra software:
+## Installing extra software
 
 ```{warning}
 Please do NOT install any additionally software as it may affect the stability and produce anomalies which is hard to troubleshoot and fix! Otherwise always remove manually installed components at the end of troubleshooting. Keep the house clean!
 ```
 
 Sometimes it is necessary to install some extra troubleshooting software. Use the common approach:
+
 ```shell
 ubuntu@juju-6692b6-0:~$ sudo apt update && sudo apt install gdb
 ...
@@ -151,10 +161,10 @@ Setting up gdb (12.1-0ubuntu1~22.04) ...
 ubuntu@juju-6692b6-0:~$
 ```
 
-
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
 
 SoS report <sos-report>
+Recovering from quorum loss <recover-from-quorum-loss>
 ```

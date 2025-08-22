@@ -1,6 +1,6 @@
 # Recovering from quorum loss
 
-Quorum loss in MySQL here the majority of nodes (the quorum) required to make decisions and
+Quorum loss in MySQL happens when the majority of nodes (the quorum) required to make decisions and
 maintain consistency is no longer available. This can happen due to network issues, node failures,
 or other disruptions. When this occurs, the cluster may become unavailable or enter a read-only
 state.
@@ -22,18 +22,20 @@ Model   Controller  Cloud/Region             Version  SLA          Timestamp
 mymodel localhost   default                  3.6.8    unsupported  17:52:19Z
 
 App    Version                  Status   Scale  Charm      Channel           Rev  Address        Exposed  Message
-mysql  8.0.42-0ubuntu0.22.04.2  waiting      3  mysql-k8s  8.0/edge/dpe7704  279  10.152.183.61  no       waiting for units to settle down
+mysql  8.0.42-0ubuntu0.22.04.2  waiting      3  mysql-k8s  8.0/edge          279  10.152.183.61  no       waiting for units to settle down
 
 Unit      Workload     Agent  Address     Ports  Message
 mysql/0*  maintenance  idle   10.1.2.48          offline
 mysql/1   maintenance  idle   10.1.0.195         offline
 mysql/2   active       idle   10.1.1.81
 ```
+
 From an active unit, check the cluster status with:
 
 ```shell
 juju run mysql/2 get-cluster-status
 ```
+
 Which will output the current status of the cluster.
 
 ```
@@ -84,6 +86,7 @@ status:
   groupinformationsourcemember: mysql-2.mysql-endpoints.m3.svc.cluster.local.:3306
 success: "True"
 ```
+
 Note from the output, we can see that the cluster is in a no-quorum state, with `status:
 no_quorum`.
 
@@ -95,4 +98,4 @@ Using the available active unit, run the action:
 juju run mysql/2 promote-to-primary scope=unit force=true
 ```
 
-The unit will become the new primary. Other offline units will rejoin automatically.
+The unit will become the new primary. Other offline units, if reachable, will rejoin automatically on the follow up `update-status` events.
