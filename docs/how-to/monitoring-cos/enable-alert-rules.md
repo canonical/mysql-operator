@@ -57,7 +57,7 @@ receivers:
   pushover_configs:
     - user_key: <replace_with_your_user_key>
       token: <replace_with_your_token>
-      url: http://<relace_with_grafana_public_ip>/cos-grafana/alerting/list
+      url: http://<replace_with_grafana_public_ip>/cos-grafana/alerting/list
       title: "{{ range .Alerts }}{{ .Labels.severity }} - {{ if .Labels.juju_unit }}{{ .Labels.juju_unit }}{{ else }}{{ .Labels.juju_application }}{{ end }} in model {{ .Labels.juju_model }}: {{ .Labels.alertname }} {{ end }}"
       message: "{{ range .Alerts }} Job: {{ .Labels.job }} Instance: {{ .Labels.instance }} {{ end }}"
 templates: []
