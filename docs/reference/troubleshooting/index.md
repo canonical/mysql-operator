@@ -1,14 +1,20 @@
 # Troubleshooting
 
 ```{warning}
-At the moment, there is NO ability to [pause operator](https://warthogs.atlassian.net/browse/DPE-2545)!<br/>Make sure your activity will not interfere with the operator itself!
+At the moment, there is NO ability to [pause the operator](https://warthogs.atlassian.net/browse/DPE-2545).
+
+Make sure your troubleshooting activity will not interfere with the operator itself!
 ```
 
-Ensure you went into the real issue, which requires manual activity. Run `juju status` and check the [list of charm statuses](/reference/charm-statuses) and recommended activities there.
+This page goes over general troubleshooting concepts, like Juju statuses, logs and running services. 
 
-## Logs
+## Check status
 
-Please be familiar with [Juju logs concepts](https://juju.is/docs/juju/log) and learn [how to manage Juju logs](https://juju.is/docs/juju/manage-logs).
+The first troubleshooting step is to run `juju status` and check the statuses and messages of all applications and units. 
+
+See [](/reference/charm-statuses) for additional recommendations based on status.
+
+## Check logs
 
 Always check the Juju logs before troubleshooting further:
 
@@ -22,13 +28,15 @@ Focus on `ERRORS` (normally there should be none):
 juju debug-log --replay | grep -c ERROR
 ```
 
-Consider to enable `DEBUG` log level IF you are troubleshooting wired charm behavior:
+Consider to enable `DEBUG` log level IF you are troubleshooting unexpected charm behavior:
+
 
 ```shell
 juju model-config 'logging-config=<root>=INFO;unit=DEBUG'
 ```
 
-The MySQL logs are located inside SNAP:
+MySQL logs are located inside the snap:
+
 
 ```shell
 > ls -la /var/snap/charmed-mysql/common/var/log/*
@@ -43,17 +51,19 @@ The MySQL logs are located inside SNAP:
 # The MySQL Router should be stopped on Charmed MySQL deployments and produce no logs.
 ```
 
-## SNAP-based Charm
+See [Juju logs documentation](https://juju.is/docs/juju/log) to learn more about logging.
 
-Check the operator [architecture](/explanation/architecture) first to be familiar with SNAP content, operator building blocks and running Juju units.
+## Check snap services
 
-To enter the unit, use:
+Check the operator [architecture](/explanation/architecture) first to be familiar with the content of the snap, operator building blocks, and Juju units.
+
+To enter a unit, use:
 
 ```shell
 juju ssh mysql/0 bash
 ```
 
-Make sure the SNAP `charmed-mysql` if installed and functional:
+Make sure the snap `charmed-mysql` if installed and functional:
 
 ```shell
 ubuntu@juju-6692b6-0:~$ sudo snap list charmed-mysql
@@ -61,7 +71,12 @@ Name           Version  Rev  Tracking       Publisher        Notes
 charmed-mysql  8.0.34   69   latest/stable  dataplatformbot  held
 ```
 
-From here you can make sure all snap (systemd) services are running:
+From here you can make sure all snap (systemd) services are running.
+
+Sample outputs:
+
+<details><summary><code>sudo snap services</code></summary>
+
 
 ```shell
 ubuntu@juju-6692b6-0# sudo snap services
@@ -69,11 +84,20 @@ Service                            Startup   Current   Notes
 charmed-mysql.mysqld               enabled   active    -
 charmed-mysql.mysqld-exporter      disabled  inactive  -
 charmed-mysql.mysqlrouter-service  disabled  inactive  -
+```
+</details>
 
+<details><summary><code>systemctl --failed</code></summary>
+```shell
 ubuntu@juju-6692b6-0:~$ systemctl --failed
 ...
 0 loaded units listed.
+```
+</details>
 
+<details><summary><code>ps auxww</code></summary>
+
+```shell
 ubuntu@juju-6692b6-0:~$ ps auxww
 USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 root           1  0.0  0.0 167432 12588 ?        Ss   22:04   0:02 /lib/systemd/systemd --system --deserialize 26
@@ -110,10 +134,15 @@ ubuntu      6178  0.0  0.0   9060  5204 pts/1    Ss   22:07   0:00 bash
 ubuntu      6244  0.0  0.0  10460  3312 pts/1    R+   22:08   0:00 ps auxww
 ubuntu@juju-6692b6-0:~$ 
 ```
+</details>
 
-The list of running SNAP/Systemd services will depends on configured (enabled) [COS integration](/how-to/monitoring-cos/enable-monitoring) and/or [Backup](/how-to/back-up-and-restore/create-a-backup) functionality. The SNAP service `charmed-mysql.mysqld` must always be active and currently running (the Linux processes `snapd`, `mysqld_safe` and `mysqld`).
+The list of running snap/systemd services will depend on whether the charm is integrated with [COS](/how-to/monitoring-cos/enable-monitoring) and/or has [backup](/how-to/back-up-and-restore/create-a-backup) functionality. 
 
-To connect inside the MySQL, check the [charm users concept](/explanation/users) and request `root` credentials to use `mysql`:
+The snap service `charmed-mysql.mysqld` must always be active and currently running (the Linux processes `snapd`, `mysqld_safe` and `mysqld`).
+
+## Access MySQL
+
+To access MySQL, request `root` credentials to use `mysql`:
 
 ```shell
 > juju run mysql/leader get-password username=root
@@ -135,24 +164,29 @@ username: root
 > ...
 ```
 
-Continue troubleshooting your DB/SQL related issues from here.
+Learn more about charm users in [](/explanation/users).
 
-```{warning}
-Please do NOT manage users, credentials, databases, schema directly to avoid a split bran situation with the operator and/or related (integrated) applications.
+Continue troubleshooting your database/SQL related issues from here.
+
+```{admonition} Recommendations to avoid split-brain scenarios
+:class: warning
+
+* Do NOT manage users, credentials, databases, or schema directly. 
+  * This prevents a split-brain situation with the operator or related (integrated) applications.
+* Do NOT restart services directly
+  * This prevents a split-brain situation with the operator's internal state.
+  * If you see a problem with a unit, consider [removing that unit and adding a new one](scale-replicas) to recover the cluster state.
 ```
 
-It is NOT recommended to restart services directly as it might create a split brain situation with operator internal state. If you see the problem with a unit, consider to [remove failing unit and add-new-unit](scale-replicas) to recover the cluster state.
-
-As a last resort, [contact us](/reference/contacts) If you cannot determinate the source of your issue.
-Also, feel free to improve this document!
+[Contact us](/reference/contacts) if you cannot determinate the source of your issue, or if you'd like to help us improve this document.
 
 ## Installing extra software
 
-```{warning}
-Please do NOT install any additionally software as it may affect the stability and produce anomalies which is hard to troubleshoot and fix! Otherwise always remove manually installed components at the end of troubleshooting. Keep the house clean!
-```
+**We do not recommend installing any additionally software** as it may affect the stability and produce anomalies which is hard to troubleshoot and fix.
 
-Sometimes it is necessary to install some extra troubleshooting software. Use the common approach:
+However, if you do so, always remove installed components manually at the end of troubleshooting.
+
+To install additional software, use the standard approach:
 
 ```shell
 ubuntu@juju-6692b6-0:~$ sudo apt update && sudo apt install gdb

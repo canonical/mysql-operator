@@ -1,74 +1,78 @@
 # Migrate database data via `mysqldump`
 
-This document describes database **data** migration only!
+This guide describes how to copy data:
+* from a legacy MySQL charm to a modern MySQL charm
+* from a modern MySQL charm to a different installation of the same modern MySQL charm. 
 
-> For information about integrating charms via juju interfaces, see [How to integrate a database with my charm](/how-to/development/integrate-with-your-charm).
+Note that this guide describes how to migrate database **data** only.
+
+For information about integrating your charm with a MySQL database, see [How to integrate a database with my charm](/how-to/development/integrate-with-your-charm).
+
+```{seealso}
+[How to migrate data via `mydumper`](/how-to/development/migrate-data-via-mydumper)
+
+[How to migrate data via backup/restore](/how-to/development/migrate-data-via-backup-restore) (recommended for migrations between modern charms)
+```
 
 ## Do you need to migrate?
 
-A database migration is only required if the output of the following command is NOT `mysql`:
-
-```shell
-# replace DB_CHARM with your legacy DB application name
-DB_CHARM= < mariadb | percona-cluster | mysql-innodb-cluster >
-
-juju show-application ${DB_CHARM} | yq '.[] | .charm'
-```
-
-```{caution}
-No migration is necessary if the output above is `mysql`! 
-
-Still, this manual can be used to copy data between different installations of the same (modern) charm `mysql`. The [backup/restore method](/how-to/back-up-and-restore/migrate-a-cluster) is recommended for migrations between modern charms.
-```
-
-## Summary
-
-The list of MariaDB/MySQL **legacy VM charms**:
+Legacy MariaDB/MySQL charms for **machines**:
 
 * [MariaDB](https://charmhub.io/mariadb)
 * [Percona Cluster](https://charmhub.io/percona-cluster)
 * [MySQL InnoDB Cluster](https://charmhub.io/mysql-innodb-cluster)
-* <s>[OSM MariaDB K8s](https://charmhub.io/charmed-osm-mariadb-k8s)</s> (K8s flavour, use [separate manual](https://charmhub.io/mysql-k8s/docs/h-migrate-mysqldump))
 
-There is a minor difference in commands for each of the legacy charms, but the general logic is common:
+Legacy MariaDB/MySQL charms for **Kubernetes**:
 
-* Deploy the modern charm nearby
-* Request credentials from legacy charm
-* Remove relation to legacy charm (to stop data changes)
-* Perform legacy DB dump (using the credentials above)
-* Upload the legacy charm dump into the modern charm
-* Add relation to modern charm
-* Validate results and remove legacy charm
+* [OSM MariaDB K8s](https://charmhub.io/charmed-osm-mariadb-k8s)
 
-Before the data migration check all [limitations of the modern Charmed MySQL](/reference/system-requirements) charm!<br/>Please check [your application compatibility](/explanation/legacy-charm) with Charmed MySQL before migrating production data from legacy charm!
+See the [`mysqldump` guide for Charmed MySQL K8s](https://canonical-charmed-mysql-k8s.readthedocs-hosted.com/how-to/development/migrate-data-via-mysqldump/)
 
-```{warning}
+To check if a database migration is required, run the following commands, where `DB_CHARM` is the name of your legacy database application:
+
+```shell
+DB_CHARM= < mariadb | percona-cluster | mysql-innodb-cluster >
+juju show-application ${DB_CHARM} | yq '.[] | .charm'
+```
+
+No migration is necessary if the output above is `mysql`.
+
+## Prepare
+
+Before migrating data:
+* check all [limitations of the modern Charmed MySQL](/reference/system-requirements) charm
+* check [your application's compatibility](/explanation/legacy-charm) with Charmed MySQL
+
+```{caution}
 Always perform the migration in a test environment before performing it in production!
 ```
 
 ## Prerequisites
 
 - Client machine with access to deployed legacy charm
-- Juju version 2.9 or later (check the [Juju tech details](/explanation/juju) for the different Juju versions)
-- Enough storage in the cluster to support backup/restore of the databases.
-- `mysql-client` on client machine (install by running `sudo apt install mysql-client`).
+- Juju 2.9 or later
+  - See the [Juju explanation](/explanation/juju) for more details
+- Enough storage in the cluster to support backup/restore of the databases
+- `mysql-client` on client machine (install by running `sudo apt install mysql-client`)
 
 ```{caution}
-Most legacy database charms support old Ubuntu series only, while Juju 3.x does [NOT support](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022) Ubuntu Bionic.
+Most legacy database charms support old Ubuntu series only, while [Juju 3.x does NOT support Ubuntu Bionic](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022).
 
 It is recommended to use the latest stable revision of the charm on Ubuntu Jammy and Juju 3.x
 ```
 
+(mysqldump-obtain-legacy-credentials)=
 ## Obtain existing database credentials
 
-To obtain credentials for existing databases execute the following commands [u]for each database to be migrated[/u]. Use those credentials in migration steps.
+Set `DB_APP` to the name of the desired unit: 
 
 ```shell
-# replace DB_APP with desired unit name
 DB_APP= < mariadb/0 | percona-cluster/leader | mysql-innodb-cluster/1 >
+```
 
-# obtain username and password of existing legacy database from DB relation
-# username is usually `root` and password is specified in `mysql` relation by 'root_password'
+Get username and password of the existing legacy database from the database relation. The username is usually `root`, and the password is specified in the `mysql` relation by `root_password`:
+
+```shell
 OLD_DB_RELATION_ID=$(juju show-unit ${DB_APP} | yq '.[] | .relation-info | select(.[].endpoint == "mysql") | .[0] | .relation-id')
 
 OLD_DB_USER=root
@@ -80,13 +84,15 @@ OLD_DB_IP=$(juju show-unit ${DB_APP} | yq '.[] | .address')
 
 ## Deploy new MySQL databases and obtain credentials
 
-Deploy new MySQL databases and obtain credentials for each new database by executing the following commands, once per database:
+Deploy new MySQL databases. In this example, 3 units are deployed:
 
 ```shell
-# deploy new MySQL database charm
 juju deploy mysql --channel 8.0/stable -n 3
+```
 
-# obtain username and password of new MySQL database from MySQL charm
+Obtain credentials for each new database by executing the following commands, once per database:
+
+```shell
 NEW_DB_USER=$(juju run mysql/leader get-password | yq '.username')
 NEW_DB_PASS=$(juju run mysql/leader get-password | yq '.password')
 NEW_DB_IP=$(juju show-unit mysql/0 | yq '.[] | .address')
@@ -94,59 +100,75 @@ NEW_DB_IP=$(juju show-unit mysql/0 | yq '.[] | .address')
 
 ## Migrate database
 
-Use the credentials and information obtained in previous steps to perform the database migration by executing the following commands:
+The next step is to use the credentials and information obtained in previous steps to perform the database migration.
+
+First, ensure that there are no new connections are made and that database is not altered.
+
+Remove the relation between your charm and the legacy MySQL charm:
 
 ```shell
-
-# ensure that there are no new connections are made and that database is not altered
-# remove relation between your_application charm and legacy charm
 juju remove-relation <your_application> <mariadb | percona-cluster | mysql-innodb-cluster>
+```
 
-# connect to the legacy database to verify connection
+Connect to the legacy database to verify the connection:
+
+```shell
 mysql \
---host=${OLD_DB_IP} \
---user=${OLD_DB_USER} \
---password=${OLD_DB_PASS} \
--e "show databases"
+  --host=${OLD_DB_IP} \
+  --user=${OLD_DB_USER} \
+  --password=${OLD_DB_PASS} \
+  -e "show databases"
+```
 
-# choose which databases to dump/migrate to the new charm (one by one!)
+Choose which databases to dump/migrate to the new charm (one by one!)
+
+```shell
 DB_NAME=< e.g. wordpress >
+```
 
-# create backup of each database file using `mysqldump` utility, username, password, and unit's IP address, obtained earlier
-# The dump will be created that can be used to restore database
+Create a backup of each database file using the `mysqldump` utility, username, password, and unit's IP address, obtained earlier. This will create a dump that can be used to restore the database.
+
+```shell
 OLD_DB_DUMP="legacy-mysql-${DB_NAME}.sql"
-mysqldump \
---host=${OLD_DB_IP} \
---user=${OLD_DB_USER} \
---password=${OLD_DB_PASS} \
---column-statistics=0 \
---databases ${OLD_DB_NAME} \
-> "${OLD_DB_DUMP}"
 
-# connect to new DB using username, password, and unit's IP address and restore database from backup
+mysqldump \
+  --host=${OLD_DB_IP} \
+  --user=${OLD_DB_USER} \
+  --password=${OLD_DB_PASS} \
+  --column-statistics=0 \
+  --databases ${OLD_DB_NAME} \
+  > "${OLD_DB_DUMP}"
+```
+
+Connect to the new database using username, password, and unit's IP address, and restore database from backup:
+
+```shell
 mysql \
---host=${NEW_DB_IP} \
---user=${NEW_DB_USER} \
---password=${NEW_DB_PASS} \
-< "${OLD_DB_DUMP}"
+  --host=${NEW_DB_IP} \
+  --user=${NEW_DB_USER} \
+  --password=${NEW_DB_PASS} \
+  < "${OLD_DB_DUMP}"
 ```
 
 ## Integrate with modern charm
 
-```shell
-# integrate your application and new MySQL database charm (using database or mysql endpoint)
-juju integrate <your_application> mysql:database
+Integrate your application and new MySQL database charm (using the `database` or `mysql` endpoint):
 
-# if database endpoint (mysql_client interface) is not yet supported, use legacy mysql interface:
+```shell
+juju integrate <your_application> mysql:database
+```
+
+If the `mysql_client` interface is not yet supported, use the legacy mysql interface:
+
+```shell
 juju integrate <your_application> mysql:mysql
 ```
 
 ## Verify database migration
 
-Note: some variables will vary for legacy and modern charms, namely: `${NEW_DB_PASS}` and `${NEW_DB_IP}`. These must be adjusted for the correct database, accordingly.
+Create a dump for the new MySQL database and compare it to the backup created earlier:
 
 ```shell
-# compare new MySQL database and compare it to the backup created earlier
 NEW_DB_DUMP="new-mysql-${DB_NAME}.sql"
 mysqldump \
 --host=${NEW_DB_IP} \
@@ -159,7 +181,19 @@ mysqldump \
 diff "${OLD_DB_DUMP}" "${NEW_DB_DUMP}"
 ```
 
-The difference between two SQL backup files should be limited to server versions, IP addresses, timestamps and other non data related information. Example of difference:
+```{note}
+Some variables will vary between legacy and modern charms, namely: `${NEW_DB_PASS}` and `${NEW_DB_IP}`. These must be adjusted for the correct database, accordingly.
+```
+
+The difference between two SQL backup files should be limited to server versions, IP addresses, timestamps and other non data related information. 
+
+````{dropdown} Example
+
+```shell
+diff "${OLD_DB_DUMP}" "${NEW_DB_DUMP}"
+```
+
+Output:
 
 ```text
 < -- Host: 10.1.45.226 Database: katib
@@ -199,6 +233,7 @@ The difference between two SQL backup files should be limited to server versions
 ---
 > -- Dump completed on 2023-09-21 17:09:40
 ```
+````
 
 ## Remove old databases
 
@@ -207,8 +242,4 @@ Test your application and if you are happy with a data migration, do not forget 
 ```shell
 juju remove-application --destroy-storage < mariadb | percona-cluster | mysql-innodb-cluster >
 ```
-
-## Links
-
-Database data migration is also possible using [`mydumper`](/how-to/development/migrate-data-via-mydumper).
 

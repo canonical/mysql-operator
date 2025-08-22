@@ -1,18 +1,23 @@
-# Charm testing reference
+# Charm testing
 
-There are [a lot of test types](https://en.wikipedia.org/wiki/Software_testing) available and most of them are well applicable for Charmed MySQL. Here is a list prepared by Canonical:
+<!--TODO: migrate this to github dev docs-->
 
-* Smoke test
-* Unit tests
-* Integration tests
-* System test
-* Performance test
+This reference describes the different [software test types](https://en.wikipedia.org/wiki/Software_testing) that are applicable to Charmed MySQL. It is intended for charm developers and contributors.
 
 ## Smoke test
 
-Complexity: trivial
-Speed: fast
-Goal: ensure basic functionality works over short amount of time.
+```{eval-rst}
+.. list-table::
+   :header-rows: 0
+
+   * - **Complexity**
+     - trivial
+   * - **Speed**
+     - fast
+   * - **Goal**
+     - ensure basic functionality works over short amount of time
+```
+
 
 Create a Juju model for testing, deploy a database with a test application and start the "continuous write" test:
 
@@ -62,5 +67,6 @@ Please check the "[Contributing](https://github.com/canonical/mysql-operator/blo
 Please check/deploy the charm [mysql-bundle](https://charmhub.io/mysql-bundle) ([Git](https://github.com/canonical/mysql-bundle)). It deploy and test all the necessary parts at once.
 
 ## Performance test
+
 Refer to the [sysbench documentation](https://discourse.charmhub.io/t/charmed-sysbench-documentation-home/13945).
 
