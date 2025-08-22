@@ -74,8 +74,8 @@ async def test_exporter_endpoints(ops_test: OpsTest, highly_available_cluster) -
                         "charmed-mysql.mysqld-exporter",
                     )
                     assert output.split("\n")[1].split()[2] == "active"
-        except RetryError:
-            raise Exception("Failed to start the mysqld-exporter snap service")
+        except RetryError as e:
+            raise Exception("Failed to start the mysqld-exporter snap service") from e
 
         time.sleep(30)
 

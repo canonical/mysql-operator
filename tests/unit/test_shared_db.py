@@ -45,7 +45,7 @@ class TestSharedDBRelation(unittest.TestCase):
             self.shared_db_relation_id, self.harness.charm.app
         )
         shared_db_relation = self.charm.model.get_relation(LEGACY_DB_SHARED)
-        app_unit = list(shared_db_relation.units)[0]
+        app_unit = next(iter(shared_db_relation.units))
 
         self.assertEqual(shared_db_relation_databag, {})
         self.assertEqual(shared_db_relation.data.get(app_unit), {})

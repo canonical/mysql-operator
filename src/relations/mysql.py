@@ -135,18 +135,19 @@ class MySQLRelation(Object):
         ):
             return
 
-        if isinstance(self.charm.unit.status, ActiveStatus) and self.model.relations.get(
-            LEGACY_MYSQL
-        ):
-            if (
+        if (
+            isinstance(self.charm.unit.status, ActiveStatus)
+            and self.model.relations.get(LEGACY_MYSQL)
+            and (
                 self.charm.config.mysql_interface_database
                 != self.charm.app_peer_data[MYSQL_RELATION_DATABASE_KEY]
                 or self.charm.config.mysql_interface_user
                 != self.charm.app_peer_data[MYSQL_RELATION_USER_KEY]
-            ):
-                self.charm.app.status = BlockedStatus(
-                    "Remove and re-relate `mysql` relations in order to change config"
-                )
+            )
+        ):
+            self.charm.app.status = BlockedStatus(
+                "Remove and re-relate `mysql` relations in order to change config"
+            )
 
     def _on_mysql_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handle the legacy `mysql` relation created event.

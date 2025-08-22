@@ -8,7 +8,6 @@ import subprocess
 from asyncio import gather
 from pathlib import Path
 from time import sleep
-from typing import Optional
 
 import pytest
 import yaml
@@ -34,7 +33,7 @@ MINUTE = 60
 
 
 @pytest.fixture(scope="module")
-def first_model(ops_test: OpsTest) -> Optional[Model]:
+def first_model(ops_test: OpsTest) -> Model | None:
     """Return the first model."""
     first_model = ops_test.model
     return first_model
@@ -231,9 +230,9 @@ async def test_standby_promotion(
     assert results[0] > 1, "No data was written to the database"
 
     cluster_set_status = await get_cluster_status(leader_unit, cluster_set=True)
-    assert (
-        cluster_set_status["clusters"]["cuzco"]["clusterrole"] == "primary"
-    ), "standby not promoted to primary"
+    assert cluster_set_status["clusters"]["cuzco"]["clusterrole"] == "primary", (
+        "standby not promoted to primary"
+    )
 
 
 @juju3
@@ -268,12 +267,12 @@ async def test_failover(ops_test: OpsTest, first_model: Model, second_model: Mod
 
     cluster_set_status = await get_cluster_status(leader_unit, cluster_set=True)
     logger.info("Checking clusters statuses")
-    assert (
-        cluster_set_status["clusters"]["lima"]["clusterrole"] == "primary"
-    ), "standby not promoted to primary"
-    assert (
-        cluster_set_status["clusters"]["cuzco"]["globalstatus"] == "invalidated"
-    ), "old primary not invalidated"
+    assert cluster_set_status["clusters"]["lima"]["clusterrole"] == "primary", (
+        "standby not promoted to primary"
+    )
+    assert cluster_set_status["clusters"]["cuzco"]["globalstatus"] == "invalidated", (
+        "old primary not invalidated"
+    )
 
 
 @juju3

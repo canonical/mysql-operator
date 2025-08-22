@@ -3,7 +3,6 @@
 
 import logging
 from pathlib import Path
-from typing import List, Optional
 
 import yaml
 from juju.unit import Unit
@@ -76,7 +75,7 @@ def get_application_name(ops_test: OpsTest, application_name_substring: str) -> 
 
 
 async def ensure_n_online_mysql_members(
-    ops_test: OpsTest, number_online_members: int, mysql_units: Optional[List[Unit]] = None
+    ops_test: OpsTest, number_online_members: int, mysql_units: list[Unit] | None = None
 ) -> bool:
     """Waits until N mysql cluster members are online.
 
@@ -177,6 +176,7 @@ async def deploy_and_scale_application(ops_test: OpsTest) -> str:
             num_units=1,
             channel="latest/edge",
             base="ubuntu@22.04",
+            config={"sleep_interval": "500"},
         )
 
         await ops_test.model.wait_for_idle(
@@ -241,8 +241,8 @@ async def insert_data_into_mysql_and_validate_replication(
     ops_test: OpsTest,
     database_name: str,
     table_name: str,
-    mysql_application_substring: Optional[str] = "mysql",
-    mysql_units: Optional[List[Unit]] = None,
+    mysql_application_substring: str | None = "mysql",
+    mysql_units: list[Unit] | None = None,
 ) -> str:
     """Inserts data into the mysql cluster and validates its replication.
 
@@ -332,7 +332,7 @@ async def clean_up_database_and_table(
 
 
 async def ensure_all_units_continuous_writes_incrementing(
-    ops_test: OpsTest, mysql_units: Optional[List[Unit]] = None
+    ops_test: OpsTest, mysql_units: list[Unit] | None = None
 ) -> None:
     """Ensure that continuous writes is incrementing on all units.
 
@@ -365,8 +365,8 @@ async def ensure_all_units_continuous_writes_incrementing(
                         ops_test, unit, server_config_credentials
                     )
                     logger.info(f"{max_written_value=} on unit {unit.name}")
-                    assert (
-                        max_written_value > last_max_written_value
-                    ), "Continuous writes not incrementing"
+                    assert max_written_value > last_max_written_value, (
+                        "Continuous writes not incrementing"
+                    )
 
                     last_max_written_value = max_written_value

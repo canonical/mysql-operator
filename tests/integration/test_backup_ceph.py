@@ -236,7 +236,7 @@ async def test_backup(ops_test: OpsTest, charm, cloud_configs, cloud_credentials
     output = results["backups"]
     new_backup_ids = [line.split("|")[0].strip() for line in output.split("\n")[2:]]
 
-    assert sorted(new_backup_ids) == sorted(backup_ids + [backup_id])
+    assert sorted(new_backup_ids) == sorted([*backup_ids, backup_id])
 
     # insert data into cluster after backup
     logger.info("Inserting value after backup")
@@ -329,7 +329,8 @@ async def test_restore_on_same_cluster(
     logger.info("Ensuring inserted values before backup and after restore exist on all units")
     for unit in ops_test.model.applications[mysql_application_name].units:
         await ops_test.model.block_until(
-            lambda: unit.workload_status == "active",
+            # Awaitied insed the loop
+            lambda: unit.workload_status == "active",  # noqa: B023
             timeout=TIMEOUT,
         )
 

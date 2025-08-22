@@ -56,7 +56,8 @@ def get_mysql_dependencies_model() -> MySQLVMDependenciesModel:
 def set_cron_daemon(action: str) -> None:
     """Start/stop the cron daemon."""
     logger.debug(f"{action}ing cron daemon")
-    subprocess.run(["systemctl", action, "cron"], check=True)
+    # Subprocess call is hardcoded in the charm
+    subprocess.run(["/usr/bin/systemctl", action, "cron"], check=True)  # noqa: S603
 
 
 class MySQLVMUpgrade(DataUpgrade):
@@ -134,18 +135,18 @@ class MySQLVMUpgrade(DataUpgrade):
 
         try:
             self._pre_upgrade_prepare()
-        except MySQLSetClusterPrimaryError:
+        except MySQLSetClusterPrimaryError as e:
             raise ClusterNotReadyError(
                 message=fail_message,
                 cause="Failed to set primary",
                 resolution="Check the cluster status",
-            )
-        except MySQLSetVariableError:
+            ) from e
+        except MySQLSetVariableError as e:
             raise ClusterNotReadyError(
                 message=fail_message,
                 cause="Failed to set slow shutdown",
                 resolution="Check the cluster status",
-            )
+            ) from e
 
     def _on_upgrade_charm_check_legacy(self, event) -> None:
         if not self.peer_relation or len(self.app_units) < len(self.charm.app_units):
@@ -323,7 +324,7 @@ class MySQLVMUpgrade(DataUpgrade):
                 message="Cannot upgrade MySQL server",
                 cause=e.message,
                 resolution="Check mysql-shell upgrade utility output for more details",
-            )
+            ) from e
 
     def _check_server_unsupported_downgrade(self) -> bool:
         """Check error log for unsupported downgrade.

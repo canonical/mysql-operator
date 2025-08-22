@@ -63,9 +63,9 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     }
 
     # verify that connection is possible
-    assert is_connection_possible(
-        config
-    ), f"❌ Connection to host {primary_unit_ip} is not possible"
+    assert is_connection_possible(config), (
+        f"❌ Connection to host {primary_unit_ip} is not possible"
+    )
 
     logger.info(f"Cutting network for {primary_hostname}")
     cut_network_from_unit(primary_hostname)
@@ -73,15 +73,15 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {primary_unit}:
         hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(
-            hostname, primary_hostname
-        ), "❌ unit is reachable from peer"
+        assert not is_machine_reachable_from(hostname, primary_hostname), (
+            "❌ unit is reachable from peer"
+        )
 
     # verify machine is not reachable from controller
     controller = await get_controller_machine(ops_test)
-    assert not is_machine_reachable_from(
-        controller, primary_hostname
-    ), "❌ unit is reachable from controller"
+    assert not is_machine_reachable_from(controller, primary_hostname), (
+        "❌ unit is reachable from controller"
+    )
 
     # verify that connection is not possible
     assert not is_connection_possible(config), "❌ Connection is possible after network cut"
@@ -107,9 +107,9 @@ async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuo
                 logger.debug(
                     f"Waiting until connection possible after network restore on {new_unit_ip}"
                 )
-                assert is_connection_possible(
-                    new_unit_config
-                ), "❌ Connection is not possible after network restore"
+                assert is_connection_possible(new_unit_config), (
+                    "❌ Connection is not possible after network restore"
+                )
 
         logger.info(f"Waiting for {primary_unit.name} to enter active")
         await ops_test.model.block_until(

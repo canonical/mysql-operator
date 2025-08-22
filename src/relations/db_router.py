@@ -7,7 +7,6 @@ import json
 import logging
 import typing
 from collections import namedtuple
-from typing import Dict, List, Set, Tuple
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
@@ -70,7 +69,7 @@ class DBRouterRelation(Object):
 
     def _get_requested_users_from_relation_databag(
         self, db_router_databag: RelationDataContent
-    ) -> List[RequestedUser]:
+    ) -> list[RequestedUser]:
         """Retrieve requested user information from the db-router relation databag.
 
         Args:
@@ -86,7 +85,7 @@ class DBRouterRelation(Object):
         application_names = {
             key.split("_")[0]
             for key in db_router_databag
-            if "_" in key and "username" == key.split("_")[1]
+            if "_" in key and key.split("_")[1] == "username"
         }
 
         for application_name in application_names:
@@ -109,8 +108,8 @@ class DBRouterRelation(Object):
         return requested_users
 
     def _create_requested_users(
-        self, requested_users: List[RequestedUser], user_unit_name: str
-    ) -> Tuple[Dict[str, str], Set[str]]:
+        self, requested_users: list[RequestedUser], user_unit_name: str
+    ) -> tuple[dict[str, str], set[str]]:
         """Create the requested users and said user scoped databases.
 
         Args:
