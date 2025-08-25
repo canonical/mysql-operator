@@ -30,11 +30,13 @@ juju debug-log --replay | grep -c ERROR
 
 Consider to enable `DEBUG` log level IF you are troubleshooting unexpected charm behavior:
 
+
 ```shell
 juju model-config 'logging-config=<root>=INFO;unit=DEBUG'
 ```
 
 MySQL logs are located inside the snap:
+
 
 ```shell
 > ls -la /var/snap/charmed-mysql/common/var/log/*
@@ -73,8 +75,8 @@ From here you can make sure all snap (systemd) services are running.
 
 Sample outputs:
 
-
 <details><summary><code>sudo snap services</code></summary>
+
 
 ```shell
 ubuntu@juju-6692b6-0# sudo snap services
@@ -198,4 +200,5 @@ ubuntu@juju-6692b6-0:~$
 :maxdepth: 2
 
 SoS report <sos-report>
+Recovering from quorum loss <recover-from-quorum-loss>
 ```
