@@ -1,0 +1,29 @@
+
+# Reference
+
+Technical specifications, APIs, release notes, and other reference material for fast lookup.
+
+```{toctree}
+:titlesonly:
+:maxdepth: 2
+
+Releases <releases>
+System requirements <system-requirements>
+Profiles <profiles>
+Plugins/extensions <plugins-extensions>
+Alert rules <alert-rules>
+Charm statuses <charm-statuses>
+Software testing <software-testing>
+Troubleshooting <troubleshooting/index>
+Contacts <contacts>
+```
+
+In the tabs at the top of this charm's [CharmHub page](https://charmhub.io/mysql/), you will find the following automatically generated references:
+
+| Page  | Description |
+|----------|-------------------|
+| [Integrations](https://charmhub.io/mysql/integrations) | Integration/relation interfaces supported by this charm |
+| [Configuration](https://charmhub.io/mysql/configuration) | Configuration parameters specific to this charm |
+| [Actions](https://charmhub.io/mysql/actions) | Juju actions supported by this charm |
+
+

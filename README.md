@@ -2,7 +2,6 @@
 [![CharmHub Badge](https://charmhub.io/mysql/badge.svg)](https://charmhub.io/mysql)
 [![Release](https://github.com/canonical/mysql-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/mysql-operator/actions/workflows/release.yaml)
 [![Tests](https://github.com/canonical/mysql-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/mysql-operator/actions/workflows/ci.yaml?query=branch%3Amain)
-[![Docs](https://github.com/canonical/mysql-operator/actions/workflows/sync_docs.yaml/badge.svg)](https://github.com/canonical/mysql-operator/actions/workflows/sync_docs.yaml)
 
 ## Description
 
