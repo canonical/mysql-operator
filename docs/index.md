@@ -6,7 +6,7 @@ relatedlinks: "[Charmhub](https://charmhub.io/mysql)"
 
 Charmed MySQL is an open-source software operator that deploys and operates [MySQL Community Edition](https://www.mysql.com/products/community/) relational databases on IAAS/VM via [Juju](https://juju.is/). 
 
-This new operator built with the [charm SDK](https://juju.is/docs/sdk) replaces [**MariaDB**](https://charmhub.io/mariadb), [**OSM MariaDB**](https://charmhub.io/charmed-osm-mariadb-k8s), [**Percona cluster**](https://charmhub.io/percona-cluster) and [**MySQL InnoDB cluster**](https://charmhub.io/mysql-innodb-cluster) operators.
+This operator is built with the [charm SDK](https://juju.is/docs/sdk) and replaces the [**MariaDB**](https://charmhub.io/mariadb), [**OSM MariaDB**](https://charmhub.io/charmed-osm-mariadb-k8s), [**Percona Cluster**](https://charmhub.io/percona-cluster) and [**MySQL InnoDB Cluster**](https://charmhub.io/mysql-innodb-cluster) operators.
 
 Charmed MySQL includes features such as cluster-to-cluster replication, TLS encryption, password rotation, backups, and easy integration with other applications both inside and outside of Juju. It meets the need of deploying MySQL in a structured and consistent manner while allowing the user flexibility in configuration, simplifying reliable management of MySQL in production environments.
 
