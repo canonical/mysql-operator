@@ -32,6 +32,7 @@ from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
     MySQLConfigureInstanceError,
+    MySQLConfigureMySQLRolesError,
     MySQLConfigureMySQLUsersError,
     MySQLCreateClusterError,
     MySQLCreateClusterSetError,
@@ -326,6 +327,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
 
         try:
             self.workload_initialise()
+        except MySQLConfigureMySQLRolesError:
+            self.unit.status = BlockedStatus("Failed to initialize MySQL roles")
+            return
         except MySQLConfigureMySQLUsersError:
             self.unit.status = BlockedStatus("Failed to initialize MySQL users")
             return
@@ -350,19 +354,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             self.unit_peer_data["member-state"] = "waiting"
             return
 
-        try:
-            # Create the cluster and cluster set from the leader unit
-            logger.info(f"Creating cluster {self.app_peer_data['cluster-name']}")
-            self.create_cluster()
-            self._open_ports()
-            self.unit.status = ActiveStatus(self.active_status_message)
-        except (
-            MySQLCreateClusterError,
-            MySQLCreateClusterSetError,
-            MySQLInitializeJujuOperationsTableError,
-        ) as e:
-            logger.exception("Failed to create cluster")
-            raise e
+        self._create_cluster()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the peer relation changed event."""
@@ -780,7 +772,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.write_mysqld_config()
         self.log_rotation_setup.setup()
         self._mysql.reset_root_password_and_start_mysqld()
-        self._mysql.configure_mysql_users()
+        self._mysql.configure_mysql_router_roles()
+        self._mysql.configure_mysql_system_roles()
+        self._mysql.configure_mysql_system_users()
 
         if self.config.plugin_audit_enabled:
             self._mysql.install_plugins(["audit_log"])
@@ -815,16 +809,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         """Update endpoints for the cluster."""
         self.database_relation._update_endpoints_all_relations(None)
         self._on_update_status(None)
-
-    def _open_ports(self) -> None:
-        """Open ports.
-
-        Used if `juju expose` ran on application
-        """
-        try:
-            self.unit.set_ports(3306, 33060)
-        except ops.ModelError:
-            logger.exception("failed to open port")
 
     def _can_start(self, event: StartEvent) -> bool:
         """Check if the unit can start.
@@ -874,6 +858,22 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return False
 
         return True
+
+    def _create_cluster(self) -> None:
+        """Creates the InnoDB cluster and sets up the ports."""
+        try:
+            # Create the cluster and cluster set from the leader unit
+            logger.info(f"Creating cluster {self.app_peer_data['cluster-name']}")
+            self.create_cluster()
+            self.unit.set_ports(3306, 33060)
+            self.unit.status = ActiveStatus(self.active_status_message)
+        except (
+            MySQLCreateClusterError,
+            MySQLCreateClusterSetError,
+            MySQLInitializeJujuOperationsTableError,
+        ) as e:
+            logger.exception("Failed to create cluster")
+            raise e
 
     def _is_unit_waiting_to_join_cluster(self) -> bool:
         """Return if the unit is waiting to join the cluster."""

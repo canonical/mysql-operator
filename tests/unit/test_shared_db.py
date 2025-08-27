@@ -4,7 +4,10 @@
 import unittest
 from unittest.mock import patch
 
-from charms.mysql.v0.mysql import MySQLCreateApplicationDatabaseAndScopedUserError
+from charms.mysql.v0.mysql import (
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
+)
 from ops.model import BlockedStatus
 from ops.testing import Harness
 
@@ -27,10 +30,12 @@ class TestSharedDBRelation(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_shared_db_relation_changed(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _generate_random_password,
         _get_cluster_primary_address,
         _,
@@ -65,7 +70,10 @@ class TestSharedDBRelation(unittest.TestCase):
 
         # 2 calls during start-up events, and 1 calls during the shared_db_relation_changed event
         self.assertEqual(_generate_random_password.call_count, 1)
-        _create_application_database_and_scoped_user.assert_called_once_with(
+        _create_database.assert_called_once_with(
+            "shared_database",
+        )
+        _create_scoped_user.assert_called_once_with(
             "shared_database",
             "shared_user",
             "super_secure_password",
@@ -88,10 +96,12 @@ class TestSharedDBRelation(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("relations.shared_db.SharedDBRelation._on_leader_elected")
     @patch("utils.generate_random_password", return_value="super_secure_password")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_shared_db_relation_changed_error_on_user_creation(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _generate_random_password,
         _,
         _leader_elected,
@@ -101,9 +111,7 @@ class TestSharedDBRelation(unittest.TestCase):
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
-        _create_application_database_and_scoped_user.side_effect = (
-            MySQLCreateApplicationDatabaseAndScopedUserError("Can't create user")
-        )
+        _create_database.side_effect = MySQLCreateApplicationDatabaseError
         # update the app leader unit data to trigger shared_db_relation_changed event
         self.harness.update_relation_data(
             self.shared_db_relation_id,
@@ -116,15 +124,35 @@ class TestSharedDBRelation(unittest.TestCase):
         )
 
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+        _create_database.reset_mock()
+        _create_scoped_user.reset_mock()
+
+        _create_scoped_user.side_effect = MySQLCreateApplicationScopedUserError
+        # update the app leader unit data to trigger shared_db_relation_changed event
+        self.harness.update_relation_data(
+            self.shared_db_relation_id,
+            "other-app/0",
+            {
+                "database": "shared_database",
+                "hostname": "1.1.1.2",
+                "username": "shared_user",
+            },
+        )
+
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+        _create_database.reset_mock()
+        _create_scoped_user.reset_mock()
 
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0:3306")
     @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch("relations.shared_db.generate_random_password", return_value="super_secure_password")
-    @patch("mysql_vm_helpers.MySQL.create_application_database_and_scoped_user")
+    @patch("mysql_vm_helpers.MySQL.create_database")
+    @patch("mysql_vm_helpers.MySQL.create_scoped_user")
     def test_shared_db_relation_departed(
         self,
-        _create_application_database_and_scoped_user,
+        _create_scoped_user,
+        _create_database,
         _generate_random_password,
         _delete_users_for_unit,
         _get_cluster_primary_address,

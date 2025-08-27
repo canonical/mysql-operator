@@ -10,7 +10,8 @@ import typing
 
 from charms.mysql.v0.mysql import (
     MySQLCheckUserExistenceError,
-    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
     MySQLDeleteUsersForUnitError,
     MySQLGetClusterPrimaryAddressError,
 )
@@ -195,7 +196,8 @@ class MySQLRelation(Object):
         password = self._get_or_set_password_in_peer_secrets(username)
 
         try:
-            self.charm._mysql.create_application_database_and_scoped_user(
+            self.charm._mysql.create_database(database)
+            self.charm._mysql.create_scoped_user(
                 database,
                 username,
                 password,
@@ -204,9 +206,9 @@ class MySQLRelation(Object):
             )
 
             primary_address = self.charm._mysql.get_cluster_primary_address()
-
         except (
-            MySQLCreateApplicationDatabaseAndScopedUserError,
+            MySQLCreateApplicationDatabaseError,
+            MySQLCreateApplicationScopedUserError,
             MySQLGetClusterPrimaryAddressError,
         ):
             self.charm.unit.status = BlockedStatus("Failed to initialize `mysql` relation")
