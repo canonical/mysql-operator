@@ -11,7 +11,7 @@ This operator is built with the [charm SDK](https://juju.is/docs/sdk) replaces [
 Charmed MySQL includes features such as cluster-to-cluster replication, TLS encryption, password rotation, backups, and easy integration with other applications both inside and outside of Juju. It meets the need of deploying MySQL in a structured and consistent manner while allowing the user flexibility in configuration, simplifying reliable management of MySQL in production environments.
 
 ```{note}
-This is a **IAAS/VM** operator. To deploy on Kubernetes, see [Charmed MySQL K8s](https://charmhub.io/mysql-k8s).
+This is a **IAAS/VM** operator. To deploy on Kubernetes, see [Charmed MySQL K8s](https://canonical-charmed-mysql-k8s.readthedocs-hosted.com/).
 ```
 
 ## In this documentation
