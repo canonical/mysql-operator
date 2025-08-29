@@ -127,7 +127,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 92
+LIBPATCH = 93
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -874,7 +874,11 @@ class MySQLCharmBase(CharmBase, ABC):
             if v["status"] == MySQLMemberState.RECOVERING:
                 continue
 
-            address = f"{self.get_unit_address(unit_labels[k], relation_name)}:3306"
+            # skip if unit not available in unit_labels
+            if unit_label := unit_labels.get(k):
+                address = f"{self.get_unit_address(unit_label, relation_name)}:3306"
+            else:
+                continue
 
             if v["status"] != MySQLMemberState.ONLINE:
                 no_endpoints.add(address)
