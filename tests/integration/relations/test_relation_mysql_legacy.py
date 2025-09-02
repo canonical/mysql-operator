@@ -29,7 +29,7 @@ APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "mysql"
 
 TEST_USER = "testuser"
-TEST_DATABASE = "continuous_writes_database"
+TEST_DATABASE = "continuous_writes"
 TIMEOUT = 15 * 60
 
 

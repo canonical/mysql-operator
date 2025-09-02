@@ -7,7 +7,8 @@ import logging
 import typing
 
 from charms.mysql.v0.mysql import (
-    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
     MySQLGetClusterPrimaryAddressError,
 )
 from ops.charm import LeaderElectedEvent, RelationChangedEvent, RelationDepartedEvent
@@ -153,8 +154,13 @@ class SharedDBRelation(Object):
         remote_host = event.relation.data[event.unit].get("private-address")
 
         try:
-            self._charm._mysql.create_application_database_and_scoped_user(
-                database_name, database_user, password, remote_host, unit_name=joined_unit
+            self._charm._mysql.create_database(database_name)
+            self._charm._mysql.create_scoped_user(
+                database_name,
+                database_user,
+                password,
+                remote_host,
+                unit_name=joined_unit,
             )
 
             # set the relation data for consumption
@@ -179,7 +185,10 @@ class SharedDBRelation(Object):
                 allowed_units_set
             )
 
-        except MySQLCreateApplicationDatabaseAndScopedUserError:
+        except (
+            MySQLCreateApplicationDatabaseError,
+            MySQLCreateApplicationScopedUserError,
+        ):
             self._charm.unit.status = BlockedStatus("Failed to initialize shared_db relation")
             return
 

@@ -8,6 +8,14 @@ from unittest.mock import call, patch
 
 import tenacity
 from charms.mysql.v0.mysql import (
+    LEGACY_ROLE_ROUTER,
+    MODERN_ROLE_ROUTER,
+    ROLE_BACKUP,
+    ROLE_DBA,
+    ROLE_DDL,
+    ROLE_DML,
+    ROLE_READ,
+    ROLE_STATS,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLBase,
@@ -15,9 +23,11 @@ from charms.mysql.v0.mysql import (
     MySQLClientError,
     MySQLClusterMetadataExistsError,
     MySQLConfigureInstanceError,
+    MySQLConfigureMySQLRolesError,
     MySQLConfigureMySQLUsersError,
     MySQLConfigureRouterUserError,
-    MySQLCreateApplicationDatabaseAndScopedUserError,
+    MySQLCreateApplicationDatabaseError,
+    MySQLCreateApplicationScopedUserError,
     MySQLCreateClusterError,
     MySQLCreateClusterSetError,
     MySQLCreateReplicaClusterError,
@@ -55,7 +65,7 @@ from charms.mysql.v0.mysql import (
     MySQLSetVariableError,
 )
 
-from constants import MYSQLD_SOCK_FILE
+from constants import MYSQLD_SOCK_FILE, ROOT_USERNAME
 
 SHORT_CLUSTER_STATUS = {
     "defaultreplicaset": {
@@ -124,40 +134,137 @@ class TestMySQLBase(unittest.TestCase):
             "backupspassword",
         )  # pyright: ignore
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_users(self, _run_mysqlcli_script):
-        """Test successful configuration of MySQL users."""
+    def test_configure_mysql_router_roles(self, _run_mysqlcli_script, _list_mysql_roles):
+        """Test successful configuration of MySQL router role."""
+        router_roles = (LEGACY_ROLE_ROUTER, MODERN_ROLE_ROUTER)
+
+        for role in router_roles:
+            _list_mysql_roles.return_value = {next(r for r in router_roles if r != role)}
+            _run_mysqlcli_script.reset_mock()
+            _run_mysqlcli_script.return_value = b""
+
+            _expected_configure_role_commands = [
+                f"CREATE ROLE {role}",
+                f"GRANT CREATE ON *.* TO {role}",
+                f"GRANT CREATE USER ON *.* TO {role}",
+                f"GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
+            ]
+
+            self.mysql.configure_mysql_router_roles()
+
+            _run_mysqlcli_script.assert_called_once_with(
+                _expected_configure_role_commands,
+                user=ROOT_USERNAME,
+                password="password",
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysql_router_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+        """Test failure to configure the MySQL router role."""
+        _list_mysql_roles.return_value = set()
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLConfigureMySQLRolesError):
+            self.mysql.configure_mysql_router_roles()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysql_system_roles(self, _run_mysqlcli_script, _list_mysql_roles):
+        """Test successful configuration of MySQL system roles."""
+        _list_mysql_roles.return_value = {ROLE_DBA}
         _run_mysqlcli_script.return_value = b""
 
-        _expected_configure_user_commands = (
-            "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
-            "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
-            "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
-            "GRANT SYSTEM_USER, SELECT, PROCESS, SUPER, REPLICATION CLIENT, RELOAD ON *.* TO 'monitoring'@'%'",
-            "CREATE USER 'backups'@'%' IDENTIFIED BY 'backupspassword'",
-            "GRANT CONNECTION_ADMIN, BACKUP_ADMIN, PROCESS, RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'backups'@'%'",
-            "GRANT SELECT ON performance_schema.log_status TO 'backups'@'%'",
-            "GRANT SELECT ON performance_schema.keyring_component_status TO 'backups'@'%'",
-            "GRANT SELECT ON performance_schema.replication_group_members TO 'backups'@'%'",
-            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
-            "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
-            "REVOKE SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, SUPER, REPLICATION_SLAVE_ADMIN, GROUP_REPLICATION_ADMIN, BINLOG_ADMIN, SET_USER_ID, ENCRYPTION_KEY_ADMIN, VERSION_TOKEN_ADMIN, CONNECTION_ADMIN ON *.* FROM 'root'@'localhost'",
-            "FLUSH PRIVILEGES",
-        )
+        _expected_configure_roles_commands = [
+            # Charmed read queries
+            f"CREATE ROLE {ROLE_READ}",
+            # Charmed DML queries
+            f"CREATE ROLE {ROLE_DML}",
+            # Charmed stats queries
+            f"CREATE ROLE {ROLE_STATS}",
+            f"GRANT SELECT ON performance_schema.* TO {ROLE_STATS}",
+            f"GRANT PROCESS, RELOAD, REPLICATION CLIENT ON *.* TO {ROLE_STATS}",
+            # Charmed backup queries
+            f"CREATE ROLE {ROLE_BACKUP}",
+            f"GRANT charmed_stats TO {ROLE_BACKUP}",
+            f"GRANT EXECUTE, LOCK TABLES, PROCESS, RELOAD ON *.* TO {ROLE_BACKUP}",
+            f"GRANT BACKUP_ADMIN, CONNECTION_ADMIN ON *.* TO {ROLE_BACKUP}",
+            # Charmed DDL queries
+            f"CREATE ROLE {ROLE_DDL}",
+            f"GRANT charmed_dml TO {ROLE_DDL}",
+            f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, SHOW_ROUTINE, SHOW VIEW, TRIGGER ON *.* TO {ROLE_DDL}",
+        ]
 
-        self.mysql.configure_mysql_users()
+        self.mysql.configure_mysql_system_roles()
 
         _run_mysqlcli_script.assert_called_once_with(
-            _expected_configure_user_commands, password="password"
+            _expected_configure_roles_commands,
+            user=ROOT_USERNAME,
+            password="password",
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysql_system_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+        """Test failure to configure the MySQL system roles."""
+        _list_mysql_roles.return_value = set()
+        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLConfigureMySQLRolesError):
+            self.mysql.configure_mysql_system_roles()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_configure_mysql_system_users(self, _run_mysqlcli_script):
+        """Test successful configuration of MySQL system users."""
+        _run_mysqlcli_script.return_value = b""
+
+        _expected_configure_user_commands = [
+            "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
+            "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
+            "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
+            "CREATE USER 'monitoring'@'%' IDENTIFIED BY 'monitoringpassword' WITH MAX_USER_CONNECTIONS 3",
+            "CREATE USER 'backups'@'%' IDENTIFIED BY 'backupspassword'",
+            "GRANT ALL ON *.* TO 'serverconfig'@'%' WITH GRANT OPTION",
+            "GRANT charmed_stats TO 'monitoring'@'%'",
+            "GRANT charmed_backup TO 'backups'@'%'",
+            "REVOKE BINLOG_ADMIN, CONNECTION_ADMIN, ENCRYPTION_KEY_ADMIN, GROUP_REPLICATION_ADMIN, REPLICATION_SLAVE_ADMIN, SET_USER_ID, SUPER, SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, VERSION_TOKEN_ADMIN ON *.* FROM 'root'@'localhost'",
+            "FLUSH PRIVILEGES",
+        ]
+
+        self.mysql.configure_mysql_system_users()
+
+        _run_mysqlcli_script.assert_called_once_with(
+            _expected_configure_user_commands,
+            user=ROOT_USERNAME,
+            password="password",
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_users_fail(self, _run_mysqlcli_script):
-        """Test failure to configure the MySQL users."""
+    def test_configure_mysql_system_users_fail(self, _run_mysqlcli_script):
+        """Test failure to configure the MySQL system users."""
         _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureMySQLUsersError):
-            self.mysql.configure_mysql_users()
+            self.mysql.configure_mysql_system_users()
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
+    def test_list_mysql_roles(self, _run_mysqlcli_script):
+        """Test successful listing of MySQL roles."""
+        _run_mysqlcli_script.return_value = []
+
+        _expected_list_roles_commands = (
+            "SELECT User FROM mysql.user WHERE User LIKE 'charmed_%'",
+        )
+
+        self.mysql.list_mysql_roles("charmed_%")
+
+        _run_mysqlcli_script.assert_called_once_with(
+            _expected_list_roles_commands,
+            user=ROOT_USERNAME,
+            password="password",
+        )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
     def test_does_mysql_user_exist(self, _run_mysqlcli_script):
@@ -250,24 +357,23 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database_and_scoped_user(self, _run_mysqlsh_script):
-        """Test the successful execution of create_application_database_and_scoped_user."""
+    def test_create_application_database(self, _run_mysqlsh_script):
+        """Test the successful execution of create_application_database."""
         _run_mysqlsh_script.return_value = ""
 
         _expected_create_scoped_user_commands = "\n".join((
             "shell.connect_to_primary()",
-            'session.run_sql("CREATE DATABASE IF NOT EXISTS `test-database`;")',
-            'session.run_sql("CREATE USER `test-username`@`1.1.1.1` IDENTIFIED BY \'test-password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
-            'session.run_sql("GRANT USAGE ON *.* TO `test-username`@`1.1.1.1`;")',
-            'session.run_sql("GRANT ALL PRIVILEGES ON `test-database`.* TO `test-username`@`1.1.1.1`;")',
+            'session.run_sql("CREATE DATABASE IF NOT EXISTS `test_database`;")',
+            'session.run_sql("GRANT SELECT ON `test_database`.* TO charmed_read;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO charmed_dml;")',
+            'session.run_sql("CREATE ROLE IF NOT EXISTS `charmed_dba_test_database`;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO charmed_dba_test_database;")',
+            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO charmed_dba_test_database;")',
         ))
 
-        self.mysql.create_application_database_and_scoped_user(
-            "test-database", "test-username", "test-password", "1.1.1.1", unit_name="app/0"
-        )
+        self.mysql.create_database("test_database")
 
         self.assertEqual(_run_mysqlsh_script.call_count, 1)
-
         self.assertEqual(
             _run_mysqlsh_script.mock_calls,
             [
@@ -280,18 +386,78 @@ class TestMySQLBase(unittest.TestCase):
             ],
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database_and_scoped_user_failure(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
+    def test_create_application_database_failure(self, _run_mysqlsh_script):
         """Test failure to create application database and scoped user."""
-        _get_cluster_primary_address.return_value = "2.2.2.2"
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
-        with self.assertRaises(MySQLCreateApplicationDatabaseAndScopedUserError):
-            self.mysql.create_application_database_and_scoped_user(
-                "test_database", "test_username", "test_password", "1.1.1.1", unit_name="app/.0"
+        with self.assertRaises(MySQLCreateApplicationDatabaseError):
+            self.mysql.create_database("test_database")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_database_invalid(self, _run_mysqlsh_script):
+        """Test failure to create an invalid application database."""
+        with self.assertRaises(MySQLCreateApplicationDatabaseError):
+            self.mysql.create_database("extremely_extra_long_database_name")
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_scoped_user(self, _run_mysqlsh_script):
+        """Test the successful execution of create_application_scoped_user."""
+        _run_mysqlsh_script.return_value = ""
+
+        _expected_create_scoped_user_commands = "\n".join((
+            "shell.connect_to_primary()",
+            'session.run_sql("CREATE USER `test_username`@`1.1.1.1` IDENTIFIED BY \'test_password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
+            'session.run_sql("GRANT USAGE ON *.* TO `test_username`@`1.1.1.1`;")',
+            'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
+        ))
+
+        self.mysql.create_scoped_user(
+            "test_database",
+            "test_username",
+            "test_password",
+            "1.1.1.1",
+            unit_name="app/0",
+        )
+
+        self.assertEqual(_run_mysqlsh_script.call_count, 1)
+        self.assertEqual(
+            _run_mysqlsh_script.mock_calls,
+            [
+                call(
+                    _expected_create_scoped_user_commands,
+                    user="serverconfig",
+                    password="serverconfigpassword",
+                    host="127.0.0.1:33062",
+                )
+            ],
+        )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_scoped_user_failure(self, _run_mysqlsh_script):
+        """Test failure to create application scoped user."""
+        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+
+        with self.assertRaises(MySQLCreateApplicationScopedUserError):
+            self.mysql.create_scoped_user(
+                "test_database",
+                "test_username",
+                "test_password",
+                "1.1.1.1",
+                unit_name="app/0",
+            )
+
+    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    def test_create_application_scoped_user_invalid(self, _run_mysqlsh_script):
+        """Test failure to create an invalid application scoped user."""
+        with self.assertRaises(MySQLCreateApplicationScopedUserError):
+            self.mysql.create_scoped_user(
+                "test_database",
+                "test_username",
+                "test_password",
+                "1.1.1.1",
+                unit_name="app/0",
+                extra_roles=[ROLE_BACKUP],
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
@@ -1049,41 +1215,6 @@ class TestMySQLBase(unittest.TestCase):
         _run_mysqlsh_script.side_effect = MySQLClientError
         with self.assertRaises(MySQLGetMySQLVersionError):
             self.mysql.get_mysql_version()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_grant_privileges_to_user(self, _run_mysqlsh_script):
-        """Test the successful execution of grant_privileges_to_user."""
-        expected_commands = "\n".join((
-            "shell.connect_to_primary()",
-            "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_user'@'%' WITH GRANT OPTION\")",
-        ))
-
-        self.mysql.grant_privileges_to_user(
-            "test_user", "%", ["CREATE USER"], with_grant_option=True
-        )
-
-        _run_mysqlsh_script.assert_called_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-        _run_mysqlsh_script.reset_mock()
-
-        expected_commands = "\n".join((
-            "shell.connect_to_primary()",
-            "session.run_sql(\"GRANT SELECT, UPDATE ON *.* TO 'test_user'@'%'\")",
-        ))
-
-        self.mysql.grant_privileges_to_user("test_user", "%", ["SELECT", "UPDATE"])
-
-        _run_mysqlsh_script.assert_called_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_update_user_password(self, _run_mysqlsh_script):
@@ -2075,8 +2206,8 @@ class TestMySQLBase(unittest.TestCase):
         _get_available_memory.return_value = 32341442560
 
         expected_config = {
-            "bind-address": "0.0.0.0",
-            "mysqlx-bind-address": "0.0.0.0",
+            "bind_address": "0.0.0.0",
+            "mysqlx_bind_address": "0.0.0.0",
             "admin_address": "127.0.0.1",
             "report_host": "127.0.0.1",
             "max_connections": "724",
@@ -2095,6 +2226,7 @@ class TestMySQLBase(unittest.TestCase):
             "innodb_buffer_pool_chunk_size": "2902458368",
             "gtid_mode": "ON",
             "enforce_gtid_consistency": "ON",
+            "activate_all_roles_on_login": "ON",
         }
         self.maxDiff = None
 
@@ -2478,8 +2610,8 @@ class TestMySQLBase(unittest.TestCase):
   File "/var/lib/juju/agents/unit-mysql-k8s-edge-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 1771, in wait_output
     raise ExecError[AnyStr](self._command, exit_code, out_value, err_value)
 ops.pebble.ExecError: non-zero exit code 1 executing ['/usr/bin/mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@mysql-k8s-edge-0.mysql-k8s-edge-endpoints.stg-alutay-datasql-juju361.svc.cluster.local:33062', '--python', '--verbose=0', '-c', 'shell.options.set(\'useWizards\', False)\nprint(\'###\')\nsh$
-ll.connect_to_primary()\nsession.run_sql("CREATE DATABASE IF NOT EXISTS `continuous_writes_database`;")\nsession.run_sql("CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY \'s1ffxPedAmX58aOdCRSzxEpm\' ATTRIBUTE \'{}\';")\nsession.run_sql("GRANT USAGE ON *.* TO `relation-21_ff7306c7454f44`@`%`;")\nses
-sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes_database`.* TO `relation-21_ff7306c7454f44`@`%`;")'], stdout="\x1b[1mPlease provide the password for 'serverconfig@mysql-k8s-edge-0.mysql-k8s-edge-endpoints.stg-alutay-datasql-juju361.svc.cluster.local:33062': \x1b[0m###\n", stderr='Cannot set LC_ALL to
+ll.connect_to_primary()\nsession.run_sql("CREATE DATABASE IF NOT EXISTS `continuous_writes`;")\nsession.run_sql("CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY \'s1ffxPedAmX58aOdCRSzxEpm\' ATTRIBUTE \'{}\';")\nsession.run_sql("GRANT USAGE ON *.* TO `relation-21_ff7306c7454f44`@`%`;")\nses
+sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes`.* TO `relation-21_ff7306c7454f44`@`%`;")'], stdout="\x1b[1mPlease provide the password for 'serverconfig@mysql-k8s-edge-0.mysql-k8s-edge-endpoints.stg-alutay-datasql-juju361.svc.cluster.local:33062': \x1b[0m###\n", stderr='Cannot set LC_ALL to
  locale en_US.UTF-8: No such file or directory\n\x1b[36mNOTE: \x1b[0mAlready connected to a PRIMARY.\nTraceback (most recent call last):\n  File "<string>", line 5, in <module>\nmysqlsh.DBError: MySQL Error (1396): ClassicSession.run_sql: Operation CREATE USER failed for \'relation-21_ff7306c7454f44\'@\'%\'\n
 """
         output = self.mysql.strip_off_passwords(_input)
