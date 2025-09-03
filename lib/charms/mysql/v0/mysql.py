@@ -900,7 +900,11 @@ class MySQLCharmBase(CharmBase, ABC):
             if v["status"] == MySQLMemberState.RECOVERING:
                 continue
 
-            address = f"{self.get_unit_address(unit_labels[k], relation_name)}:3306"
+            # skip if unit not available in unit_labels
+            if unit_label := unit_labels.get(k):
+                address = f"{self.get_unit_address(unit_label, relation_name)}:3306"
+            else:
+                continue
 
             if v["status"] != MySQLMemberState.ONLINE:
                 no_endpoints.add(address)
