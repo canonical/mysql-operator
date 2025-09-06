@@ -1,0 +1,44 @@
+[32mINFO    [0m integration.test_tls:test_tls.py:180 Removing relation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:13:36Z
+
+App                       Version          Status  Scale  Charm                     Channel        Rev  Exposed  Message
+mysql                     8.0.42-0ubun...  active      3  mysql                                      0  no       
+self-signed-certificates                   active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports           Message
+mysql/0                      active    idle   0        10.209.190.236  3306,33060/tcp  
+mysql/1*                     active    idle   1        10.209.190.57   3306,33060/tcp  
+mysql/2                      active    idle   2        10.209.190.193                  
+self-signed-certificates/0*  active    idle   3        10.209.190.17                   
+
+Machine  State    Address         Inst id        Base          AZ               Message
+0        started  10.209.190.236  juju-d36b98-0  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+1        started  10.209.190.57   juju-d36b98-1  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+2        started  10.209.190.193  juju-d36b98-2  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+3        started  10.209.190.17   juju-d36b98-3  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 02:06:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:06:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:06:14 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:07:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:07:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:07:28 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:07:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:07:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:07:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:11:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:11:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:11:02 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-0: 02:12:26 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:12:30 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:12:31 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:12:34 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:12:35 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:12:36 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
