@@ -1,0 +1,51 @@
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:136 Asserting that a connection to the database is still possible with application credentials
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:146 Removing relation mysql:mysql with mysql-test-app:mysql
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:155 Waiting till mysql is active and mysql-test-app is waiting
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:173 Asserting that a connection to the database is not possible with application credentials
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:31:21Z
+
+App             Version          Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active       3  mysql                          0  no       
+mysql-test-app  0.0.2            waiting      1  mysql-test-app  latest/edge   85  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  waiting   idle   0        10.133.23.211                   
+mysql/0            active    idle   1        10.133.23.20    3306,33060/tcp  
+mysql/1*           active    idle   2        10.133.23.22    3306,33060/tcp  Primary
+mysql/2            active    idle   3        10.133.23.17    3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ               Message
+0        started  10.133.23.211  juju-96c6f0-0  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+1        started  10.133.23.20   juju-96c6f0-1  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+2        started  10.133.23.22   juju-96c6f0-2  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+3        started  10.133.23.17   juju-96c6f0-3  ubuntu@22.04  pkrvm7jw40e0xgp  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:26:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:26:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 02:26:38 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:27:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:27:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:27:53 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:28:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:28:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:28:04 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:28:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:28:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:28:13 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
