@@ -1,0 +1,558 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:120 Get leader unit
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:125 Run pre-upgrade-check action
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:131 Inject dependency fault
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:136 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:139 Wait for upgrade to fail on leader
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:145 Ensure continuous_writes while in failure state
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:483 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=611 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=611 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=710 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=715 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=721 on unit mysql/2
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:148 Re-run pre-upgrade-check action
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:151 Re-refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:153 Wait for upgrade to start
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] blocked: ready to rollback application
+  mysql/2 [idle] waiting: other units upgrading first...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: starting services...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: upgrade completed
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] maintenance: upgrade completed
+  mysql/1 [executing] maintenance: stopping services..
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: Primary
+[32mINFO    [0m integration.high_availability.test_upgrade:test_upgrade.py:160 Ensure continuous_writes after rollback procedure
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:483 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=6978 on unit mysql/1
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  01:58:31Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active      3  mysql                          2  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       Last written value=41372
+
+Unit               Workload     Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active       idle   0        10.214.125.206                  Last written value=41372
+mysql/0            maintenance  idle   1        10.214.125.107  3306,33060/tcp  offline
+mysql/1*           maintenance  idle   2        10.214.125.223  3306,33060/tcp  offline
+mysql/2            active       idle   3        10.214.125.127  3306,33060/tcp  Primary
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.214.125.206  juju-a94d20-0  ubuntu@22.04  runnervmf4ws1  Running
+1        started  10.214.125.107  juju-a94d20-1  ubuntu@22.04  runnervmf4ws1  Running
+2        started  10.214.125.223  juju-a94d20-2  ubuntu@22.04  runnervmf4ws1  Running
+3        started  10.214.125.127  juju-a94d20-3  ubuntu@22.04  runnervmf4ws1  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:41:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:41:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 01:41:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 01:42:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:42:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:42:46 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 01:42:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:42:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:42:59 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 01:43:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:43:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:43:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-1: 01:50:34 ERROR unit.mysql/1.juju-log charms.data_platform_libs.v0.upgrade.VersionError - {'message': 'Versions incompatible, charm 1 can not be upgraded to 2', 'cause': 'Upgrades only supported for specific versions, charm versions satisfying requirement >1', 'resolution': ''}
+unit-mysql-1: 01:50:34 CRITICAL unit.mysql/1.juju-log Upgrade failed, follow the instructions below to rollback:
+    1. Re-run `pre-upgrade-check` action on the leader unit to enter 'recovery' state
+    2. Run `juju refresh` to the previously deployed charm revision or local charm file
+unit-mysql-0: 01:54:00 ERROR unit.mysql/0.juju-log ERROR		bab3e680-8eb0-11f0-a627-00163e907c97	bab3e680-8eb0-11f0-a627-00163e907c97
+unit-mysql-0: 01:54:00 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:54:01 ERROR unit.mysql/1.juju-log ERROR		ae1f84a8-8eb0-11f0-b8c4-00163e93fb66	ae1f84a8-8eb0-11f0-b8c4-00163e93fb66
+unit-mysql-1: 01:54:01 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:54:10 ERROR unit.mysql/0.juju-log ERROR		bab3e680-8eb0-11f0-a627-00163e907c97	bab3e680-8eb0-11f0-a627-00163e907c97
+unit-mysql-0: 01:54:10 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:54:11 ERROR unit.mysql/1.juju-log ERROR		ae1f84a8-8eb0-11f0-b8c4-00163e93fb66	ae1f84a8-8eb0-11f0-b8c4-00163e93fb66
+unit-mysql-1: 01:54:11 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:54:21 ERROR unit.mysql/0.juju-log ERROR		bab3e680-8eb0-11f0-a627-00163e907c97	bab3e680-8eb0-11f0-a627-00163e907c97
+unit-mysql-0: 01:54:21 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:54:22 ERROR unit.mysql/1.juju-log ERROR		ae1f84a8-8eb0-11f0-b8c4-00163e93fb66	ae1f84a8-8eb0-11f0-b8c4-00163e93fb66
+unit-mysql-1: 01:54:22 ERROR unit.mysql/1.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-0: 01:54:28 ERROR unit.mysql/0.juju-log ERROR		bab3e680-8eb0-11f0-a627-00163e907c97	bab3e680-8eb0-11f0-a627-00163e907c97
+unit-mysql-0: 01:54:28 ERROR unit.mysql/0.juju-log Failed to get member state: mysqld daemon is down
+unit-mysql-1: 01:54:45 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:54:45 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:54:46 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-0: 01:54:51 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.214.125.127:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\ncluster.rejoin_instance('juju-a94d20-1.lxd:33062',{'password': '*****'})"]' returned non-zero exit status 1.
+unit-mysql-0: 01:54:51 ERROR unit.mysql/0.juju-log Failed to rejoin instance juju-a94d20-1.lxd to cluster cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-0: 01:54:57 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.214.125.127:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.214.125.107', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'auto'})"]' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2150, in add_instance_to_cluster
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 811, in _run_mysqlsh_script
+    raise MySQLClientError from e
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.214.125.127:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.214.125.107', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'clone'})"]' returned non-zero exit status 1.
+unit-mysql-0: 01:54:57 ERROR unit.mysql/0.juju-log Failed to add instance_address='10.214.125.107' to self.cluster_name='cluster-4bcb7926dbc59a03712de9af9c3f9dfd' on self.instance_address='juju-a94d20-1.lxd'
+unit-mysql-0: 01:54:58 ERROR unit.mysql/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.214.125.127:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.214.125.107', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'auto'})"]' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2150, in add_instance_to_cluster
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 811, in _run_mysqlsh_script
+    raise MySQLClientError from e
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.214.125.127:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.214.125.107', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'clone'})"]' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2150, in add_instance_to_cluster
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 811, in _run_mysqlsh_script
+    raise MySQLClientError from e
+charms.mysql.v0.mysql.MySQLClientError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 1021, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 587, in _on_update_status
+    if not self._handle_non_online_instance_status(state):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 470, in _handle_non_online_instance_status
+    self._execute_manual_rejoin()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 524, in _execute_manual_rejoin
+    self._mysql.add_instance_to_cluster(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2168, in add_instance_to_cluster
+    self.add_instance_to_cluster(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2163, in add_instance_to_cluster
+    raise MySQLAddInstanceToClusterError from e
+charms.mysql.v0.mysql.MySQLAddInstanceToClusterError
+unit-mysql-0: 01:54:59 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-1: 01:54:59 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:54:59 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:55:00 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:55:16 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:55:16 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:55:17 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:55:30 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:55:30 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:55:31 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:55:47 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:55:47 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:55:47 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:56:02 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:56:02 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:56:03 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:56:13 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:56:13 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:56:15 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:56:29 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:56:29 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:56:30 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:56:44 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:56:44 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:56:45 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:56:57 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:56:57 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:56:57 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:57:10 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:57:10 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:57:11 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:57:28 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:57:28 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:57:29 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:57:42 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:57:42 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:57:42 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:58:00 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:58:00 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:58:01 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:58:13 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:58:13 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:58:14 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-1: 01:58:30 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a94d20-2.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-4bcb7926dbc59a03712de9af9c3f9dfd')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-1: 01:58:30 ERROR unit.mysql/1.juju-log Failed to get cluster status for cluster-4bcb7926dbc59a03712de9af9c3f9dfd
+unit-mysql-1: 01:58:31 ERROR unit.mysql/1.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 889, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
