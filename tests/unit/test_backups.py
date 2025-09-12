@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from charms.mysql.v0.mysql import (
     MySQLConfigureInstanceError,
@@ -155,7 +155,12 @@ test stderr"""
         return_value=({"path": "/path"}, []),
     )
     @patch(
-        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
+        "charms.mysql.v0.backups.MySQLBackups._can_cluster_perform_backup",
+        return_value=(True, None),
+    )
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup",
+        return_value=(True, None),
     )
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
@@ -170,6 +175,7 @@ test stderr"""
         _pre_backup,
         _upload_content_to_s3,
         _can_unit_perform_backup,
+        _can_cluster_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
         _update_status,
@@ -191,6 +197,7 @@ Juju Version: 0.0.0
         self.mysql_backups._on_create_backup(event)
 
         _retrieve_s3_parameters.assert_called_once()
+        _can_cluster_perform_backup.assert_called_once()
         _can_unit_perform_backup.assert_called_once()
         _upload_content_to_s3.assert_called_once_with(
             expected_metadata, f"{expected_backup_path}.metadata", expected_s3_params
@@ -208,7 +215,12 @@ Juju Version: 0.0.0
         return_value=({"path": "/path"}, []),
     )
     @patch(
-        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup", return_value=(True, None)
+        "charms.mysql.v0.backups.MySQLBackups._can_cluster_perform_backup",
+        return_value=(True, None),
+    )
+    @patch(
+        "charms.mysql.v0.backups.MySQLBackups._can_unit_perform_backup",
+        return_value=(True, None),
     )
     @patch("charms.mysql.v0.backups.upload_content_to_s3")
     @patch("charms.mysql.v0.backups.MySQLBackups._pre_backup", return_value=(True, None))
@@ -223,6 +235,7 @@ Juju Version: 0.0.0
         _pre_backup,
         _upload_content_to_s3,
         _can_unit_perform_backup,
+        _can_cluster_perform_backup,
         _retrieve_s3_parameters,
         _datetime,
     ):
@@ -272,11 +285,23 @@ Juju Version: 0.0.0
         # test failure with _can_unit_perform_backup
         _can_unit_perform_backup.return_value = False, "can unit perform backup failure"
         event = MagicMock()
+        event.params = {"force": False}
         self.charm.unit.status = ActiveStatus()
 
         self.mysql_backups._on_create_backup(event)
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("can unit perform backup failure")
+        self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+        # test failure with _can_cluster_perform_backup
+        _can_cluster_perform_backup.return_value = False, "can cluster perform backup failure"
+        event = MagicMock()
+        event.params = {"force": False}
+        self.charm.unit.status = ActiveStatus()
+
+        self.mysql_backups._on_create_backup(event)
+        event.set_results.assert_not_called()
+        event.fail.assert_called_once_with("can cluster perform backup failure")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         # test failure with _retrieve_s3_parameters
@@ -308,6 +333,32 @@ Juju Version: 0.0.0
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("Missing relation with S3 integrator charm")
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
+
+    @patch("mysql_vm_helpers.MySQL.get_cluster_status")
+    def test_can_cluster_perform_backup(self, _get_cluster_status):
+        """Test _can_cluster_perform_backup()."""
+        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "ok"}}
+
+        success, error_message = self.mysql_backups._can_cluster_perform_backup()
+        self.assertTrue(success)
+        self.assertIsNone(error_message)
+
+    @patch("mysql_vm_helpers.MySQL.get_cluster_status")
+    def test_can_cluster_perform_backup_failure(self, _get_cluster_status):
+        """Test failure of _can_unit_perform_backup()."""
+        # test unknown state
+        _get_cluster_status.return_value = None
+
+        success, error_message = self.mysql_backups._can_cluster_perform_backup()
+        self.assertFalse(success)
+        self.assertEqual(error_message, "Cluster status unknown")
+
+        # test error state
+        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "error"}}
+
+        success, error_message = self.mysql_backups._can_cluster_perform_backup()
+        self.assertFalse(success)
+        self.assertEqual(error_message, "Cluster is not in a healthy state")
 
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
@@ -538,10 +589,7 @@ Juju Version: 0.0.0
     ):
         """Test _pre_restore_checks()."""
         event_mock = MagicMock()
-        type(event_mock).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
+        event_mock.params = {"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
         self.assertTrue(self.mysql_backups._pre_restore_checks(event_mock))
 
     @patch("mysql_vm_helpers.MySQL.is_server_connectable", return_value=True)
@@ -559,10 +607,7 @@ Juju Version: 0.0.0
         # test more than one planned units
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
         event = MagicMock()
-        type(event).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
+        event.params = {"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
@@ -570,40 +615,24 @@ Juju Version: 0.0.0
         # test unit in blocked state
         _is_unit_busy.return_value = True
         event = MagicMock()
-        type(event).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
+        event.params = {"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
         # test mysqld not running
         _is_server_connectable.return_value = False
         event = MagicMock()
-        type(event).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
+        event.params = {"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
         # test missing backup-id
         event = MagicMock()
-        type(event).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
-        params_mock = {}
-        with patch.dict(params_mock, {}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.assertFalse(self.mysql_backups._pre_restore_checks(event))
+        event.params = {}
+        self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
         # test missing s3-integrator relation
         self.harness.remove_relation(self.s3_integrator_id)
         event = MagicMock()
-        type(event).params = PropertyMock(
-            return_value={"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
-        )
-
+        event.params = {"restore-to-time": "2025-02-10 12:30:30", "backup-id": "test-id"}
         self.assertFalse(self.mysql_backups._pre_restore_checks(event))
 
     @patch("charm.MySQLOperatorCharm._on_update_status")
@@ -630,12 +659,8 @@ Juju Version: 0.0.0
     ):
         """Test _on_restore()."""
         event = MagicMock()
-        params_mock = {}
-
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         expected_s3_parameters = {"path": "/path"}
 
@@ -678,11 +703,8 @@ Juju Version: 0.0.0
         _post_restore.return_value = (False, "post restore error")
 
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("post restore error")
@@ -691,11 +713,8 @@ Juju Version: 0.0.0
         _restore.return_value = (False, True, "restore error")
 
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("restore error")
@@ -707,11 +726,8 @@ Juju Version: 0.0.0
         _restore.return_value = (False, False, "restore error")
 
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("restore error")
@@ -721,11 +737,8 @@ Juju Version: 0.0.0
         # test failure of _pre_restore()
         _pre_restore.return_value = (False, "pre restore error")
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("pre restore error")
@@ -734,11 +747,8 @@ Juju Version: 0.0.0
         _fetch_and_check_existence_of_s3_path.return_value = False
 
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("Invalid backup-id: test-backup-id")
@@ -747,11 +757,8 @@ Juju Version: 0.0.0
         _retrieve_s3_parameters.return_value = ({}, ["bucket"])
 
         event = MagicMock()
-        params_mock = {}
-        with patch.dict(params_mock, {"backup-id": "test-backup-id"}):
-            type(event).params = PropertyMock(return_value=params_mock)
-
-            self.mysql_backups._on_restore(event)
+        event.params = {"backup-id": "test-backup-id"}
+        self.mysql_backups._on_restore(event)
 
         event.set_results.assert_not_called()
         event.fail.assert_called_once_with("Missing S3 parameters: ['bucket']")
