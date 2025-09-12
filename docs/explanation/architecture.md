@@ -4,7 +4,7 @@
 
 ## HLD (High Level Design)
 
-The charm design leverages on the SNAP “[charmed-mysql](https://snapcraft.io/charmed-mysql)” which is deployed by Juju on the specified VM/MAAS/bare-metal machine based on Ubuntu Jammy/22.04. SNAP allows to run MySQL service(s) in a secure and isolated environment ([strict confinement](https://ubuntu.com/blog/demystifying-snap-confinement)). The installed SNAP:
+The charm design leverages on the SNAP “[charmed-mysql](https://snapcraft.io/charmed-mysql)” which is deployed by Juju on the specified VM/MAAS/bare-metal machine based on Ubuntu Jammy/22.04. SNAP allows to run MySQL service(s) in a secure and isolated environment ([strict confinement](https://snapcraft.io/blog/demystifying-snap-confinement)). The installed SNAP:
 
 ```
 > juju ssh mysql/0
