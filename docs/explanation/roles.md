@@ -13,8 +13,9 @@ There are several definitions of roles in Charmed MySQL:
 ```
 
 ## MySQL roles
+MySQL does not provide any built-in roles for users to get permissions from.
 
-### Charmed MySQL instance-level roles
+## Charmed MySQL instance-level roles
 
 Charmed MySQL introduces the following instance-level predefined roles:
 
@@ -46,7 +47,7 @@ mysql> SELECT host, user FROM mysql.user;
 Additionally, the role `charmed_router` is available to ease the integration with [Charmed MySQL Router](https://charmhub.io/mysql-router).
 This role contains all the necessary permissions for a MySQL Router relation user to operate.
 
-### Charmed MySQL database-level roles
+## Charmed MySQL database-level roles
 
 Charmed MySQL also introduces database level roles, with permissions tied to each database that's created.
 Example for a database named `test`:
