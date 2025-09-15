@@ -1033,7 +1033,7 @@ class TestMySQLBase(unittest.TestCase):
         self.mysql.get_cluster_status()
         expected_commands = "\n".join((
             "cluster = dba.get_cluster('test_cluster')",
-            "print(cluster.status({'extended': False}))",
+            "print(cluster.status({'extended': 0}))",
         ))
         _run_mysqlsh_script.assert_called_once_with(
             expected_commands,
