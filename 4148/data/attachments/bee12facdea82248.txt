@@ -1,0 +1,77 @@
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:59 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:26:54Z
+
+App             Version          Status  Scale  Charm           Channel       Rev  Exposed  Message
+db1             8.0.42-0ubun...  active      3  mysql                           0  no       
+mysql-router    8.0.42           active      1  mysql-router    dpe/edge     1054  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge    85  no       Last written value=44
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+db1/0*             active    executing  0        10.97.127.180   3306,33060/tcp  Primary
+db1/1              active    executing  1        10.97.127.243   3306,33060/tcp  
+db1/2              active    executing  2        10.97.127.199                   
+mysql-test-app/0*  active    idle       3        10.97.127.76                    Last written value=44
+  mysql-router/0*  active    idle                10.97.127.76                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.97.127.180  juju-73b475-0  ubuntu@22.04  runnervmf4ws1  Running
+1        started  10.97.127.243  juju-73b475-1  ubuntu@22.04  runnervmf4ws1  Running
+2        started  10.97.127.199  juju-73b475-2  ubuntu@22.04  runnervmf4ws1  Running
+3        started  10.97.127.76   juju-73b475-3  ubuntu@22.04  runnervmf4ws1  Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:06:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:06:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-0: 02:06:29 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:10:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:10:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-2: 02:10:15 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:10:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:10:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-db1-1: 02:10:58 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-db1-2: 02:11:53 ERROR unit.db1/2.juju-log ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock' (2)
+unit-db1-2: 02:11:53 ERROR unit.db1/2.juju-log Failed to execute MySQL cli command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-2/charm/lib/charms/mysql/v0/mysql.py", line 3692, in check_mysqlcli_connection
+    self._run_mysqlcli_script(
+  File "/var/lib/juju/agents/unit-db1-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-db1-2/charm/src/mysql_vm_helpers.py", line 872, in _run_mysqlcli_script
+    raise MySQLClientError
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-2/charm/src/mysql_vm_helpers.py", line 878, in _run_mysqlcli_script
+    stdout = subprocess.check_output(command, timeout=timeout, text=True)  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysql', '-u', 'root', '-N', '-B', '--socket=/var/snap/charmed-mysql/common/var/run/mysqld/mysqld.sock', '-e', 'SELECT 1']' returned non-zero exit status 1.
+unit-db1-2: 02:11:53 ERROR unit.db1/2.juju-log Failed to connect to MySQL with mysqlcli with default root user
+machine-3: 02:15:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 02:15:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-router-0: 02:15:59 ERROR juju.worker.meterstatus error running "meter-status-changed": exit status 1
+unit-db1-0: 02:26:39 ERROR unit.db1/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-db1-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-73b475-0.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\ncs = dba.get_cluster_set()\ncs.rejoin_cluster('cuzco')"]' returned non-zero exit status 1.
+unit-db1-0: 02:26:39 ERROR unit.db1/0.juju-log Failed to rejoin cluster
+unit-db1-0: 02:26:39 ERROR unit.db1/0.juju-log Failed to rejoin cluster='cuzco' to the cluster set
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
