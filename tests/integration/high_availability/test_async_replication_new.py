@@ -35,9 +35,6 @@ def first_model(juju: Juju, request: pytest.FixtureRequest) -> Generator:
     """Creates and return the first model."""
     yield juju.model
 
-    if request.config.getoption("--keep-models"):
-        return
-
 
 @pytest.fixture(scope="module")
 def second_model(juju: Juju, request: pytest.FixtureRequest) -> Generator:
@@ -274,11 +271,7 @@ def test_failover(first_model: str, second_model: str) -> None:
     # Restore mysqld process
     logging.info("Unfreezing mysqld on primary cluster units")
     for unit_name in model_2_mysql_units:
-        unfreeze_cmd = (
-            "while true; do ps -ax -o state | grep -q T && sudo pkill -18 -x mysqld || break;"
-            "sleep 0.5; done"
-        )
-        model_2.exec(unfreeze_cmd, unit=unit_name)
+        model_2.exec("sudo pkill -x mysqld --signal SIGCONT", unit=unit_name)
 
     logging.info("Checking clusters statuses")
     cluster_set_status = get_mysql_cluster_status(
