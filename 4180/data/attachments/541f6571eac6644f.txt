@@ -1,0 +1,41 @@
+[32mINFO    [0m integration.test_tls:test_tls.py:180 Removing relation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  02:22:37Z
+
+App                       Version          Status  Scale  Charm                     Channel        Rev  Exposed  Message
+mysql                     8.0.42-0ubun...  active      3  mysql                                      0  no       
+self-signed-certificates                   active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*                     active    idle   0        10.32.32.96     3306,33060/tcp  
+mysql/1                      active    idle   1        10.32.32.25     3306,33060/tcp  
+mysql/2                      active    idle   2        10.32.32.200    3306,33060/tcp  
+self-signed-certificates/0*  active    idle   3        10.32.32.37                     
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.32.32.96   juju-42b0da-0  ubuntu@22.04  runnervmf4ws1  Running
+1        started  10.32.32.25   juju-42b0da-1  ubuntu@22.04  runnervmf4ws1  Running
+2        started  10.32.32.200  juju-42b0da-2  ubuntu@22.04  runnervmf4ws1  Running
+3        started  10.32.32.37   juju-42b0da-3  ubuntu@22.04  runnervmf4ws1  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:14:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:14:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:16:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:16:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:16:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:16:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:19:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:19:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:21:28 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:21:33 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:21:34 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:21:37 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:21:37 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:21:38 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:21:42 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

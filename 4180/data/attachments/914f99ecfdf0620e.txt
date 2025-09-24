@@ -1,0 +1,541 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:303 Remove async relation
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:309 waiting for units to be blocked
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:315 Waiting for the applications to settle
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] blocked: Standalone read-only unit.
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [executing] blocked: Standalone read-only unit.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [executing] maintenance: Removing replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [idle] active: Primary
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] blocked: Standalone read-only unit.
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [executing] blocked: Standalone read-only unit.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [idle] active: Primary
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [idle] blocked: Standalone read-only unit.
+  db2/1 [idle] blocked: Standalone read-only unit.
+  db2/2 [idle] blocked: Standalone read-only unit.
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:329 Re relating the two mysql clusters
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:332 Waiting for the applications to settle
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:341 Running create replication action
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:351 Waiting for the applications to settle
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] blocked: Wait until unit is initialized before running create-replication on offer side
+  db2/1 [executing] blocked: Standalone read-only unit.
+  db2/2 [executing] blocked: Standalone read-only unit.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [executing] maintenance: Sharing credentials with replica cluster
+  db1/1 [executing] active: 
+  db1/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] waiting: Waiting other units join the cluster
+  db2/1 [executing] waiting: waiting to get cluster primary from peers
+  db2/2 [executing] waiting: waiting to get cluster primary from peers
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [executing] maintenance: Sharing credentials with replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] waiting: Waiting other units join the cluster
+  db2/1 [executing] active: 
+  db2/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [idle] maintenance: Sharing credentials with replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] waiting: Waiting for primary cluster
+  db2/1 [idle] active: 
+  db2/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [executing] maintenance: Sharing credentials with replica cluster
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] waiting: Waiting for recovery to complete on other units
+  db2/1 [executing] waiting: waiting to join the cluster
+  db2/2 [executing] waiting: waiting to join the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db1/0 [idle] active: Primary
+  db1/1 [idle] active: 
+  db1/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [idle] waiting: Waiting for recovery to complete on other units
+  db2/1 [idle] waiting: waiting to join the cluster
+  db2/2 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [idle] waiting: Waiting for recovery to complete on other units
+  db2/1 [executing] maintenance: joining the cluster
+  db2/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  db2/0 [executing] waiting: Waiting for recovery to complete on other units
+  db2/1 [executing] active: 
+  db2/2 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:374 Testing data replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:381 Stopping continuous writes and wait (5s) for replication
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:388 Querying max value on all units
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.test_async_replication:test_async_replication.py:59 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  02:41:04Z
+
+App             Version          Status  Scale  Charm           Channel       Rev  Exposed  Message
+db1             8.0.42-0ubun...  active      3  mysql                           0  no       
+mysql-router    8.0.42           active      1  mysql-router    dpe/edge     1057  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge    85  no       Last written value=8432
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+db1/0*             active    executing  0        10.212.126.145  3306,33060/tcp  Primary
+db1/1              active    executing  1        10.212.126.155  3306,33060/tcp  
+db1/2              active    executing  2        10.212.126.83   3306,33060/tcp  
+mysql-test-app/0*  active    idle       3        10.212.126.5                    Last written value=8432
+  mysql-router/0*  active    idle                10.212.126.5                    
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.212.126.145  juju-a12380-0  ubuntu@22.04  runnervmf4ws1  Running
+1        started  10.212.126.155  juju-a12380-1  ubuntu@22.04  runnervmf4ws1  Running
+2        started  10.212.126.83   juju-a12380-2  ubuntu@22.04  runnervmf4ws1  Running
+3        started  10.212.126.5    juju-a12380-3  ubuntu@22.04  runnervmf4ws1  Running
+
+Offer  Application  Charm  Rev  Connected  Endpoint           Interface    Role
+db1    db1          mysql  0    1/1        replication-offer  mysql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:14:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:14:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:18:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:18:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:18:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:18:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:24:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:24:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-router-0: 02:35:26 ERROR unit.mysql-router/0.juju-log common.mysql_shell:Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    # Disable wizards in this script, since it will be invoked without --no-wizard
+    shell.options.set('useWizards', False)
+    import json
+
+    cluster_set = dba.get_cluster_set()
+    routers = cluster_set.list_routers()
+    # mysqlsh objects are weird—they quack (i.e. duck typing) like standard Python objects (e.g. list,
+    # dict), but do not serialize to JSON correctly.
+    # Cast to str & load from JSON str before serializing
+    routers = json.loads(str(routers))
+    with open("/tmp/mysqlsh_output.json", "w") as file:
+        json.dump(routers, file)
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+stderr:
+[31mERROR: [0mFailed to retrieve the password: Process "mysql_config_editor" finished with exit code 1: mysql_config_editor: Can't create/write to file '/root/snap/charmed-mysql/151/.mylogin.cnf' (OS errno 13 - Permission denied)
+couldn't create the login file : Permission denied
+mysql_config_editor: Error on close of '<fd out of range>' (OS errno 9 - Bad file descriptor)
+operation failed. : Bad file descriptor
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+RuntimeError: Dba.get_cluster_set: This function is not available through a session to a standalone instance (metadata exists, instance does not belong to that metadata, and GR is not active)
+
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:26 ERROR unit.mysql-router/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 231, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/abstract_charm.py", line 360, in reconcile
+    logger.debug(f"{workload_.status=}")
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/workload.py", line 440, in status
+    if not self.shell.is_router_in_cluster_set(self._router_id):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 212, in is_router_in_cluster_set
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:27 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 02:35:37 ERROR unit.mysql-router/0.juju-log common.mysql_shell:Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    # Disable wizards in this script, since it will be invoked without --no-wizard
+    shell.options.set('useWizards', False)
+    import json
+
+    cluster_set = dba.get_cluster_set()
+    routers = cluster_set.list_routers()
+    # mysqlsh objects are weird—they quack (i.e. duck typing) like standard Python objects (e.g. list,
+    # dict), but do not serialize to JSON correctly.
+    # Cast to str & load from JSON str before serializing
+    routers = json.loads(str(routers))
+    with open("/tmp/mysqlsh_output.json", "w") as file:
+        json.dump(routers, file)
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+stderr:
+[31mERROR: [0mFailed to retrieve the password: Process "mysql_config_editor" finished with exit code 1: mysql_config_editor: Can't create/write to file '/root/snap/charmed-mysql/151/.mylogin.cnf' (OS errno 13 - Permission denied)
+couldn't create the login file : Permission denied
+mysql_config_editor: Error on close of '<fd out of range>' (OS errno 9 - Bad file descriptor)
+operation failed. : Bad file descriptor
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+RuntimeError: Dba.get_cluster_set: This function is not available through a session to a standalone instance (metadata exists, instance does not belong to that metadata, and GR is not active)
+
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:37 ERROR unit.mysql-router/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 231, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/abstract_charm.py", line 360, in reconcile
+    logger.debug(f"{workload_.status=}")
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/workload.py", line 440, in status
+    if not self.shell.is_router_in_cluster_set(self._router_id):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 212, in is_router_in_cluster_set
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:37 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-db1-2: 02:35:40 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "9cc69926-61f5-4bfd-83a5-ce2660a12380:r#3#remote-e01b03ebda964f868075e7da2c4e30b4": settings 9cc69926-61f5-4bfd-83a5-ce2660a12380:r#3#remote-e01b03ebda964f868075e7da2c4e30b4 not found (not found)
+unit-db1-0: 02:35:43 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "9cc69926-61f5-4bfd-83a5-ce2660a12380:r#3#remote-e01b03ebda964f868075e7da2c4e30b4": settings 9cc69926-61f5-4bfd-83a5-ce2660a12380:r#3#remote-e01b03ebda964f868075e7da2c4e30b4 not found (not found)
+unit-mysql-router-0: 02:35:55 ERROR unit.mysql-router/0.juju-log common.mysql_shell:Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    # Disable wizards in this script, since it will be invoked without --no-wizard
+    shell.options.set('useWizards', False)
+    import json
+
+    cluster_set = dba.get_cluster_set()
+    routers = cluster_set.list_routers()
+    # mysqlsh objects are weird—they quack (i.e. duck typing) like standard Python objects (e.g. list,
+    # dict), but do not serialize to JSON correctly.
+    # Cast to str & load from JSON str before serializing
+    routers = json.loads(str(routers))
+    with open("/tmp/mysqlsh_output.json", "w") as file:
+        json.dump(routers, file)
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+stderr:
+[31mERROR: [0mFailed to retrieve the password: Process "mysql_config_editor" finished with exit code 1: mysql_config_editor: Can't create/write to file '/root/snap/charmed-mysql/151/.mylogin.cnf' (OS errno 13 - Permission denied)
+couldn't create the login file : Permission denied
+mysql_config_editor: Error on close of '<fd out of range>' (OS errno 9 - Bad file descriptor)
+operation failed. : Bad file descriptor
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+RuntimeError: Dba.get_cluster_set: This function is not available through a session to a standalone instance (metadata exists, instance does not belong to that metadata, and GR is not active)
+
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:55 ERROR unit.mysql-router/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 231, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/abstract_charm.py", line 360, in reconcile
+    logger.debug(f"{workload_.status=}")
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/workload.py", line 440, in status
+    if not self.shell.is_router_in_cluster_set(self._router_id):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 212, in is_router_in_cluster_set
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:35:55 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-router-0: 02:36:19 ERROR unit.mysql-router/0.juju-log common.mysql_shell:Failed to run MySQL Shell script:
+import json
+import mysqlsh
+import traceback
+
+try:
+    # Disable wizards in this script, since it will be invoked without --no-wizard
+    shell.options.set('useWizards', False)
+    import json
+
+    cluster_set = dba.get_cluster_set()
+    routers = cluster_set.list_routers()
+    # mysqlsh objects are weird—they quack (i.e. duck typing) like standard Python objects (e.g. list,
+    # dict), but do not serialize to JSON correctly.
+    # Cast to str & load from JSON str before serializing
+    routers = json.loads(str(routers))
+    with open("/tmp/mysqlsh_output.json", "w") as file:
+        json.dump(routers, file)
+except mysqlsh.DBError as exception:
+    error = {
+        "message": str(exception),
+        "code": exception.code,
+        "traceback_message": "".join(traceback.format_exception(exception)),
+    }
+else:
+    error = None
+with open("/tmp/mysqlsh_error.json", "w") as file:
+    json.dump(error, file)
+
+stderr:
+[31mERROR: [0mFailed to retrieve the password: Process "mysql_config_editor" finished with exit code 1: mysql_config_editor: Can't create/write to file '/root/snap/charmed-mysql/151/.mylogin.cnf' (OS errno 13 - Permission denied)
+couldn't create the login file : Permission denied
+mysql_config_editor: Error on close of '<fd out of range>' (OS errno 9 - Bad file descriptor)
+operation failed. : Bad file descriptor
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+RuntimeError: Dba.get_cluster_set: This function is not available through a session to a standalone instance (metadata exists, instance does not belong to that metadata, and GR is not active)
+
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:36:19 ERROR unit.mysql-router/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 324, in _run_command
+    output = subprocess.run(
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/charm.py", line 231, in <module>
+    ops.main.main(MachineSubordinateRouterCharm)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 436, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 942, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/abstract_charm.py", line 360, in reconcile
+    logger.debug(f"{workload_.status=}")
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/workload.py", line 440, in status
+    if not self.shell.is_router_in_cluster_set(self._router_id):
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 212, in is_router_in_cluster_set
+    self._run_code(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/mysql_shell/__init__.py", line 72, in _run_code
+    self._container.run_mysql_shell(
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/venv/lib/python3.10/site-packages/common/container.py", line 242, in run_mysql_shell
+    return self._run_command(args, timeout=timeout, input=input)
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 738, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-router-0/charm/src/snap.py", line 333, in _run_command
+    raise common.container.CalledProcessError(
+common.container.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri', 'relation-10_9cc6992661f54b@juju-6d5a87-0.lxd:3306', '--python', '--file', '/tmp/mysqlsh_script.py']' returned non-zero exit status 1.
+unit-mysql-router-0: 02:36:20 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
