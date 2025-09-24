@@ -77,13 +77,29 @@ For more information on encryption, see the [Cryptography](https://discourse.cha
 
 Charmed MySQL uses the [caching_sha2_password](https://dev.mysql.com/doc/refman/8.0/en/caching-sha2-pluggable-authentication.html) plugin for authentication. 
 
-### Monitoring and auditing
+### Monitoring
 
 Charmed MySQL provides native integration with the [Canonical Observability Stack (COS)](https://charmhub.io/topics/canonical-observability-stack). To reduce the blast radius of infrastructure disruptions, the general recommendation is to deploy COS and the observed application into separate environments, isolated from one another. Refer to the [COS production deployments best practices](https://charmhub.io/topics/canonical-observability-stack/reference/best-practices) for more information.
 
 For instructions, see the [How to enable monitoring](https://canonical.com/data/docs/mysql/iaas/h-enable-monitoring), [How to enable alert rules](https://canonical.com/data/docs/mysql/iaas/h-enable-alert-rules), and [How to enable tracing](https://canonical.com/data/docs/mysql/iaas/h-enable-tracing) guides.
 
-The Audit log plugin is enabled by default and produces login/logout logs. See the [Audit Logs](https://charmhub.io/mysql/docs/e-audit-logs) guide for further configuration. These logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql` directory of the MySQL container and are rotated every minute to the `/var/snap/charmed-mysql/common/var/log/mysql/archive_audit` directory. It’s recommended to integrate the charm with [COS](https://discourse.charmhub.io/t/9900), from where the logs can be easily persisted and queried using [Loki](https://charmhub.io/loki-k8s)/[Grafana](https://charmhub.io/grafana).
+### Security event logging
+
+Charmed MySQL provides audit log plugin enabled by default. These logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql/audit.log` file of each unit, and rotated minutely the  `archive_audit` sub directory. If COS is enabled, audit logs are also persisted there.
+
+It's recommended configure the retention period to a value bigger than the default (three days), with:
+
+```shell
+juju config mysql logs_retention_period=14 # days
+```
+
+By default, audit log will contain entries for logins and logouts, but it can include the SQL queries done for each user with:
+
+```shell
+juju config mysql logs_audit_policy=all
+```
+
+See the [Audit Logs](https://charmhub.io/mysql/docs/e-audit-logs) guide for further configuration.
 
 ## Additional Resources
 
