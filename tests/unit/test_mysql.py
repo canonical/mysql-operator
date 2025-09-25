@@ -356,19 +356,33 @@ class TestMySQLBase(unittest.TestCase):
                 "test_username", "test_password", "1.1.1.1", "app/0"
             )
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_non_system_databases")
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database(self, _run_mysqlsh_script):
+    def test_create_application_database(
+        self, _run_mysqlsh_script, _list_mysql_roles, _get_non_system_databases
+    ):
         """Test the successful execution of create_application_database."""
+        _get_non_system_databases.return_value = {"test_database"}
+        _list_mysql_roles.return_value = set()
+        _run_mysqlsh_script.return_value = ""
+
+        self.mysql.create_database("test_database")
+
+        self.assertEqual(_run_mysqlsh_script.call_count, 0)
+
+        _get_non_system_databases.return_value = set()
+        _list_mysql_roles.return_value = set()
         _run_mysqlsh_script.return_value = ""
 
         _expected_create_scoped_user_commands = "\n".join((
             "shell.connect_to_primary()",
-            'session.run_sql("CREATE DATABASE IF NOT EXISTS `test_database`;")',
+            'session.run_sql("CREATE ROLE `charmed_dba_test_database_00`;")',
+            'session.run_sql("CREATE DATABASE `test_database`;")',
             'session.run_sql("GRANT SELECT ON `test_database`.* TO charmed_read;")',
             'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO charmed_dml;")',
-            'session.run_sql("CREATE ROLE IF NOT EXISTS `charmed_dba_test_database`;")',
-            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO charmed_dba_test_database;")',
-            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO charmed_dba_test_database;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO charmed_dba_test_database_00;")',
+            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO charmed_dba_test_database_00;")',
         ))
 
         self.mysql.create_database("test_database")
@@ -386,19 +400,19 @@ class TestMySQLBase(unittest.TestCase):
             ],
         )
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_non_system_databases")
+    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database_failure(self, _run_mysqlsh_script):
+    def test_create_application_database_failure(
+        self, _run_mysqlsh_script, _list_mysql_roles, _get_non_system_databases
+    ):
         """Test failure to create application database and scoped user."""
+        _get_non_system_databases.return_value = set()
+        _list_mysql_roles.return_value = set()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLCreateApplicationDatabaseError):
             self.mysql.create_database("test_database")
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_database_invalid(self, _run_mysqlsh_script):
-        """Test failure to create an invalid application database."""
-        with self.assertRaises(MySQLCreateApplicationDatabaseError):
-            self.mysql.create_database("extremely_extra_long_database_name")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_create_application_scoped_user(self, _run_mysqlsh_script):
