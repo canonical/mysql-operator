@@ -8,6 +8,11 @@ import pytest
 from jubilant import Juju, all_active
 
 from ..markers import juju3
+from .high_availability_helpers_new import (
+    get_app_name,
+    get_app_units,
+    get_mysql_primary_unit,
+)
 
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
@@ -20,10 +25,10 @@ def test_cluster_switchover(juju: Juju, highly_available_cluster) -> None:
     app_name = get_app_name(juju, "mysql")
     assert app_name, "MySQL application not found in the cluster"
 
-    app_units = get_app_units(juju, app_name)
+    app_units = set(get_app_units(juju, app_name))
     assert len(app_units) > 1, "Not enough units to perform a switchover"
 
-    primary_unit = get_primary_unit_name(juju, next(iter(app_units)))
+    primary_unit = get_mysql_primary_unit(juju, app_name)
     assert primary_unit, "No primary unit found in the cluster"
     logging.info(f"Current primary unit: {primary_unit}")
 
@@ -35,7 +40,7 @@ def test_cluster_switchover(juju: Juju, highly_available_cluster) -> None:
     switchover_task = juju.run(new_primary_unit, "promote-to-primary", {"scope": "unit"})
     assert switchover_task.status == "completed", "Switchover failed"
 
-    assert get_primary_unit_name(juju, primary_unit) == new_primary_unit, "Switchover failed"
+    assert get_mysql_primary_unit(juju, app_name) == new_primary_unit, "Switchover failed"
 
 
 @juju3
@@ -45,10 +50,10 @@ def test_cluster_failover_after_majority_loss(juju: Juju, highly_available_clust
     app_name = get_app_name(juju, "mysql")
     assert app_name, "MySQL application not found in the cluster"
 
-    app_units = get_app_units(juju, app_name)
+    app_units = set(get_app_units(juju, app_name))
     assert len(app_units) > 1, "Not enough units to perform a switchover"
 
-    primary_unit = get_primary_unit_name(juju, next(iter(app_units)))
+    primary_unit = get_mysql_primary_unit(juju, app_name)
     assert primary_unit, "No primary unit found in the cluster"
     logging.info(f"Current primary unit: {primary_unit}")
 
@@ -90,33 +95,7 @@ def test_cluster_failover_after_majority_loss(juju: Juju, highly_available_clust
     logging.info("Waiting for all units to become active after switchover...")
     juju.wait(all_active, timeout=60 * 10, delay=5)
 
-    assert get_primary_unit_name(juju, primary_unit) == unit_to_promote, "Failover failed"
-
-
-def get_primary_unit_name(juju: Juju, mysql_unit) -> str | None:
-    """Get the current primary node of the cluster."""
-    cluster_status_task = juju.run(mysql_unit, "get-cluster-status")
-    assert cluster_status_task.status == "completed", "Failed to retrieve cluster status"
-    for label, value in cluster_status_task.results["status"]["defaultreplicaset"][
-        "topology"
-    ].items():
-        if value["memberrole"] == "primary":
-            return label.replace("-", "/")
-
-
-def get_app_name(juju: Juju, charm_name: str) -> str | None:
-    """Get the application name for the given charm."""
-    status = juju.status()
-    for app, value in status.apps.items():
-        if value.charm_name == charm_name:
-            return app
-
-
-def get_app_units(juju: Juju, app_name: str) -> set[str]:
-    """Get the units for the given application."""
-    status = juju.status()
-    assert app_name in status.apps, f"Application {app_name} not found in status"
-    return set(status.apps[app_name].units.keys())
+    assert get_mysql_primary_unit(juju, app_name) == unit_to_promote, "Failover failed"
 
 
 def get_unit_machine(juju: Juju, app_name: str, unit_name: str) -> str:
