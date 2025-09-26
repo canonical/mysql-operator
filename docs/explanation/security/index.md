@@ -93,7 +93,7 @@ We recommend setting the retention period to a value greater than the default (t
 juju config mysql logs_retention_period=14 # days
 ```
 
-By default, audit log will contain entries for logins and logouts, but it can include the SQL queries done for each user with:
+By default, the audit log records logins and logouts. To include the SQL queries executed by each user:
 
 ```shell
 juju config mysql logs_audit_policy=all
