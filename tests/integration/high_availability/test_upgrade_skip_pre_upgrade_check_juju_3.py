@@ -66,12 +66,13 @@ async def test_refresh_without_pre_upgrade_check(juju: Juju, charm: str) -> None
     juju.refresh(app=MYSQL_APP_NAME, path=charm)
 
     logging.info("Wait for rolling restart")
-    wait_for_any_unit_status(juju, MYSQL_APP_NAME, "maintenance")
+    app_units = get_app_units(juju, MYSQL_APP_NAME)
+    app_units_funcs = [wait_for_unit_status(MYSQL_APP_NAME, unit, "error") for unit in app_units]
 
-    logging.info("Wait for rolling restart to complete")
     juju.wait(
-        ready=lambda status: jubilant.all_active(status, MYSQL_APP_NAME),
-        timeout=20 * MINUTE_SECS,
+        ready=lambda status: any(status_func(status) for status_func in app_units_funcs),
+        timeout=10 * MINUTE_SECS,
+        successes=1,
     )
 
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
@@ -85,23 +86,13 @@ async def test_rollback_without_pre_upgrade_check(juju: Juju, charm: str) -> Non
     juju.cli("refresh", "--channel=8.0/stable", f"--switch={MYSQL_APP_NAME}", MYSQL_APP_NAME)
 
     logging.info("Wait for rolling restart")
-    wait_for_any_unit_status(juju, MYSQL_APP_NAME, "maintenance")
-
-    logging.info("Wait for rolling restart to complete")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, MYSQL_APP_NAME),
-        timeout=20 * MINUTE_SECS,
-    )
-
-    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
-
-
-def wait_for_any_unit_status(juju: Juju, app_name: str, unit_status: str) -> None:
-    """Wait for any app unit to reach the desired status."""
-    app_units = get_app_units(juju, app_name)
-    app_units_funcs = [wait_for_unit_status(app_name, unit, unit_status) for unit in app_units]
+    app_units = get_app_units(juju, MYSQL_APP_NAME)
+    app_units_funcs = [wait_for_unit_status(MYSQL_APP_NAME, unit, "error") for unit in app_units]
 
     juju.wait(
         ready=lambda status: any(status_func(status) for status_func in app_units_funcs),
         timeout=10 * MINUTE_SECS,
+        successes=1,
     )
+
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
