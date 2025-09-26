@@ -87,7 +87,7 @@ For instructions, see the [How to enable monitoring](https://canonical.com/data/
 
 Charmed MySQL provides audit log plugin enabled by default. These logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql/audit.log` file of each unit, and rotated minutely the  `archive_audit` sub directory. If COS is enabled, audit logs are also persisted there.
 
-It's recommended configure the retention period to a value bigger than the default (three days), with:
+We recommend setting the retention period to a value greater than the default (three days):
 
 ```shell
 juju config mysql logs_retention_period=14 # days
