@@ -8,11 +8,10 @@ import shutil
 import zipfile
 from pathlib import Path
 
-import jubilant
+import jubilant_backports
 import pytest
-from jubilant import Juju
+from jubilant_backports import Juju
 
-from ..markers import juju3
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
     get_app_leader,
@@ -31,7 +30,6 @@ MINUTE_SECS = 60
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-@juju3
 @pytest.mark.abort_on_fail
 def test_deploy_latest(juju: Juju) -> None:
     """Simple test to ensure that the MySQL and application charms get deployed."""
@@ -59,13 +57,14 @@ def test_deploy_latest(juju: Juju) -> None:
 
     logging.info("Wait for applications to become active")
     juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME),
-        error=jubilant.any_blocked,
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
         timeout=20 * MINUTE_SECS,
     )
 
 
-@juju3
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(juju: Juju) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -88,7 +87,6 @@ async def test_pre_upgrade_check(juju: Juju) -> None:
     assert mysql_primary == mysql_leader, "Primary unit not set to leader"
 
 
-@juju3
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
     """Update the second cluster."""
@@ -100,13 +98,13 @@ async def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> N
 
     logging.info("Wait for upgrade to start")
     juju.wait(
-        ready=lambda status: jubilant.any_maintenance(status, MYSQL_APP_NAME),
+        ready=lambda status: jubilant_backports.any_maintenance(status, MYSQL_APP_NAME),
         timeout=10 * MINUTE_SECS,
     )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
-        ready=lambda status: jubilant.all_active(status, MYSQL_APP_NAME),
+        ready=lambda status: jubilant_backports.all_active(status, MYSQL_APP_NAME),
         timeout=20 * MINUTE_SECS,
     )
 
@@ -114,7 +112,6 @@ async def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> N
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
 
-@juju3
 @pytest.mark.abort_on_fail
 async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     """Test an upgrade failure and its rollback."""
@@ -139,7 +136,7 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
 
     logging.info("Wait for upgrade to fail on leader")
     juju.wait(
-        ready=wait_for_apps_status(jubilant.any_blocked, MYSQL_APP_NAME),
+        ready=wait_for_apps_status(jubilant_backports.any_blocked, MYSQL_APP_NAME),
         timeout=10 * MINUTE_SECS,
     )
 
@@ -155,13 +152,13 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
 
     logging.info("Wait for upgrade to start")
     juju.wait(
-        ready=lambda status: jubilant.any_maintenance(status, MYSQL_APP_NAME),
+        ready=lambda status: jubilant_backports.any_maintenance(status, MYSQL_APP_NAME),
         timeout=10 * MINUTE_SECS,
     )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
-        ready=lambda status: jubilant.all_active(status, MYSQL_APP_NAME),
+        ready=lambda status: jubilant_backports.all_active(status, MYSQL_APP_NAME),
         timeout=20 * MINUTE_SECS,
     )
 

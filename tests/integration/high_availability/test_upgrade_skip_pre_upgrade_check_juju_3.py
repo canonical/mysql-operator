@@ -3,13 +3,11 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
 
-import jubilant
+import jubilant_backports
 import pytest
-from jubilant import Juju
+from jubilant_backports import Juju
 
-from ..markers import juju3
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
     get_app_units,
@@ -25,7 +23,6 @@ MINUTE_SECS = 60
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-@juju3
 @pytest.mark.abort_on_fail
 def test_deploy_stable(juju: Juju) -> None:
     """Simple test to ensure that the MySQL and application charms get deployed."""
@@ -54,13 +51,14 @@ def test_deploy_stable(juju: Juju) -> None:
 
     logging.info("Wait for applications to become active")
     juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME),
-        error=jubilant.any_blocked,
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
         timeout=20 * MINUTE_SECS,
     )
 
 
-@juju3
 @pytest.mark.abort_on_fail
 async def test_refresh_without_pre_upgrade_check(juju: Juju, charm: str) -> None:
     """Test updating from stable channel."""
@@ -79,16 +77,12 @@ async def test_refresh_without_pre_upgrade_check(juju: Juju, charm: str) -> None
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
 
-@juju3
 @pytest.mark.abort_on_fail
 async def test_rollback_without_pre_upgrade_check(juju: Juju, charm: str) -> None:
     """Test refresh back to stable channel."""
     # Early Jubilant 1.X.Y versions do not support the `switch` option
-    logging.info("Refresh the charm back to stable channel")
-    subprocess.run(
-        ["juju", "refresh", "--channel=8.0/stable", f"--switch={MYSQL_APP_NAME}", MYSQL_APP_NAME],
-        check=True,
-    )
+    logging.info("Refresh the charm to stable channel")
+    juju.cli("refresh", "--channel=8.0/stable", f"--switch={MYSQL_APP_NAME}", MYSQL_APP_NAME)
 
     logging.info("Wait for rolling restart")
     wait_for_any_unit_status(juju, MYSQL_APP_NAME, "maintenance")

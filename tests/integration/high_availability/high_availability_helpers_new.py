@@ -5,10 +5,10 @@
 import subprocess
 from collections.abc import Callable
 
-import jubilant
+import jubilant_backports
 import yaml
-from jubilant import Juju
-from jubilant.statustypes import Status, UnitStatus
+from jubilant_backports import Juju
+from jubilant_backports.statustypes import Status, UnitStatus
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
@@ -254,7 +254,7 @@ def wait_for_apps_status(jubilant_status_func: JujuAppsStatusFn, *apps: str) -> 
         Juju model status function.
     """
     return lambda status: all((
-        jubilant.all_agents_idle(status, *apps),
+        jubilant_backports.all_agents_idle(status, *apps),
         jubilant_status_func(status, *apps),
     ))
 
