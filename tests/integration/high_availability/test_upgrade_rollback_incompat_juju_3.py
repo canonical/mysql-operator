@@ -19,7 +19,6 @@ from ..markers import amd64_only
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
     get_app_leader,
-    get_app_units,
     get_relation_data,
     get_unit_by_index,
     get_unit_status_log,
@@ -59,7 +58,7 @@ async def test_build_and_deploy(juju: Juju, charm: str) -> None:
     """Simple test to ensure that the MySQL and application charms get deployed."""
     snap_revisions = Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
-        old_revisions: dict = json.load(file)
+        old_revisions = json.load(file)
 
     # TODO: support arm64 & s390x
     new_revisions = old_revisions.copy()
@@ -67,11 +66,14 @@ async def test_build_and_deploy(juju: Juju, charm: str) -> None:
 
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
+
+    local_charm = get_locally_built_charm(charm)
+
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
 
     juju.deploy(
-        charm=get_locally_built_charm(charm),
+        charm=local_charm,
         app=MYSQL_APP_NAME,
         base="ubuntu@22.04",
         config={"profile": "testing", "plugin-audit-enabled": False},
@@ -163,7 +165,7 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
 
     snap_revisions = Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
-        old_revisions: dict = json.load(file)
+        old_revisions = json.load(file)
 
     # TODO: support arm64 & s390x
     new_revisions = old_revisions.copy()
@@ -173,7 +175,6 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
         json.dump(new_revisions, file)
 
     mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
-    mysql_units = get_app_units(juju, MYSQL_APP_NAME)
     local_charm = get_locally_built_charm(charm)
 
     time.sleep(10)
@@ -188,12 +189,8 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     juju.refresh(app=MYSQL_APP_NAME, path=local_charm)
 
     logging.info("Wait for upgrade to start")
-    mysql_units_funcs = [
-        wait_for_unit_status(MYSQL_APP_NAME, unit, "waiting") for unit in mysql_units
-    ]
-
     juju.wait(
-        ready=lambda status: any(status_func(status) for status_func in mysql_units_funcs),
+        ready=lambda status: jubilant_backports.any_maintenance(status, MYSQL_APP_NAME),
         timeout=10 * MINUTE_SECS,
     )
     juju.wait(
