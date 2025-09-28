@@ -1,0 +1,68 @@
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:82 Refresh the charm
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:85 Wait for upgrade to start
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:91 Wait for upgrade to complete
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: stopping services..
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] waiting: other units upgrading first...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [executing] maintenance: starting services...
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: starting services...
+  mysql/1 [idle] waiting: other units upgrading first...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] maintenance: upgrade completed
+  mysql/1 [executing] maintenance: upgrading snap...
+  mysql/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.high_availability.test_upgrade_from_stable:test_upgrade_from_stable.py:96 Ensure continuous_writes
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:342 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:483 Retrieving primary unit
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=26266 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=26266 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=26303 on unit mysql/0
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=26307 on unit mysql/1
+[32mINFO    [0m integration.high_availability.high_availability_helpers:high_availability_helpers.py:367 max_written_value=26313 on unit mysql/2
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  02:46:28Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle       0        10.214.116.246                  
+mysql/0            active    executing  1        10.214.116.118  3306,33060/tcp  Primary
+mysql/1*           active    executing  2        10.214.116.51   3306,33060/tcp  
+mysql/2            active    executing  3        10.214.116.102  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.214.116.246  juju-640380-0  ubuntu@22.04  runnervm3ublj  Running
+1        started  10.214.116.118  juju-640380-1  ubuntu@22.04  runnervm3ublj  Running
+2        started  10.214.116.51   juju-640380-2  ubuntu@22.04  runnervm3ublj  Running
+3        started  10.214.116.102  juju-640380-3  ubuntu@22.04  runnervm3ublj  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:37:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:37:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:38:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:38:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:38:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:38:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:39:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:39:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

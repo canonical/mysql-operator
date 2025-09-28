@@ -1,0 +1,80 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.10   unsupported  02:44:54Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.34-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle       3        10.102.139.83                   
+mysql/0*           error     idle       0        10.102.139.174  3306,33060/tcp  hook failed: "update-status"
+mysql/1            active    idle       1        10.102.139.234  3306,33060/tcp  
+mysql/2            active    executing  2        10.102.139.247                  
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.102.139.174  juju-7c7428-0  ubuntu@22.04  runnervm3ublj  Running
+1        started  10.102.139.234  juju-7c7428-1  ubuntu@22.04  runnervm3ublj  Running
+2        started  10.102.139.247  juju-7c7428-2  ubuntu@22.04  runnervm3ublj  Running
+3        started  10.102.139.83   juju-7c7428-3  ubuntu@22.04  runnervm3ublj  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:40:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:40:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:41:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:41:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:41:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:41:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:41:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:41:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:42:27 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:42:28 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:42:39 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-1: 02:42:51 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:42:57 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-1: 02:44:02 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-1: 02:44:09 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:44:09 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:44:12 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-1: 02:44:25 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:44:27 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-2: 02:44:30 ERROR unit.mysql/2.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-1: 02:44:31 ERROR unit.mysql/1.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:44:33 ERROR unit.mysql/0.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+unit-mysql-0: 02:44:53 ERROR unit.mysql/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 1021, in <module>
+    main(MySQLOperatorCharm)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 81, in _update_endpoints_all_relations
+    self._update_endpoints(relation.id, relation.app.name)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 903, in get_cluster_endpoints
+    address = f"{self.get_unit_address(unit_labels[k], relation_name)}:3306"
+KeyError: 'juju-7c7428-2.lxd:3306'
+unit-mysql-0: 02:44:54 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mysql-2: 02:44:54 ERROR unit.mysql/2.juju-log database-peers:0: Failed to reconcile binlogs collection during peer relation event
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
