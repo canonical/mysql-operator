@@ -1,19 +1,20 @@
-resource "juju_application" "machine_mysql" {
+resource "juju_application" "mysql_server" {
   name  = var.app_name
-  model = var.juju_model_name
+  model = var.model_name
 
   charm {
     name     = "mysql"
+    base     = var.base
     channel  = var.channel
     revision = var.revision
-    base     = var.base
   }
 
   storage_directives = {
     database = var.storage_size
   }
 
-  units       = var.units
-  constraints = var.constraints
-  config      = var.config
+  config            = var.config
+  constraints       = var.constraints
+  endpoint_bindings = var.endpoint_bindings
+  units             = var.units
 }
