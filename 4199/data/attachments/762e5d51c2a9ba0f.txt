@@ -1,0 +1,30 @@
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:62 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json mysql-test-app/0 clear-continuous-writes
+[32mINFO    [0m root:test_async_replication_upgrade.py:64 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json mysql-test-app/0 start-continuous-writes
+[32mINFO    [0m root:test_async_replication_upgrade.py:212 Testing data replication
+[32mINFO    [0m root:test_async_replication_upgrade.py:225 Stopping continuous writes
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json mysql-test-app/0 stop-continuous-writes --params /root/snap/juju/common/tmpogxosijj
+[32mINFO    [0m root:test_async_replication_upgrade.py:236 Querying max value on all db1 units
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpy8yi350e
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json db1/1 get-password --params /root/snap/juju/common/tmphjhsfoyr
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json db1/2 get-password --params /root/snap/juju/common/tmpgxcqnuv7
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:241 Querying max value on all db2 units
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing-other --format json db2/0 get-password --params /root/snap/juju/common/tmp00r99cod
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing-other --format json db2/1 get-password --params /root/snap/juju/common/tmp8tz6r5o1
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing-other --format json db2/2 get-password --params /root/snap/juju/common/tmpe89g8of5
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:69 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju run --model testing --format json mysql-test-app/0 clear-continuous-writes
+[32mINFO    [0m root:test_async_replication_upgrade.py:52 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju debug-log --limit 1000
