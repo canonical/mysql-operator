@@ -109,15 +109,17 @@ def get_unit_info(juju: Juju, unit_name: str) -> dict:
     return json.loads(output)
 
 
-def get_unit_status_log(juju: Juju, unit_name: str) -> list[dict]:
+def get_unit_status_log(juju: Juju, unit_name: str, log_lines: int = 0) -> list[dict]:
     """Get the status log for a unit.
 
     Args:
         juju: The juju instance to use.
         unit_name: The name of the unit to retrieve the status log for
+        log_lines: The number of status logs to retrieve (optional)
     """
+    # fmt: off
     output = subprocess.check_output(
-        ["juju", "show-status-log", f"--model={juju.model}", "--format=json", unit_name],
+        ["juju", "show-status-log", f"--model={juju.model}", "--format=json", unit_name, "-n", f"{log_lines}"],
         text=True,
     )
 

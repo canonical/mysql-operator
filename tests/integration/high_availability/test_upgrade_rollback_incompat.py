@@ -1,208 +1,219 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import ast
 import json
 import logging
-import pathlib
 import shutil
-from time import sleep
-from zipfile import ZipFile
+import time
+import zipfile
+from ast import literal_eval
+from collections.abc import Generator
+from pathlib import Path
 
+import jubilant_backports
 import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from .. import juju_, markers
-from ..helpers import (
-    get_leader_unit,
+from ..markers import amd64_only
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_app_leader,
     get_relation_data,
-    get_status_log,
-    get_unit_by_index,
-)
-from .high_availability_helpers import (
-    ensure_all_units_continuous_writes_incrementing,
-    relate_mysql_and_application,
+    get_unit_by_number,
+    get_unit_status_log,
+    wait_for_apps_status,
+    wait_for_unit_status,
 )
 
-logger = logging.getLogger(__name__)
-
-TIMEOUT = 20 * 60
 MYSQL_APP_NAME = "mysql"
-TEST_APP = "mysql-test-app"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
+
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-# TODO: remove after next incompatible MySQL server version released in our snap
+@pytest.fixture()
+def continuous_writes(juju: Juju) -> Generator:
+    """Starts continuous writes to the MySQL cluster for a test and clear the writes at the end."""
+    test_app_leader = get_app_leader(juju, MYSQL_TEST_APP_NAME)
+
+    logging.info("Clearing continuous writes")
+    juju.run(test_app_leader, "clear-continuous-writes")
+    logging.info("Starting continuous writes")
+    juju.run(test_app_leader, "start-continuous-writes")
+
+    yield
+
+    logging.info("Clearing continuous writes")
+    juju.run(test_app_leader, "clear-continuous-writes")
+
+
+# TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
-@markers.amd64_only
+@amd64_only
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
-    """Simple test to ensure that the mysql and application charms get deployed."""
-    snap_revisions = pathlib.Path("snap_revisions.json")
+async def test_build_and_deploy(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    snap_revisions = Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
-        old_revisions: dict = json.load(file)
-    new_revisions = old_revisions.copy()
+        old_revisions = json.load(file)
+
     # TODO: support arm64 & s390x
+    new_revisions = old_revisions.copy()
     new_revisions["x86_64"] = "69"
+
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    local_charm = await charm_local_build(ops_test, charm)
+
+    local_charm = get_locally_built_charm(charm)
 
     with snap_revisions.open("w") as file:
         json.dump(old_revisions, file)
 
-    async with ops_test.fast_forward("30s"):
-        await ops_test.model.deploy(
-            local_charm,
-            application_name=MYSQL_APP_NAME,
-            num_units=3,
-            base="ubuntu@22.04",
-            config={"profile": "testing", "plugin-audit-enabled": "false"},
-        )
+    juju.deploy(
+        charm=local_charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing", "plugin-audit-enabled": False},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"auto_start_writes": False, "sleep_interval": 500},
+        num_units=1,
+    )
 
-        await ops_test.model.deploy(
-            TEST_APP,
-            application_name=TEST_APP,
-            channel="latest/edge",
-            num_units=1,
-            base="ubuntu@22.04",
-            config={"auto_start_writes": False, "sleep_interval": "500"},
-        )
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
 
-        await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP)
-        await ops_test.model.wait_for_idle(
-            apps=[MYSQL_APP_NAME, TEST_APP],
-            status="active",
-            timeout=TIMEOUT,
-        )
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
 
-# TODO: remove after next incompatible MySQL server version released in our snap
+# TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
-@markers.amd64_only
+@amd64_only
 @pytest.mark.abort_on_fail
-async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
+async def test_pre_upgrade_check(juju: Juju) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
-    logger.info("Get leader unit")
-    leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
+    mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
 
-    assert leader_unit is not None, "No leader unit found"
-    logger.info("Run pre-upgrade-check action")
-    await juju_.run_action(leader_unit, "pre-upgrade-check")
+    logging.info("Run pre-upgrade-check action")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
 
-# TODO: remove after next incompatible MySQL server version released in our snap
+# TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
-@markers.amd64_only
+@amd64_only
 @pytest.mark.abort_on_fail
-async def test_upgrade_to_failling(
-    ops_test: OpsTest,
-    charm,
-    continuous_writes,
-) -> None:
-    logger.info("Ensure continuous_writes")
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
-
-    application = ops_test.model.applications[MYSQL_APP_NAME]
+async def test_upgrade_to_failing(juju: Juju, charm: str, continuous_writes) -> None:
+    logging.info("Ensure continuous_writes")
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
     with InjectFailure(
         path="src/upgrade.py",
         original_str="self.charm.recover_unit_after_restart()",
         replace_str="raise Exception",
     ):
-        logger.info("Build charm with failure injected")
-        new_charm = await charm_local_build(ops_test, charm, refresh=True)
+        logging.info("Build charm with failure injected")
+        new_charm = get_locally_built_charm(charm)
 
-    logger.info("Refresh the charm")
-    await application.refresh(path=new_charm)
+    logging.info("Refresh the charm")
+    juju.refresh(app=MYSQL_APP_NAME, path=new_charm)
 
-    logger.info("Wait for upgrade to start")
-    await ops_test.model.block_until(
-        lambda: "waiting" in {unit.workload_status for unit in application.units},
-        timeout=TIMEOUT,
+    logging.info("Wait for upgrade to start")
+    juju.wait(
+        ready=lambda status: jubilant_backports.any_maintenance(status, MYSQL_APP_NAME),
+        timeout=10 * MINUTE_SECS,
     )
-    logger.info("Get first upgrading unit")
-    relation_data = await get_relation_data(ops_test, MYSQL_APP_NAME, "upgrade")
+
+    logging.info("Get first upgrading unit")
+    relation_data = get_relation_data(juju, MYSQL_APP_NAME, "upgrade")
     upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
-    upgrading_unit = get_unit_by_index(
-        MYSQL_APP_NAME, application.units, ast.literal_eval(upgrade_stack)[-1]
-    )
+    upgrade_unit = get_unit_by_number(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
 
-    assert upgrading_unit is not None, "No upgrading unit found"
-
-    logger.info("Wait for upgrade to fail on upgrading unit")
-    await ops_test.model.block_until(
-        lambda: upgrading_unit.workload_status == "blocked",
-        timeout=TIMEOUT,
+    logging.info("Wait for upgrade to fail on upgrading unit")
+    juju.wait(
+        ready=wait_for_unit_status(MYSQL_APP_NAME, upgrade_unit, "blocked"),
+        timeout=10 * MINUTE_SECS,
     )
 
 
-# TODO: remove after next incompatible MySQL server version released in our snap
+# TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
-@markers.amd64_only
+@amd64_only
 @pytest.mark.abort_on_fail
-async def test_rollback(ops_test, charm, continuous_writes) -> None:
-    application = ops_test.model.applications[MYSQL_APP_NAME]
-
-    relation_data = await get_relation_data(ops_test, MYSQL_APP_NAME, "upgrade")
+async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
+    """Test upgrade rollback to a healthy revision."""
+    relation_data = get_relation_data(juju, MYSQL_APP_NAME, "upgrade")
     upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
-    upgrading_unit = get_unit_by_index(
-        MYSQL_APP_NAME, application.units, ast.literal_eval(upgrade_stack)[-1]
-    )
-    assert upgrading_unit is not None, "No upgrading unit found"
-    assert upgrading_unit.workload_status == "blocked", "Upgrading unit's status is not blocked"
+    upgrade_unit = get_unit_by_number(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
 
-    snap_revisions = pathlib.Path("snap_revisions.json")
+    snap_revisions = Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
-        old_revisions: dict = json.load(file)
-    new_revisions = old_revisions.copy()
+        old_revisions = json.load(file)
+
     # TODO: support arm64 & s390x
+    new_revisions = old_revisions.copy()
     new_revisions["x86_64"] = "69"
+
     with snap_revisions.open("w") as file:
         json.dump(new_revisions, file)
-    local_charm = await charm_local_build(ops_test, charm, refresh=True)
 
-    logger.info("Get leader unit")
-    leader_unit = await get_leader_unit(ops_test, MYSQL_APP_NAME)
+    mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
+    local_charm = get_locally_built_charm(charm)
 
-    assert leader_unit is not None, "No leader unit found"
+    time.sleep(10)
 
-    sleep(10)
-    logger.info("Run pre-upgrade-check action")
-    await juju_.run_action(leader_unit, "pre-upgrade-check")
+    logging.info("Run pre-upgrade-check action")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
-    sleep(20)
-    logger.info("Refresh with previous charm")
-    await application.refresh(path=local_charm)
+    time.sleep(20)
 
-    logger.info("Wait for upgrade to start")
-    await ops_test.model.block_until(
-        lambda: "waiting" in {unit.workload_status for unit in application.units},
-        timeout=TIMEOUT,
+    logging.info("Refresh with previous charm")
+    juju.refresh(app=MYSQL_APP_NAME, path=local_charm)
+
+    logging.info("Wait for upgrade to start")
+    juju.wait(
+        ready=lambda status: jubilant_backports.any_maintenance(status, MYSQL_APP_NAME),
+        timeout=10 * MINUTE_SECS,
     )
-    await ops_test.model.wait_for_idle(apps=[MYSQL_APP_NAME], status="active", timeout=TIMEOUT)
+    juju.wait(
+        ready=lambda status: jubilant_backports.all_active(status, MYSQL_APP_NAME),
+        timeout=20 * MINUTE_SECS,
+    )
 
-    logger.info("Ensure rollback has taken place")
+    logging.info("Ensure rollback has taken place")
+    unit_status_logs = get_unit_status_log(juju, upgrade_unit, 100)
 
-    status_logs = await get_status_log(ops_test, upgrading_unit.name, 100)
+    upgrade_failed_index = get_unit_log_message(
+        status_logs=unit_status_logs[:],
+        unit_message="upgrade failed. Check logs for rollback instruction",
+    )
+    assert upgrade_failed_index is not None
 
-    upgrade_failed_index = -1
-    for index, status_log in enumerate(status_logs):
-        if "upgrade failed. Check logs for rollback instruction" in status_log:
-            upgrade_failed_index = index
-            break
-    assert upgrade_failed_index > -1, "Upgrade failed status log not found"
+    upgrade_complete_index = get_unit_log_message(
+        status_logs=unit_status_logs[upgrade_failed_index:],
+        unit_message="upgrade completed",
+    )
+    assert upgrade_complete_index is not None
 
-    post_upgrade_failed_status_logs = status_logs[upgrade_failed_index:]
-
-    upgrade_complete_index = -1
-    for index, status_log in enumerate(post_upgrade_failed_status_logs):
-        if "upgrade completed" in status_log:
-            upgrade_complete_index = index
-            break
-    assert upgrade_complete_index > -1, "Upgrade completed status log not found for rollback"
-
-    logger.info("Ensure continuous_writes after rollback procedure")
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    logging.info("Ensure continuous writes after rollback procedure")
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
 
 class InjectFailure:
@@ -214,7 +225,7 @@ class InjectFailure:
             self.original_content = file.read()
 
     def __enter__(self):
-        logger.info("Injecting failure")
+        logging.info("Injecting failure")
         assert self.original_str in self.original_content, "replace content not found"
         new_content = self.original_content.replace(self.original_str, self.replace_str)
         assert self.original_str not in new_content, "original string not replaced"
@@ -222,33 +233,37 @@ class InjectFailure:
             file.write(new_content)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        logger.info("Reverting failure")
+        logging.info("Reverting failure")
         with open(self.path, "w") as file:
             file.write(self.original_content)
 
 
-async def charm_local_build(ops_test: OpsTest, charm, refresh: bool = False):
+def get_unit_log_message(status_logs: list[dict], unit_message: str) -> int | None:
+    """Returns the index of a status log containing the desired message."""
+    for index, status_log in enumerate(status_logs):
+        if status_log.get("message") == unit_message:
+            return index
+
+    return None
+
+
+def get_locally_built_charm(charm: str) -> str:
     """Wrapper for a local charm build zip file updating."""
-    local_charms = pathlib.Path().glob("local-*.charm")
-    for lc in local_charms:
-        # clean up local charms from previous runs to avoid
-        # pytest_operator_cache globbing them
-        lc.unlink()
+    local_charm_paths = Path().glob("local-*.charm")
 
-    update_files = ["snap_revisions.json", "src/upgrade.py"]
+    # Clean up local charms from previous runs
+    # to avoid pytest_operator_cache globbing them
+    for charm_path in local_charm_paths:
+        charm_path.unlink()
 
-    # create a copy of the charm to avoid modifying the original
-    local_charm = pathlib.Path(shutil.copy(charm, f"local-{pathlib.Path(charm).stem}.charm"))
+    # Create a copy of the charm to avoid modifying the original
+    local_charm_path = shutil.copy(charm, f"local-{Path(charm).stem}.charm")
+    local_charm_path = Path(local_charm_path)
 
-    for path in update_files:
+    for path in ["snap_revisions.json", "src/upgrade.py"]:
         with open(path) as f:
             content = f.read()
-
-        with ZipFile(local_charm, mode="a") as charm_zip:
+        with zipfile.ZipFile(local_charm_path, mode="a") as charm_zip:
             charm_zip.writestr(path, content)
 
-    if refresh:
-        # when refreshing, return posix path
-        return local_charm
-    # when deploying, return prefixed full path
-    return f"local:{local_charm.resolve()}"
+    return f"{local_charm_path.resolve()}"
