@@ -1,6 +1,5 @@
-# Audit Logs
-
 (audit_logs)=
+# Audit Logs
 
 The Audit Log plugin allows fine grained configuration for all login/logout, queries or both records to be stored in a log file. It is enabled in Charmed MySQL by default.
 
