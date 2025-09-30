@@ -85,7 +85,7 @@ For instructions, see the [How to enable monitoring](https://canonical.com/data/
 
 ### Security event logging
 
-Charmed MySQL provides [audit log plugin](audit_logs) enabled by default. These logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql/audit.log` file of each unit, and rotated minutely the  `archive_audit` sub directory. If COS is enabled, audit logs are also persisted there.
+Charmed MySQL provides [audit log plugin](audit_logs) enabled by default. These logs are stored in the `/var/snap/charmed-mysql/common/var/log/mysql/audit.log` file of each unit, and rotated minutely the `archive_audit` sub directory. If COS is enabled, audit logs are also persisted there.
 
 We recommend setting the retention period to a value greater than the default (three days):
 
