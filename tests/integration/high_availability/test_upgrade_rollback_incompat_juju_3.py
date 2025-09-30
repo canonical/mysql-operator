@@ -20,7 +20,7 @@ from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
     get_app_leader,
     get_relation_data,
-    get_unit_by_index,
+    get_unit_by_number,
     get_unit_status_log,
     wait_for_apps_status,
     wait_for_unit_status,
@@ -144,7 +144,7 @@ async def test_upgrade_to_failing(juju: Juju, charm: str, continuous_writes) -> 
     logging.info("Get first upgrading unit")
     relation_data = get_relation_data(juju, MYSQL_APP_NAME, "upgrade")
     upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
-    upgrade_unit = get_unit_by_index(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
+    upgrade_unit = get_unit_by_number(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
 
     logging.info("Wait for upgrade to fail on upgrading unit")
     juju.wait(
@@ -161,7 +161,7 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     """Test upgrade rollback to a healthy revision."""
     relation_data = get_relation_data(juju, MYSQL_APP_NAME, "upgrade")
     upgrade_stack = relation_data[0]["application-data"]["upgrade-stack"]
-    upgrade_unit = get_unit_by_index(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
+    upgrade_unit = get_unit_by_number(juju, MYSQL_APP_NAME, literal_eval(upgrade_stack)[-1])
 
     snap_revisions = Path("snap_revisions.json")
     with snap_revisions.open("r") as file:
@@ -199,19 +199,19 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     )
 
     logging.info("Ensure rollback has taken place")
-    unit_status_logs = get_unit_status_log(juju, upgrade_unit, 100)
+    unit_status_logs = get_unit_status_log(juju, upgrade_unit)
 
     upgrade_failed_index = get_unit_log_message(
         status_logs=unit_status_logs[:],
         unit_message="upgrade failed. Check logs for rollback instruction",
     )
-    assert upgrade_failed_index != -1
+    assert upgrade_failed_index is not None
 
     upgrade_complete_index = get_unit_log_message(
         status_logs=unit_status_logs[upgrade_failed_index:],
         unit_message="upgrade completed",
     )
-    assert upgrade_complete_index != -1
+    assert upgrade_complete_index is not None
 
     logging.info("Ensure continuous writes after rollback procedure")
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
@@ -239,15 +239,13 @@ class InjectFailure:
             file.write(self.original_content)
 
 
-def get_unit_log_message(status_logs: list[str], unit_message: str) -> int:
+def get_unit_log_message(status_logs: list[dict], unit_message: str) -> int | None:
     """Returns the index of a status log containing the desired message."""
-    log_message_index = -1
     for index, status_log in enumerate(status_logs):
-        if unit_message in status_log:
-            log_message_index = index
-            break
+        if status_log["message"] == unit_message:
+            return index
 
-    return log_message_index
+    return None
 
 
 def get_locally_built_charm(charm: str) -> str:

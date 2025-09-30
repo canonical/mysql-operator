@@ -2,11 +2,11 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import subprocess
 from collections.abc import Callable
 
 import jubilant_backports
-import yaml
 from jubilant_backports import Juju
 from jubilant_backports.statustypes import Status, UnitStatus
 from tenacity import Retrying, stop_after_delay, wait_fixed
@@ -77,12 +77,12 @@ def get_app_units(juju: Juju, app_name: str) -> dict[str, UnitStatus]:
     return app_status.units
 
 
-def get_unit_by_index(juju: Juju, app_name: str, index: int) -> str:
-    """Get unit by index."""
+def get_unit_by_number(juju: Juju, app_name: str, unit_number: int) -> str:
+    """Get unit by number."""
     model_status = juju.status()
     app_status = model_status.apps[app_name]
     for name in app_status.units:
-        if name == f"{app_name}/{index}":
+        if name == f"{app_name}/{unit_number}":
             return name
 
     raise Exception("No application unit found")
@@ -102,27 +102,26 @@ def get_unit_ip(juju: Juju, app_name: str, unit_name: str) -> str:
 def get_unit_info(juju: Juju, unit_name: str) -> dict:
     """Return a dictionary with the show-unit data."""
     output = subprocess.check_output(
-        ["juju", "show-unit", f"--model={juju.model}", unit_name],
+        ["juju", "show-unit", f"--model={juju.model}", "--format=json", unit_name],
         text=True,
     )
 
-    return yaml.safe_load(output)
+    return json.loads(output)
 
 
-def get_unit_status_log(juju: Juju, unit_name: str, log_lines: int = 0) -> list[str]:
+def get_unit_status_log(juju: Juju, unit_name: str) -> list[dict]:
     """Get the status log for a unit.
 
     Args:
         juju: The juju instance to use.
         unit_name: The name of the unit to retrieve the status log for
-        log_lines: The number of status logs to retrieve (optional)
     """
     output = subprocess.check_output(
-        ["juju", "show-status-log", f"--model={juju.model}", unit_name, "-n", f"{log_lines}"],
+        ["juju", "show-status-log", f"--model={juju.model}", "--format=json", unit_name],
         text=True,
     )
 
-    return output.split("\n")
+    return json.loads(output)
 
 
 def get_relation_data(juju: Juju, app_name: str, rel_name: str) -> list[dict]:
@@ -152,13 +151,13 @@ def get_relation_data(juju: Juju, app_name: str, rel_name: str) -> list[dict]:
     return relation_data
 
 
-def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool | None = False) -> dict:
+def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool = False) -> dict:
     """Get the cluster status by running the get-cluster-status action.
 
     Args:
         juju: The juju instance to use.
         unit: The unit on which to execute the action on
-        cluster_set: Whether to get the cluster-set instead
+        cluster_set: Whether to get the cluster-set instead (optional)
 
     Returns:
         A dictionary representing the cluster status
@@ -166,7 +165,7 @@ def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool | None = F
     task = juju.run(
         unit=unit,
         action="get-cluster-status",
-        params={"cluster-set": bool(cluster_set)},
+        params={"cluster-set": cluster_set},
         wait=5 * MINUTE_SECS,
     )
     task.raise_on_failure()
