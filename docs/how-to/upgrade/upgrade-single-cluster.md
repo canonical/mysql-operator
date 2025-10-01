@@ -11,21 +11,18 @@ To upgrade a multi-cluster deployment, see [](/how-to/upgrade/multi-cluster) fir
 
 ## Important information
 
-We strongly recommend to **NOT** perform any other extraordinary operations on a Charmed MySQL cluster while upgrading. These may be (but not limited to) the following:
+**Do not perform any other extraordinary operations on a Charmed MySQL cluster while upgrading.** For example:
 
-1. Adding or removing units
-2. Creating or destroying new relations
-3. Changes in workload configuration
-4. Upgrading other connected/related/integrated applications simultaneously
+* Adding or removing units
+* Creating or destroying new relations
+* Changes in workload configuration
+* Upgrading other connected/related/integrated applications simultaneously
 
 Concurrency with other operations is not supported, and it can lead the cluster into inconsistent states.
 
-```{caution}
-Make sure to have a backup of your data when running any type of upgrades!
-See: [How to create a backup](/how-to/back-up-and-restore/create-a-backup)
-```
+**Create and test a backup of your data before running any type of upgrades.** See [](/how-to/back-up-and-restore/create-a-backup).
 
-It is recommended to deploy your application in conjunction with [Charmed MySQL Router](https://charmhub.io/mysql-router). This will ensure minimal service disruption, if any.
+**It is recommended to integrate your application with [Charmed MySQL Router](https://charmhub.io/mysql-router).** This will ensure minimal service disruption, if any.
 
 ## Summary of the upgrade steps
 
@@ -91,6 +88,10 @@ The action will configure the charm to minimize the amount of primary switchover
 ## Step 3: Upgrade
 
 Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process.
+
+```{caution}
+If you are refreshing multiple clusters, make sure to leave the primary cluster for last. See [](/how-to/upgrade/upgrade-multi-cluster) for more information.
+```
 
 Example with channel selection
 
