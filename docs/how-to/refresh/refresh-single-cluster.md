@@ -1,11 +1,11 @@
-# How to upgrade a single cluster
+# How to refresh a single cluster
 
 **Example**: MySQL 8.0.33 -> MySQL 8.0.34<br/>
 (including charm revision bump: e.g. Revision 193 -> Revision 196)
 
 This guide covers refresh for single cluster MySQL deployments. 
 
-To upgrade a multi-cluster deployment, see [](/how-to/refresh/refresh-multi-cluster) first.
+To refresh a multi-cluster deployment, see [](/how-to/refresh/refresh-multi-cluster) first.
 
 ## Important information
 
@@ -84,7 +84,7 @@ The action will configure the charm to minimize the amount of primary switchover
 
 If you are refreshing multiple clusters, make sure to refresh the standby clusters first. See [](/how-to/refresh/refresh-multi-cluster) for more information.
 
-Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process. 
+Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm refresh process. 
 
 Example with channel selection:
 
@@ -143,9 +143,9 @@ Machine  State    Address         Inst id         Series  AZ  Message
 13       started  10.169.158.70   juju-b72e25-13  jammy       Running
 ```
 
-After each unit completes the upgrade, the message `upgrade completed` is displayed, and the next unit follows.
+After each unit completes the refresh, the message `refresh completed` is displayed, and the next unit follows.
 
-Example `juju status` during an upgrade:
+Example `juju status` during an refresh:
 
 ```shell
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
@@ -174,7 +174,7 @@ After a `juju refresh`, if there are any version incompatibilities in charm revi
 (step-4-rollback-optional)=
 ## Step 4: Roll back
 
-If there was an issue with the upgrade, even if the underlying MySQL cluster continues to work, it’s important to roll back the charm to the previous revision. 
+If there was an issue with the refresh, even if the underlying MySQL cluster continues to work, it’s important to roll back the charm to the previous revision. 
 
 The update can be attempted again after a further inspection of the failure. 
 
