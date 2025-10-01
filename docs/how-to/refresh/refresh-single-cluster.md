@@ -1,11 +1,6 @@
 # How to refresh a single cluster
 
-**Example**: MySQL 8.0.33 -> MySQL 8.0.34<br/>
-(including charm revision bump: e.g. Revision 193 -> Revision 196)
-
-This guide covers refresh for single cluster MySQL deployments. 
-
-To refresh a multi-cluster deployment, see [](/how-to/refresh/refresh-multi-cluster) first.
+This guide covers refresh for single cluster MySQL deployments. To refresh a multi-cluster deployment, see [](/how-to/refresh/refresh-multi-cluster) first.
 
 ## Important information
 
