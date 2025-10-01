@@ -1,29 +1,26 @@
 # Upgrade
 
 This section contains documentation about performing upgrades (and rollbacks) on:
-* [MySQL Server (workload)](mysql-upgrades)
+* [MySQL Server (workload and charm)](mysql-upgrades)
 * [Juju version](#juju-upgrades)
 
 (mysql-upgrades)=
-## MySQL upgrades
-There are two types of in-place workload upgrades:
-* **Major upgrades** -  E.g. MySQL `8.0` -> MySQL `9.0`
-  * *Not supported*
-* **Minor upgrades** -  E.g. MySQL `8.0.33` -> `8.0.34` (includes charm revision bump)
-  * See: [How to perform a minor upgrade](/how-to/upgrade/perform-a-minor-upgrade)
-  * See: [How to perform a minor rollback](/how-to/upgrade/perform-a-minor-rollback)
+## MySQL upgrades (refresh)
 
-```{caution}
-This charm only supports in-place **minor** upgrades. 
+This charm supports in-place upgrades versions of MySQL via Juju's [`refresh`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/#details) command.
 
-To upgrade to a major MySQL version, one must install a new cluster separately and migrate the data from the old to the new installation. This documentation will be updated with the migration instructions when a new MySQL version becomes available.
-```
+<!-- warning about incompatible patch version (maybe 8.0.37) -->
+
+See:
+* [](/how-to/upgrade/upgrade-single-cluster)
+* [](/how-to/upgrade/upgrade-multi-cluster-deployment)
+
 (juju-upgrades)=
 ## Juju upgrades
 
 New revisions of the charm may require that you do a major or minor Juju upgrade.
 
-See the guide: [How to upgrade Juju](/how-to/upgrade/upgrade-juju)
+See: [](/how-to/upgrade/upgrade-juju)
 
 ```{toctree}
 :titlesonly:
@@ -31,6 +28,6 @@ See the guide: [How to upgrade Juju](/how-to/upgrade/upgrade-juju)
 :hidden:
 
 Upgrade Juju <upgrade-juju>
-Perform a minor rollback <perform-a-minor-rollback>
-Perform a minor upgrade <perform-a-minor-upgrade>
+Upgrade a single cluster <upgrade-single-cluster>
+Upgrade a multi-cluster setup <update-multi-cluster>
 ```

@@ -1,7 +1,11 @@
-# How to perform a minor rollback
+# How to roll back a single cluster
 
 **Example**: MySQL 8.0.34 -> MySQL 8.0.33<br/>
 (including charm revision bump: e.g Revision 43 -> Revision 42)
+
+```{note}
+This guide covers upgrades for single cluster MySQL deployments. To upgrade a multi-cluster deployment, see [](/how-to/upgrade/multi-cluster).
+```
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the upgrade process, the process will be halted and enter a failure state.
 

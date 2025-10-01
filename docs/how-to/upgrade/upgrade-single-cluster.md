@@ -1,9 +1,11 @@
-# How to perform a minor upgrade
+# How to upgrade a single cluster
 
 **Example**: MySQL 8.0.33 -> MySQL 8.0.34<br/>
 (including charm revision bump: e.g. Revision 193 -> Revision 196)
 
-This is part of the [Upgrade section](/how-to/upgrade/index). Refer to the landing page for more information and an overview of the content.
+```{note}
+This guide covers upgrades for single cluster MySQL deployments. To upgrade a multi-cluster deployment, see [](/how-to/upgrade/multi-cluster).
+```
 
 ## Important information
 
@@ -65,7 +67,7 @@ For this example, the current revision is `182`. Store it safely to use in case 
 (step-2-prepare)=
 ## Step 2: Prepare
 
-Before running the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command, it’s necessary to run the `pre-upgrade-check` action against the leader unit:
+Before running the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command, it’s necessary to run the `pre-upgrade-check` action against the [leader unit](https://documentation.ubuntu.com/juju/latest/reference/unit/index.html#leader-unit):
 
 ```shell
 juju run mysql/leader pre-upgrade-check
