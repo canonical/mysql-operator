@@ -1,15 +1,15 @@
+(upgrade-juju)=
 # Upgrade Juju for a new database revision
 
 This guide contains instructions to perform a patch or major/minor Juju upgrade to a controller and model containing a database charm. 
 
-For more background about Juju upgrades in the context of database charms, check  [Explanation > Juju > Juju upgrades](/explanation/juju).
-
+For more background about Juju upgrades in the context of database charms, see [](explanation-juju-upgrades).
 
 ## Patch version upgrade
+
 A [PATCH](https://semver.org/#summary) Juju upgrade (e.g. Juju `3.1.5` → `3.1.8`) can be easily applied in-place.
 
-
-```text
+```shell
 sudo snap refresh juju 
 
 juju upgrade-controller 
@@ -18,13 +18,15 @@ juju upgrade-controller
 juju upgrade-model 
 # wait until complete
 ```
+
 Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/perform-a-minor-upgrade).
 
-
 ## Major/minor version upgrade
+
 The easiest way to perform a [MAJOR/MINOR](https://semver.org/#summary) Juju version upgrade (e.g. Juju `3.1.8` → `3.5.1`),  is to update the controller and model to the new version, then [migrate](https://juju.is/docs/juju/juju-migrate) the model.
 
 ### Commands summary
+
 The following is a summary of commands that upgrade Juju to `3.5/stable`:
 
 ```text
@@ -41,6 +43,7 @@ juju upgrade-model -m lxd_3.5.1:mydatabase
 Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/perform-a-minor-upgrade).
 
 ### Example
+
 This section goes over the commands listed in the summary above with more details and sample outputs.
 
 <details><summary>In this example scenario, we have <code>mysql</code> deployed in model <code>mydatabase</code> on the Juju controller <code>lxd_3.1.8</code>.</summary> 
