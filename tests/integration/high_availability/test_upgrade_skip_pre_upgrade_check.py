@@ -1,110 +1,97 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
-import subprocess
-from time import sleep
 
+import jubilant_backports
 import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from .high_availability_helpers import (
-    ensure_all_units_continuous_writes_incrementing,
-    relate_mysql_and_application,
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_app_units,
+    wait_for_apps_status,
+    wait_for_unit_status,
 )
 
-logger = logging.getLogger(__name__)
-
-TIMEOUT = 20 * 60
-
 MYSQL_APP_NAME = "mysql"
-TEST_APP_NAME = "mysql-test-app"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
+
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy_stable(ops_test: OpsTest) -> None:
-    """Simple test to ensure that the mysql and application charms get deployed."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            MYSQL_APP_NAME,
-            application_name=MYSQL_APP_NAME,
-            num_units=3,
-            channel="8.0/stable",
-            base="ubuntu@22.04",
-            config={"profile": "testing"},
-        ),
-        ops_test.model.deploy(
-            TEST_APP_NAME,
-            application_name=TEST_APP_NAME,
-            num_units=1,
-            channel="latest/edge",
-            base="ubuntu@22.04",
-            config={"sleep_interval": 50},
-        ),
+def test_deploy_stable(juju: Juju) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=MYSQL_APP_NAME,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        channel="8.0/stable",
+        config={"profile": "testing"},
+        num_units=3,
     )
-    await relate_mysql_and_application(ops_test, MYSQL_APP_NAME, TEST_APP_NAME)
-    logger.info("Wait for applications to become active")
-    await ops_test.model.wait_for_idle(
-        apps=[MYSQL_APP_NAME, TEST_APP_NAME],
-        status="active",
-        timeout=TIMEOUT,
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 50},
+        num_units=1,
     )
-    assert len(ops_test.model.applications[MYSQL_APP_NAME].units) == 3
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
 
-async def test_refresh_without_pre_upgrade_check(ops_test: OpsTest, charm):
+@pytest.mark.abort_on_fail
+async def test_refresh_without_pre_upgrade_check(juju: Juju, charm: str) -> None:
     """Test updating from stable channel."""
-    application = ops_test.model.applications[MYSQL_APP_NAME]
+    logging.info("Refresh the charm")
+    juju.refresh(app=MYSQL_APP_NAME, path=charm)
 
-    logger.info("Refresh the charm")
-    await application.refresh(path=charm)
+    logging.info("Wait for rolling restart")
+    app_units = get_app_units(juju, MYSQL_APP_NAME)
+    app_units_funcs = [wait_for_unit_status(MYSQL_APP_NAME, unit, "error") for unit in app_units]
 
-    # Refresh without pre-upgrade-check can have two immediate effects:
-    #   1. None, if there's no configuration change
-    #   2. Rolling restart, if there's a configuration change
-    # for both, operations should continue to work
-    # and there's a mismatch between the charm and the snap
-    logger.info("Wait (120s) for rolling restart OR continue to writes")
-    count = 0
-    while count < 2 * 60:
-        if "maintenance" in {unit.workload_status for unit in application.units}:
-            # Case when refresh triggers a rolling restart
-            logger.info("Waiting for rolling restart to complete")
-            await ops_test.model.wait_for_idle(
-                apps=[MYSQL_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
-            )
-            break
-        else:
-            count += 1
-            sleep(1)
-
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
-
-
-async def test_rollback_without_pre_upgrade_check(ops_test: OpsTest):
-    """Test refresh back to stable channel."""
-    application = ops_test.model.applications[MYSQL_APP_NAME]
-
-    logger.info("Refresh the charm back to stable channel")
-    # pylibjuju refresh dont work for switch:
-    # https://github.com/juju/python-libjuju/issues/924
-    subprocess.check_output(
-        f"juju refresh {MYSQL_APP_NAME} --switch ch:{MYSQL_APP_NAME} --channel 8.0/stable".split()
+    juju.wait(
+        ready=lambda status: any(status_func(status) for status_func in app_units_funcs),
+        timeout=10 * MINUTE_SECS,
+        successes=1,
     )
 
-    logger.info("Wait (120s) for rolling restart OR continue to writes")
-    count = 0
-    while count < 2 * 60:
-        if "maintenance" in {unit.workload_status for unit in application.units}:
-            # Case when refresh triggers a rolling restart
-            logger.info("Waiting for rolling restart to complete")
-            await ops_test.model.wait_for_idle(
-                apps=[MYSQL_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
-            )
-            break
-        else:
-            count += 1
-            sleep(1)
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+
+@pytest.mark.abort_on_fail
+async def test_rollback_without_pre_upgrade_check(juju: Juju, charm: str) -> None:
+    """Test refresh back to stable channel."""
+    # Early Jubilant 1.X.Y versions do not support the `switch` option
+    logging.info("Refresh the charm to stable channel")
+    juju.cli("refresh", "--channel=8.0/stable", f"--switch={MYSQL_APP_NAME}", MYSQL_APP_NAME)
+
+    logging.info("Wait for rolling restart")
+    app_units = get_app_units(juju, MYSQL_APP_NAME)
+    app_units_funcs = [wait_for_unit_status(MYSQL_APP_NAME, unit, "error") for unit in app_units]
+
+    juju.wait(
+        ready=lambda status: any(status_func(status) for status_func in app_units_funcs),
+        timeout=10 * MINUTE_SECS,
+        successes=1,
+    )
+
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
