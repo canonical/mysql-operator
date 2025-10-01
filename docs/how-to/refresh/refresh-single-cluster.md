@@ -89,19 +89,19 @@ Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trig
 Example with channel selection:
 
 ```shell
-juju refresh mysql --channel 8.0/edge
+juju refresh mysql --channel 8.0/stable
 ```
 
 Example with specific revision selection:
 
 ```shell
-juju refresh mysql --revision=183
+juju refresh mysql --revision=366
 ```
 
 Example with a local charm file:
 
 ```shell
-juju refresh mysql --path ./mysql_ubuntu-22.04-amd64.charm
+juju refresh mysql --path ./mysql_ubuntu-24.04-amd64.charm
 ```
 
 ```{admonition} During an ongoing refresh
