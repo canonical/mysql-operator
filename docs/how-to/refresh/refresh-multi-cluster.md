@@ -1,4 +1,4 @@
-# How to upgrade a multi-cluster deployment
+# How to refresh a multi-cluster deployment
 
 A MySQL multi-cluster deployment (also known as a multi-node cluster or cluster set) can be upgraded by performing a refresh of each cluster individually.
 
@@ -16,7 +16,7 @@ When a primary cluster gets refreshed, it triggers a potentially costly re-elect
 
 ## Refresh each cluster
 
-For each cluster, follow the instructions in [](/how-to/upgrade/upgrade-single-cluster).
+For each cluster, follow the instructions in [](/how-to/refresh/refresh-single-cluster).
 
 **Perform a health check before proceeding to the next cluster.**
 
@@ -30,7 +30,7 @@ juju run <?> get-cluster-status
 
 ## Roll back
 
-If something goes wrong, roll back the cluster. See: [](/how-to/upgrade/roll-back-single-cluster)
+If something goes wrong, roll back the cluster. See: [](/how-to/refresh/roll-back-single-cluster)
 
 <!--TODO: clarify what to do if you've already refreshed one or more clusters, another one fails, and you need to roll back everything - including the clusters that are fully upgraded -->
 

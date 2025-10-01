@@ -6,15 +6,15 @@
 ```{caution}
 This guide covers rollbacks for single cluster MySQL deployments. 
 
-Before rolling back a **multi-cluster** upgrade, see [](/how-to/upgrade/upgrade-multi-cluster).
+Before rolling back a **multi-cluster** refresh, see [](/how-to/refresh/refresh-multi-cluster).
 ```
 
-After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the upgrade process, the process will be halted and enter a failure state.
+After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the refresh process, the process will be halted and enter a failure state.
 
 Even if the underlying MySQL cluster continue to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure.
 
-```{caution}
-**Warning:** Do NOT trigger `rollback` during the running `upgrade` action! It may cause an  unpredictable MySQL cluster state!
+```{warning}
+Do NOT trigger `rollback` during a running `refresh` action! It may cause an  unpredictable MySQL cluster state!
 ```
 
 ## Summary of the rollback steps
@@ -25,9 +25,9 @@ Even if the underlying MySQL cluster continue to work, it’s important to roll 
 
 ## Step 1: Prepare
 
-To execute a rollback, we use a similar procedure to the upgrade. The difference is the charm revision to upgrade to. In this guide's example, we will refresh the charm back to revision `182`.
+To execute a rollback, we use a similar procedure to the refresh. The difference is the charm revision to refresh to. In this guide's example, we will refresh the charm back to revision `182`.
 
-It is necessary to re-run `pre-upgrade-check` action on the leader unit in order to enter the upgrade recovery state:
+It is necessary to re-run `pre-upgrade-check` action on the leader unit in order to enter the refresh recovery state:
 
 ```shell
 juju run mysql/leader pre-upgrade-check
@@ -36,15 +36,18 @@ juju run mysql/leader pre-upgrade-check
 ## Step 2: Rollback
 
 When using charm from charmhub:
+
 ```shell
 juju refresh mysql --revision=182
 ```
 
 When deploying from a local charm file, one must have the previous revision charm file and run the following command:
+
 ```shell
 juju refresh mysql --path=./mysql_ubuntu-22.04-amd64.charm
 ```
-> where `mysql_ubuntu-22.04-amd64.charm` is the previous revision charm file.
+
+where `mysql_ubuntu-22.04-amd64.charm` is the previous revision charm file.
 
 The first unit will be rolled out and should rejoin the cluster after settling down. After the refresh command, the juju controller revision for the application will be back in sync with the running Charmed MySQL revision.
 
