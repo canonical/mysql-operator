@@ -3,8 +3,10 @@
 **Example**: MySQL 8.0.33 -> MySQL 8.0.34<br/>
 (including charm revision bump: e.g. Revision 193 -> Revision 196)
 
-```{note}
-This guide covers upgrades for single cluster MySQL deployments. To upgrade a multi-cluster deployment, see [](/how-to/upgrade/multi-cluster).
+```{caution}
+This guide covers upgrades for single cluster MySQL deployments. 
+
+To upgrade a multi-cluster deployment, see [](/how-to/upgrade/multi-cluster) first.
 ```
 
 ## Important information

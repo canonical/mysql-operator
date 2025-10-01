@@ -1,5 +1,5 @@
 (upgrade-juju)=
-# Upgrade Juju for a new database revision
+# How to upgrade Juju for a new database revision
 
 This guide contains instructions to perform a patch or major/minor Juju upgrade to a controller and model containing a database charm. 
 
@@ -19,7 +19,7 @@ juju upgrade-model
 # wait until complete
 ```
 
-Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/perform-a-minor-upgrade).
+Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/upgrade-single-cluster).
 
 ## Major/minor version upgrade
 
@@ -40,7 +40,7 @@ juju upgrade-model -m lxd_3.5.1:mydatabase
 # wait until complete
 ```
 
-Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/perform-a-minor-upgrade).
+Once the model has finished upgrading, you can proceed with the [charm upgrade](/how-to/upgrade/upgrade-single-cluster).
 
 ### Example
 
@@ -184,7 +184,7 @@ mydatabase  lxd_3.5.1   localhost/localhost  3.5.1    unsupported  22:59:01+02:0
 
 At this stage, the application continues running under the supervision of the new controller version and is ready to be refreshed to the new charm revision.
 
-You can now proceed with the [charm upgrade](/how-to/upgrade/perform-a-minor-upgrade).
+You can now proceed with the [charm upgrade](/how-to/upgrade/upgrade-single-cluster).
 
 ## Resources
 Further documentation about Juju upgrades: 

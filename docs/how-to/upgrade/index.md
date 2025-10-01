@@ -1,33 +1,29 @@
-# Upgrade
+# Upgrade (refresh)
 
-This section contains documentation about performing upgrades (and rollbacks) on:
-* [MySQL Server (workload and charm)](mysql-upgrades)
-* [Juju version](#juju-upgrades)
+This charm supports in-place upgrades via Juju's [`refresh`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/#details) command.
 
-(mysql-upgrades)=
-## MySQL upgrades (refresh)
+When refreshing a **single cluster**, see:
 
-This charm supports in-place upgrades versions of MySQL via Juju's [`refresh`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/#details) command.
-
-<!-- warning about incompatible patch version (maybe 8.0.37) -->
-
-See:
 * [](/how-to/upgrade/upgrade-single-cluster)
-* [](/how-to/upgrade/upgrade-multi-cluster-deployment)
+* [](/how-to/upgrade/roll-back-single-cluster)
 
-(juju-upgrades)=
-## Juju upgrades
+When refreshing a **multi-cluster** deployment, see
 
-New revisions of the charm may require that you do a major or minor Juju upgrade.
+* [](/how-to/upgrade/upgrade-multi-cluster)
 
-See: [](/how-to/upgrade/upgrade-juju)
+## Juju version
+
+Before refreshing the charm, make sure to check the [](/reference/releases) page to see if there any requirements for the new revision, such as a Juju version upgrade.
+
+* [](/how-to/upgrade/upgrade-juju)
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
 :hidden:
 
+Upgrade a cluster <upgrade-single-cluster>
+Roll back a cluster <roll-back-single-cluster>
+Upgrade a multi-cluster deployment <upgrade-multi-cluster>
 Upgrade Juju <upgrade-juju>
-Upgrade a single cluster <upgrade-single-cluster>
-Upgrade a multi-cluster setup <update-multi-cluster>
 ```
