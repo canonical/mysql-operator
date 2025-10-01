@@ -2,7 +2,7 @@
 
 ## Pre-requisites
 
-Make sure both `Rome` and `Lisbon` clusters are deployed following the [async deployment guide](/how-to/cross-regional-async-replication/deploy).
+Make sure both `Rome` and `Lisbon` clusters are deployed following the [async deployment guide](/how-to/cluster-cluster-replication/deploy).
 
 ## Recover detached cluster
 

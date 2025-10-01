@@ -16,5 +16,6 @@ secondary.
 
 ```{caution}
 The `promote-to-primary` action can be used in cluster scope, when using async replication.
-Check [Switchover / Failover](cross-regional-async-replication/switchover-failover) for more information.
+
+See [](/how-to/cluster-cluster-replication/switchover-failover) for more information.
 ```
