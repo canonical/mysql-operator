@@ -2,7 +2,7 @@
 
 Cluster-cluster asynchronous replication focuses on disaster recovery by distributing data across different servers.
 
-For increased safety, it is recommended to distribute data across different geographical regions as well.
+For increased safety, it is recommended to deploy each cluster in a different geographical region.
 
 ## Substrate dependencies
 
