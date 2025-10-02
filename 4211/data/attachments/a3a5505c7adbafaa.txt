@@ -1,0 +1,146 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:model.py:2284 Deploying local:mysql-0
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [executing] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [allocating] waiting: waiting for machine
+  mysql/1 [allocating] waiting: waiting for machine
+  mysql/2 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: Installing MySQL
+  mysql/1 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: Setting up cluster node
+  mysql/1 [executing] maintenance: Setting up cluster node
+  mysql/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] maintenance: joining the cluster
+  mysql/1 [idle] waiting: waiting to join the cluster.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] maintenance: joining the cluster
+  mysql/2 [executing] active: Primary
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:43 Deploy keystone..
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/keystone-689
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:58 Relate keystone and mysql
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:60 Wait keystone settle after relation
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:76 Checking keystone migration
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:43 Deploy keystone..
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/keystone-689
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:58 Relate keystone and mysql
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:60 Wait keystone settle after relation
+[32mINFO    [0m integration.relations.test_shared_db:test_shared_db.py:76 Checking keystone migration
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 2 units, current : 3)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [idle] active: Primary
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/3 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: 
+  mysql/1 [executing] active: Primary
+  mysql/3 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/3 [executing] waiting: Waiting to join the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [executing] maintenance: joining the cluster
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/3 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:29:56Z
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        stopped  10.238.100.127  juju-c6a272-0  ubuntu@22.04  runnervm3ublj  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-2: 02:03:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:03:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:03:51 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-0: 02:05:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:05:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:05:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:05:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:05:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:05:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:09:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:09:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-keystone-0: 02:09:39 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:09:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:09:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-keystone-1: 02:09:56 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-keystone-0: 02:11:26 ERROR unit.keystone/0.juju-log Key repository setup failed, will retry in config-changed hook: Command '['sudo', '-u', 'keystone', 'keystone-manage', 'credential_migrate']' returned non-zero exit status 1.
+machine-5: 02:17:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:17:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-keystone-0: 02:17:09 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-6: 02:17:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:17:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-keystone-1: 02:17:20 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-another-keystone-0: 02:19:13 ERROR unit.another-keystone/0.juju-log Key repository setup failed, will retry in config-changed hook: Command '['sudo', '-u', 'keystone', 'keystone-manage', 'credential_migrate']' returned non-zero exit status 1.
+machine-7: 02:26:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:26:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 02:26:00 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-keystone-1: 02:26:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-keystone-0: 02:26:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mysql-0: 02:26:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mysql-1: 02:26:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

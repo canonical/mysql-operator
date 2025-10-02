@@ -1,0 +1,32 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:08:22Z
+
+App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+mysql  8.0.42-0ubun...  active      3  mysql             0  no       
+
+Unit      Workload     Agent      Machine  Public address  Ports           Message
+mysql/0*  active       idle       0        10.117.68.49    3306,33060/tcp  Primary
+mysql/1   active       idle       1        10.117.68.212   3306,33060/tcp  
+mysql/2   maintenance  executing  2        10.117.68.101                   Setting up cluster node
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.117.68.49   juju-6dae60-0  ubuntu@22.04  runnervm3ublj  Running
+1        started  10.117.68.212  juju-6dae60-1  ubuntu@22.04  runnervm3ublj  Running
+2        started  10.117.68.101  juju-6dae60-2  ubuntu@22.04  runnervm3ublj  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:04:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:04:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:04:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:05:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:05:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:05:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:05:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:05:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:05:44 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:308 cli: juju debug-log --model testing --limit 1000
