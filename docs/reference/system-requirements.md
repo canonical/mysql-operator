@@ -19,7 +19,7 @@ The charm supports several Juju releases from [2.9 LTS](https://documentation.ub
 | ![3.1] | `3.1.6+` | [196]+ |     |
 | ![2.9 LTS] | `2.9.32+` | [151]+ |     |
 
-See the guide [How to upgrade Juju for a new database revision](/how-to/upgrade/upgrade-juju).
+See the guide [How to upgrade Juju for a new database revision](/how-to/refresh/upgrade-juju).
 
 ### MySQL Group replication requirements
 * In order to integrate with this charm, every table created by the integrated application **must have a primary key**. This is required by the [group replication plugin](https://dev.mysql.com/doc/refman/8.0/en/group-replication-requirements.html) enabled in this charm.
