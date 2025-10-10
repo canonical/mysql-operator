@@ -20,7 +20,7 @@ To retrieve credentials for a different user:
 juju run mysql/leader get-password username=<username>
 ```
 
-### Set password
+## Set password
 
 To change the `root` user's password to a new, randomized password:
 
