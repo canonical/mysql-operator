@@ -3,22 +3,64 @@
 # See LICENSE file for licensing details.
 
 import json
+import os
 import subprocess
 from collections.abc import Callable
+from pathlib import Path
 
 import jubilant_backports
 from jubilant_backports import Juju
 from jubilant_backports.statustypes import Status, UnitStatus
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    Retrying,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from constants import SERVER_CONFIG_USERNAME
 
 from ..helpers import execute_queries_on_unit
 
 MINUTE_SECS = 60
+TEST_DATABASE_NAME = "testing"
 
 JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
+
+
+def _get_juju_keys() -> tuple[str, str]:
+    """Get Juju public and private keys."""
+    config_dir = Path("~/.local/share/juju")
+    if juju_data := os.getenv("JUJU_DATA"):
+        config_dir = Path(juju_data)
+
+    return (
+        str(config_dir.expanduser().resolve() / "ssh" / "juju_id_rsa.pub"),
+        str(config_dir.expanduser().resolve() / "ssh" / "juju_id_rsa"),
+    )
+
+
+def check_mysql_instances_online(juju: Juju, app_name: str) -> bool:
+    """Checks whether all MySQL cluster instances are online.
+
+    Args:
+        juju: The Juju instance
+        app_name: The name of the application
+    """
+    mysql_app_leader = get_app_leader(juju, app_name)
+    mysql_app_units = get_app_units(juju, app_name)
+
+    for attempt in Retrying(stop=stop_after_delay(10 * MINUTE_SECS), wait=wait_fixed(10)):
+        with attempt:
+            mysql_cluster_status = get_mysql_cluster_status(juju, mysql_app_leader)
+            mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
+            assert len(mysql_cluster_topology) == len(mysql_app_units)
+
+            for member in mysql_cluster_topology.values():
+                if member["status"] != "online":
+                    return False
+
+    return True
 
 
 async def check_mysql_units_writes_increment(
@@ -77,6 +119,33 @@ def get_app_units(juju: Juju, app_name: str) -> dict[str, UnitStatus]:
     return app_status.units
 
 
+def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
+    """Scale a given application to a number of units."""
+    app_units = get_app_units(juju, app_name)
+    app_units_diff = len(app_units) - num_units
+
+    scale_func = None
+    if app_units_diff > 0:
+        scale_func = juju.remove_unit
+    if app_units_diff < 0:
+        scale_func = juju.add_unit
+    if app_units_diff == 0:
+        return
+
+    for _ in range(abs(app_units_diff)):
+        scale_func(app_name, num_units=1)
+
+    juju.wait(
+        ready=lambda status: len(status.apps[app_name].units) == num_units,
+        timeout=20 * MINUTE_SECS,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
 def get_unit_by_number(juju: Juju, app_name: str, unit_number: int) -> str:
     """Get unit by number."""
     model_status = juju.status()
@@ -109,6 +178,17 @@ def get_unit_info(juju: Juju, unit_name: str) -> dict:
     return json.loads(output)
 
 
+def get_unit_process_id(juju: Juju, unit_name: str, process_name: str) -> int | None:
+    """Return the pid of a process running in a given unit."""
+    try:
+        task = juju.exec(f"pgrep -x {process_name}", unit=unit_name)
+        task.raise_on_failure()
+
+        return int(task.stdout.strip())
+    except Exception:
+        return None
+
+
 def get_unit_status_log(juju: Juju, unit_name: str, log_lines: int = 0) -> list[dict]:
     """Get the status log for a unit.
 
@@ -124,6 +204,54 @@ def get_unit_status_log(juju: Juju, unit_name: str, log_lines: int = 0) -> list[
     )
 
     return json.loads(output)
+
+
+# TODO:
+#  Rely on Jubilant scp command once they make it easier
+#  for package users to deal with temporal directories
+#  https://github.com/canonical/jubilant/issues/201
+def scp_unit_file_from(
+    juju: Juju, app_name: str, unit_name: str, source_path: str, target_path: str
+) -> None:
+    """Copy a file from a given unit."""
+    juju_keys = _get_juju_keys()
+    unit_address = get_unit_ip(juju, app_name, unit_name)
+    unit_username = "ubuntu"
+
+    subprocess.check_output([
+        "scp",
+        "-B",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-i",
+        juju_keys[1],
+        f"{unit_username}@{unit_address}:{source_path}",
+        f"{target_path}",
+    ])
+
+
+# TODO:
+#  Rely on Jubilant scp command once they make it easier
+#  for package users to deal with temporal directories
+#  https://github.com/canonical/jubilant/issues/201
+def scp_unit_file_into(
+    juju: Juju, app_name: str, unit_name: str, source_path: str, target_path: str
+) -> None:
+    """Copy a file into a given unit."""
+    juju_keys = _get_juju_keys()
+    unit_address = get_unit_ip(juju, app_name, unit_name)
+    unit_username = "ubuntu"
+
+    subprocess.check_output([
+        "scp",
+        "-B",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-i",
+        juju_keys[1],
+        f"{source_path}",
+        f"{unit_username}@{unit_address}:{target_path}",
+    ])
 
 
 def get_relation_data(juju: Juju, app_name: str, rel_name: str) -> list[dict]:
@@ -242,6 +370,111 @@ async def get_mysql_variable_value(
         [f"SELECT @@{variable_name};"],
     )
     return output[0]
+
+
+async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, value: str) -> None:
+    """Insert data into the MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        table_name: The database table name.
+        value: The value to insert.
+    """
+    mysql_leader = get_app_leader(juju, app_name)
+    mysql_primary = get_mysql_primary_unit(juju, app_name)
+
+    credentials_task = juju.run(
+        unit=mysql_leader,
+        action="get-password",
+        params={"username": SERVER_CONFIG_USERNAME},
+    )
+    credentials_task.raise_on_failure()
+
+    insert_queries = [
+        f"CREATE DATABASE IF NOT EXISTS `{TEST_DATABASE_NAME}`",
+        f"CREATE TABLE IF NOT EXISTS `{TEST_DATABASE_NAME}`.`{table_name}` (id VARCHAR(255), PRIMARY KEY (id))",
+        f"INSERT INTO `{TEST_DATABASE_NAME}`.`{table_name}` (id) VALUES ('{value}')",
+    ]
+
+    await execute_queries_on_unit(
+        get_unit_ip(juju, app_name, mysql_primary),
+        credentials_task.results["username"],
+        credentials_task.results["password"],
+        insert_queries,
+        commit=True,
+    )
+
+
+async def remove_mysql_test_data(juju: Juju, app_name: str, table_name: str) -> None:
+    """Remove data into the MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        table_name: The database table name.
+    """
+    mysql_leader = get_app_leader(juju, app_name)
+    mysql_primary = get_mysql_primary_unit(juju, app_name)
+
+    credentials_task = juju.run(
+        unit=mysql_leader,
+        action="get-password",
+        params={"username": SERVER_CONFIG_USERNAME},
+    )
+    credentials_task.raise_on_failure()
+
+    remove_queries = [
+        f"DROP TABLE IF EXISTS `{TEST_DATABASE_NAME}`.`{table_name}`",
+        f"DROP DATABASE IF EXISTS `{TEST_DATABASE_NAME}`",
+    ]
+
+    await execute_queries_on_unit(
+        get_unit_ip(juju, app_name, mysql_primary),
+        credentials_task.results["username"],
+        credentials_task.results["password"],
+        remove_queries,
+        commit=True,
+    )
+
+
+async def verify_mysql_test_data(juju: Juju, app_name: str, table_name: str, value: str) -> None:
+    """Verifies data into the MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        table_name: The database table name.
+        value: The value to check against.
+    """
+    mysql_app_leader = get_app_leader(juju, app_name)
+    mysql_app_units = get_app_units(juju, app_name)
+
+    credentials_task = juju.run(
+        unit=mysql_app_leader,
+        action="get-password",
+        params={"username": SERVER_CONFIG_USERNAME},
+    )
+    credentials_task.raise_on_failure()
+
+    select_queries = [
+        f"SELECT id FROM `{TEST_DATABASE_NAME}`.`{table_name}` WHERE id = '{value}'",
+    ]
+
+    for unit_name in mysql_app_units:
+        for attempt in Retrying(
+            reraise=True,
+            stop=stop_after_delay(5 * MINUTE_SECS),
+            wait=wait_fixed(10),
+        ):
+            with attempt:
+                output = await execute_queries_on_unit(
+                    get_unit_ip(juju, app_name, unit_name),
+                    credentials_task.results["username"],
+                    credentials_task.results["password"],
+                    select_queries,
+                )
+                assert output[0] == value
 
 
 def wait_for_apps_status(jubilant_status_func: JujuAppsStatusFn, *apps: str) -> JujuModelStatusFn:
