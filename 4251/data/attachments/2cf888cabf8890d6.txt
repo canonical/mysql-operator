@@ -1,0 +1,68 @@
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator1/0 [executing] blocked: Please relate the data-integrator with the desired product
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: Primary
+  mysql/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator2/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.roles.test_instance_roles:test_instance_roles.py:174 Checking that when no role is specified the created user can do everything
+[32mINFO    [0m integration.roles.test_instance_roles:test_instance_roles.py:194 Checking that the charmed_dml role can read from an existing table
+[32mINFO    [0m integration.roles.test_instance_roles:test_instance_roles.py:209 Checking that the charmed_dml role can write into an existing table
+[32mINFO    [0m integration.roles.test_instance_roles:test_instance_roles.py:220 Checking that the charmed_dml role cannot create a new table
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator1/0 [idle] active: 
+  data-integrator2/0 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:21:11Z
+
+App               Version          Status   Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator1                   blocked      1  data-integrator  latest/stable  180  no       Please relate the data-integrator with the desired product
+data-integrator2                   blocked      1  data-integrator  latest/stable  180  no       Please relate the data-integrator with the desired product
+mysql             8.0.42-0ubun...  active       3  mysql                             0  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports           Message
+data-integrator1/0*  blocked   idle   1        10.249.123.108                  Please relate the data-integrator with the desired product
+data-integrator2/0*  blocked   idle   0        10.249.123.72                   Please relate the data-integrator with the desired product
+mysql/0              active    idle   2        10.249.123.203  3306,33060/tcp  
+mysql/1*             active    idle   3        10.249.123.47   3306,33060/tcp  
+mysql/2              active    idle   4        10.249.123.206  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.249.123.72   juju-e2d333-0  ubuntu@24.04  runnervmwhb2z  Running
+1        started  10.249.123.108  juju-e2d333-1  ubuntu@24.04  runnervmwhb2z  Running
+2        started  10.249.123.203  juju-e2d333-2  ubuntu@22.04  runnervmwhb2z  Running
+3        started  10.249.123.47   juju-e2d333-3  ubuntu@22.04  runnervmwhb2z  Running
+4        started  10.249.123.206  juju-e2d333-4  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:13:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:13:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-data-integrator2-0: 02:13:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:13:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:13:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-data-integrator1-0: 02:13:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:15:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:15:01 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:15:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:15:48 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-4: 02:15:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:15:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:15:54 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+unit-mysql-2: 02:20:56 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "0d80869a-08eb-41d2-8004-72f4dde2d333:r#6#data-integrator1": settings 0d80869a-08eb-41d2-8004-72f4dde2d333:r#6#data-integrator1 not found (not found)
+unit-mysql-1: 02:20:57 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "0d80869a-08eb-41d2-8004-72f4dde2d333:r#6#data-integrator1": settings 0d80869a-08eb-41d2-8004-72f4dde2d333:r#6#data-integrator1 not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
