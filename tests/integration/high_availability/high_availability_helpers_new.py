@@ -4,8 +4,10 @@
 
 import json
 import os
+import random
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 import jubilant_backports
@@ -13,6 +15,7 @@ from jubilant_backports import Juju
 from jubilant_backports.statustypes import Status, UnitStatus
 from tenacity import (
     Retrying,
+    stop_after_attempt,
     stop_after_delay,
     wait_fixed,
 )
@@ -72,10 +75,11 @@ async def check_mysql_units_writes_increment(
     on all units (ensure that no committed data is lost).
     """
     if not app_units:
-        app_units = get_app_units(juju, app_name)
+        app_units = list(get_app_units(juju, app_name))
 
-    app_primary = get_mysql_primary_unit(juju, app_name)
-    app_max_value = await get_mysql_max_written_value(juju, app_name, app_primary)
+    app_random_unit = random.choice(app_units)
+    app_primary_unit = get_mysql_primary_unit(juju, app_name, app_random_unit)
+    app_max_value = await get_mysql_max_written_value(juju, app_name, app_primary_unit)
 
     juju.model_config({"update-status-hook-interval": "15s"})
     for unit_name in app_units:
@@ -88,6 +92,19 @@ async def check_mysql_units_writes_increment(
                 unit_max_value = await get_mysql_max_written_value(juju, app_name, unit_name)
                 assert unit_max_value > app_max_value, "Writes not incrementing"
                 app_max_value = unit_max_value
+
+
+@contextmanager
+def fast_interval(juju: Juju) -> Generator:
+    """Temporarily speed up update-status firing rate for the current model."""
+    update_interval_key = "update-status-hook-interval"
+    update_interval_val = juju.model_config()[update_interval_key]
+
+    juju.model_config({update_interval_key: "10s"})
+    try:
+        yield
+    finally:
+        juju.model_config({update_interval_key: update_interval_val})
 
 
 def get_app_leader(juju: Juju, app_name: str) -> str:
@@ -308,10 +325,12 @@ def get_mysql_unit_name(instance_label: str) -> str:
     return "/".join(instance_label.rsplit("-", 1))
 
 
-def get_mysql_primary_unit(juju: Juju, app_name: str) -> str:
+def get_mysql_primary_unit(juju: Juju, app_name: str, unit_name: str | None = None) -> str:
     """Get the current primary node of the cluster."""
-    mysql_primary = get_app_leader(juju, app_name)
-    mysql_cluster_status = get_mysql_cluster_status(juju, mysql_primary)
+    if unit_name is None:
+        unit_name = get_app_leader(juju, app_name)
+
+    mysql_cluster_status = get_mysql_cluster_status(juju, unit_name)
     mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
 
     for label, value in mysql_cluster_topology.items():
@@ -370,6 +389,30 @@ async def get_mysql_variable_value(
         [f"SELECT @@{variable_name};"],
     )
     return output[0]
+
+
+def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
+    """Start a MySQL process within a machine."""
+    task = juju.exec("sudo snap restart charmed-mysql.mysqld", unit=unit_name)
+    task.raise_on_failure()
+
+    # Hold execution until process is started
+    for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
+        with attempt:
+            if get_unit_process_id(juju, unit_name, "mysqld") is None:
+                raise Exception("Failed to start the mysqld process")
+
+
+def stop_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
+    """Gracefully stop MySQL process."""
+    task = juju.exec("sudo pkill -x mysqld --signal SIGTERM", unit=unit_name)
+    task.raise_on_failure()
+
+    # Hold execution until process is stopped
+    for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
+        with attempt:
+            if get_unit_process_id(juju, unit_name, "mysqld") is not None:
+                raise Exception("Failed to stop the mysqld process")
 
 
 async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, value: str) -> None:
