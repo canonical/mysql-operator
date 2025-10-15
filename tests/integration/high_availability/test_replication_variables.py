@@ -1,39 +1,67 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from ..helpers import (
-    retrieve_database_variable_value,
-)
-from .high_availability_helpers import (
-    get_application_name,
+from .high_availability_helpers_new import (
+    get_app_units,
+    get_mysql_variable_value,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_custom_variables(ops_test: OpsTest, highly_available_cluster) -> None:
-    """Query database for custom variables."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
-    application = ops_test.model.applications[mysql_application_name]
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
 
-    for unit in application.units:
-        custom_vars = {}
-        custom_vars["max_connections"] = 100
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_custom_variables(juju: Juju) -> None:
+    """Query database for custom variables."""
+    for unit in get_app_units(juju, MYSQL_APP_NAME):
+        custom_vars = {"max_connections": 100}
+
         for k, v in custom_vars.items():
-            logger.info(f"Checking that {k} is set to {v} on {unit.name}")
-            value = await retrieve_database_variable_value(ops_test, unit, k)
-            assert value == v, f"Variable {k} is not set to {v}"
+            logging.info(f"Checking that {k} is set to {v} on {unit}")
+            assert await get_mysql_variable_value(juju, MYSQL_APP_NAME, unit, k) == v

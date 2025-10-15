@@ -1,87 +1,112 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
 import time
-from pathlib import Path
 
+import jubilant_backports
 import pytest
 import urllib3
-import yaml
-from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-
-from ..helpers import (
-    fetch_credentials,
-)
-from .high_availability_helpers import (
-    get_application_name,
+from jubilant_backports import Juju
+from tenacity import (
+    Retrying,
+    stop_after_attempt,
+    wait_fixed,
 )
 
-logger = logging.getLogger(__name__)
+from constants import (
+    CHARMED_MYSQL_SNAP_NAME,
+    CHARMED_MYSQLD_EXPORTER_SERVICE,
+    MONITORING_USERNAME,
+    MYSQL_EXPORTER_PORT,
+)
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+from .high_availability_helpers_new import (
+    get_app_units,
+    get_unit_ip,
+    wait_for_apps_status,
+)
+
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
+
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_exporter_endpoints(ops_test: OpsTest, highly_available_cluster) -> None:
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+def test_exporter_endpoints(juju: Juju) -> None:
     """Test that endpoints are running."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
-    application = ops_test.model.applications[mysql_application_name]
-    http = urllib3.PoolManager()
+    http_client = urllib3.PoolManager()
+    service_name = f"{CHARMED_MYSQL_SNAP_NAME}.{CHARMED_MYSQLD_EXPORTER_SERVICE}"
 
-    for unit in application.units:
-        _, output, _ = await ops_test.juju(
-            "ssh", unit.name, "sudo", "snap", "services", "charmed-mysql.mysqld-exporter"
+    for unit_name in get_app_units(juju, MYSQL_APP_NAME):
+        task = juju.exec(f"sudo snap services {service_name}", unit=unit_name)
+        task.raise_on_failure()
+
+        assert task.stdout.split("\n")[1].split()[2] == "inactive"
+
+        credentials_task = juju.run(
+            unit=unit_name,
+            action="get-password",
+            params={"username": MONITORING_USERNAME},
         )
-        assert output.split("\n")[1].split()[2] == "inactive"
+        credentials_task.raise_on_failure()
 
-        return_code, _, _ = await ops_test.juju(
-            "ssh", unit.name, "sudo", "snap", "set", "charmed-mysql", "exporter.user=monitoring"
-        )
-        assert return_code == 0
+        username = credentials_task.results["username"]
+        password = credentials_task.results["password"]
 
-        monitoring_credentials = await fetch_credentials(unit, "monitoring")
-        return_code, _, _ = await ops_test.juju(
-            "ssh",
-            unit.name,
-            "sudo",
-            "snap",
-            "set",
-            "charmed-mysql",
-            f"exporter.password={monitoring_credentials['password']}",
-        )
-        assert return_code == 0
+        juju.exec(f"sudo snap set charmed-mysql exporter.user={username}", unit=unit_name)
+        juju.exec(f"sudo snap set charmed-mysql exporter.password={password}", unit=unit_name)
+        juju.exec(f"sudo snap start {service_name}", unit=unit_name)
 
-        return_code, _, _ = await ops_test.juju(
-            "ssh", unit.name, "sudo", "snap", "start", "charmed-mysql.mysqld-exporter"
-        )
-        assert return_code == 0
+        for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
+            with attempt:
+                task = juju.exec(f"sudo snap services {service_name}", unit=unit_name)
+                task.raise_on_failure()
 
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
-                with attempt:
-                    _, output, _ = await ops_test.juju(
-                        "ssh",
-                        unit.name,
-                        "sudo",
-                        "snap",
-                        "services",
-                        "charmed-mysql.mysqld-exporter",
-                    )
-                    assert output.split("\n")[1].split()[2] == "active"
-        except RetryError as e:
-            raise Exception("Failed to start the mysqld-exporter snap service") from e
+        assert task.stdout.split("\n")[1].split()[2] == "active"
 
         time.sleep(30)
 
-        unit_address = await unit.get_public_address()
-        mysql_exporter_url = f"http://{unit_address}:9104/metrics"
+        mysql_unit_address = get_unit_ip(juju, MYSQL_APP_NAME, unit_name)
+        mysql_unit_exporter_url = f"http://{mysql_unit_address}:{MYSQL_EXPORTER_PORT}/metrics"
+        mysql_unit_response = http_client.request("GET", mysql_unit_exporter_url)
 
-        jmx_resp = http.request("GET", mysql_exporter_url)
-
-        assert jmx_resp.status == 200
+        assert mysql_unit_response.status == 200
