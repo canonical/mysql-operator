@@ -1,105 +1,92 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from ..helpers import (
-    execute_queries_on_unit,
-    generate_random_string,
-    get_primary_unit_wrapper,
-    get_server_config_credentials,
-    scale_application,
-)
-from .high_availability_helpers import (
-    get_application_name,
+from ..helpers import generate_random_string
+from .high_availability_helpers_new import (
+    get_app_units,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    scale_app_units,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_scaling_without_data_loss(ops_test: OpsTest, highly_available_cluster) -> None:
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_scaling_without_data_loss(juju: Juju) -> None:
     """Test that data is preserved during scale up and scale down."""
-    # Insert values into test table from the primary unit
-    app = get_application_name(ops_test, "mysql")
-    application = ops_test.model.applications[app]
+    table_name = "instance_state_replication"
+    table_value = generate_random_string(255)
 
-    random_unit = application.units[0]
-    server_config_credentials = await get_server_config_credentials(random_unit)
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
 
-    primary_unit = await get_primary_unit_wrapper(
-        ops_test,
-        app,
-    )
-    primary_unit_address = await primary_unit.get_public_address()
-
-    random_chars = generate_random_string(40)
-    create_records_sql = [
-        "CREATE DATABASE IF NOT EXISTS test",
-        "CREATE TABLE IF NOT EXISTS test.instance_state_replication (id varchar(40), primary key(id))",
-        f"INSERT INTO test.instance_state_replication VALUES ('{random_chars}')",
-    ]
-
-    await execute_queries_on_unit(
-        primary_unit_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-        create_records_sql,
-        commit=True,
-    )
-
-    old_unit_names = [unit.name for unit in ops_test.model.applications[app].units]
-
-    # Add a unit and wait until it is active
-    async with ops_test.fast_forward("60s"):
-        await scale_application(ops_test, app, 4)
-
-    added_unit = next(unit for unit in application.units if unit.name not in old_unit_names)
+    mysql_app_old_units = set(get_app_units(juju, MYSQL_APP_NAME))
+    scale_app_units(juju, MYSQL_APP_NAME, 4)
+    mysql_app_new_units = set(get_app_units(juju, MYSQL_APP_NAME))
 
     # Ensure that all units have the above inserted data
-    select_data_sql = [
-        f"SELECT * FROM test.instance_state_replication WHERE id = '{random_chars}'",
-    ]
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
 
-    for unit in application.units:
-        unit_address = await unit.get_public_address()
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            select_data_sql,
-        )
-        assert random_chars in output
-
-    # Destroy the recently created unit and wait until the application is active
-    await ops_test.model.destroy_units(added_unit.name)
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(lambda: len(ops_test.model.applications[app].units) == 3)
-        await ops_test.model.wait_for_idle(
-            apps=[app],
-            status="active",
-            raise_on_blocked=True,
-            timeout=TIMEOUT,
-        )
+    mysql_app_added_unit = (mysql_app_new_units - mysql_app_old_units).pop()
+    juju.remove_unit(mysql_app_added_unit)
+    juju.wait(
+        ready=lambda status: len(status.apps[MYSQL_APP_NAME].units) == 3,
+        timeout=20 * MINUTE_SECS,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, MYSQL_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
     # Ensure that the data still exists in all the units
-    for unit in application.units:
-        unit_address = await unit.get_public_address()
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            select_data_sql,
-        )
-        assert random_chars in output
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)

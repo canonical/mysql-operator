@@ -1,41 +1,72 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from ..helpers import generate_random_string
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_consistent_data_replication_across_cluster(
-    ops_test: OpsTest, highly_available_cluster
-) -> None:
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_consistent_data_replication_across_cluster(juju: Juju) -> None:
     """Confirm that data is replicated from the primary node to all the replicas."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
+    table_name = "data"
+    table_value = generate_random_string(255)
 
-    # assert that there are 3 units in the mysql cluster
-    assert len(ops_test.model.applications[mysql_application_name].units) == 3
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
 
-    database_name, table_name = "test-check-consistency", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
-
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)

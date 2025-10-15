@@ -1,76 +1,100 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from ..helpers import (
-    get_primary_unit_wrapper,
-    scale_application,
-)
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    ensure_n_online_mysql_members,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from ..helpers import generate_random_string
+from .high_availability_helpers_new import (
+    check_mysql_instances_online,
+    check_mysql_units_writes_increment,
+    get_mysql_primary_unit,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    scale_app_units,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_kill_primary_check_reelection(ops_test: OpsTest, highly_available_cluster) -> None:
-    """Confirm that a new primary is elected when the current primary is torn down."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
-    application = ops_test.model.applications[mysql_application_name]
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
 
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
 
-    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_name = primary_unit.name
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
-    # Destroy the primary unit and block to ensure that the
-    # juju status changed from active
-    logger.info("Destroying leader unit")
-    await ops_test.model.destroy_units(primary_unit.name)
 
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(lambda: len(application.units) == 2)
-        await ops_test.model.wait_for_idle(
-            apps=[mysql_application_name],
-            status="active",
-            raise_on_blocked=True,
-            timeout=TIMEOUT,
-        )
+@pytest.mark.abort_on_fail
+async def test_kill_primary_check_reelection(juju: Juju) -> None:
+    """Confirm that a new primary is elected when the current primary is tear down."""
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # Wait for unit to be destroyed and confirm that the new primary unit is different
-    new_primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
+    mysql_old_primary = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
 
-    assert primary_unit_name != new_primary_unit.name, "Primary has not changed"
+    # Destroy the primary unit to ensure that the juju status changed from active
+    logging.info("Killing the primary unit")
+    juju.remove_unit(mysql_old_primary)
+
+    juju.wait(
+        ready=lambda status: len(status.apps[MYSQL_APP_NAME].units) == 2,
+        timeout=20 * MINUTE_SECS,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, MYSQL_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+    # Confirm that the new primary unit is different
+    mysql_new_primary = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
+    assert mysql_new_primary != mysql_old_primary, "Primary has not changed"
 
     # Add the unit back and wait until it is active
-    async with ops_test.fast_forward("60s"):
-        logger.info("Scaling back to 3 units")
-        await scale_application(ops_test, mysql_application_name, 3)
+    logging.info("Scaling back to 3 units")
+    scale_app_units(juju, MYSQL_APP_NAME, 3)
 
-        # wait (and retry) until the killed pod is back online in the mysql cluster
-        assert await ensure_n_online_mysql_members(ops_test, 3), (
-            "Old primary has not come back online after being killed"
-        )
+    # Retry until the killed pod is back online in the mysql cluster
+    assert check_mysql_instances_online(juju, MYSQL_APP_NAME)
 
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
-
-    database_name, table_name = "test-kill-primary-check-reelection", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
+    table_name = "data"
+    table_value = generate_random_string(255)
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)

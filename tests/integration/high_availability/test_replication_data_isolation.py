@@ -1,103 +1,94 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
-from pathlib import Path
 
-import yaml
-from pytest_operator.plugin import OpsTest
+import jubilant_backports
+import pytest
+from jubilant_backports import Juju
 
-from ..helpers import (
-    execute_queries_on_unit,
-    get_primary_unit,
-    get_server_config_credentials,
-)
-from .high_availability_helpers import (
-    get_application_name,
+from .high_availability_helpers_new import (
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-ANOTHER_APP_NAME = f"second{APP_NAME}"
-TIMEOUT = 17 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-async def test_cluster_isolation(ops_test: OpsTest, charm, highly_available_cluster) -> None:
+@pytest.mark.abort_on_fail
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+async def test_cluster_data_isolation(juju: Juju, charm: str) -> None:
     """Test for cluster data isolation.
 
     This test creates a new cluster, create a new table on both cluster, write a single record with
     the application name for each cluster, retrieve and compare these records, asserting they are
     not the same.
     """
-    app = get_application_name(ops_test, "mysql")
-    apps = [app, ANOTHER_APP_NAME]
+    mysql_main_app_name = f"{MYSQL_APP_NAME}"
+    mysql_other_app_name = f"{MYSQL_APP_NAME}-other"
 
-    await ops_test.model.deploy(
-        charm,
-        application_name=ANOTHER_APP_NAME,
-        num_units=1,
+    juju.deploy(
+        charm=charm,
+        app=mysql_other_app_name,
         base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=1,
     )
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[ANOTHER_APP_NAME].units) == 1
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[ANOTHER_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=TIMEOUT,
-        )
 
-    # retrieve connection data for each cluster
-    connection_data = {}
-    for application in apps:
-        random_unit = ops_test.model.applications[application].units[0]
-        server_config_credentials = await get_server_config_credentials(random_unit)
-        primary_unit = await get_primary_unit(ops_test, random_unit, application)
+    logging.info("Wait for application to become active")
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, mysql_other_app_name),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
-        primary_unit_address = await primary_unit.get_public_address()
+    table_name = "cluster_isolation_table"
 
-        connection_data[application] = {
-            "host": primary_unit_address,
-            "username": server_config_credentials["username"],
-            "password": server_config_credentials["password"],
-        }
+    for app_name in (mysql_main_app_name, mysql_other_app_name):
+        await insert_mysql_test_data(juju, app_name, table_name, f"{app_name}-value")
+    for app_name in (mysql_main_app_name, mysql_other_app_name):
+        await verify_mysql_test_data(juju, app_name, table_name, f"{app_name}-value")
+    for app_name in (mysql_main_app_name, mysql_other_app_name):
+        await remove_mysql_test_data(juju, app_name, table_name)
 
-    # write single distinct record to each cluster
-    for application in apps:
-        create_records_sql = [
-            "CREATE DATABASE IF NOT EXISTS test",
-            "DROP TABLE IF EXISTS test.cluster_isolation_table",
-            "CREATE TABLE test.cluster_isolation_table (id varchar(40), primary key(id))",
-            f"INSERT INTO test.cluster_isolation_table VALUES ('{application}')",
-        ]
-
-        await execute_queries_on_unit(
-            connection_data[application]["host"],
-            connection_data[application]["username"],
-            connection_data[application]["password"],
-            create_records_sql,
-            commit=True,
-        )
-
-    result = []
-    # read single record from each cluster
-    for application in apps:
-        read_records_sql = ["SELECT id FROM test.cluster_isolation_table"]
-
-        output = await execute_queries_on_unit(
-            connection_data[application]["host"],
-            connection_data[application]["username"],
-            connection_data[application]["password"],
-            read_records_sql,
-            commit=False,
-        )
-
-        assert len(output) == 1, "Just one record must exist on the test table"
-        result.append(output[0])
-
-    assert result[0] != result[1], "Writes from one cluster are replicated to another cluster."
+    juju.remove_application(mysql_other_app_name, destroy_storage=True, force=True)
