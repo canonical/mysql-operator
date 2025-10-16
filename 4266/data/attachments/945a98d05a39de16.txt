@@ -1,0 +1,64 @@
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:116 Creating backup
+[32mINFO    [0m integration.backups:backups.py:120 Creating test data 1
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:136 Creating test data 2
+[32mINFO    [0m integration.helpers:helpers.py:482 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:148 Scaling down to 1 unit
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 3)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+[32mINFO    [0m integration.backups:backups.py:158 Restoring backup 2025-10-16T02:05:56Z with bad restore-to-time parameter
+[32mINFO    [0m integration.backups:backups.py:167 Restoring backup 2025-10-16T02:05:56Z with year_before restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [executing] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:179 Restoring backup 2025-10-16T02:05:56Z with year_after restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:191 Restoring backup 2025-10-16T02:05:56Z with actual restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [executing] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:203 Restoring backup 2025-10-16T02:05:56Z with restore-to-time=latest parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:38 Cleaning backups from cloud buckets
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  02:11:22Z
+
+App            Version          Status   Scale  Charm          Channel        Rev  Exposed  Message
+mysql          8.0.42-0ubun...  blocked      1  mysql                           0  no       Move restored cluster to another S3 repository
+s3-integrator                   active       1  s3-integrator  latest/stable  145  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports           Message
+mysql/1*          active    idle   2        10.40.170.140   3306,33060/tcp  Primary
+s3-integrator/0*  active    idle   0        10.40.170.226                   
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.40.170.226  juju-47207a-0  ubuntu@22.04  runnervmwhb2z  Running
+2        started  10.40.170.140  juju-47207a-2  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:00:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:00:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-s3-integrator-0: 02:00:35 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 02:02:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:02:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 02:02:05 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 02:02:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:02:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:02:21 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 02:02:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:02:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:02:34 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
