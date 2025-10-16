@@ -1,6 +1,6 @@
 # How to refresh a single cluster
 
-This guide covers refresh for single cluster MySQL deployments. To refresh a multi-cluster deployment, see [](/how-to/refresh/refresh-multi-cluster) first.
+This guide covers refresh for single cluster MySQL deployments. To refresh a multi-cluster deployment, see [](/how-to/refresh/multi-cluster/refresh-multi-cluster) first.
 
 ## Important information
 
@@ -77,7 +77,7 @@ The action will configure the charm to minimize the amount of primary switchover
 (step-3-refresh)=
 ## Step 3: Refresh
 
-If you are refreshing multiple clusters, make sure to refresh the standby clusters first. See [](/how-to/refresh/refresh-multi-cluster) for more information.
+If you are refreshing multiple clusters, make sure to refresh the standby clusters first. See [](/how-to/refresh/multi-cluster/refresh-multi-cluster) for more information.
 
 Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm refresh process. 
 

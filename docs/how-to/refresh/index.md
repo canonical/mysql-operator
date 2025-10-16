@@ -41,21 +41,21 @@ Before refreshing the charm, make sure to check the [](/reference/releases) page
 
 To refresh a **single cluster**, see:
 
-* [](/how-to/refresh/refresh-single-cluster)
-* [](/how-to/refresh/roll-back-single-cluster)
+* [](/how-to/refresh/single-cluster/refresh-single-cluster)
+* [](/how-to/refresh/single-cluster/roll-back-single-cluster)
 
 To refresh a **multi-cluster** deployment, see
 
-* [](/how-to/refresh/refresh-multi-cluster)
+* [](/how-to/refresh/multi-cluster/refresh-multi-cluster)
+* [](/how-to/refresh/multi-cluster/roll-back-multi-cluster)
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
 :hidden:
 
-Refresh a cluster <refresh-single-cluster>
-Roll back a cluster <roll-back-single-cluster>
-Refresh a multi-cluster deployment <refresh-multi-cluster>
+Single cluster <single-cluster/index>
+Multi-cluster <multi-cluster/index>
 Upgrade Juju <upgrade-juju>
 ```
 

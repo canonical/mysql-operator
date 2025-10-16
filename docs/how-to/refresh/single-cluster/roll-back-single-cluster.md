@@ -8,7 +8,7 @@ Even if the underlying MySQL cluster continues to work, it’s important to roll
 Do NOT trigger `rollback` during a running `refresh` action! It may cause an  unpredictable MySQL cluster state!
 ```
 
-This guide covers rollbacks for single cluster MySQL deployments. Before rolling back a **multi-cluster** refresh, see [](/how-to/refresh/refresh-multi-cluster).
+This guide covers rollbacks for single cluster MySQL deployments. Before rolling back a **multi-cluster** refresh, see [](/how-to/refresh/multi-cluster/refresh-multi-cluster).
 
 ## Summary of the rollback steps
 
@@ -49,4 +49,3 @@ The first unit will be rolled out and should rejoin the cluster after settling d
 Future [improvements are planned](https://warthogs.atlassian.net/browse/DPE-2621) to check the state on pods/clusters on a low level. 
 
 For now, check `juju status` to make sure the cluster [state](/reference/charm-statuses) is OK.
-
