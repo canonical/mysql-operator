@@ -96,7 +96,7 @@ juju refresh mysql --revision=366
 Example with a local charm file:
 
 ```shell
-juju refresh mysql --path ./mysql_ubuntu-24.04-amd64.charm
+juju refresh mysql --path ./mysql_ubuntu-22.04-amd64.charm
 ```
 
 ```{admonition} During an ongoing refresh
