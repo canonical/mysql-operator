@@ -20,7 +20,7 @@ juju run mysql/<n> get-cluster-status cluster-set=true
 
 ## Refresh each cluster
 
-For each cluster, follow the instructions in [](/how-to/refresh/refresh-single-cluster).
+For each cluster, follow the instructions in [](/how-to/refresh/single-cluster/refresh-single-cluster).
 
 **Perform a health check before proceeding to the next cluster.**
 
@@ -28,6 +28,6 @@ Use the [`get-cluster-status`](https://charmhub.io/mysql/actions#get-cluster-sta
 
 ## Roll back
 
-If something goes wrong, roll back the cluster. See: [](/how-to/refresh/roll-back-single-cluster)
+If something goes wrong, roll back the cluster. See: [](/how-to/refresh/single-cluster/roll-back-single-cluster)
 
 
