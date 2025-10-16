@@ -2,7 +2,7 @@
 
 After a `juju refresh`, if there are any version incompatibilities in charm revisions, its dependencies, or any other unexpected failure in the refresh process, the process will be halted and enter a failure state.
 
-Even if the underlying MySQL cluster continue to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure.
+Even if the underlying MySQL cluster continues to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure.
 
 ```{warning}
 Do NOT trigger `rollback` during a running `refresh` action! It may cause an  unpredictable MySQL cluster state!
@@ -37,10 +37,10 @@ juju refresh mysql --revision=312
 When deploying from a local charm file, one must have the previous revision charm file and run the following command:
 
 ```shell
-juju refresh mysql --path=./mysql_ubuntu-24.04-amd64.charm
+juju refresh mysql --path=./mysql_ubuntu-22.04-amd64.charm
 ```
 
-where `mysql_ubuntu-24.04-amd64.charm` is the previous revision charm file.
+where `mysql_ubuntu-22.04-amd64.charm` is the previous revision charm file.
 
 The first unit will be rolled out and should rejoin the cluster after settling down. After the refresh command, the juju controller revision for the application will be back in sync with the running Charmed MySQL revision.
 
