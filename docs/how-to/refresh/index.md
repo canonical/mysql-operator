@@ -27,7 +27,7 @@ This charm supports in-place upgrades to higher versions via Juju's [`refresh`](
 +------------+------------+----------+------------+
 ```
 
-Due to an upstream issue with MySQL Server version `8.0.35`, Charmed MySQL versions below [Revision 240](https://github.com/canonical/mysql-operator/releases/tag/rev240) **cannot** be refreshed beyond [Revision 196](https://github.com/canonical/mysql-operator/releases/tag/rev196).
+Due to an upstream issue with MySQL Server version `8.0.35`, Charmed MySQL versions below [Revision 240](https://github.com/canonical/mysql-operator/releases/tag/rev240) **cannot** be upgraded using Juju's `refresh`.
 
 To upgrade from older versions to Revision 240 or higher, the data must be migrated manually. See: [](/how-to/development/migrate-data-via-backup-restore).
 
