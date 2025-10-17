@@ -3,10 +3,8 @@
 # See LICENSE file for licensing details.
 
 import json
-import os
 import subprocess
 from collections.abc import Callable
-from pathlib import Path
 
 import jubilant_backports
 from jubilant_backports import Juju
@@ -26,18 +24,6 @@ TEST_DATABASE_NAME = "testing"
 
 JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
-
-
-def _get_juju_keys() -> tuple[str, str]:
-    """Get Juju public and private keys."""
-    config_dir = Path("~/.local/share/juju")
-    if juju_data := os.getenv("JUJU_DATA"):
-        config_dir = Path(juju_data)
-
-    return (
-        str(config_dir.expanduser().resolve() / "ssh" / "juju_id_rsa.pub"),
-        str(config_dir.expanduser().resolve() / "ssh" / "juju_id_rsa"),
-    )
 
 
 def check_mysql_instances_online(juju: Juju, app_name: str) -> bool:
@@ -204,54 +190,6 @@ def get_unit_status_log(juju: Juju, unit_name: str, log_lines: int = 0) -> list[
     )
 
     return json.loads(output)
-
-
-# TODO:
-#  Rely on Jubilant scp command once they make it easier
-#  for package users to deal with temporal directories
-#  https://github.com/canonical/jubilant/issues/201
-def scp_unit_file_from(
-    juju: Juju, app_name: str, unit_name: str, source_path: str, target_path: str
-) -> None:
-    """Copy a file from a given unit."""
-    juju_keys = _get_juju_keys()
-    unit_address = get_unit_ip(juju, app_name, unit_name)
-    unit_username = "ubuntu"
-
-    subprocess.check_output([
-        "scp",
-        "-B",
-        "-o",
-        "StrictHostKeyChecking=no",
-        "-i",
-        juju_keys[1],
-        f"{unit_username}@{unit_address}:{source_path}",
-        f"{target_path}",
-    ])
-
-
-# TODO:
-#  Rely on Jubilant scp command once they make it easier
-#  for package users to deal with temporal directories
-#  https://github.com/canonical/jubilant/issues/201
-def scp_unit_file_into(
-    juju: Juju, app_name: str, unit_name: str, source_path: str, target_path: str
-) -> None:
-    """Copy a file into a given unit."""
-    juju_keys = _get_juju_keys()
-    unit_address = get_unit_ip(juju, app_name, unit_name)
-    unit_username = "ubuntu"
-
-    subprocess.check_output([
-        "scp",
-        "-B",
-        "-o",
-        "StrictHostKeyChecking=no",
-        "-i",
-        juju_keys[1],
-        f"{source_path}",
-        f"{unit_username}@{unit_address}:{target_path}",
-    ])
 
 
 def get_relation_data(juju: Juju, app_name: str, rel_name: str) -> list[dict]:
