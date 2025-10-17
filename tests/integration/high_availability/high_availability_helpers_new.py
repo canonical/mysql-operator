@@ -108,22 +108,14 @@ def get_app_units(juju: Juju, app_name: str) -> dict[str, UnitStatus]:
 def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
     """Scale a given application to a number of units."""
     app_units = list(get_app_units(juju, app_name))
-    app_units_diff = len(app_units) - num_units
-
-    scale_func = None
-    scale_func_args = []
+    app_units_diff = num_units - len(app_units)
 
     if app_units_diff > 0:
-        scale_func = juju.remove_unit
-        scale_func_args = app_units[(-1 * app_units_diff) :]
+        juju.add_unit(app_name, num_units=app_units_diff)
     if app_units_diff < 0:
-        scale_func = juju.add_unit
-        scale_func_args = [app_name] * (-1 * app_units_diff)
+        juju.remove_unit(*app_units[app_units_diff:])
     if app_units_diff == 0:
         return
-
-    for arg in scale_func_args:
-        scale_func(arg, num_units=1)
 
     juju.wait(
         ready=lambda status: len(status.apps[app_name].units) == num_units,
