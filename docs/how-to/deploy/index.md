@@ -11,7 +11,15 @@ AWS EC2 <aws-ec2>
 GCE <gce>
 Azure <azure>
 Multi-AZ <multi-az>
-Terraform <terraform>
 Air-gapped <air-gapped>
 Juju spaces <juju-spaces>
+```
+
+## Terraform
+
+```{toctree}
+:titlesonly:
+:maxdepth: 2
+
+Terraform <terraform/index>
 ```
