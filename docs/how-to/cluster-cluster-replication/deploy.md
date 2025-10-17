@@ -1,14 +1,4 @@
-# Deploy async replication
-
-The following table shows the source and target controller/model combinations that are currently supported:
-
-|  | AWS | GCP | Azure |
-|---|---|:---:|:---:|
-| AWS | ![ check ] |  |  |
-| GCP |  | ![ check ] |  |
-| Azure |  | | ![ check ] |
-
-## Deploy
+# Deploy
 
 Deploy two MySQL Clusters, named `Rome` and `Lisbon`:
 
@@ -24,7 +14,7 @@ juju deploy mysql db2 --channel=8.0/edge --config profile=testing --config clust
 ```
 
 ```{caution}
-Remove profile configuration for production deployments. Check [Profiles](/reference/profiles) for documentation.
+Remove [profile](/reference/profiles) configuration for production deployments. 
 ```
 
 ## Offer
@@ -107,8 +97,5 @@ juju add-unit db2 -n 2 -m lisbon
 ```
 
 ```{caution}
-**Note**: The scaling is possible before and after the asynchronous replication established/created.
+The scaling is possible before and after the asynchronous replication is established/created.
 ```
-
-[check]: https://img.shields.io/badge/%E2%9C%93-brightgreen
-

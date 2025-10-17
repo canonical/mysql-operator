@@ -1,4 +1,4 @@
-# Migrate data via backup/restore
+# How to migrate data via backup/restore
 
 Charmed MySQL is able to restore [its own backups](/how-to/back-up-and-restore/restore-a-backup) stored on [S3-compatible storage](/how-to/back-up-and-restore/configure-s3-aws). 
 
