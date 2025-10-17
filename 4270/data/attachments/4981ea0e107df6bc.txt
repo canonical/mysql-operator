@@ -1,0 +1,79 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model concierge-lxd:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:29 Clearing continuous writes
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:32 Starting continuous writes
+[32mINFO    [0m root:test_upgrade_from_stable.py:87 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp3hfg9igx
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmp90sf79d5
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=15s
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpqod927fz
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmpa2yr_4vu
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/2 get-password --params /root/snap/juju/common/tmpvyz05x68
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade_from_stable.py:90 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju refresh --model testing mysql --path ./mysql_ubuntu@22.04-amd64.charm
+[32mINFO    [0m root:test_upgrade_from_stable.py:93 Wait for upgrade to start
+[32mINFO    [0m root:test_upgrade_from_stable.py:99 Wait for upgrade to complete
+[32mINFO    [0m root:test_upgrade_from_stable.py:105 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpbjdluo7z
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/2 get-password --params /root/snap/juju/common/tmptgkrxiqd
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=15s
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmp1y1668jy
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpx06_ko4d
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmpevdqlh5g
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/2 get-password --params /root/snap/juju/common/tmpx1ssn7gq
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:37 Clearing continuous writes
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  07:23:21Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       Last written value=11615
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.79.19.35                     Last written value=11615
+mysql/0*           active    idle   0        10.79.19.88     3306,33060/tcp  
+mysql/1            active    idle   1        10.79.19.17                     
+mysql/2            active    idle   2        10.79.19.187    3306,33060/tcp  Primary
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.79.19.88   juju-0770af-0  ubuntu@22.04  runnervmzdgdc  Running
+1        started  10.79.19.17   juju-0770af-1  ubuntu@22.04  runnervmzdgdc  Running
+2        started  10.79.19.187  juju-0770af-2  ubuntu@22.04  runnervmzdgdc  Running
+3        started  10.79.19.35   juju-0770af-3  ubuntu@22.04  runnervmzdgdc  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 07:13:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 07:13:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 07:13:40 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-3: 07:15:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 07:15:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-test-app-0: 07:15:27 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-2: 07:15:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:15:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 07:15:36 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+machine-1: 07:15:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:15:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 07:15:57 ERROR juju.worker.meterstatus error running "meter-status-changed": charm missing from disk
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
