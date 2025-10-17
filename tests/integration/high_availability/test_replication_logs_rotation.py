@@ -3,6 +3,7 @@
 
 import logging
 import tempfile
+from pathlib import Path
 
 import jubilant_backports
 import pytest
@@ -18,8 +19,6 @@ from constants import CHARMED_MYSQL_COMMON_DIRECTORY
 from .high_availability_helpers_new import (
     get_app_leader,
     get_unit_process_id,
-    scp_unit_file_from,
-    scp_unit_file_into,
     wait_for_apps_status,
 )
 
@@ -91,7 +90,6 @@ def test_log_rotation(juju: Juju) -> None:
         logging.info("Writing some data to the text log files")
         write_unit_file(
             juju=juju,
-            app_name=MYSQL_APP_NAME,
             unit_name=mysql_app_leader,
             file_path=f"{mysql_logs_path}/{log_type}.log",
             file_data=f"{log_type} content",
@@ -118,7 +116,6 @@ def test_log_rotation(juju: Juju) -> None:
     for log_type in log_types:
         active_log_file_data = read_unit_file(
             juju=juju,
-            app_name=MYSQL_APP_NAME,
             unit_name=mysql_app_leader,
             file_path=f"{mysql_logs_path}/{log_type}.log",
         )
@@ -132,7 +129,6 @@ def test_log_rotation(juju: Juju) -> None:
         archive_log_file_name = archive_log_files_listed[0].split()[-1]
         archive_log_file_data = read_unit_file(
             juju=juju,
-            app_name=MYSQL_APP_NAME,
             unit_name=mysql_app_leader,
             file_path=f"{archive_log_dir}/{archive_log_file_name}",
         )
@@ -174,12 +170,11 @@ def list_unit_files(juju: Juju, unit_name: str, file_path: str) -> list[str]:
     ]
 
 
-def read_unit_file(juju: Juju, app_name: str, unit_name: str, file_path: str) -> str:
+def read_unit_file(juju: Juju, unit_name: str, file_path: str) -> str:
     """Read contents from file in the provided unit.
 
     Args:
         juju: The Juju instance
-        app_name: The name of the app
         unit_name: The name of the unit to read the file from
         file_path: The path of the unit to read the file
     """
@@ -188,13 +183,10 @@ def read_unit_file(juju: Juju, app_name: str, unit_name: str, file_path: str) ->
     juju.exec(f"sudo cp {file_path} {temp_path}", unit=unit_name)
     juju.exec(f"sudo chown ubuntu:ubuntu {temp_path}", unit=unit_name)
 
-    with tempfile.NamedTemporaryFile(mode="r+") as temp_file:
-        scp_unit_file_from(
-            juju=juju,
-            app_name=app_name,
-            unit_name=unit_name,
-            source_path=temp_path,
-            target_path=temp_file.name,
+    with tempfile.NamedTemporaryFile(mode="r+", dir=Path.home()) as temp_file:
+        juju.scp(
+            f"{unit_name}:{temp_path}",
+            f"{temp_file.name}",
         )
         contents = temp_file.read()
 
@@ -202,28 +194,24 @@ def read_unit_file(juju: Juju, app_name: str, unit_name: str, file_path: str) ->
     return contents
 
 
-def write_unit_file(juju: Juju, app_name: str, unit_name: str, file_path: str, file_data: str):
+def write_unit_file(juju: Juju, unit_name: str, file_path: str, file_data: str):
     """Write content to the file in the provided unit.
 
     Args:
         juju: The Juju instance
-        app_name: The name of the app
         unit_name: The name of the unit to write the file into
         file_path: The path of the unit to write the file
         file_data: The data to write to the file.
     """
     temp_path = "/tmp/file"
 
-    with tempfile.NamedTemporaryFile(mode="w") as temp_file:
+    with tempfile.NamedTemporaryFile(mode="w", dir=Path.home()) as temp_file:
         temp_file.write(file_data)
         temp_file.flush()
 
-        scp_unit_file_into(
-            juju=juju,
-            app_name=app_name,
-            unit_name=unit_name,
-            source_path=temp_file.name,
-            target_path=temp_path,
+        juju.scp(
+            f"{temp_file.name}",
+            f"{unit_name}:{temp_path}",
         )
 
     juju.exec(f"sudo mv {temp_path} {file_path}", unit=unit_name)
