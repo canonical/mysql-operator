@@ -1,0 +1,3 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing ./mysql_ubuntu@22.04-amd64.charm mysql-other --base ubuntu@22.04 --config profile=testing
+[32mINFO    [0m root:test_replication_data_isolation.py:78 Wait for application to become active
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000

@@ -1,0 +1,23 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.9    unsupported  09:21:55Z
+
+App    Version  Status   Scale  Charm  Channel  Rev  Exposed  Message
+mysql           waiting    0/3  mysql             0  no       waiting for machine
+
+Unit     Workload  Agent       Machine  Public address  Ports  Message
+mysql/0  waiting   allocating  0        10.105.66.15           waiting for machine
+mysql/1  waiting   allocating  1        10.105.66.95           waiting for machine
+mysql/2  waiting   allocating  2        10.105.66.85           waiting for machine
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        down     10.105.66.15  juju-454372-0  ubuntu@22.04  runnervmzdgdc  Running
+1        down     10.105.66.95  juju-454372-1  ubuntu@22.04  runnervmzdgdc  Running
+2        pending  10.105.66.85  juju-454372-2  ubuntu@22.04  runnervmzdgdc  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
