@@ -173,7 +173,7 @@ If there was an issue with the refresh, even if the underlying MySQL cluster con
 
 The update can be attempted again after a further inspection of the failure. 
 
-See: [](/how-to/refresh/roll-back-single-cluster) 
+See: [](/how-to/refresh/single-cluster/roll-back-single-cluster) 
 
 (step-5-check)=
 ## Step 5: Check cluster health
