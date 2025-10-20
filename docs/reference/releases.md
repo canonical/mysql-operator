@@ -14,7 +14,7 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [Juju section of the system requirements](/reference/system-requirements) for more details.
 * Support for specific features
 
-| Release | MySQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/enable-monitoring) | [Minor version upgrades](/how-to/upgrade/perform-a-minor-upgrade) | [Cross-regional async replication](/how-to/cross-regional-async-replication/deploy) |
+| Release | MySQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/enable-monitoring) | [In-place upgrades](/how-to/refresh/single-cluster/refresh-single-cluster) | [Cluster-cluster replication](/how-to/cluster-cluster-replication/deploy) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | [366], [367] | 8.0.41 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |
 | [312], [313] | 8.0.39 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] |

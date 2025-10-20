@@ -132,7 +132,7 @@ Machine  State    Address         Inst id        Base          AZ  Message
 1        started  10.234.188.135  juju-ff9064-0  ubuntu@22.04      Running
 ```
 
-You can also watch juju logs with the [`juju debug-log`](https://juju.is/docs/juju/juju-debug-log) command.
+You can also watch juju logs with the [`juju debug-log`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/debug-log/) command.
 
 ## Access MySQL
 
