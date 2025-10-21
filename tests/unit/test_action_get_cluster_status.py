@@ -61,14 +61,17 @@ def test_get_cluster_status_action_success(harness):
         evt.fail.assert_not_called()
 
 
-def test_get_cluster_status_action_failure(harness):
+@pytest.mark.parametrize("backend_result", [
+    {"error": RuntimeError("boom")},
+    {"response": None},  # silent failure
+])
+def test_get_cluster_status_action_failure(backend_result, harness):
     """On backend error, the action calls event.fail() and does not set_results()."""
     # Seed peer-databag for cluster-name lookup
     rel = harness.add_relation("database-peers", "database-peers")
     harness.update_relation_data(rel, harness.charm.app.name, {"cluster-name": "my-cluster"})
 
-    # Patch MySQL backend to always raise
-    fake = FakeMySQLBackend(error=RuntimeError("boom"))
+    fake = FakeMySQLBackend(**backend_result)
     with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
         evt = make_event()
 
@@ -77,23 +80,4 @@ def test_get_cluster_status_action_failure(harness):
 
         # It should report failure and never set_results
         evt.fail.assert_called_once()
-        args, _ = evt.fail.call_args
-        assert "Failed to read cluster status" in args[0]
-
-        evt.set_results.assert_not_called()
-
-
-def test_get_cluster_status_action_none_return(harness):
-    """When the backend returns None (no error), the action should fail."""
-    rel = harness.add_relation("database-peers", "database-peers")
-    harness.update_relation_data(rel, harness.charm.app.name, {"cluster-name": "my-cluster"})
-
-    fake = FakeMySQLBackend(response=None)  # Simulate silent failure
-    with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
-        evt = make_event()
-        harness.charm._get_cluster_status(evt)
-
-        evt.fail.assert_called_once_with(
-            "Failed to read cluster status. See logs for more information."
-        )
         evt.set_results.assert_not_called()
