@@ -61,10 +61,13 @@ def test_get_cluster_status_action_success(harness):
         evt.fail.assert_not_called()
 
 
-@pytest.mark.parametrize("backend_result", [
-    {"error": RuntimeError("boom")},
-    {"response": None},  # silent failure
-])
+@pytest.mark.parametrize(
+    "backend_result",
+    [
+        {"error": RuntimeError("boom")},
+        {"response": None},  # silent failure
+    ],
+)
 def test_get_cluster_status_action_failure(backend_result, harness):
     """On backend error, the action calls event.fail() and does not set_results()."""
     # Seed peer-databag for cluster-name lookup
