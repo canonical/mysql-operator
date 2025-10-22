@@ -27,38 +27,38 @@ class FakeMySQLBackend:
 @pytest.fixture
 def harness():
     """Start the charm so harness.charm exists and peer databag works."""
-    h = Harness(MySQLOperatorCharm)
-    h.begin()
-    return h
+    harness = Harness(MySQLOperatorCharm)
+    harness.begin()
+    return harness
 
 
 def make_event():
     """Create a dummy ActionEvent with spies on set_results() and fail()."""
-    evt = Mock(spec=ActionEvent)
-    evt.set_results = Mock()
-    evt.fail = Mock()
-    evt.params = {}  # ensure .params.get() won't AttributeError
-    return evt
+    event = Mock(spec=ActionEvent)
+    event.set_results = Mock()
+    event.fail = Mock()
+    event.params = {}  # ensure .params.get() won't AttributeError
+    return event
 
 
 def test_get_cluster_status_action_success(harness):
     """On success, the action wraps and forwards the status dict."""
     # Prepare peer-databag so handler finds a cluster-name
-    rel = harness.add_relation("database-peers", "database-peers")
-    harness.update_relation_data(rel, harness.charm.app.name, {"cluster-name": "my-cluster"})
+    relation = harness.add_relation("database-peers", "database-peers")
+    harness.update_relation_data(relation, harness.charm.app.name, {"cluster-name": "my-cluster"})
 
     # Patch out the MySQL backend to return a known dict
     sample = {"clusterrole": "primary", "status": "ok"}
     fake = FakeMySQLBackend(response=sample)
     with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
-        evt = make_event()
+        event = make_event()
 
         # Invoke the action
-        harness.charm._get_cluster_status(evt)
+        harness.charm._get_cluster_status(event)
 
         # Expect set_results called once with {'success': True, 'status': sample}
-        evt.set_results.assert_called_once_with({"success": True, "status": sample})
-        evt.fail.assert_not_called()
+        event.set_results.assert_called_once_with({"success": True, "status": sample})
+        event.fail.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -71,16 +71,16 @@ def test_get_cluster_status_action_success(harness):
 def test_get_cluster_status_action_failure(backend_result, harness):
     """On backend error, the action calls event.fail() and does not set_results()."""
     # Seed peer-databag for cluster-name lookup
-    rel = harness.add_relation("database-peers", "database-peers")
-    harness.update_relation_data(rel, harness.charm.app.name, {"cluster-name": "my-cluster"})
+    relation = harness.add_relation("database-peers", "database-peers")
+    harness.update_relation_data(relation, harness.charm.app.name, {"cluster-name": "my-cluster"})
 
     fake = FakeMySQLBackend(**backend_result)
     with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
-        evt = make_event()
+        event = make_event()
 
         # Invoke the action
-        harness.charm._get_cluster_status(evt)
+        harness.charm._get_cluster_status(event)
 
         # It should report failure and never set_results
-        evt.fail.assert_called_once()
-        evt.set_results.assert_not_called()
+        event.fail.assert_called_once()
+        event.set_results.assert_not_called()
