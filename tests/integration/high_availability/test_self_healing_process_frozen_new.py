@@ -15,12 +15,12 @@ from ..helpers import (
 )
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
-    fast_interval,
     get_mysql_primary_unit,
     get_unit_ip,
     get_unit_process_id,
     insert_mysql_test_data,
     remove_mysql_test_data,
+    update_interval,
     verify_mysql_test_data,
     wait_for_apps_status,
 )
@@ -108,7 +108,7 @@ async def test_freeze_db_process(juju: Juju, continuous_writes_new) -> None:
     assert is_connection_possible(config)
 
     # Ensure continuous writes still incrementing for all units
-    with fast_interval(juju):
+    with update_interval(juju, "10s"):
         await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
     # Ensure that we are able to insert data into the primary

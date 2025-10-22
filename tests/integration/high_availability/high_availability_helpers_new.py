@@ -72,19 +72,6 @@ async def check_mysql_units_writes_increment(
                 app_max_value = unit_max_value
 
 
-@contextmanager
-def fast_interval(juju: Juju) -> Generator:
-    """Temporarily speed up update-status firing rate for the current model."""
-    update_interval_key = "update-status-hook-interval"
-    update_interval_val = juju.model_config()[update_interval_key]
-
-    juju.model_config({update_interval_key: "10s"})
-    try:
-        yield
-    finally:
-        juju.model_config({update_interval_key: update_interval_val})
-
-
 def get_app_leader(juju: Juju, app_name: str) -> str:
     """Get the leader unit for the given application."""
     model_status = juju.status()
@@ -350,6 +337,19 @@ def stop_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
         with attempt:
             if get_unit_process_id(juju, unit_name, "mysqld") is not None:
                 raise Exception("Failed to stop the mysqld process")
+
+
+@contextmanager
+def update_interval(juju: Juju, interval: str) -> Generator:
+    """Temporarily speed up update-status firing rate for the current model."""
+    update_interval_key = "update-status-hook-interval"
+    update_interval_val = juju.model_config()[update_interval_key]
+
+    juju.model_config({update_interval_key: interval})
+    try:
+        yield
+    finally:
+        juju.model_config({update_interval_key: update_interval_val})
 
 
 async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, value: str) -> None:

@@ -18,7 +18,6 @@ from ..helpers import generate_random_string
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
     execute_queries_on_unit,
-    fast_interval,
     get_app_leader,
     get_app_units,
     get_mysql_cluster_status,
@@ -28,6 +27,7 @@ from .high_availability_helpers_new import (
     insert_mysql_test_data,
     remove_mysql_test_data,
     stop_mysql_process_gracefully,
+    update_interval,
     verify_mysql_test_data,
     wait_for_apps_status,
     wait_for_unit_status,
@@ -101,7 +101,7 @@ async def test_sst_test(juju: Juju, continuous_writes_new):
             logging.info(f"Purge binary logs on unit {unit_name}")
             await purge_mysql_binary_logs(juju, MYSQL_APP_NAME, unit_name)
 
-    with fast_interval(juju):
+    with update_interval(juju, "10s"):
         logging.info("Waiting unit to enter maintenance")
         juju.wait(
             ready=wait_for_unit_status(MYSQL_APP_NAME, mysql_primary_unit, "maintenance"),

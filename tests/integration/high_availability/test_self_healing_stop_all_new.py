@@ -15,13 +15,13 @@ from ..helpers import (
 )
 from .high_availability_helpers_new import (
     check_mysql_units_writes_increment,
-    fast_interval,
     get_app_units,
     get_unit_ip,
     insert_mysql_test_data,
     remove_mysql_test_data,
     start_mysql_process_gracefully,
     stop_mysql_process_gracefully,
+    update_interval,
     verify_mysql_test_data,
     wait_for_apps_status,
     wait_for_unit_status,
@@ -108,7 +108,7 @@ async def test_cluster_pause(juju: Juju, continuous_writes_new) -> None:
     for unit_name in mysql_units:
         start_mysql_process_gracefully(juju, unit_name)
 
-    with fast_interval(juju):
+    with update_interval(juju, "10s"):
         logging.info("Waiting units to enter maintenance")
         juju.wait(
             ready=lambda status: all((

@@ -24,6 +24,7 @@ from .high_availability_helpers_new import (
     remove_mysql_test_data,
     start_mysql_process_gracefully,
     stop_mysql_process_gracefully,
+    update_interval,
     verify_mysql_test_data,
     wait_for_apps_status,
 )
@@ -99,32 +100,28 @@ async def test_replicate_data_on_restart(juju: Juju, continuous_writes_new) -> N
 
     # It is necessary to inhibit update-status-hook to stop the service
     # since the charm will restart the service on the hook
-    juju.model_config({"update-status-hook-interval": "60m"})
+    with update_interval(juju, "60m"):
+        logging.info(f"Stopping server on unit {mysql_primary_unit}")
+        stop_mysql_process_gracefully(juju, mysql_primary_unit)
 
-    logging.info(f"Stopping server on unit {mysql_primary_unit}")
-    stop_mysql_process_gracefully(juju, mysql_primary_unit)
+        # Verify that connection is gone
+        assert not is_connection_possible(config)
 
-    # Verify that connection is gone
-    assert not is_connection_possible(config)
+        online_units = set(mysql_units) - {mysql_primary_unit}
+        online_units = list(online_units)
+        random_unit = random.choice(online_units)
 
-    online_units = set(mysql_units) - {mysql_primary_unit}
-    online_units = list(online_units)
-    random_unit = random.choice(online_units)
+        new_mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME, random_unit)
 
-    new_mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME, random_unit)
+        logging.info("Write to new primary")
+        table_name = "data"
+        table_value = generate_random_string(255)
+        await insert_mysql_test_data(
+            juju, MYSQL_APP_NAME, new_mysql_primary_unit, table_name, table_value
+        )
 
-    logging.info("Write to new primary")
-    table_name = "data"
-    table_value = generate_random_string(255)
-    await insert_mysql_test_data(
-        juju, MYSQL_APP_NAME, new_mysql_primary_unit, table_name, table_value
-    )
-
-    logging.info(f"Starting server on unit {mysql_primary_unit}")
-    start_mysql_process_gracefully(juju, mysql_primary_unit)
-
-    # Restore standard interval
-    juju.model_config({"update-status-hook-interval": "5m"})
+        logging.info(f"Starting server on unit {mysql_primary_unit}")
+        start_mysql_process_gracefully(juju, mysql_primary_unit)
 
     # Verify that connection is possible
     assert is_connection_possible(config, retry_if_not_possible=True)
