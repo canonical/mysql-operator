@@ -311,7 +311,7 @@ def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
     #  Rely on Jubilant exec command once they fix it
     #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
-        command="sudo snap restart charmed-mysql.mysqld",
+        command="sudo snap start charmed-mysql.mysqld",
         target=unit_name,
     )
 
