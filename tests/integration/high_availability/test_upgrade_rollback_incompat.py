@@ -7,7 +7,6 @@ import shutil
 import time
 import zipfile
 from ast import literal_eval
-from collections.abc import Generator
 from pathlib import Path
 
 import jubilant_backports
@@ -31,22 +30,6 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 MINUTE_SECS = 60
 
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
-
-@pytest.fixture()
-def continuous_writes(juju: Juju) -> Generator:
-    """Starts continuous writes to the MySQL cluster for a test and clear the writes at the end."""
-    test_app_leader = get_app_leader(juju, MYSQL_TEST_APP_NAME)
-
-    logging.info("Clearing continuous writes")
-    juju.run(test_app_leader, "clear-continuous-writes")
-    logging.info("Starting continuous writes")
-    juju.run(test_app_leader, "start-continuous-writes")
-
-    yield
-
-    logging.info("Clearing continuous writes")
-    juju.run(test_app_leader, "clear-continuous-writes")
 
 
 # TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap

@@ -1,124 +1,220 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
-from pathlib import Path
+import subprocess
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, wait_fixed
+from jubilant_backports import Juju
+from tenacity import (
+    Retrying,
+    retry,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 from constants import CLUSTER_ADMIN_USERNAME
 
 from ..helpers import (
-    cut_network_from_unit,
-    get_controller_machine,
-    get_primary_unit_wrapper,
-    get_system_user_password,
-    get_unit_ip,
+    generate_random_string,
     is_connection_possible,
-    is_machine_reachable_from,
-    restore_network_for_unit,
-    unit_hostname,
-    wait_network_restore,
 )
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_app_units,
+    get_mysql_primary_unit,
+    get_unit_ip,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    verify_mysql_test_data,
+    wait_for_apps_status,
+    wait_for_unit_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_network_cut(ops_test: OpsTest, highly_available_cluster, continuous_writes):
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_network_cut(juju: Juju, continuous_writes) -> None:
     """Completely cut and restore network."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
-    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    all_units = ops_test.model.applications[mysql_application_name].units
+    mysql_units = get_app_units(juju, MYSQL_APP_NAME)
 
-    # ensure continuous writes still incrementing for all units
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # get unit hostname
-    primary_hostname = await unit_hostname(ops_test, primary_unit.name)
+    mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
+    mysql_primary_hostname = get_unit_hostname(juju, MYSQL_APP_NAME, mysql_primary_unit)
+    mysql_primary_unit_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_primary_unit)
 
-    logger.info(f"Unit {primary_unit.name} it's on machine {primary_hostname} ✅")
+    logging.info(f"Unit {mysql_primary_unit} is on machine {mysql_primary_hostname}")
 
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
-    cluster_admin_password = await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME)
+    credentials_task = juju.run(
+        unit=mysql_primary_unit,
+        action="get-password",
+        params={"username": CLUSTER_ADMIN_USERNAME},
+    )
+    credentials_task.raise_on_failure()
 
     config = {
-        "username": CLUSTER_ADMIN_USERNAME,
-        "password": cluster_admin_password,
-        "host": primary_unit_ip,
+        "username": credentials_task.results["username"],
+        "password": credentials_task.results["password"],
+        "host": mysql_primary_unit_ip,
     }
 
-    # verify that connection is possible
-    assert is_connection_possible(config), (
-        f"❌ Connection to host {primary_unit_ip} is not possible"
+    # Verify that connection is possible
+    assert is_connection_possible(config)
+
+    logging.info(f"Cutting network for {mysql_primary_hostname}")
+    cut_unit_network(mysql_primary_hostname)
+
+    hostnames = [get_controller_hostname(juju)]
+    for unit_name in set(mysql_units) - {mysql_primary_unit}:
+        unit_hostname = get_unit_hostname(juju, MYSQL_APP_NAME, unit_name)
+        hostnames.append(unit_hostname)
+
+    for hostname in hostnames:
+        assert not check_machine_connection(hostname, mysql_primary_hostname)
+
+    # Verify that connection is not possible
+    assert not is_connection_possible(config)
+
+    logging.info(f"Restoring network for {mysql_primary_hostname}")
+    set_unit_network(mysql_primary_hostname)
+
+    # Wait until network is re-established for the unit
+    wait_for_unit_network(juju, MYSQL_APP_NAME, mysql_primary_unit)
+
+    # Wait for the unit to be ready
+    for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(10)):
+        with attempt:
+            new_primary_unit_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_primary_unit)
+            new_primary_unit_config = {
+                "username": credentials_task.results["username"],
+                "password": credentials_task.results["password"],
+                "host": new_primary_unit_ip,
+            }
+
+            logging.debug(f"Waiting until connection possible on {new_primary_unit_ip}")
+            assert is_connection_possible(new_primary_unit_config)
+
+    logging.info(f"Waiting for {mysql_primary_unit} to enter active")
+    juju.wait(
+        ready=wait_for_unit_status(MYSQL_APP_NAME, mysql_primary_unit, "active"),
+        timeout=20 * MINUTE_SECS,
     )
 
-    logger.info(f"Cutting network for {primary_hostname}")
-    cut_network_from_unit(primary_hostname)
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # verify machine is not reachable from peer units
-    for unit in set(all_units) - {primary_unit}:
-        hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(hostname, primary_hostname), (
-            "❌ unit is reachable from peer"
-        )
+    # Ensure that we are able to insert data into the primary
+    table_name = "data"
+    table_value = generate_random_string(255)
 
-    # verify machine is not reachable from controller
-    controller = await get_controller_machine(ops_test)
-    assert not is_machine_reachable_from(controller, primary_hostname), (
-        "❌ unit is reachable from controller"
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
+
+
+def check_machine_connection(source_machine: str, target_machine: str) -> bool:
+    """Test network reachability between hosts.
+
+    Args:
+        source_machine: hostname of the machine to test connection from
+        target_machine: hostname of the machine to test connection into
+    """
+    try:
+        subprocess.check_call(f"lxc exec {source_machine} -- ping -c 3 {target_machine}".split())
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def cut_unit_network(machine_hostname: str) -> None:
+    """Cut network from a LXC container."""
+    subprocess.check_call(f"lxc config device add {machine_hostname} eth0 none".split())
+
+
+def set_unit_network(machine_hostname: str) -> None:
+    """Restore network from a lxc container."""
+    subprocess.check_call(f"lxc config device remove {machine_hostname} eth0".split())
+
+
+def get_controller_hostname(juju: Juju) -> str:
+    """Return controller machine hostname."""
+    model_status = juju.status()
+
+    output = subprocess.check_output(
+        ["juju", "show-controller", "--format=json"],
+        text=True,
     )
 
-    # verify that connection is not possible
-    assert not is_connection_possible(config), "❌ Connection is possible after network cut"
+    controller_info = json.loads(output.strip())
+    controller_machines = controller_info[model_status.model.controller]["controller-machines"]
+    return next(machine.get("instance-id") for machine in controller_machines.values())
 
-    logger.info(f"Restoring network for {primary_hostname}")
-    restore_network_for_unit(primary_hostname)
 
-    # wait until network is reestablished for the unit
-    await wait_network_restore(ops_test, primary_unit.name)
+def get_unit_hostname(juju: Juju, app_name: str, unit_name: str) -> str:
+    """Get hostname for a unit."""
+    task = juju.exec("hostname", unit=unit_name)
+    task.raise_on_failure()
 
-    # ensure continuous writes still incrementing for all units
-    async with ops_test.fast_forward():
-        # wait for the unit to be ready
-        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(10)):
-            with attempt:
-                new_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
-                new_unit_config = {
-                    "username": CLUSTER_ADMIN_USERNAME,
-                    "password": cluster_admin_password,
-                    "host": new_unit_ip,
-                }
+    return task.stdout.strip()
 
-                logger.debug(
-                    f"Waiting until connection possible after network restore on {new_unit_ip}"
-                )
-                assert is_connection_possible(new_unit_config), (
-                    "❌ Connection is not possible after network restore"
-                )
 
-        logger.info(f"Waiting for {primary_unit.name} to enter active")
-        await ops_test.model.block_until(
-            lambda: primary_unit.workload_status == "active", timeout=40 * 60
-        )
+@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
+def wait_for_unit_network(juju: Juju, app_name: str, unit_name: str) -> None:
+    """Wait until network is restored.
 
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    Args:
+        juju: The juju instance to use.
+        app_name: The name of the app
+        unit_name: The name of the unit
+    """
+    task = juju.exec("ip address", unit=unit_name)
+    task.raise_on_failure()
 
-    # ensure that we are able to insert data into the primary and have it replicated to all units
-    database_name, table_name = "test-network-cut", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
+    unit_ip = get_unit_ip(juju, app_name, unit_name)
+    if unit_ip in task.stdout:
+        raise Exception()

@@ -2,121 +2,167 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
+import random
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from jubilant_backports import Juju
 
 from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 
 from ..helpers import (
     execute_queries_on_unit,
-    get_primary_unit_wrapper,
-    get_system_user_password,
-    get_unit_ip,
-    graceful_stop_server,
+    generate_random_string,
     is_connection_possible,
-    start_server,
-    write_random_chars_to_test_table,
 )
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from .high_availability_helpers_new import (
+    TEST_DATABASE_NAME,
+    check_mysql_units_writes_increment,
+    get_app_units,
+    get_mysql_primary_unit,
+    get_unit_ip,
+    remove_mysql_test_data,
+    start_mysql_process_gracefully,
+    stop_mysql_process_gracefully,
+    update_interval,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_replicate_data_on_restart(
-    ops_test: OpsTest, highly_available_cluster, continuous_writes
-):
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_replicate_data_on_restart(juju: Juju, continuous_writes) -> None:
     """Stop server, write data, start and validate replication."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # ensure continuous writes still incrementing for all units
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    mysql_units = get_app_units(juju, MYSQL_APP_NAME)
+    mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
+    mysql_primary_unit_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_primary_unit)
 
-    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    credentials_task = juju.run(
+        unit=mysql_primary_unit,
+        action="get-password",
+        params={"username": CLUSTER_ADMIN_USERNAME},
+    )
+    credentials_task.raise_on_failure()
 
     config = {
-        "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": primary_unit_ip,
+        "username": credentials_task.results["username"],
+        "password": credentials_task.results["password"],
+        "host": mysql_primary_unit_ip,
     }
 
-    # verify that connection is possible
-    assert is_connection_possible(config), (
-        f"❌ Connection to host {primary_unit_ip} is not possible"
-    )
+    # Verify that connection is possible
+    assert is_connection_possible(config)
 
-    # it's necessary to inhibit update-status-hook to stop the service
+    # It is necessary to inhibit update-status-hook to stop the service
     # since the charm will restart the service on the hook
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
-    logger.info(f"Stopping server on unit {primary_unit.name}")
-    await graceful_stop_server(ops_test, primary_unit.name)
+    with update_interval(juju, "60m"):
+        logging.info(f"Stopping server on unit {mysql_primary_unit}")
+        stop_mysql_process_gracefully(juju, mysql_primary_unit)
 
-    # verify that connection is gone
-    assert not is_connection_possible(config), (
-        f"❌ Connection to host {primary_unit_ip} is possible"
+        # Verify that connection is gone
+        assert not is_connection_possible(config)
+
+        online_units = set(mysql_units) - {mysql_primary_unit}
+        online_units = list(online_units)
+        random_unit = random.choice(online_units)
+
+        new_mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME, random_unit)
+
+        logging.info("Write to new primary")
+        table_name = "data"
+        table_value = generate_random_string(255)
+        await insert_mysql_test_data(
+            juju, MYSQL_APP_NAME, new_mysql_primary_unit, table_name, table_value
+        )
+
+        logging.info(f"Starting server on unit {mysql_primary_unit}")
+        start_mysql_process_gracefully(juju, mysql_primary_unit)
+
+    # Verify that connection is possible
+    assert is_connection_possible(config, retry_if_not_possible=True)
+
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
+
+
+async def insert_mysql_test_data(
+    juju: Juju,
+    app_name: str,
+    unit_name: str,
+    table_name: str,
+    table_value: str,
+) -> None:
+    """Insert data into the MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        unit_name: The application unit to insert data into.
+        table_name: The database table name.
+        table_value: The value to insert.
+    """
+    credentials_task = juju.run(
+        unit=unit_name,
+        action="get-password",
+        params={"username": SERVER_CONFIG_USERNAME},
     )
+    credentials_task.raise_on_failure()
 
-    # get primary to write to it
-    server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
-    logger.info("Get new primary")
-    new_primary_unit = await get_primary_unit_wrapper(
-        ops_test, mysql_application_name, unit_excluded=primary_unit
-    )
-
-    logger.info("Write to new primary")
-    random_chars = await write_random_chars_to_test_table(ops_test, new_primary_unit)
-
-    # restart server on old primary
-    logger.info(f"Re starting server on unit {primary_unit.name}")
-    await start_server(ops_test, primary_unit.name)
-
-    # restore standard interval
-    await ops_test.model.set_config({"update-status-hook-interval": "5m"})
-
-    # verify/wait availability
-    assert is_connection_possible(config, retry_if_not_possible=True), (
-        "❌ Connection not possible after restart"
-    )
-
-    # read and verify data
-    select_data_sql = [
-        f"SELECT * FROM test.data_replication_table WHERE id = '{random_chars}'",
+    insert_queries = [
+        f"CREATE DATABASE IF NOT EXISTS `{TEST_DATABASE_NAME}`",
+        f"CREATE TABLE IF NOT EXISTS `{TEST_DATABASE_NAME}`.`{table_name}` (id VARCHAR(255), PRIMARY KEY (id))",
+        f"INSERT INTO `{TEST_DATABASE_NAME}`.`{table_name}` (id) VALUES ('{table_value}')",
     ]
 
-    # allow some time for sync
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
-            with attempt:
-                output = await execute_queries_on_unit(
-                    primary_unit_ip,
-                    SERVER_CONFIG_USERNAME,
-                    server_config_password,
-                    select_data_sql,
-                )
-                assert random_chars in output, "❌ Data was not synced"
-    except RetryError:
-        assert False, "❌ Data was not synced"
-
-    # ensure continuous writes still incrementing for all units
-    async with ops_test.fast_forward():
-        await ensure_all_units_continuous_writes_incrementing(ops_test)
-
-    # ensure that we are able to insert data into the primary and have it replicated to all units
-    database_name, table_name = "test-replicate-data-restart", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
+    await execute_queries_on_unit(
+        get_unit_ip(juju, app_name, unit_name),
+        credentials_task.results["username"],
+        credentials_task.results["password"],
+        insert_queries,
+        commit=True,
+    )

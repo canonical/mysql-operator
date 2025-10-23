@@ -12,7 +12,6 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 from ..helpers import (
     execute_queries_on_unit,
     generate_random_string,
-    get_cluster_status,
     get_primary_unit_wrapper,
     get_server_config_credentials,
     get_unit_ip,
@@ -29,8 +28,6 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 MYSQL_DEFAULT_APP_NAME = METADATA["name"]
 APPLICATION_DEFAULT_APP_NAME = "mysql-test-app"
 TIMEOUT = 20 * 60
-
-mysql_charm, application_charm = None, None
 
 logger = logging.getLogger(__name__)
 
@@ -72,39 +69,6 @@ def get_application_name(ops_test: OpsTest, application_name_substring: str) -> 
             return application
 
     return ""
-
-
-async def ensure_n_online_mysql_members(
-    ops_test: OpsTest, number_online_members: int, mysql_units: list[Unit] | None = None
-) -> bool:
-    """Waits until N mysql cluster members are online.
-
-    Args:
-        ops_test: The ops test framework
-        number_online_members: Number of online members to wait for
-        mysql_units: Expected online mysql units
-    """
-    logger.info(f"Ensure {number_online_members} units are online")
-    mysql_application = get_application_name(ops_test, "mysql")
-
-    if not mysql_units:
-        mysql_units = ops_test.model.applications[mysql_application].units
-    mysql_unit = mysql_units[0]
-
-    try:
-        for attempt in Retrying(stop=stop_after_delay(10 * 60), wait=wait_fixed(10)):
-            with attempt:
-                cluster_status = await get_cluster_status(mysql_unit)
-                online_members = [
-                    label
-                    for label, member in cluster_status["defaultreplicaset"]["topology"].items()
-                    if member["status"] == "online"
-                ]
-                assert len(online_members) == number_online_members
-                return True
-    except RetryError:
-        pass
-    return False
 
 
 async def deploy_and_scale_mysql(
@@ -217,26 +181,6 @@ async def relate_mysql_and_application(
     )
 
 
-async def get_process_stat(ops_test: OpsTest, unit_name: str, process: str) -> str:
-    """Retrieve the STAT column of a process on a unit.
-
-    Args:
-        ops_test: The ops test framework
-        unit_name: The name of the unit for the process
-        process: The name of the process to get the STAT for
-    """
-    get_stat_commands = [
-        "ssh",
-        unit_name,
-        f"ps -eo comm,stat | grep {process} | awk '{{print $2}}'",
-    ]
-    return_code, stat, _ = await ops_test.juju(*get_stat_commands)
-
-    assert return_code == 0, f"Failed to get STAT, unit_name={unit_name}, process={process}"
-
-    return stat
-
-
 async def insert_data_into_mysql_and_validate_replication(
     ops_test: OpsTest,
     database_name: str,
@@ -296,39 +240,6 @@ async def insert_data_into_mysql_and_validate_replication(
         assert False, "Cannot query inserted data from all units"
 
     return value
-
-
-async def clean_up_database_and_table(
-    ops_test: OpsTest, database_name: str, table_name: str
-) -> None:
-    """Cleans the database and table created by insert_data_into_mysql_and_validate_replication.
-
-    Args:
-        ops_test: The ops test framework
-        database_name: The name of the database to drop
-        table_name: The name of the table to drop
-    """
-    mysql_application_name = get_application_name(ops_test, "mysql")
-
-    mysql_unit = ops_test.model.applications[mysql_application_name].units[0]
-
-    server_config_credentials = await get_server_config_credentials(mysql_unit)
-
-    primary = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_address = await get_unit_ip(ops_test, primary.name)
-
-    clean_up_database_and_table_sql = [
-        f"DROP TABLE IF EXISTS `{database_name}`.`{table_name}`",
-        f"DROP DATABASE IF EXISTS `{database_name}`",
-    ]
-
-    await execute_queries_on_unit(
-        primary_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-        clean_up_database_and_table_sql,
-        commit=True,
-    )
 
 
 async def ensure_all_units_continuous_writes_incrementing(

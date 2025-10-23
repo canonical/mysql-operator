@@ -2,78 +2,119 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
 from constants import CLUSTER_ADMIN_USERNAME
 
 from ..helpers import (
-    get_primary_unit_wrapper,
-    get_process_pid,
-    get_system_user_password,
-    get_unit_ip,
+    generate_random_string,
     is_connection_possible,
 )
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_mysql_primary_unit,
+    get_unit_ip,
+    get_unit_process_id,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    update_interval,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_PROCESS_NAME = "mysqld"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_freeze_db_process(ops_test: OpsTest, highly_available_cluster, continuous_writes):
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_freeze_db_process(juju: Juju, continuous_writes) -> None:
     """Freeze and unfreeze process and check for auto cluster recovery."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # ensure continuous writes still incrementing for all units
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
+    mysql_primary_unit_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_primary_unit)
+    mysql_primary_unit_pid = get_unit_process_id(juju, mysql_primary_unit, MYSQL_PROCESS_NAME)
 
-    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
+    logging.info(f"Freezing process id {mysql_primary_unit_pid}")
+    juju.exec(f"sudo kill --signal SIGSTOP {mysql_primary_unit_pid}", unit=mysql_primary_unit)
 
-    # get running mysqld PID
-    pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
+    logging.info("Get cluster admin password")
+    credentials_task = juju.run(
+        unit=mysql_primary_unit,
+        action="get-password",
+        params={"username": CLUSTER_ADMIN_USERNAME},
+    )
+    credentials_task.raise_on_failure()
 
-    # freeze (STOP signal) mysqld for the unit
-    logger.info(f"Freezing process id {pid}")
-    await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-19", pid)
-
-    logger.info("Get cluster admin password")
     config = {
-        "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(primary_unit, CLUSTER_ADMIN_USERNAME),
-        "host": primary_unit_ip,
+        "username": credentials_task.results["username"],
+        "password": credentials_task.results["password"],
+        "host": mysql_primary_unit_ip,
     }
 
-    # verify that connection is not possible
-    logger.info(f"Verifying that connection to host {primary_unit_ip} is not possible")
-    assert not is_connection_possible(config), "❌ Mysqld is not paused"
+    # Verify that connection is not possible
+    logging.info(f"Verifying that connection to host {mysql_primary_unit_ip} is not possible")
+    assert not is_connection_possible(config)
 
-    # unfreeze (CONT signal) mysqld for the unit
-    logger.info(f"Unfreezing process id {pid}")
-    await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-18", pid)
+    logging.info(f"Unfreezing process id {mysql_primary_unit_pid}")
+    juju.exec(f"sudo kill --signal SIGCONT {mysql_primary_unit_pid}", unit=mysql_primary_unit)
 
-    # verify that connection is possible
-    logger.info(f"Verifying that connection to host {primary_unit_ip} is possible")
-    assert is_connection_possible(config), "❌ Mysqld is paused"
+    # Verify that connection is possible
+    logging.info(f"Verifying that connection to host {mysql_primary_unit_ip} is possible")
+    assert is_connection_possible(config)
 
-    # ensure continuous writes still incrementing for all units
-    async with ops_test.fast_forward():
-        await ensure_all_units_continuous_writes_incrementing(ops_test)
+    # Ensure continuous writes still incrementing for all units
+    with update_interval(juju, "10s"):
+        await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # ensure that we are able to insert data into the primary and have it replicated to all units
-    database_name, table_name = "test-freeze-db-process", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
+    # Ensure that we are able to insert data into the primary
+    table_name = "data"
+    table_value = generate_random_string(255)
+
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
