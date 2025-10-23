@@ -2,67 +2,90 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from ..helpers import (
-    get_primary_unit_wrapper,
-    get_process_pid,
+from ..helpers import generate_random_string
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_mysql_primary_unit,
+    get_unit_process_id,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    update_interval,
+    verify_mysql_test_data,
+    wait_for_apps_status,
 )
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    ensure_n_online_mysql_members,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
-)
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_PROCESS_NAME = "mysqld"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_kill_db_process(
-    ops_test: OpsTest, highly_available_cluster, continuous_writes
-) -> None:
-    """Kill mysqld process and check for auto cluster recovery."""
-    mysql_application_name = get_application_name(ops_test, "mysql")
-
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
-
-    primary_unit = await get_primary_unit_wrapper(ops_test, mysql_application_name)
-
-    # ensure all units in the cluster are online
-    assert await ensure_n_online_mysql_members(ops_test, 3), (
-        "The deployed mysql application is not fully online"
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
     )
 
-    # get running mysqld PID
-    pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
 
-    # kill mysqld for the unit
-    logger.info(f"Killing process id {pid}")
-    await ops_test.juju("ssh", primary_unit.name, "sudo", "kill", "-9", pid)
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
 
-    # retrieve new PID
-    new_pid = await get_process_pid(ops_test, primary_unit.name, MYSQL_DAEMON)
-    logger.info(f"New process id is {new_pid}")
 
-    # verify that mysqld instance is not the killed one
-    assert new_pid != pid, "❌ PID for mysql daemon did not change"
+@pytest.mark.abort_on_fail
+async def test_kill_db_process(juju: Juju, continuous_writes_new) -> None:
+    """Kill mysqld process and check for auto cluster recovery."""
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    # ensure continuous writes still incrementing for all units
-    async with ops_test.fast_forward():
-        await ensure_all_units_continuous_writes_incrementing(ops_test)
+    mysql_primary_unit = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
+    mysql_primary_unit_pid = get_unit_process_id(juju, mysql_primary_unit, MYSQL_PROCESS_NAME)
 
-    # ensure that we are able to insert data into the primary and have it replicated to all units
-    database_name, table_name = "test-kill-db-process", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
+    logging.info(f"Killing process id {mysql_primary_unit_pid}")
+    juju.exec(f"sudo kill --signal SIGKILL {mysql_primary_unit_pid}", unit=mysql_primary_unit)
+
+    new_mysql_primary_unit_pid = get_unit_process_id(juju, mysql_primary_unit, MYSQL_PROCESS_NAME)
+    assert new_mysql_primary_unit_pid != mysql_primary_unit_pid
+
+    # Ensure continuous writes still incrementing for all units
+    with update_interval(juju, "10s"):
+        await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
+
+    # Ensure that we are able to insert data into the primary
+    table_name = "data"
+    table_value = generate_random_string(255)
+
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)

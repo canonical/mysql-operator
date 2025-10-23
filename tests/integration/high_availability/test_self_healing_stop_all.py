@@ -1,97 +1,143 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
 from constants import CLUSTER_ADMIN_USERNAME
 
 from ..helpers import (
-    get_system_user_password,
-    get_unit_ip,
-    graceful_stop_server,
+    generate_random_string,
     is_connection_possible,
-    start_server,
 )
-from .high_availability_helpers import (
-    clean_up_database_and_table,
-    ensure_all_units_continuous_writes_incrementing,
-    get_application_name,
-    insert_data_into_mysql_and_validate_replication,
+from .high_availability_helpers_new import (
+    check_mysql_units_writes_increment,
+    get_app_units,
+    get_unit_ip,
+    insert_mysql_test_data,
+    remove_mysql_test_data,
+    start_mysql_process_gracefully,
+    stop_mysql_process_gracefully,
+    update_interval,
+    verify_mysql_test_data,
+    wait_for_apps_status,
+    wait_for_unit_status,
 )
 
-logger = logging.getLogger(__name__)
+MYSQL_APP_NAME = "mysql"
+MYSQL_TEST_APP_NAME = "mysql-test-app"
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-MYSQL_DAEMON = "mysqld"
-WAIT_TIMEOUT = 30 * 60
+MINUTE_SECS = 60
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_cluster_pause(ops_test: OpsTest, highly_available_cluster, continuous_writes):
+def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
+    """Simple test to ensure that the MySQL and application charms get deployed."""
+    logging.info("Deploying MySQL cluster")
+    juju.deploy(
+        charm=charm,
+        app=MYSQL_APP_NAME,
+        base="ubuntu@22.04",
+        config={"profile": "testing"},
+        num_units=3,
+    )
+    juju.deploy(
+        charm=MYSQL_TEST_APP_NAME,
+        app=MYSQL_TEST_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+        config={"sleep_interval": 500},
+        num_units=1,
+    )
+
+    juju.integrate(
+        f"{MYSQL_APP_NAME}:database",
+        f"{MYSQL_TEST_APP_NAME}:database",
+    )
+
+    logging.info("Wait for applications to become active")
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
+        ),
+        error=jubilant_backports.any_blocked,
+        timeout=20 * MINUTE_SECS,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_cluster_pause(juju: Juju, continuous_writes_new) -> None:
     """Pause test.
 
     A graceful simultaneous restart of all instances,
     check primary election after the start, write and read data
     """
-    mysql_application_name = get_application_name(ops_test, "mysql")
-    all_units = ops_test.model.applications[mysql_application_name].units
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    config = {
-        "username": CLUSTER_ADMIN_USERNAME,
-        "password": await get_system_user_password(all_units[0], CLUSTER_ADMIN_USERNAME),
-    }
+    mysql_units = get_app_units(juju, MYSQL_APP_NAME)
 
-    # ensure update status won't run to avoid self healing
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
+    # Ensure update status will not run to avoid self-healing
+    juju.model_config({"update-status-hook-interval": "60m"})
 
-    # stop all instances
-    logger.info("Stopping all instances")
+    logging.info("Stopping all instances")
+    for unit_name in mysql_units:
+        stop_mysql_process_gracefully(juju, unit_name)
 
-    await asyncio.gather(
-        graceful_stop_server(ops_test, all_units[0].name),
-        graceful_stop_server(ops_test, all_units[1].name),
-        graceful_stop_server(ops_test, all_units[2].name),
-    )
+    logging.info("Checking all instances connectivity")
+    for unit_name in mysql_units:
+        credentials_task = juju.run(
+            unit=unit_name,
+            action="get-password",
+            params={"username": CLUSTER_ADMIN_USERNAME},
+        )
+        config = {
+            "username": credentials_task.results["username"],
+            "password": credentials_task.results["password"],
+            "host": get_unit_ip(juju, MYSQL_APP_NAME, unit_name),
+        }
 
-    # verify connection is not possible to any instance
-    for unit in all_units:
-        unit_ip = await get_unit_ip(ops_test, unit.name)
-        config["host"] = unit_ip
-        assert not is_connection_possible(config), (
-            f"❌ connection to unit {unit.name} is still possible"
+        assert not is_connection_possible(config)
+
+    logging.info("Starting all instances")
+    for unit_name in mysql_units:
+        start_mysql_process_gracefully(juju, unit_name)
+
+    with update_interval(juju, "10s"):
+        logging.info("Waiting units to enter maintenance")
+        juju.wait(
+            ready=lambda status: all((
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/0", "maintenance")(status),
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/1", "maintenance")(status),
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/2", "maintenance")(status),
+            )),
+            timeout=20 * MINUTE_SECS,
+        )
+        logging.info("Waiting units to be back online")
+        juju.wait(
+            ready=lambda status: all((
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/0", "active")(status),
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/1", "active")(status),
+                wait_for_unit_status(MYSQL_APP_NAME, f"{MYSQL_APP_NAME}/2", "active")(status),
+            )),
+            timeout=20 * MINUTE_SECS,
         )
 
-    # restart all instances
-    logger.info("Starting all instances")
-    for unit in all_units:
-        await start_server(ops_test, unit.name)
+    # Ensure continuous writes still incrementing for all units
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
-    async with ops_test.fast_forward():
-        logger.info("Waiting units to enter maintenance.")
-        await ops_test.model.block_until(
-            lambda: {unit.workload_status for unit in all_units} == {"maintenance"},
-            timeout=WAIT_TIMEOUT,
-        )
-        logger.info("Waiting units to be back online.")
-        await ops_test.model.block_until(
-            lambda: {unit.workload_status for unit in all_units} == {"active"},
-            timeout=WAIT_TIMEOUT,
-        )
+    # Ensure that we are able to insert data into the primary
+    table_name = "data"
+    table_value = generate_random_string(255)
 
-    # ensure continuous writes still incrementing for all units
-    await ensure_all_units_continuous_writes_incrementing(ops_test)
+    await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
+    await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
 
-    # ensure that we are able to insert data into the primary and have it replicated to all units
-    database_name, table_name = "test-cluster-pause", "data"
-    await insert_data_into_mysql_and_validate_replication(ops_test, database_name, table_name)
-    await clean_up_database_and_table(ops_test, database_name, table_name)
-
-    # return to default
-    await ops_test.model.set_config({"update-status-hook-interval": "5m"})
+    # Restore standard interval
+    juju.model_config({"update-status-hook-interval": "5m"})
