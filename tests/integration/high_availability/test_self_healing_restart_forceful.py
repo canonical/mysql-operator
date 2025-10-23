@@ -78,7 +78,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_sst_test(juju: Juju, continuous_writes_new):
+async def test_sst_test(juju: Juju, continuous_writes):
     """Test a forceful restart with deleted data and without transaction logs (forced clone)."""
     # Ensure continuous writes still incrementing for all units
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)

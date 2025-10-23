@@ -65,7 +65,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_cluster_manual_rejoin(juju: Juju, continuous_writes_new) -> None:
+async def test_cluster_manual_rejoin(juju: Juju, continuous_writes) -> None:
     """The cluster manual re-join test.
 
     A graceful restart is performed in one of the instances (choosing Primary to make it painful).

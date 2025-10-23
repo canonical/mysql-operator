@@ -77,7 +77,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_network_cut(juju: Juju, continuous_writes_new) -> None:
+async def test_network_cut(juju: Juju, continuous_writes) -> None:
     """Completely cut and restore network."""
     mysql_units = get_app_units(juju, MYSQL_APP_NAME)
 

@@ -70,7 +70,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_freeze_db_process(juju: Juju, continuous_writes_new) -> None:
+async def test_freeze_db_process(juju: Juju, continuous_writes) -> None:
     """Freeze and unfreeze process and check for auto cluster recovery."""
     # Ensure continuous writes still incrementing for all units
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)

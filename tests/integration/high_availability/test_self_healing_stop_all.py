@@ -71,7 +71,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_cluster_pause(juju: Juju, continuous_writes_new) -> None:
+async def test_cluster_pause(juju: Juju, continuous_writes) -> None:
     """Pause test.
 
     A graceful simultaneous restart of all instances,

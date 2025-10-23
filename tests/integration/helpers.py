@@ -6,11 +6,8 @@ import json
 import logging
 import secrets
 import string
-import subprocess
 
-import juju.unit
 import yaml
-from juju.model import Model
 from juju.unit import Unit
 from mysql.connector.errors import (
     DatabaseError,
@@ -19,7 +16,7 @@ from mysql.connector.errors import (
     ProgrammingError,
 )
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from constants import SERVER_CONFIG_USERNAME
 
@@ -319,25 +316,6 @@ async def app_name(ops_test: OpsTest) -> str:
     return None
 
 
-async def get_model_logs(ops_test: OpsTest, log_level: str, log_lines: int = 100) -> str:
-    """Return the juju logs from a specific model.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        log_level: The logging level to return messages from
-        log_lines: The maximum lines to return at once
-    """
-    _, output, _ = await ops_test.juju(
-        "debug-log",
-        f"--model={ops_test.model.info.name}",
-        f"--level={log_level}",
-        f"--limit={log_lines}",
-        "--no-tail",
-    )
-
-    return output
-
-
 async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> int:
     """Return the pid of a process running in a given unit.
 
@@ -355,118 +333,6 @@ async def get_process_pid(ops_test: OpsTest, unit_name: str, process: str) -> in
         return pid
     except Exception:
         return None
-
-
-@retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-async def is_unit_in_cluster(unit_name: str, action_unit: juju.unit.Unit) -> bool:
-    """Check is unit is online in the cluster.
-
-    Args:
-        unit_name: The name of the unit to be tested
-        action_unit: a different unit to run get status action
-    Returns:
-        A boolean
-    """
-    results = await juju_.run_action(action_unit, action_name="get-cluster-status")
-    cluster_topology = results["status"]["defaultreplicaset"]["topology"]
-
-    for k, v in cluster_topology.items():
-        if k.replace("-", "/") == unit_name and v.get("status") == "online":
-            return True
-    raise TimeoutError
-
-
-def cut_network_from_unit(machine_name: str) -> None:
-    """Cut network from a lxc container.
-
-    Args:
-        machine_name: lxc container hostname
-    """
-    # apply a mask (device type `none`)
-    cut_network_command = f"lxc config device add {machine_name} eth0 none"
-    subprocess.check_call(cut_network_command.split())
-
-
-def restore_network_for_unit(machine_name: str) -> None:
-    """Restore network from a lxc container.
-
-    Args:
-        machine_name: lxc container hostname
-    """
-    # remove mask from eth0
-    restore_network_command = f"lxc config device remove {machine_name} eth0"
-    subprocess.check_call(restore_network_command.split())
-
-
-async def unit_hostname(ops_test: OpsTest, unit_name: str) -> str:
-    """Get hostname for a unit.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
-    Returns:
-        The machine/container hostname
-    """
-    _, raw_hostname, _ = await ops_test.juju("ssh", unit_name, "hostname")
-    return raw_hostname.strip()
-
-
-@retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
-async def wait_network_restore(ops_test: OpsTest, unit_name: str) -> None:
-    """Wait until network is restored.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit
-        old_ip: old registered IP address
-    """
-    return_code, stdout, _ = await ops_test.juju("ssh", unit_name, "ip", "a")
-    if return_code != 0:
-        raise Exception
-
-    juju_unit_ip = await get_unit_ip(ops_test, unit_name)
-
-    if juju_unit_ip in stdout:
-        raise Exception
-
-
-async def graceful_stop_server(ops_test: OpsTest, unit_name: str) -> None:
-    """Gracefully stop server.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
-    """
-    # send TERM signal to mysql daemon, which trigger shutdown process
-    await ops_test.juju("ssh", unit_name, "sudo", "pkill", "-15", "mysqld")
-
-    # hold execution until process is stopped
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
-            with attempt:
-                if await get_process_pid(ops_test, unit_name, "mysqld"):
-                    raise Exception
-    except RetryError as e:
-        raise Exception("Failed to gracefully stop server.") from e
-
-
-async def start_server(ops_test: OpsTest, unit_name: str) -> None:
-    """Start a previously stopped machine.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
-    """
-    await ops_test.juju("ssh", unit_name, "sudo", "snap", "restart", "charmed-mysql.mysqld")
-
-    # hold execution until process is started
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(5)):
-            with attempt:
-                if not await get_process_pid(ops_test, unit_name, "mysqld"):
-                    raise Exception
-    except RetryError as e:
-        raise Exception("Failed to start server.") from e
 
 
 async def get_primary_unit_wrapper(ops_test: OpsTest, app_name: str, unit_excluded=None) -> Unit:
@@ -572,27 +438,6 @@ def get_read_only_endpoints(relation_data: list) -> set[str]:
     return read_only_endpoints
 
 
-async def get_leader_unit(
-    ops_test: OpsTest | None, app_name: str, model: Model | None = None
-) -> Unit | None:
-    """Get the leader unit of a given application.
-
-    Args:
-        ops_test: The ops test framework instance
-        app_name: The name of the application
-        model: The model to use (overrides ops_test.model)
-    """
-    leader_unit = None
-    if not model:
-        model = ops_test.model
-    for unit in model.applications[app_name].units:
-        if await unit.is_leader_from_status():
-            leader_unit = unit
-            break
-
-    return leader_unit
-
-
 def get_read_only_endpoint_ips(relation_data: list) -> list[str]:
     """Returns the read-only-endpoint hostnames from the relation data.
 
@@ -676,98 +521,7 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
         assert read_endpoint_ip in app_ips
 
 
-async def get_controller_machine(ops_test: OpsTest) -> str:
-    """Return controller machine hostname.
-
-    Args:
-        ops_test: The ops test framework instance
-    Returns:
-        Controller hostname (str)
-    """
-    _, raw_controller, _ = await ops_test.juju("show-controller")
-
-    controller = yaml.safe_load(raw_controller.strip())
-
-    return next(
-        machine.get("instance-id")
-        for machine in controller[ops_test.controller_name]["controller-machines"].values()
-    )
-
-
-def is_machine_reachable_from(origin_machine: str, target_machine: str) -> bool:
-    """Test network reachability between hosts.
-
-    Args:
-        origin_machine: hostname of the machine to test connection from
-        target_machine: hostname of the machine to test connection to
-    """
-    try:
-        subprocess.check_call(f"lxc exec {origin_machine} -- ping -c 3 {target_machine}".split())
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-async def write_random_chars_to_test_table(ops_test: OpsTest, primary_unit: Unit) -> str:
-    """Writes to common test table.
-
-    Args:
-        ops_test: The ops test framework instance
-        primary_unit: the R/W unit to write the data
-    Returns:
-        The random chars(str) written to test table.
-    """
-    create_records_sql = [
-        "CREATE DATABASE IF NOT EXISTS test",
-        "DROP TABLE IF EXISTS test.data_replication_table",
-        "CREATE TABLE test.data_replication_table (id varchar(40), primary key(id))",
-        (
-            "INSERT INTO test.data_replication_table"
-            f" VALUES ('{(random_chars := generate_random_string(40))}')"
-        ),
-    ]
-
-    primary_unit_ip = await get_unit_ip(ops_test, primary_unit.name)
-    server_config_password = await get_system_user_password(primary_unit, SERVER_CONFIG_USERNAME)
-
-    await execute_queries_on_unit(
-        primary_unit_ip,
-        SERVER_CONFIG_USERNAME,
-        server_config_password,
-        create_records_sql,
-        commit=True,
-    )
-
-    return random_chars
-
-
-async def retrieve_database_variable_value(
-    ops_test: OpsTest, unit: Unit, variable_name: str
-) -> str:
-    """Retrieve a database variable value as a string.
-
-    Args:
-        ops_test: The ops test framework instance
-        unit: The unit to retrieve the variable
-        variable_name: The name of the variable to retrieve
-    Returns:
-        The variable value (str)
-    """
-    unit_ip = await get_unit_ip(ops_test, unit.name)
-    server_config_password = await get_system_user_password(unit, SERVER_CONFIG_USERNAME)
-    queries = [f"SELECT @@{variable_name};"]
-
-    output = await execute_queries_on_unit(
-        unit_ip, SERVER_CONFIG_USERNAME, server_config_password, queries
-    )
-
-    return output[0]
-
-
-async def get_tls_ca(
-    ops_test: OpsTest,
-    unit_name: str,
-) -> str:
+async def get_tls_ca(ops_test: OpsTest, unit_name: str) -> str:
     """Returns the TLS CA used by the unit.
 
     Args:
@@ -808,52 +562,3 @@ async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> st
 
     except Exception:
         return None
-
-
-async def get_cluster_status(unit: Unit, cluster_set: bool | None = False) -> dict:
-    """Get the cluster status by running the get-cluster-status action.
-
-    Args:
-        unit: The unit on which to execute the action on
-        cluster_set: Whether to get the cluster-set instead
-
-    Returns:
-        A dictionary representing the cluster status
-    """
-    if cluster_set:
-        result = await juju_.run_action(
-            unit, "get-cluster-status", **{"--wait": "5m", "cluster-set": True}
-        )
-    else:
-        result = await juju_.run_action(unit, "get-cluster-status")
-    return result.get("status", {})
-
-
-def get_unit_by_index(app_name: str, units: list, index: int):
-    """Get unit by index.
-
-    Args:
-        app_name: Name of the application
-        units: List of units
-        index: index of the unit to get
-    """
-    for unit in units:
-        if unit.name == f"{app_name}/{index}":
-            return unit
-
-
-async def get_status_log(ops_test: OpsTest, unit_name: str, num_logs: int | None = None) -> list:
-    """Get the status log for a unit.
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to retrieve the status log for
-        num_logs: (optional) The number of status logs to retrieve
-    """
-    command = ["show-status-log", unit_name]
-    if num_logs:
-        command.extend(["-n", num_logs])
-
-    return_code, output, _ = await ops_test.juju(*command)
-    assert return_code == 0
-    return output.split("\n")[1:]

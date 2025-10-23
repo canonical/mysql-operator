@@ -73,7 +73,7 @@ def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_replicate_data_on_restart(juju: Juju, continuous_writes_new) -> None:
+async def test_replicate_data_on_restart(juju: Juju, continuous_writes) -> None:
     """Stop server, write data, start and validate replication."""
     # Ensure continuous writes still incrementing for all units
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
