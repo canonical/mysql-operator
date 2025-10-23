@@ -1,0 +1,43 @@
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:136 Asserting that a connection to the database is still possible with application credentials
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:146 Removing relation mysql:mysql with mysql-test-app:mysql
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:155 Waiting till mysql is active and mysql-test-app is waiting
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+[32mINFO    [0m integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:173 Asserting that a connection to the database is not possible with application credentials
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:09:59Z
+
+App             Version          Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active       3  mysql                          0  no       
+mysql-test-app  0.0.2            waiting      1  mysql-test-app  latest/edge   85  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  waiting   idle   0        10.10.111.150                   
+mysql/0*           active    idle   1        10.10.111.222   3306,33060/tcp  Primary
+mysql/1            active    idle   2        10.10.111.78    3306,33060/tcp  
+mysql/2            active    idle   3        10.10.111.7     3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.10.111.150  juju-57b43f-0  ubuntu@22.04  runnervmwhb2z  Running
+1        started  10.10.111.222  juju-57b43f-1  ubuntu@22.04  runnervmwhb2z  Running
+2        started  10.10.111.78   juju-57b43f-2  ubuntu@22.04  runnervmwhb2z  Running
+3        started  10.10.111.7    juju-57b43f-3  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:05:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:05:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:06:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:06:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:06:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:06:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:07:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:07:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
