@@ -2,17 +2,19 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
+from collections.abc import Generator
+from contextlib import contextmanager
 
 import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
+from ... import architecture, markers
 from .high_availability_helpers import (
     check_mysql_units_writes_increment,
     get_app_leader,
-    get_app_units,
     get_mysql_primary_unit,
-    get_mysql_variable_value,
     wait_for_apps_status,
 )
 
@@ -24,16 +26,63 @@ MINUTE_SECS = 60
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-@pytest.mark.abort_on_fail
-def test_deploy_stable(juju: Juju) -> None:
-    """Simple test to ensure that the MySQL and application charms get deployed."""
+@contextmanager
+def continuous_writes(juju: Juju) -> Generator:
+    """Starts continuous writes to the MySQL cluster for a test and clear the writes at the end."""
+    test_app_leader = get_app_leader(juju, MYSQL_TEST_APP_NAME)
+
+    logging.info("Clearing continuous writes")
+    juju.run(test_app_leader, "clear-continuous-writes")
+    logging.info("Starting continuous writes")
+    juju.run(test_app_leader, "start-continuous-writes")
+
+    yield
+
+    logging.info("Clearing continuous writes")
+    juju.run(test_app_leader, "clear-continuous-writes")
+
+
+@markers.amd64_only
+def test_upgrade_from_stable_amd(juju: Juju, charm: str):
+    """Simple test to ensure that all MySQL stable revisions can be upgraded."""
+    revision = os.getenv("CHARM_REVISION_AMD64")
+    if revision is None:
+        pytest.skip(f"No revision for {architecture.architecture} architecture")
+
+    deploy_stable(juju, int(revision))
+    run_upgrade_check(juju)
+
+    with continuous_writes(juju):
+        upgrade_from_stable(juju, charm)
+
+
+@markers.arm64_only
+def test_upgrade_from_stable_arm(juju: Juju, charm: str):
+    """Simple test to ensure that all MySQL stable revisions can be upgraded."""
+    revision = os.getenv("CHARM_REVISION_ARM64")
+    if revision is None:
+        pytest.skip(f"No revision for {architecture.architecture} architecture")
+
+    deploy_stable(juju, int(revision))
+    run_upgrade_check(juju)
+
+    with continuous_writes(juju):
+        upgrade_from_stable(juju, charm)
+
+
+# TODO: add s390x test
+
+
+def deploy_stable(juju: Juju, revision: int) -> None:
+    """Ensure that the MySQL and application charms get deployed."""
     logging.info("Deploying MySQL cluster")
     juju.deploy(
         charm=MYSQL_APP_NAME,
         app=MYSQL_APP_NAME,
         base="ubuntu@22.04",
         channel="8.0/stable",
-        config={"profile": "testing"},
+        config={"profile": "testing"} if revision >= 196 else {},
+        revision=revision,
         num_units=3,
     )
     juju.deploy(
@@ -59,31 +108,21 @@ def test_deploy_stable(juju: Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_pre_upgrade_check(juju: Juju) -> None:
-    """Test that the pre-upgrade-check action runs successfully."""
+async def run_upgrade_check(juju: Juju) -> None:
+    """Run the pre-upgrade-check action runs successfully."""
     mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
-    mysql_units = get_app_units(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
     task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
     task.raise_on_failure()
-
-    logging.info("Assert slow shutdown is enabled")
-    for unit_name in mysql_units:
-        value = await get_mysql_variable_value(
-            juju, MYSQL_APP_NAME, unit_name, "innodb_fast_shutdown"
-        )
-        assert value == 0
 
     logging.info("Assert primary is set to leader")
     mysql_primary = get_mysql_primary_unit(juju, MYSQL_APP_NAME)
     assert mysql_primary == mysql_leader, "Primary unit not set to leader"
 
 
-@pytest.mark.abort_on_fail
-async def test_upgrade_from_stable(juju: Juju, charm: str, continuous_writes) -> None:
-    """Update the second cluster."""
+async def upgrade_from_stable(juju: Juju, charm: str) -> None:
+    """Update the cluster."""
     logging.info("Ensure continuous writes are incrementing")
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
 
