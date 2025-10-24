@@ -1,0 +1,7 @@
+summary: test_relation_mysql_legacy.py
+environment:
+  TEST_MODULE: relations/test_relation_mysql_legacy.py
+execute: |
+  tox run -e integration -- "tests/integration/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results
