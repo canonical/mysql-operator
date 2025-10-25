@@ -1,5 +1,5 @@
-variable "model_name" {
-  description = "Juju model to deploy to"
+variable "model" {
+  description = "UUID of the juju model to deploy to"
   type        = string
 }
 
@@ -56,5 +56,3 @@ variable "endpoint_bindings" {
   type        = set(map(string))
   default     = []
 }
-
-

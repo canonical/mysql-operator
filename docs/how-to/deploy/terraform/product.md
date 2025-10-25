@@ -9,15 +9,17 @@ TLS and COS (_Canonical Observability Stack_) charms to build more complex setup
 This guide assumes Juju is installed, and you have an LXD controller already bootstrapped.
 For more information, check the [Charmed MySQL tutorial](/tutorial/index).
 
-Let's install Terraform Provider and example modules:
+Let's install the Terraform and YQ snaps:
 ```shell
 sudo snap install terraform --classic
+sudo snap install yq
 ```
 
 Switch to the LXD provider and create a new model:
 ```shell
 juju switch lxd
 juju add-model my-model
+juju show-model my-model | yq '."my-model"."model-uuid"'
 ```
 
 Clone the MySQL operator repository and navigate to the terraform module:
@@ -36,7 +38,7 @@ terraform init
 Open the `main.tf` file to see the brief contents of the Terraform module, and run `terraform plan` to get a preview of the changes that will be made:
 
 ```shell
-terraform plan -var 'model=my-model'
+terraform plan -var 'model=<model-uuid>'
 ```
 
 ## Apply the deployment
@@ -48,7 +50,7 @@ In order to deploy those resources:
 
 ```shell
 terraform apply -auto-approve \
-    -var 'model=my-model'
+    -var 'model=<model-uuid>'
 ```
 
 ### Extended charms
@@ -58,7 +60,7 @@ In order to deploy all resources:
 
 ```shell
 terraform apply -auto-approve \
-    -var 'model=my-model' \
+    -var 'model=<model-uuid>' \
     -var 'tls_offer=certificates' \
     -var 'cos_offers={"dashboard"="cos-agent"}'
 ```
@@ -71,7 +73,7 @@ As an alternative, the [manual-tls-certificates](https://charmhub.io/manual-tls-
 
 ```shell
 terraform apply -auto-approve \
-    -var 'model=my-model' \
+    -var 'model=<model-uuid>' \
     -var 'tls_offer=certificates' \
     -var 'certificates={"app_name"="manual-tls-certificates","base"="ubuntu@22.04","channel"="latest/stable"}'
 ```
@@ -129,7 +131,7 @@ Continue to operate the charm as usual from here or apply further Terraform chan
 
 To keep the house clean, remove the newly deployed MySQL charm by running
 ```shell
-terraform destroy -var 'model=my-model'
+terraform destroy -var 'model=<model-uuid>'
 ```
 
 ---
