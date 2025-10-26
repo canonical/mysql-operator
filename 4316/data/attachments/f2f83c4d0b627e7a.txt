@@ -1,0 +1,107 @@
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:49 Deploying mysql and scaling to 3 units
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:52 Deploying mysql-test-app
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:55 Relating mysql with mysql-test-app
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp07iafgox
+[32mINFO    [0m root:test_primary_switchover.py:57 Current primary unit: mysql/1
+[32mINFO    [0m root:test_primary_switchover.py:63 Unit selected for promotion: mysql/0
+[32mINFO    [0m root:test_primary_switchover.py:65 Kill all but one unit to simulate majority loss...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=45s
+[32mINFO    [0m root:test_primary_switchover.py:74 Waiting to settle in error state
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 promote-to-primary --wait 600s --params /root/snap/juju/common/tmpyzkqj6al
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=15s
+[32mINFO    [0m root:test_primary_switchover.py:95 Waiting for all units to become active after switchover...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpp1rgjk17
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  01:49:15Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       Last written value=124
+
+Unit               Workload  Agent      Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle       3        10.227.135.17                   Last written value=124
+mysql/0*           active    executing  0        10.227.135.172  3306,33060/tcp  (get-cluster-status) Primary
+mysql/1            active    idle       1        10.227.135.146  3306,33060/tcp  
+mysql/2            active    idle       2        10.227.135.90   3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.227.135.172  juju-8c7bea-0  ubuntu@22.04  runnervmwhb2z  Running
+1        started  10.227.135.146  juju-8c7bea-1  ubuntu@22.04  runnervmwhb2z  Running
+2        started  10.227.135.90   juju-8c7bea-2  ubuntu@22.04  runnervmwhb2z  Running
+3        started  10.227.135.17   juju-8c7bea-3  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:39:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:39:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:46:23 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.146:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-2: 01:46:24 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.172:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-1: 01:46:25 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.172:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-1: 01:46:26 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.90:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-2: 01:46:56 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.172:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-1: 01:47:05 ERROR unit.mysql/1.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.227.135.172:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
