@@ -21,7 +21,7 @@ from ...helpers import (
     generate_random_string,
     is_connection_possible,
 )
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     check_mysql_units_writes_increment,
     get_app_units,
     get_mysql_primary_unit,

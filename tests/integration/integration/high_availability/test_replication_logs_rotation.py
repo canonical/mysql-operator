@@ -16,7 +16,7 @@ from tenacity import (
 
 from constants import CHARMED_MYSQL_COMMON_DIRECTORY
 
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     get_app_leader,
     get_unit_process_id,
     wait_for_apps_status,

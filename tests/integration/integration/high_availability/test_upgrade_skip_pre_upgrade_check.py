@@ -7,7 +7,7 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     check_mysql_units_writes_increment,
     get_app_units,
     wait_for_apps_status,

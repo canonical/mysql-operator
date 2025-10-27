@@ -13,8 +13,7 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from ...markers import amd64_only
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     check_mysql_units_writes_increment,
     get_app_leader,
     get_relation_data,
@@ -23,6 +22,7 @@ from .high_availability_helpers_new import (
     wait_for_apps_status,
     wait_for_unit_status,
 )
+from ...markers import amd64_only
 
 MYSQL_APP_NAME = "mysql"
 MYSQL_TEST_APP_NAME = "mysql-test-app"

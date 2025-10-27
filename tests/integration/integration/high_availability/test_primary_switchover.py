@@ -7,7 +7,7 @@ from subprocess import run
 import pytest
 from jubilant_backports import Juju, all_active
 
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     get_app_name,
     get_app_units,
     get_mysql_primary_unit,

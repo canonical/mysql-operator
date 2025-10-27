@@ -21,7 +21,7 @@ from constants import (
     MYSQL_EXPORTER_PORT,
 )
 
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     get_app_units,
     get_unit_ip,
     wait_for_apps_status,
