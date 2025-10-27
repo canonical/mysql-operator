@@ -1,6 +1,6 @@
 resource "juju_application" "mysql_server" {
-  name  = var.app_name
-  model = var.model_name
+  model_uuid = var.model
+  name       = var.app_name
 
   charm {
     name     = "mysql"
