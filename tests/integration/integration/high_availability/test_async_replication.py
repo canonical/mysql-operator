@@ -11,14 +11,14 @@ import pytest
 from jubilant_backports import Juju
 
 from ... import architecture
-from ...markers import juju3
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     get_app_leader,
     get_app_units,
     get_mysql_cluster_status,
     get_mysql_max_written_value,
     wait_for_apps_status,
 )
+from ...markers import juju3
 
 MYSQL_APP_1 = "db1"
 MYSQL_APP_2 = "db2"

@@ -20,7 +20,7 @@ from tenacity import (
 
 from constants import SERVER_CONFIG_USERNAME
 
-from ...helpers import execute_queries_on_unit
+from .helpers import execute_queries_on_unit
 
 MINUTE_SECS = 60
 TEST_DATABASE_NAME = "testing"

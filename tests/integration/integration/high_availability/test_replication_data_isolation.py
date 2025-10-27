@@ -7,7 +7,7 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from .high_availability_helpers_new import (
+from ...helpers_ha import (
     insert_mysql_test_data,
     remove_mysql_test_data,
     verify_mysql_test_data,
