@@ -29,21 +29,30 @@ JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
 
 
-def check_mysql_instances_online(juju: Juju, app_name: str) -> bool:
+def check_mysql_instances_online(
+    juju: Juju,
+    app_name: str,
+    app_units: list[str] | None = None,
+) -> bool:
     """Checks whether all MySQL cluster instances are online.
 
     Args:
         juju: The Juju instance
         app_name: The name of the application
+        app_units: The list of application units to check
     """
-    mysql_app_leader = get_app_leader(juju, app_name)
-    mysql_app_units = get_app_units(juju, app_name)
+    if not app_units:
+        app_units = get_app_units(juju, app_name)
 
-    mysql_cluster_status = get_mysql_cluster_status(juju, mysql_app_leader)
+    mysql_cluster_status = get_mysql_cluster_status(juju, app_units[0])
     mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
-    assert len(mysql_cluster_topology) == len(mysql_app_units)
 
-    return all(member["status"] == "online" for member in mysql_cluster_topology.values())
+    for unit_name in app_units:
+        unit_label = get_mysql_instance_label(unit_name)
+        if mysql_cluster_topology[unit_label]["status"] != "online":
+            return False
+
+    return True
 
 
 async def check_mysql_units_writes_increment(
@@ -57,7 +66,7 @@ async def check_mysql_units_writes_increment(
     if not app_units:
         app_units = get_app_units(juju, app_name)
 
-    app_primary = get_mysql_primary_unit(juju, app_name)
+    app_primary = get_mysql_primary_unit(juju, app_name, app_units[0])
     app_max_value = await get_mysql_max_written_value(juju, app_name, app_primary)
 
     for unit_name in app_units:
@@ -232,6 +241,11 @@ def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool = False) -
     task.raise_on_failure()
 
     return task.results["status"]
+
+
+def get_mysql_instance_label(unit_name: str) -> str:
+    """Builds a MySQL instance label out of a Juju unit name."""
+    return "-".join(unit_name.rsplit("/", 1))
 
 
 def get_mysql_unit_name(instance_label: str) -> str:
