@@ -1,0 +1,28 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:12:41Z
+
+App              Version  Status   Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator           blocked      1  data-integrator  latest/stable  180  no       Please specify either topic, index, database name, or prefix
+mysql                     waiting    0/3  mysql                             0  no       waiting for machine
+
+Unit                Workload  Agent       Machine  Public address  Ports  Message
+data-integrator/0*  blocked   idle        0        10.225.177.58          Please specify either topic, index, database name, or prefix
+mysql/0             waiting   allocating  1                               waiting for machine
+mysql/1             waiting   allocating  2                               waiting for machine
+mysql/2             waiting   allocating  3                               waiting for machine
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.225.177.58  juju-0d0b7d-0  ubuntu@24.04  runnervmwhb2z  Running
+1        down                    pending        ubuntu@22.04                 cannot get available image metadata: failed getting published images metadata from default ubuntu cloud images: canno...
+2        pending                 pending        ubuntu@22.04                 
+3        pending                 pending        ubuntu@22.04                 
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:09:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:09:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+controller-0: 02:10:41 ERROR juju.worker.provisioner 1 cannot get available image metadata: failed getting published images metadata from default ubuntu cloud images: cannot read index data, attempt count exceeded: cannot access URL "http://cloud-images.ubuntu.com/releases/streams/v1/index2.sjson": Get "http://cloud-images.ubuntu.com/releases/streams/v1/index2.sjson": read tcp 10.225.177.52:46988->185.125.190.37:80: read: connection reset by peer
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

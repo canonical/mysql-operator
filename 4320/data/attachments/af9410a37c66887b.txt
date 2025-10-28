@@ -1,0 +1,73 @@
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:116 Creating backup
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:31:19Z
+
+App            Version          Status   Scale  Charm          Channel        Rev  Exposed  Message
+mysql          8.0.42-0ubun...  active       3  mysql                           0  no       
+s3-integrator                   blocked      1  s3-integrator  latest/stable  145  no       Missing parameters: ['access-key', 'secret-key']
+
+Unit              Workload  Agent      Machine  Public address  Ports           Message
+mysql/0           active    executing  1        10.155.23.15    3306,33060/tcp  
+mysql/1*          active    idle       2        10.155.23.148   3306,33060/tcp  Primary
+mysql/2           active    idle       3        10.155.23.183   3306,33060/tcp  
+s3-integrator/0*  blocked   idle       0        10.155.23.235                   Missing parameters: ['access-key', 'secret-key']
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.155.23.235  juju-3dabc9-0  ubuntu@22.04  runnervmwhb2z  Running
+1        started  10.155.23.15   juju-3dabc9-1  ubuntu@22.04  runnervmwhb2z  Running
+2        started  10.155.23.148  juju-3dabc9-2  ubuntu@22.04  runnervmwhb2z  Running
+3        started  10.155.23.183  juju-3dabc9-3  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-2: 02:26:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:26:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:28:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:28:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:28:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:28:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:29:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:29:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:29:48 ERROR unit.mysql/0.juju-log Error while reading cluster status
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 606, in _get_cluster_status
+    status = self._mysql.get_cluster_status()
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/charm.py", line 645, in _mysql
+    self.app_peer_data["cluster-name"],
+KeyError: 'cluster-name'
+unit-mysql-0: 02:30:21 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-3dabc9-1.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-0: 02:30:21 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:30:42 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-3dabc9-1.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-0: 02:30:42 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:30:50 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 796, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-3dabc9-1.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-0: 02:30:50 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:31:19 ERROR unit.mysql/0.juju-log Backup failed: missing relation with S3 integrator charm
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
