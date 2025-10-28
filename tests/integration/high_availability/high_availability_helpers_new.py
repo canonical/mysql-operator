@@ -321,9 +321,6 @@ async def get_mysql_variable_value(
 
 def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
     """Start a MySQL process within a machine."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo snap start charmed-mysql.mysqld",
         target=unit_name,
@@ -338,9 +335,6 @@ def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
 
 def stop_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
     """Gracefully stop MySQL process."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo pkill mysqld --signal SIGTERM",
         target=unit_name,

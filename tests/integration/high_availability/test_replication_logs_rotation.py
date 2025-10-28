@@ -220,9 +220,6 @@ def write_unit_file(juju: Juju, unit_name: str, file_path: str, file_data: str):
 
 def start_unit_flush_logs_job(juju: Juju, unit_name: str) -> None:
     """Start running the logrotate job."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo logrotate -f /etc/logrotate.d/flush_mysql_logs",
         target=unit_name,
@@ -231,9 +228,6 @@ def start_unit_flush_logs_job(juju: Juju, unit_name: str) -> None:
 
 def stop_unit_flush_logs_job(juju: Juju, unit_name: str) -> None:
     """Stop running any logrotate jobs that may have been triggered by cron."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo pkill -f 'logrotate -f /etc/logrotate.d/flush_mysql_logs' --signal SIGTERM",
         target=unit_name,
