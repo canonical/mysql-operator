@@ -140,7 +140,7 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
     )
 
     logging.info("Ensure continuous writes on all units")
-    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME, list(mysql_app_units))
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME, mysql_app_units)
 
     logging.info("Re-run pre-upgrade-check action")
     task = juju.run(unit=mysql_app_leader, action="pre-upgrade-check")
@@ -162,7 +162,7 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
     )
 
     logging.info("Ensure continuous writes after rollback procedure")
-    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME, list(mysql_app_units))
+    await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME, mysql_app_units)
 
     # Remove fault charm file
     tmp_folder_charm.unlink()

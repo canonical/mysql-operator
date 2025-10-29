@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 import jubilant_backports
 from jubilant_backports import Juju
-from jubilant_backports.statustypes import Status, UnitStatus
+from jubilant_backports.statustypes import Status
 from tenacity import (
     Retrying,
     retry,
@@ -94,16 +94,16 @@ def get_app_name(juju: Juju, charm_name: str) -> str | None:
     raise Exception("No application name found")
 
 
-def get_app_units(juju: Juju, app_name: str) -> dict[str, UnitStatus]:
+def get_app_units(juju: Juju, app_name: str) -> list[str]:
     """Get the units for the given application."""
     model_status = juju.status()
     app_status = model_status.apps[app_name]
-    return app_status.units
+    return list(app_status.units)
 
 
 def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
     """Scale a given application to a number of units."""
-    app_units = list(get_app_units(juju, app_name))
+    app_units = get_app_units(juju, app_name)
     app_units_diff = num_units - len(app_units)
 
     if app_units_diff > 0:
