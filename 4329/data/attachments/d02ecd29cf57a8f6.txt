@@ -1,0 +1,66 @@
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:116 Creating backup
+[32mINFO    [0m integration.backups:backups.py:120 Creating test data 1
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:136 Creating test data 2
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.backups:backups.py:148 Scaling down to 1 unit
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 3)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+[32mINFO    [0m integration.backups:backups.py:158 Restoring backup 2025-10-29T02:00:23Z with bad restore-to-time parameter
+[32mINFO    [0m integration.backups:backups.py:167 Restoring backup 2025-10-29T02:00:23Z with year_before restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] blocked: Failed to restore point-in-time-recovery to the 2024-10-29 02:00:36
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:179 Restoring backup 2025-10-29T02:00:23Z with year_after restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] blocked: Failed to restore point-in-time-recovery to the 2026-10-29 02:00:36
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:191 Restoring backup 2025-10-29T02:00:23Z with actual restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] blocked: Failed to restore point-in-time-recovery to the 2025-10-29 02:00:36
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:203 Restoring backup 2025-10-29T02:00:23Z with restore-to-time=latest parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] blocked: Failed to restore point-in-time-recovery to the latest
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backups:backups.py:38 Cleaning backups from cloud buckets
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:04:23Z
+
+App            Version          Status  Scale  Charm          Channel        Rev  Exposed  Message
+mysql          8.0.42-0ubun...  active      1  mysql                           0  no       
+s3-integrator                   active      1  s3-integrator  latest/stable  145  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*          blocked   idle   1        10.42.79.49     3306,33060/tcp  failed to recover cluster.
+s3-integrator/0*  active    idle   0        10.42.79.70                     
+
+Machine  State    Address      Inst id        Base          AZ             Message
+0        started  10.42.79.70  juju-e39ac9-0  ubuntu@22.04  runnervmwhb2z  Running
+1        started  10.42.79.49  juju-e39ac9-1  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:54:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:54:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:56:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:56:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:59:51 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector is enabled but not running
+unit-mysql-0: 01:59:51 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector will be restarted due to force_restart option
+unit-mysql-0: 02:00:41 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector is enabled but not running
+unit-mysql-0: 02:00:41 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector will be restarted due to force_restart option
+unit-mysql-0: 02:00:44 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector is enabled but not running
+unit-mysql-0: 02:00:44 ERROR unit.mysql/0.juju-log database-peers:3: Binlogs collector will be restarted due to force_restart option
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
