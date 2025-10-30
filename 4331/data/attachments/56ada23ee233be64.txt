@@ -1,0 +1,28 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  12:26:51Z
+
+App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+mysql  8.0.42-0ubun...  active    2/3  mysql             0  no       
+
+Unit      Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*  error     idle   0        10.133.203.138  3306,33060/tcp  hook failed: "update-status"
+mysql/1   unknown   lost   1        10.133.203.11   3306,33060/tcp  agent lost, see 'juju show-status-log mysql/1'
+mysql/2   active    idle   2        10.133.203.158  3306,33060/tcp  
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.133.203.138  juju-48aa73-0  ubuntu@22.04  runnervmwhb2z  Running
+1        down     10.133.203.11   juju-48aa73-1  ubuntu@22.04  runnervmwhb2z  Running
+2        started  10.133.203.158  juju-48aa73-2  ubuntu@22.04  runnervmwhb2z  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 12:22:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 12:22:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 12:23:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 12:23:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:23:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:23:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
