@@ -6,23 +6,16 @@ import logging
 import jubilant_backports
 import pytest
 from jubilant_backports import Juju
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_fixed,
-)
 
 from constants import SERVER_CONFIG_USERNAME
 
 from ..helpers import generate_random_string
 from .high_availability_helpers_new import (
+    check_mysql_instances_online,
     check_mysql_units_writes_increment,
     execute_queries_on_unit,
-    get_app_leader,
     get_app_units,
-    get_mysql_cluster_status,
     get_mysql_primary_unit,
-    get_mysql_unit_name,
     get_unit_ip,
     insert_mysql_test_data,
     remove_mysql_test_data,
@@ -119,7 +112,7 @@ async def test_sst_test(juju: Juju, continuous_writes):
 
     # Verify instance is part of the cluster
     logging.info("Check if instance in cluster")
-    assert check_unit_in_mysql_cluster(juju, new_mysql_primary_unit)
+    assert check_mysql_instances_online(juju, MYSQL_APP_NAME, [new_mysql_primary_unit])
 
     # Ensure continuous writes still incrementing for all units
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME)
@@ -131,25 +124,6 @@ async def test_sst_test(juju: Juju, continuous_writes):
     await insert_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
     await verify_mysql_test_data(juju, MYSQL_APP_NAME, table_name, table_value)
     await remove_mysql_test_data(juju, MYSQL_APP_NAME, table_name)
-
-
-@retry(stop=stop_after_attempt(12), wait=wait_fixed(15), reraise=True)
-def check_unit_in_mysql_cluster(juju: Juju, unit_name: str) -> bool:
-    """Check is unit is online in the cluster.
-
-    Args:
-        juju: The Juju model.
-        unit_name: The unit name to check.
-    """
-    mysql_app_leader = get_app_leader(juju, MYSQL_APP_NAME)
-    mysql_cluster_status = get_mysql_cluster_status(juju, mysql_app_leader)
-    mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
-
-    for k, v in mysql_cluster_topology.items():
-        if get_mysql_unit_name(k) == unit_name and v.get("status") == "online":
-            return True
-
-    return False
 
 
 async def purge_mysql_binary_logs(juju: Juju, app_name: str, unit_name: str) -> None:

@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 import jubilant_backports
 from jubilant_backports import Juju
-from jubilant_backports.statustypes import Status, UnitStatus
+from jubilant_backports.statustypes import Status
 from tenacity import (
     Retrying,
     retry,
@@ -29,21 +29,30 @@ JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
 
 
-def check_mysql_instances_online(juju: Juju, app_name: str) -> bool:
+def check_mysql_instances_online(
+    juju: Juju,
+    app_name: str,
+    app_units: list[str] | None = None,
+) -> bool:
     """Checks whether all MySQL cluster instances are online.
 
     Args:
         juju: The Juju instance
         app_name: The name of the application
+        app_units: The list of application units to check
     """
-    mysql_app_leader = get_app_leader(juju, app_name)
-    mysql_app_units = get_app_units(juju, app_name)
+    if not app_units:
+        app_units = get_app_units(juju, app_name)
 
-    mysql_cluster_status = get_mysql_cluster_status(juju, mysql_app_leader)
+    mysql_cluster_status = get_mysql_cluster_status(juju, app_units[0])
     mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
-    assert len(mysql_cluster_topology) == len(mysql_app_units)
 
-    return all(member["status"] == "online" for member in mysql_cluster_topology.values())
+    for unit_name in app_units:
+        unit_label = get_mysql_instance_label(unit_name)
+        if mysql_cluster_topology[unit_label]["status"] != "online":
+            return False
+
+    return True
 
 
 async def check_mysql_units_writes_increment(
@@ -57,7 +66,7 @@ async def check_mysql_units_writes_increment(
     if not app_units:
         app_units = get_app_units(juju, app_name)
 
-    app_primary = get_mysql_primary_unit(juju, app_name)
+    app_primary = get_mysql_primary_unit(juju, app_name, app_units[0])
     app_max_value = await get_mysql_max_written_value(juju, app_name, app_primary)
 
     for unit_name in app_units:
@@ -94,16 +103,16 @@ def get_app_name(juju: Juju, charm_name: str) -> str | None:
     raise Exception("No application name found")
 
 
-def get_app_units(juju: Juju, app_name: str) -> dict[str, UnitStatus]:
+def get_app_units(juju: Juju, app_name: str) -> list[str]:
     """Get the units for the given application."""
     model_status = juju.status()
     app_status = model_status.apps[app_name]
-    return app_status.units
+    return list(app_status.units)
 
 
 def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
     """Scale a given application to a number of units."""
-    app_units = list(get_app_units(juju, app_name))
+    app_units = get_app_units(juju, app_name)
     app_units_diff = num_units - len(app_units)
 
     if app_units_diff > 0:
@@ -234,6 +243,11 @@ def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool = False) -
     return task.results["status"]
 
 
+def get_mysql_instance_label(unit_name: str) -> str:
+    """Builds a MySQL instance label out of a Juju unit name."""
+    return "-".join(unit_name.rsplit("/", 1))
+
+
 def get_mysql_unit_name(instance_label: str) -> str:
     """Builds a Juju unit name out of a MySQL instance label."""
     return "/".join(instance_label.rsplit("-", 1))
@@ -307,9 +321,6 @@ async def get_mysql_variable_value(
 
 def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
     """Start a MySQL process within a machine."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo snap start charmed-mysql.mysqld",
         target=unit_name,
@@ -324,9 +335,6 @@ def start_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
 
 def stop_mysql_process_gracefully(juju: Juju, unit_name: str) -> None:
     """Gracefully stop MySQL process."""
-    # TODO:
-    #  Rely on Jubilant exec command once they fix it
-    #  https://github.com/canonical/jubilant/issues/206
     juju.ssh(
         command="sudo pkill mysqld --signal SIGTERM",
         target=unit_name,
