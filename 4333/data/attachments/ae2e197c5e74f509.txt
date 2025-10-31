@@ -1,0 +1,5 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing /root/spread_project/local-mysql_ubuntu@22.04-amd64.charm mysql --base ubuntu@22.04 --config profile=testing --config plugin-audit-enabled=false --num-units 3
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing mysql-test-app mysql-test-app --base ubuntu@22.04 --channel latest/edge --config auto_start_writes=false --config sleep_interval=500
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing mysql:database mysql-test-app:database
+[32mINFO    [0m root:test_upgrade_rollback_incompat.py:78 Wait for applications to become active
