@@ -28,6 +28,8 @@ poetry-core = "*"
 pydantic = "^1.10"
 # grafana_agent/v0/cos_agent.py
 cosl = ">=0.0.50"
+# operator_libs_linux/v2/snap.py
+opentelemetry-api = "*"
 # tls_certificates_interface/v2/tls_certificates.py
 cryptography = ">=42.0.5"
 jsonschema = "*"
