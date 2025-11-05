@@ -12,5 +12,3 @@ Charmed MySQL is an open source project that warmly welcomes community contribut
 * [Git sources for Charmed MySQL](https://github.com/canonical/mysql-operator)
 * [Canonical Data on Launchpad](https://launchpad.net/~data-platform)
 * [Canonical Data on Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) 
-* [Mailing list on Launchpad](https://lists.launchpad.net/data-platform/)
-
