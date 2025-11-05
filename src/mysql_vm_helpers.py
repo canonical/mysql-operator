@@ -182,7 +182,7 @@ class MySQL(MySQLBase):
             with pathlib.Path("snap_revisions.json").open("r") as file:
                 revision = json.load(file)[platform.machine()]
             logger.info(f"Installing {CHARMED_MYSQL_SNAP_NAME} {revision=}")
-            charmed_mysql.ensure(snap.SnapState.Present, classic=True, revision=revision)
+            charmed_mysql.ensure(snap.SnapState.Present, revision=revision)
             if not charmed_mysql.held:
                 # hold the snap in charm determined revision
                 charmed_mysql.hold()
