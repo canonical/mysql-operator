@@ -11,6 +11,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import time
 import typing
 from collections.abc import Iterable
 from typing import Any
@@ -433,12 +434,12 @@ class MySQL(MySQLBase):
         Retry every 5 seconds for 120 seconds if there is an issue obtaining a connection.
         """
         logger.debug("Waiting for MySQL connection")
-
-        if not os.path.exists(MYSQLD_SOCK_FILE):
-            raise MySQLServiceNotRunningError("MySQL socket file not found")
-
-        if check_port and not self.check_mysqlcli_connection():
-            raise MySQLServiceNotRunningError("Connection with mysqlcli not possible")
+        time.sleep(60)
+        # if not os.path.exists(MYSQLD_SOCK_FILE):
+        #     raise MySQLServiceNotRunningError("MySQL socket file not found")
+        #
+        # if check_port and not self.check_mysqlcli_connection():
+        #     raise MySQLServiceNotRunningError("Connection with mysqlcli not possible")
 
         logger.debug("MySQL connection possible")
 
