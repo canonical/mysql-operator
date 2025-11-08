@@ -1,0 +1,6 @@
+[32mINFO    [0m root:test_async_replication.py:251 Freezing mysqld on primary cluster units
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju exec --model testing-other --format json --unit db2/0 -- 'sudo pkill -x mysqld --signal SIGSTOP'
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju exec --model testing-other --format json --unit db2/1 -- 'sudo pkill -x mysqld --signal SIGSTOP'
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju exec --model testing-other --format json --unit db2/2 -- 'sudo pkill -x mysqld --signal SIGSTOP'
