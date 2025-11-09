@@ -1,0 +1,42 @@
+[32mINFO    [0m integration.test_tls:test_tls.py:180 Removing relation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:49:46Z
+
+App                       Version          Status  Scale  Charm                     Channel        Rev  Exposed  Message
+mysql                     8.0.42-0ubun...  active      3  mysql                                      0  no       
+self-signed-certificates                   active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports           Message
+mysql/0*                     active    idle   0        10.210.39.80    3306,33060/tcp  
+mysql/1                      active    idle   1        10.210.39.213   3306,33060/tcp  
+mysql/2                      active    idle   2        10.210.39.151   3306,33060/tcp  
+self-signed-certificates/0*  active    idle   3        10.210.39.36                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.210.39.80   juju-1e4db6-0  ubuntu@22.04  runnervmw9dnm  Running
+1        started  10.210.39.213  juju-1e4db6-1  ubuntu@22.04  runnervmw9dnm  Running
+2        started  10.210.39.151  juju-1e4db6-2  ubuntu@22.04  runnervmw9dnm  Running
+3        started  10.210.39.36   juju-1e4db6-3  ubuntu@22.04  runnervmw9dnm  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:43:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:43:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:44:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:44:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:44:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:44:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:47:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:47:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:48:39 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:48:41 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:48:44 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:48:45 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 02:48:46 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 02:48:46 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:48:49 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 02:49:21 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cd549854-2b4c-470c-8176-a286e91e4db6:r#3#self-signed-certificates": settings cd549854-2b4c-470c-8176-a286e91e4db6:r#3#self-signed-certificates not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
