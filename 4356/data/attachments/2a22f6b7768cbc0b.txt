@@ -1,0 +1,41 @@
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.roles.test_instance_dba_role:test_instance_dba_role.py:68 Checking that the instance-level DBA role can create new databases
+[32mINFO    [0m integration.roles.test_instance_dba_role:test_instance_dba_role.py:80 Checking that the instance-level DBA role can see all databases
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.11   unsupported  02:00:46Z
+
+App              Version          Status  Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator                   active      1  data-integrator  latest/stable  180  no       
+mysql            8.0.42-0ubun...  active      3  mysql                             0  no       
+
+Unit                Workload  Agent  Machine  Public address  Ports           Message
+data-integrator/0*  active    idle   0        10.11.189.201                   
+mysql/0*            active    idle   1        10.11.189.231   3306,33060/tcp  
+mysql/1             active    idle   2        10.11.189.215                   
+mysql/2             active    idle   3        10.11.189.124   3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.11.189.201  juju-de4ecb-0  ubuntu@24.04  runnervmw9dnm  Running
+1        started  10.11.189.231  juju-de4ecb-1  ubuntu@22.04  runnervmw9dnm  Running
+2        started  10.11.189.215  juju-de4ecb-2  ubuntu@22.04  runnervmw9dnm  Running
+3        started  10.11.189.124  juju-de4ecb-3  ubuntu@22.04  runnervmw9dnm  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:55:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:55:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:56:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:57:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:57:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
