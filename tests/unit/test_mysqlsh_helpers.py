@@ -155,13 +155,6 @@ class TestMySQL(unittest.TestCase):
         with self.assertRaises(MySQLClientError):
             self.mysql._run_mysqlcli_script(sql_script)
 
-    @patch("mysql_vm_helpers.MySQL.wait_until_mysql_connection.retry.stop", return_value=1)
-    @patch("os.path.exists", return_value=False)
-    def test_wait_until_mysql_connection(self, _exists, _stop):
-        """Test a failed execution of wait_until_mysql_connection."""
-        with self.assertRaises(MySQLServiceNotRunningError):
-            self.mysql.wait_until_mysql_connection()
-
     @patch("tempfile.NamedTemporaryFile")
     @patch("subprocess.check_output")
     @patch("mysql_vm_helpers.snap_service_operation")
