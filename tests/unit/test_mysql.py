@@ -2124,10 +2124,13 @@ class TestMySQLBase(unittest.TestCase):
     def test_verify_server_upgradable(self, _run_mysqlsh_script):
         """Test is_server_upgradable."""
         commands = (
-            "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
+            "try:",
+            "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",
-            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] in shell.version:",
-            "        print('SAME_VERSION')",
+            "    shell_version = shell.version.split(' ')[1]",
+            "    server_version = session.run_sql('select @@version').fetch_all()[0][0].split('-')[0]",
+            "    if shell_version.split('.') >= server_version.split('.'):",
+            "        print('COMPATIBLE_VERSION')",
             "    else:",
             "        raise",
         )
@@ -2150,9 +2153,9 @@ class TestMySQLBase(unittest.TestCase):
         self.mysql.verify_server_upgradable("2.3.4.5")
         _run_mysqlsh_script.assert_called_with(
             "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="2.3.4.5:33062",
+            user="clusteradmin",
+            password="clusteradminpassword",
+            host="2.3.4.5:3306",
         )
 
         _run_mysqlsh_script.return_value = (
