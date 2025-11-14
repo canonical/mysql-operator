@@ -20,6 +20,7 @@ from charms.data_platform_libs.v0.upgrade import (
 from charms.mysql.v0.mysql import (
     MySQLGetMySQLVersionError,
     MySQLPluginInstallError,
+    MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetVariableError,
     MySQLStartMySQLDError,
@@ -185,7 +186,8 @@ class MySQLVMUpgrade(DataUpgrade):
                 logger.error("Failed to install workload snap")
                 self.set_unit_failed()
                 return
-
+            self.charm.unit.status = MaintenanceStatus("check if upgrade is possible")
+            self._check_server_upgradeability()
             # override config, avoid restart
             self.charm._on_config_changed(None)
             self.charm.unit.status = MaintenanceStatus("starting services...")
@@ -285,6 +287,44 @@ class MySQLVMUpgrade(DataUpgrade):
             self.charm._mysql.set_dynamic_variable(
                 variable="innodb_fast_shutdown", value="0", instance_address=unit_address
             )
+
+    def _check_server_upgradeability(self) -> None:
+        """Check if the server can be upgraded.
+
+        Use mysql-shell upgrade checker utility to ensure server upgradeability.
+
+        Raises:
+            VersionError: If the server is not upgradeable.
+        """
+        planned_units = self.charm.app.planned_units()
+        if planned_units == 1:
+            # single unit upgrade, no need for check
+            return
+        if len(self.upgrade_stack or []) < planned_units:
+            # check is done for first upgrading unit only
+            return
+
+        def leader_unit_address() -> str:
+            # Return the leader unit address.
+            # leader is update stack first item
+            leader_unit_ordinal = self.upgrade_stack[0]
+            for unit in self.peer_relation.units:
+                if unit.name == f"{self.charm.app.name}/{leader_unit_ordinal}":
+                    return self.charm.get_unit_address(unit, PEER)
+            return ""
+
+        try:
+            # verifies if the server is upgradeable by connecting to the leader
+            # which is running the pre-upgraded mysql-server version
+            self.charm._mysql.verify_server_upgradable(instance=leader_unit_address())
+            logger.debug("MySQL server is upgradeable")
+        except MySQLServerNotUpgradableError as e:
+            logger.error("MySQL server is not upgradeable")
+            raise VersionError(
+                message="Cannot upgrade MySQL server",
+                cause=e.message,
+                resolution="Check mysql-shell upgrade utility output for more details",
+            ) from e
 
     def _check_server_unsupported_downgrade(self) -> bool:
         """Check error log for unsupported downgrade.

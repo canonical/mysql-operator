@@ -415,6 +415,10 @@ class MySQLGetVariableError(Error):
     """Exception raised when there is an issue getting a variable."""
 
 
+class MySQLServerNotUpgradableError(Error):
+    """Exception raised when there is an issue checking for upgradeability."""
+
+
 class MySQLSecretError(Error):
     """Exception raised when there is an issue setting/getting a secret."""
 
@@ -2859,6 +2863,44 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.error("Failed to set cluster primary")
             raise MySQLSetClusterPrimaryError(e.message) from e
+
+    def verify_server_upgradable(self, instance: str | None = None) -> None:
+        """Wrapper for API check_for_server_upgrade."""
+        check_command = [
+            "try:",
+            "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
+            "except ValueError:",  # ValueError is raised for same version check
+            "    shell_version = shell.version.split(' ')[1]",
+            "    server_version = session.run_sql('select @@version').fetch_all()[0][0].split('-')[0]",
+            "    if shell_version.split('.') >= server_version.split('.'):",
+            "        print('COMPATIBLE_VERSION')",
+            "    else:",
+            "        raise",
+        ]
+
+        def _strip_output(output: str):
+            # output may need first line stripped to
+            # remove information header text
+            if not output.split("\n")[0].startswith("{"):
+                return "\n".join(output.split("\n")[1:])
+            return output
+
+        try:
+            # use cluster admin user to enforce standard port usage
+            output = self._run_mysqlsh_script(
+                "\n".join(check_command),
+                user=self.cluster_admin_user,
+                password=self.cluster_admin_password,
+                host=self.instance_def(self.cluster_admin_user, instance),
+            )
+            if "COMPATIBLE_VERSION" in output:
+                return
+            result = json.loads(_strip_output(output))
+            if result["errorCount"] == 0:
+                return
+            raise MySQLServerNotUpgradableError(result.get("summary"))
+        except MySQLClientError as e:
+            raise MySQLServerNotUpgradableError("Failed to check for server upgrade") from e
 
     def get_mysql_version(self) -> str | None:
         """Get the running mysqld version."""
