@@ -2866,7 +2866,6 @@ class MySQLBase(ABC):
 
     def verify_server_upgradable(self, instance: str | None = None) -> None:
         """Wrapper for API check_for_server_upgrade."""
-        # use cluster admin user to enforce standard port usage
         check_command = [
             "try:",
             "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
@@ -2887,11 +2886,12 @@ class MySQLBase(ABC):
             return output
 
         try:
+            # use cluster admin user to enforce standard port usage
             output = self._run_mysqlsh_script(
                 "\n".join(check_command),
-                user=self.server_config_user,
-                password=self.server_config_password,
-                host=self.instance_def(self.server_config_user, instance),
+                user=self.cluster_admin_user,
+                password=self.cluster_admin_password,
+                host=self.instance_def(self.cluster_admin_user, instance),
             )
             if "COMPATIBLE_VERSION" in output:
                 return
