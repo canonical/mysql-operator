@@ -127,7 +127,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 95
+LIBPATCH = 96
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -2871,8 +2871,10 @@ class MySQLBase(ABC):
             "try:",
             "    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
             "except ValueError:",  # ValueError is raised for same version check
-            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] in shell.version:",
-            "        print('SAME_VERSION')",
+            "    shell_version = shell.version.split(' ')[1]",
+            "    server_version = session.run_sql('select @@version').fetch_all()[0][0].split('-')[0]",
+            "    if shell_version.split('.') >= server_version.split('.'):",
+            "        print('COMPATIBLE_VERSION')",
             "    else:",
             "        raise",
         ]
@@ -2891,7 +2893,7 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user, instance),
             )
-            if "SAME_VERSION" in output:
+            if "COMPATIBLE_VERSION" in output:
                 return
             result = json.loads(_strip_output(output))
             if result["errorCount"] == 0:
