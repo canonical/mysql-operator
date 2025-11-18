@@ -49,13 +49,6 @@ class MySQL(MySQLBase):
             )
         # Add new attribute
         self.new_parameter = new_parameter
-
-    # abstract method implementation
-    @retry(reraise=True, stop=stop_after_delay(30), wait=wait_fixed(5))
-    def wait_until_mysql_connection(self) -> None:
-        if not os.path.exists(MYSQLD_SOCK_FILE):
-            raise MySQLServiceNotRunningError()
-
     ...
 ```
 
@@ -127,7 +120,7 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
-LIBPATCH = 96
+LIBPATCH = 97
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
@@ -1815,7 +1808,6 @@ class MySQLBase(ABC):
                 password=self.server_config_password,
                 host=self.instance_def(self.server_config_user),
             )
-            self.wait_until_mysql_connection()
         except MySQLClientError as e:
             logger.error(f"Failed to configure instance {self.instance_address}")
             raise MySQLConfigureInstanceError from e
@@ -3835,14 +3827,6 @@ class MySQLBase(ABC):
     @abstractmethod
     def restart_mysql_exporter(self) -> None:
         """Restart the mysqld exporter."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def wait_until_mysql_connection(self, check_port: bool = True) -> None:
-        """Wait until a connection to MySQL has been obtained.
-
-        Implemented in subclasses, test for socket file existence.
-        """
         raise NotImplementedError
 
     @abstractmethod
