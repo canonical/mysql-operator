@@ -428,10 +428,6 @@ class MySQLPromoteClusterToPrimaryError(Error):
     """Exception raised when there is an issue promoting a replica cluster to primary."""
 
 
-class MySQLFencingWritesError(Error):
-    """Exception raised when there is an issue fencing or unfencing writes."""
-
-
 class MySQLRejoinClusterError(Error):
     """Exception raised when there is an issue trying to rejoin a cluster to the cluster set."""
 
@@ -837,19 +833,17 @@ class MySQLCharmBase(CharmBase, ABC):
     @property
     def active_status_message(self) -> str:
         """Active status message."""
-        if self.unit_peer_data.get("member-role") == "primary":
-            if self._mysql.is_cluster_replica():
-                status = self._mysql.get_replica_cluster_status()
-                if status == "ok":
-                    return "Standby"
-                else:
-                    return f"Standby ({status})"
-            elif self._mysql.is_cluster_writes_fenced():
-                return "Primary (fenced writes)"
-            else:
-                return "Primary"
+        if self.unit_peer_data.get("member-role") != "primary":
+            return ""
 
-        return ""
+        if self._mysql.is_cluster_replica() is False:
+            return "Primary"
+
+        status = self._mysql.get_replica_cluster_status()
+        if status == MySQLClusterState.OK:
+            return "Standby"
+        else:
+            return f"Standby ({status})"
 
     @property
     def removing_unit(self) -> bool:
@@ -1012,7 +1006,6 @@ class MySQLClusterState(str, enum.Enum):
     ERROR = "error"
     UNREACHABLE = "unreachable"
     UNKNOWN = "unknown"
-    FENCED = "fenced_writes"
 
 
 class MySQLTextLogs(str, enum.Enum):
@@ -1938,51 +1931,6 @@ class MySQLBase(ABC):
         except MySQLClientError as e:
             logger.error("Failed to promote cluster to primary")
             raise MySQLPromoteClusterToPrimaryError from e
-
-    def fence_writes(self) -> None:
-        """Fence writes on the primary cluster."""
-        commands = (
-            "c = dba.get_cluster()",
-            "c.fence_writes()",
-        )
-
-        try:
-            self._run_mysqlsh_script(
-                "\n".join(commands),
-                user=self.server_config_user,
-                password=self.server_config_password,
-                host=self.instance_def(self.server_config_user),
-            )
-        except MySQLClientError as e:
-            logger.error("Failed to fence writes on cluster")
-            raise MySQLFencingWritesError from e
-
-    def unfence_writes(self) -> None:
-        """Unfence writes on the primary cluster and reset read_only flag."""
-        commands = (
-            "c = dba.get_cluster()",
-            "c.unfence_writes()",
-            "session.run_sql('SET GLOBAL read_only=OFF')",
-        )
-
-        try:
-            self._run_mysqlsh_script(
-                "\n".join(commands),
-                user=self.server_config_user,
-                password=self.server_config_password,
-                host=self.instance_def(self.server_config_user),
-            )
-        except MySQLClientError as e:
-            logger.error("Failed to resume writes on primary cluster")
-            raise MySQLFencingWritesError from e
-
-    def is_cluster_writes_fenced(self) -> bool | None:
-        """Check if the cluster is fenced against writes."""
-        status = self.get_cluster_status()
-        if not status:
-            return
-
-        return status["defaultreplicaset"]["status"] == MySQLClusterState.FENCED
 
     def is_cluster_in_cluster_set(self, cluster_name: str) -> bool | None:
         """Check if a cluster is in the cluster set."""
