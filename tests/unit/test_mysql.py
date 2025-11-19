@@ -474,8 +474,7 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
-    def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
+    def test_configure_instance(self, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
         # Test with create_cluster_admin=False
         configure_instance_commands = [
@@ -509,20 +508,13 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         # Test an issue with _run_mysqlsh_script
-        _wait_until_mysql_connection.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
 
-        _wait_until_mysql_connection.assert_not_called()
-
         # Reset mocks
         _run_mysqlsh_script.reset_mock()
-        _wait_until_mysql_connection.reset_mock()
-
-        # Test an issue with _wait_until_mysql_connection
-        _wait_until_mysql_connection.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
@@ -2590,9 +2582,6 @@ sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes`.* TO `relation-21_ff73
 
     def test_abstract_methods(self):
         """Test abstract methods."""
-        with self.assertRaises(NotImplementedError):
-            self.mysql.wait_until_mysql_connection()
-
         with self.assertRaises(NotImplementedError):
             self.mysql._run_mysqlsh_script("", "", "", "")
 
