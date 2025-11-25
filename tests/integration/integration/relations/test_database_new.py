@@ -133,8 +133,8 @@ def test_password_rotation_silent(juju: Juju):
 
 
 @pytest.mark.abort_on_fail
-def test_password_rotation_root_user_implicit(juju: Juju):
-    """Rotate password and confirm changes."""
+def test_password_rotation_root_user(juju: Juju):
+    """Rotate password for root user and confirm changes."""
     random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
 
     old_credentials = get_mysql_server_credentials(juju, random_unit, ROOT_USERNAME)
@@ -144,7 +144,7 @@ def test_password_rotation_root_user_implicit(juju: Juju):
     primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
     logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
-    rotate_mysql_server_credentials(juju, primary_unit)
+    rotate_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
 
     updated_credentials = get_mysql_server_credentials(juju, random_unit, ROOT_USERNAME)
     assert updated_credentials["password"] != old_credentials["password"]
