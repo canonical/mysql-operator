@@ -57,6 +57,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     juju.deploy(
         "mysql-router",
         KEYSTONE_MYSQLROUTER_APP_NAME,
+        channel="8.0/stable",
     )
 
     juju.integrate(f"{KEYSTONE_APP_NAME}:shared-db", f"{KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db")
@@ -111,6 +112,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     juju.deploy(
         "mysql-router",
         ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
+        channel="8.0/stable",
     )
 
     juju.integrate(

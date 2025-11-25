@@ -178,7 +178,7 @@ def test_relation_creation(juju: Juju):
     juju.integrate(f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}")
 
     juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_active, APPS),
+        ready=wait_for_apps_status(jubilant_backports.all_active, *APPS),
         error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
@@ -205,7 +205,7 @@ def test_read_only_endpoints(juju: Juju):
 
     # wait for the update of the endpoints
     juju.wait(
-        ready=lambda: check_read_only_endpoints(
+        ready=lambda status: check_read_only_endpoints(
             juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
         )
         or True,
@@ -216,11 +216,11 @@ def test_read_only_endpoints(juju: Juju):
     scale_app_units(juju, DATABASE_APP_NAME, 3)
 
     # remove the leader unit
-    remove_leader_unit(juju, application_name=DATABASE_APP_NAME)
+    remove_leader_unit(juju, app_name=DATABASE_APP_NAME)
 
     # wait for the update of the endpoints
     juju.wait(
-        ready=lambda: check_read_only_endpoints(
+        ready=lambda status: check_read_only_endpoints(
             juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
         )
         or True,
