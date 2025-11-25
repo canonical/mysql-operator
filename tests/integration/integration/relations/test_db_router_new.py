@@ -67,7 +67,13 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         timeout=SLOW_WAIT_TIMEOUT,
     )
     juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_waiting, KEYSTONE_APP_NAME),
+        ready=lambda status: (
+            (status.apps[KEYSTONE_APP_NAME].app_status.current == "waiting")
+            and all(
+                unit.workload_status.current == "blocked"
+                for unit in status.get_units(KEYSTONE_APP_NAME).values()
+            )
+        ),
         timeout=SLOW_WAIT_TIMEOUT,
     )
     juju.wait(
