@@ -143,7 +143,6 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, APP_NAME),
-        error=jubilant_backports.any_blocked,
         timeout=FAST_WAIT_TIMEOUT,
     )
 

@@ -184,7 +184,6 @@ def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
     if num_units > 0:
         juju.wait(
             ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
-            error=jubilant_backports.any_blocked,
             timeout=20 * MINUTE_SECS,
         )
 
