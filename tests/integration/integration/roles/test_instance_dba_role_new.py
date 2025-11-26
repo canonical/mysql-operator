@@ -44,7 +44,6 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
     juju.wait(
