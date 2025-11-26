@@ -4,16 +4,16 @@
 [project]
 name = "mysql-operator"  # Charm is not meant to be packaged
 dependencies = [
-    "ops>=2.8.0,<3",
-    "tenacity>=8.2.2,<9",
-    "boto3>=1.28.23,<2",
-    "typing_extensions>=4.7.1,<5",
-    "jinja2>=3.1.2,<4",
-    "python_hosts>=1.0.6,<2",
-    "pexpect>=4.9.0,<5",
-    "pyyaml>=6.0.2,<7",
+    "ops~=2.8",
+    "tenacity~=8.2",
+    "boto3~=1.28",
+    "typing_extensions~=4.7",
+    "jinja2~=3.1",
+    "python_hosts~=1.0",
+    "pexpect~=4.9",
+    "pyyaml~=6.0",
 ]
-requires-python = ">=3.10,<4"
+requires-python = "~=3.10"
 
 [dependency-groups]
 charm-libs = [
