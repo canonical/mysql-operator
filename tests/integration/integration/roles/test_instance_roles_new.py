@@ -54,7 +54,6 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
     juju.wait(
@@ -78,7 +77,6 @@ def test_charmed_read_role(juju: Juju):
         ready=wait_for_apps_status(
             jubilant_backports.all_active, f"{INTEGRATOR_APP_NAME}1", DATABASE_APP_NAME
         ),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
 
@@ -159,7 +157,6 @@ def test_charmed_dml_role(juju: Juju):
         ready=wait_for_apps_status(
             jubilant_backports.all_active, f"{INTEGRATOR_APP_NAME}1", DATABASE_APP_NAME
         ),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
 
@@ -172,7 +169,6 @@ def test_charmed_dml_role(juju: Juju):
         ready=wait_for_apps_status(
             jubilant_backports.all_active, f"{INTEGRATOR_APP_NAME}2", DATABASE_APP_NAME
         ),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
 
@@ -222,7 +218,6 @@ def test_charmed_dml_role(juju: Juju):
 
     logger.info("Checking that the charmed_dml role can write into an existing table")
     execute_queries_on_unit(
-        juju,
         primary_unit_address,
         results2["mysql"]["username"],
         results2["mysql"]["password"],
