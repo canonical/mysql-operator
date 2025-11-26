@@ -53,7 +53,13 @@ def deploy_and_relate_keystone_with_mysql(
     )
 
     juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_blocked, keystone_application_name),
+        ready=lambda status: (
+            (status.apps[keystone_application_name].app_status.current == "waiting")
+            and all(
+                unit.workload_status.current == "blocked"
+                for unit in status.get_units(keystone_application_name).values()
+            )
+        ),
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
