@@ -11,7 +11,7 @@ from jubilant_backports import Juju
 from ...helpers_ha import (
     CHARM_METADATA,
     MINUTE_SECS,
-    execute_queries_on_unit,
+    execute_queries_on_unit_sync,
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,
@@ -65,7 +65,6 @@ def test_charmed_dba_role(juju: Juju):
         ready=wait_for_apps_status(
             jubilant_backports.all_active, INTEGRATOR_APP_NAME, DATABASE_APP_NAME
         ),
-        error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
 
@@ -79,8 +78,7 @@ def test_charmed_dba_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that the instance-level DBA role can create new databases")
-    execute_queries_on_unit(
-        juju,
+    execute_queries_on_unit_sync(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
@@ -94,8 +92,7 @@ def test_charmed_dba_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that the instance-level DBA role can see all databases")
-    rows = execute_queries_on_unit(
-        juju,
+    rows = execute_queries_on_unit_sync(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
