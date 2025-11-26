@@ -1,3 +1,7 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Integration tests
+
 on:
   workflow_call:
     inputs:
@@ -19,29 +23,35 @@ jobs:
         uses: actions/checkout@v5
       - name: Set up environment
         run: |
-          sudo snap install charmcraft --classic
-          pipx install tox poetry
+          sudo snap install go --classic
+          go install github.com/snapcore/spread/cmd/spread@latest
+          pipx install tox
+          pipx install poetry
       - name: Collect spread jobs
         id: collect-jobs
         shell: python
         run: |
           import json
           import os
+          import pathlib
           import subprocess
 
           spread_jobs = (
               subprocess.run(
-                  ["charmcraft", "test", "--list", "github-ci"], capture_output=True, check=True, text=True
+                  [pathlib.Path.home() / "go/bin/spread", "-list", "github-ci:tests/spread/integration/"],
+                  capture_output=True,
+                  check=True,
+                  text=True,
               )
               .stdout.strip()
               .split("\n")
           )
           jobs = []
           for job in spread_jobs:
-              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/test_charm.py:juju36"
+              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/integration/test_charm.py:juju36"
               _, runner, task, variant = job.split(":")
               # Example: "test_charm.py"
-              task = task.removeprefix("tests/spread/")
+              task = task.removeprefix("tests/spread/integration/")
               if runner.endswith("-arm"):
                   architecture = "arm64"
               else:
@@ -62,7 +72,7 @@ jobs:
               file.write(output)
       - name: Generate Allure default test results
         if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
-        run: tox run -e integration -- tests/integration --allure-default-dir=allure-default-results
+        run: tox run -e integration -- tests/integration/integration --allure-default-dir=allure-default-results
       - name: Upload Allure default results
         # Default test results in case the integration tests time out or runner set up fails
         # (So that Allure report will show "unknown"/"failed" test result, instead of omitting the test)
@@ -100,10 +110,8 @@ jobs:
         uses: actions/checkout@v5
       - name: Set up environment
         timeout-minutes: 5
-        run: sudo snap install charmcraft --classic
-      # TODO: remove when https://github.com/canonical/charmcraft/issues/2105 and
-      # https://github.com/canonical/charmcraft/issues/2130 fixed
-      - run: |
+        run: |
+          sudo snap install charmcraft --classic
           sudo snap install go --classic
           go install github.com/snapcore/spread/cmd/spread@latest
       - name: Download packed charm(s)
@@ -115,9 +123,6 @@ jobs:
       - name: Run spread job
         timeout-minutes: 180
         id: spread
-        # TODO: replace with `charmcraft test` when
-        # https://github.com/canonical/charmcraft/issues/2105 and
-        # https://github.com/canonical/charmcraft/issues/2130 fixed
         run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
         env:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}

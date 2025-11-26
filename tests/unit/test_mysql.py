@@ -58,7 +58,6 @@ from charms.mysql.v0.mysql import (
     MySQLRescanClusterError,
     MySQLRestoreBackupError,
     MySQLRetrieveBackupWithXBCloudError,
-    MySQLServerNotUpgradableError,
     MySQLSetClusterPrimaryError,
     MySQLSetInstanceOfflineModeError,
     MySQLSetInstanceOptionError,
@@ -475,8 +474,7 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    @patch("charms.mysql.v0.mysql.MySQLBase.wait_until_mysql_connection")
-    def test_configure_instance(self, _wait_until_mysql_connection, _run_mysqlsh_script):
+    def test_configure_instance(self, _run_mysqlsh_script):
         """Test a successful execution of configure_instance."""
         # Test with create_cluster_admin=False
         configure_instance_commands = [
@@ -510,20 +508,13 @@ class TestMySQLBase(unittest.TestCase):
         )
 
         # Test an issue with _run_mysqlsh_script
-        _wait_until_mysql_connection.reset_mock()
         _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
 
-        _wait_until_mysql_connection.assert_not_called()
-
         # Reset mocks
         _run_mysqlsh_script.reset_mock()
-        _wait_until_mysql_connection.reset_mock()
-
-        # Test an issue with _wait_until_mysql_connection
-        _wait_until_mysql_connection.side_effect = MySQLClientError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
@@ -2120,59 +2111,6 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLSetClusterPrimaryError):
             self.mysql.set_cluster_primary(new_primary_address="10.0.0.2")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_verify_server_upgradable(self, _run_mysqlsh_script):
-        """Test is_server_upgradable."""
-        commands = (
-            "try:\n    util.check_for_server_upgrade(options={'outputFormat': 'JSON'})",
-            "except ValueError:",
-            "    if session.run_sql('select @@version').fetch_all()[0][0].split('-')[0] in shell.version:",
-            "        print('SAME_VERSION')",
-            "    else:",
-            "        raise",
-        )
-        _run_mysqlsh_script.return_value = (
-            "Some info header to be stripped\n"
-            '{"serverAddress": "10.1.148.145:33060",'
-            '"serverVersion": "8.0.32-0ubuntu0.22.04.2 - (Ubuntu)",'
-            '"targetVersion": "8.0.34",'
-            '"errorCount": 0,'
-            '"warningCount": 0,'
-            '"noticeCount": 0,'
-            '"summary": "No known compatibility errors or issues were found.",'
-            '"checksPerformed": ['
-            '{"id": "checkTableOutput",'
-            '"title": "Issues reported by \'check table x for upgrade\' command",'
-            '"status": "OK",'
-            '"detectedProblems": [] }],'
-            '"manualChecks": []}'
-        )
-        self.mysql.verify_server_upgradable("2.3.4.5")
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="2.3.4.5:33062",
-        )
-
-        _run_mysqlsh_script.return_value = (
-            '{"serverAddress": "10.1.148.145:33060",'
-            '"serverVersion": "8.0.32-0ubuntu0.22.04.2 - (Ubuntu)",'
-            '"targetVersion": "8.0.34",'
-            '"errorCount": 2,'
-            '"warningCount": 0,'
-            '"noticeCount": 0,'
-            '"summary": "No known compatibility errors or issues were found.",'
-            '"checksPerformed": ['
-            '{"id": "checkTableOutput",'
-            '"title": "Issues reported by \'check table x for upgrade\' command",'
-            '"status": "OK",'
-            '"detectedProblems": [] }],'
-            '"manualChecks": []}'
-        )
-        with self.assertRaises(MySQLServerNotUpgradableError):
-            self.mysql.verify_server_upgradable()
-
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
     def test_get_primary_label(self, _get_cluster_status):
         """Test get_primary_label."""
@@ -2644,9 +2582,6 @@ sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes`.* TO `relation-21_ff73
 
     def test_abstract_methods(self):
         """Test abstract methods."""
-        with self.assertRaises(NotImplementedError):
-            self.mysql.wait_until_mysql_connection()
-
         with self.assertRaises(NotImplementedError):
             self.mysql._run_mysqlsh_script("", "", "", "")
 
