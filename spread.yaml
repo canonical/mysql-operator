@@ -96,7 +96,9 @@ backends:
     systems:
       - ubuntu-24.04:
           username: runner
-      - ubuntu-24.04-arm:
+      # TODO: Revert to ubuntu-24.04-arm once Kernel 6.14 issue is solved
+      # https://gitlab.com/apparmor/apparmor/-/issues/571
+      - ubuntu-22.04-arm:
           username: runner
           variants:
             - -juju29
