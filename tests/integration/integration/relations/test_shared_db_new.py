@@ -17,7 +17,9 @@ from ...helpers_ha import (
     get_mysql_server_credentials,
     get_unit_ip,
     scale_app_units,
+    wait_for_app_status,
     wait_for_apps_status,
+    wait_for_unit_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,13 +55,13 @@ def deploy_and_relate_keystone_with_mysql(
     )
 
     juju.wait(
-        ready=lambda status: (
-            (status.apps[keystone_application_name].app_status.current == "waiting")
-            and all(
-                unit.workload_status.current == "blocked"
-                for unit in status.get_units(keystone_application_name).values()
-            )
-        ),
+        ready=lambda status: all((
+            wait_for_app_status(keystone_application_name, "waiting"),
+            *(
+                wait_for_unit_status(keystone_application_name, unit_name, "blocked")
+                for unit_name in status.get_units(keystone_application_name)
+            ),
+        )),
         timeout=SLOW_WAIT_TIMEOUT,
     )
 

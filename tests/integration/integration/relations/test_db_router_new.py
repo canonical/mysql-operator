@@ -16,7 +16,9 @@ from ...helpers_ha import (
     get_mysql_server_credentials,
     get_unit_ip,
     scale_app_units,
+    wait_for_app_status,
     wait_for_apps_status,
+    wait_for_unit_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,13 +69,13 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         timeout=SLOW_WAIT_TIMEOUT,
     )
     juju.wait(
-        ready=lambda status: (
-            (status.apps[KEYSTONE_APP_NAME].app_status.current == "waiting")
-            and all(
-                unit.workload_status.current == "blocked"
-                for unit in status.get_units(KEYSTONE_APP_NAME).values()
-            )
-        ),
+        ready=lambda status: all((
+            wait_for_app_status(KEYSTONE_APP_NAME, "waiting"),
+            *(
+                wait_for_unit_status(KEYSTONE_APP_NAME, unit_name, "blocked")
+                for unit_name in status.get_units(KEYSTONE_APP_NAME)
+            ),
+        )),
         timeout=SLOW_WAIT_TIMEOUT,
     )
     juju.wait(
