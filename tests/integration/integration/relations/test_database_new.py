@@ -39,7 +39,7 @@ ENDPOINT = "database"
 TIMEOUT = 15 * MINUTE_SECS
 
 
-def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str):
+def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> bool:
     """Checks that read-only-endpoints are correctly set.
 
     Args:
@@ -50,13 +50,13 @@ def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str):
     relation_data = get_relation_data(juju=juju, app_name=app_name, rel_name=relation_name)
     read_only_endpoint_ips = get_read_only_endpoint_ips(relation_data)
     # check that the number of read-only-endpoints is correct
-    assert len(get_app_units(juju, app_name)) - 1 == len(read_only_endpoint_ips)
+    if len(get_app_units(juju, app_name)) - 1 != len(read_only_endpoint_ips):
+        return False
     app_ips = [
         get_unit_ip(juju, app_name, unit_name) for unit_name in get_app_units(juju, app_name)
     ]
     # check that endpoints are the one of the application
-    for read_endpoint_ip in read_only_endpoint_ips:
-        assert read_endpoint_ip in app_ips
+    return all(read_endpoint_ip in app_ips for read_endpoint_ip in read_only_endpoint_ips)
 
 
 def rotate_mysql_server_credentials(
@@ -249,8 +249,7 @@ def test_read_only_endpoints(juju: Juju):
     juju.wait(
         ready=lambda status: check_read_only_endpoints(
             juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-        )
-        or True,
+        ),
         timeout=5 * MINUTE_SECS,
     )
 
@@ -264,8 +263,7 @@ def test_read_only_endpoints(juju: Juju):
     juju.wait(
         ready=lambda status: check_read_only_endpoints(
             juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-        )
-        or True,
+        ),
         timeout=5 * MINUTE_SECS,
     )
 
