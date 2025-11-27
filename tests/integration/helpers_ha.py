@@ -518,6 +518,11 @@ def wait_for_apps_status(jubilant_status_func: JujuAppsStatusFn, *apps: str) -> 
     ))
 
 
+def wait_for_app_status(app_name: str, app_status: str) -> JujuModelStatusFn:
+    """Returns whether a Juju app has a specific status."""
+    return lambda status: (status.apps[app_name].app_status.current == app_status)
+
+
 def wait_for_unit_status(app_name: str, unit_name: str, unit_status: str) -> JujuModelStatusFn:
     """Returns whether a Juju unit to have a specific status."""
     return lambda status: (
