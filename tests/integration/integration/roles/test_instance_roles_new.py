@@ -9,6 +9,7 @@ import pytest
 from jubilant_backports import Juju
 from mysql.connector.errors import ProgrammingError
 
+from ...helpers import execute_queries_on_unit
 from ...helpers_ha import (
     CHARM_METADATA,
     MINUTE_SECS,
@@ -17,9 +18,6 @@ from ...helpers_ha import (
     get_mysql_server_credentials,
     get_unit_ip,
     wait_for_apps_status,
-)
-from ...helpers_ha import (
-    execute_queries_on_unit_sync as execute_queries_on_unit,
 )
 
 logger = logging.getLogger(__name__)
@@ -65,7 +63,7 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
 
 
 @pytest.mark.abort_on_fail
-def test_charmed_read_role(juju: Juju):
+async def test_charmed_read_role(juju: Juju):
     """Test the instance-level charmed_read role."""
     juju.config(
         f"{INTEGRATOR_APP_NAME}1",
@@ -85,7 +83,7 @@ def test_charmed_read_role(juju: Juju):
     primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
     server_config_credentials = get_mysql_server_credentials(juju, mysql_units[0])
 
-    execute_queries_on_unit(
+    await execute_queries_on_unit(
         primary_unit_address,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -102,7 +100,7 @@ def test_charmed_read_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that the charmed_read role can read from an existing table")
-    rows = execute_queries_on_unit(
+    rows = await execute_queries_on_unit(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
@@ -117,7 +115,7 @@ def test_charmed_read_role(juju: Juju):
 
     logger.info("Checking that the charmed_read role cannot write into an existing table")
     with pytest.raises(ProgrammingError):
-        execute_queries_on_unit(
+        await execute_queries_on_unit(
             primary_unit_address,
             results["mysql"]["username"],
             results["mysql"]["password"],
@@ -129,7 +127,7 @@ def test_charmed_read_role(juju: Juju):
 
     logger.info("Checking that the charmed_read role cannot create a new table")
     with pytest.raises(ProgrammingError):
-        execute_queries_on_unit(
+        await execute_queries_on_unit(
             primary_unit_address,
             results["mysql"]["username"],
             results["mysql"]["password"],
@@ -147,7 +145,7 @@ def test_charmed_read_role(juju: Juju):
 
 
 @pytest.mark.abort_on_fail
-def test_charmed_dml_role(juju: Juju):
+async def test_charmed_dml_role(juju: Juju):
     """Test the instance-level charmed_dml role."""
     juju.config(
         f"{INTEGRATOR_APP_NAME}1", {"database-name": "charmed_dml_db", "extra-user-roles": ""}
@@ -182,7 +180,7 @@ def test_charmed_dml_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that when no role is specified the created user can do everything")
-    rows = execute_queries_on_unit(
+    rows = await execute_queries_on_unit(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
@@ -203,7 +201,7 @@ def test_charmed_dml_role(juju: Juju):
     results2 = task.results
 
     logger.info("Checking that the charmed_dml role can read from an existing table")
-    rows = execute_queries_on_unit(
+    rows = await execute_queries_on_unit(
         primary_unit_address,
         results2["mysql"]["username"],
         results2["mysql"]["password"],
@@ -217,7 +215,7 @@ def test_charmed_dml_role(juju: Juju):
     )
 
     logger.info("Checking that the charmed_dml role can write into an existing table")
-    execute_queries_on_unit(
+    await execute_queries_on_unit(
         primary_unit_address,
         results2["mysql"]["username"],
         results2["mysql"]["password"],
@@ -229,7 +227,7 @@ def test_charmed_dml_role(juju: Juju):
 
     logger.info("Checking that the charmed_dml role cannot create a new table")
     with pytest.raises(ProgrammingError):
-        execute_queries_on_unit(
+        await execute_queries_on_unit(
             primary_unit_address,
             results2["mysql"]["username"],
             results2["mysql"]["password"],

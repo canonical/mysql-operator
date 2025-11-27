@@ -32,7 +32,7 @@ FAST_WAIT_TIMEOUT = 30 * 60
 
 
 @pytest.mark.abort_on_fail
-def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
+async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation."""
     config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
 
@@ -94,7 +94,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     db_unit = get_app_units(juju, APP_NAME)[0]
     server_config_credentials = get_mysql_server_credentials(juju, db_unit)
 
-    check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
     keystone_users = []
     for unit_name in get_app_units(juju, KEYSTONE_APP_NAME):
@@ -103,7 +103,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         keystone_users.append(f"keystone@{unit_address}")
         keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
+    await check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
 
     # Deploy and test another deployment of keystone
     juju.deploy(
@@ -138,7 +138,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
-    check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
     another_keystone_users = []
     for unit_name in get_app_units(juju, ANOTHER_KEYSTONE_APP_NAME):
@@ -147,7 +147,7 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         another_keystone_users.append(f"keystone@{unit_address}")
         another_keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    check_keystone_users_existence(
+    await check_keystone_users_existence(
         juju, APP_NAME, server_config_credentials, keystone_users + another_keystone_users, []
     )
 
@@ -158,6 +158,6 @@ def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
     juju.remove_application(ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME)
 
-    check_keystone_users_existence(
+    await check_keystone_users_existence(
         juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
     )
