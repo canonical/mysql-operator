@@ -118,20 +118,17 @@ def test_build_and_deploy(juju: Juju, charm):
 @pytest.mark.abort_on_fail
 async def test_password_rotation(juju: Juju):
     """Rotate password and confirm changes."""
-    random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
-
-    old_credentials = get_mysql_server_credentials(juju, random_unit)
-
     # get primary unit first, need that to invoke set-password action
-    primary_unit_name = get_mysql_primary_unit(juju, DATABASE_APP_NAME, random_unit)
+    primary_unit_name = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
     primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit_name)
     logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
+    old_credentials = get_mysql_server_credentials(juju, primary_unit_name)
     new_password = generate_random_password(PASSWORD_LENGTH)
 
     rotate_mysql_server_credentials(juju, primary_unit_name, password=new_password)
 
-    updated_credentials = get_mysql_server_credentials(juju, random_unit)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit_name)
     assert updated_credentials["password"] != old_credentials["password"]
     assert updated_credentials["password"] == new_password
 
@@ -149,18 +146,15 @@ async def test_password_rotation(juju: Juju):
 @pytest.mark.abort_on_fail
 async def test_password_rotation_silent(juju: Juju):
     """Rotate password and confirm changes."""
-    random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
-
-    old_credentials = get_mysql_server_credentials(juju, random_unit)
-
     # get primary unit first, need that to invoke set-password action
-    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME, random_unit)
+    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
     primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
     logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
+    old_credentials = get_mysql_server_credentials(juju, primary_unit)
     rotate_mysql_server_credentials(juju, primary_unit)
 
-    updated_credentials = get_mysql_server_credentials(juju, random_unit)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit)
     assert updated_credentials["password"] != old_credentials["password"]
 
     # verify that the new password actually works by querying the db
@@ -177,18 +171,15 @@ async def test_password_rotation_silent(juju: Juju):
 @pytest.mark.abort_on_fail
 def test_password_rotation_root_user(juju: Juju):
     """Rotate password for root user and confirm changes."""
-    random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
-
-    old_credentials = get_mysql_server_credentials(juju, random_unit, ROOT_USERNAME)
-
     # get primary unit first, need that to invoke set-password action
-    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME, random_unit)
+    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
     primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
     logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
+    old_credentials = get_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
     rotate_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
 
-    updated_credentials = get_mysql_server_credentials(juju, random_unit, ROOT_USERNAME)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
     assert updated_credentials["password"] != old_credentials["password"]
 
 
