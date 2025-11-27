@@ -113,7 +113,9 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
         keystone_users.append(f"keystone@{unit_address}")
 
-    await check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
+    await check_keystone_users_existence(
+        juju, APP_NAME, server_config_credentials, keystone_users, []
+    )
 
     # Deploy and test another deployment of keystone
     deploy_and_relate_keystone_with_mysql(juju, ANOTHER_KEYSTONE_APP_NAME, 2)

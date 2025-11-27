@@ -105,7 +105,9 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         keystone_users.append(f"keystone@{unit_address}")
         keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    await check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
+    await check_keystone_users_existence(
+        juju, APP_NAME, server_config_credentials, keystone_users, []
+    )
 
     # Deploy and test another deployment of keystone
     juju.deploy(
