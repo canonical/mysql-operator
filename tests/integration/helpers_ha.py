@@ -346,7 +346,7 @@ def get_mysql_primary_unit(juju: Juju, app_name: str, unit_name: str | None = No
 def get_mysql_server_credentials(
     juju: Juju, unit_name: str, username: str = SERVER_CONFIG_USERNAME
 ) -> dict[str, str]:
-    """Helper to run an action to retrieve server config credentials.
+    """Helper that runs an action to retrieve credentials for given username on mysql-test-app.
 
     Args:
         juju: The Juju model
@@ -369,7 +369,7 @@ def get_mysql_server_credentials(
 def get_legacy_mysql_credentials(
     juju: Juju, unit_name: str, username: str = ROOT_USERNAME
 ) -> dict[str, str]:
-    """Helper to run an action to retrieve server config credentials.
+    """Helper that runs an action to retrieve legacy credentials for given username on mysql-test-app.
 
     Args:
         juju: The Juju model
