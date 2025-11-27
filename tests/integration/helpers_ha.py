@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import itertools
 import json
 import subprocess
 from collections.abc import Callable, Generator
@@ -23,7 +22,6 @@ from tenacity import (
 
 from constants import ROOT_USERNAME, SERVER_CONFIG_USERNAME
 
-from .connector import MysqlConnector
 from .helpers import execute_queries_on_unit, get_read_only_endpoint_ips
 
 CHARM_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -33,43 +31,6 @@ TEST_DATABASE_NAME = "testing"
 
 JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
-
-
-def execute_queries_on_unit_sync(
-    unit_address: str,
-    username: str,
-    password: str,
-    queries: list[str],
-    commit: bool = False,
-    raw: bool = False,
-) -> list:
-    """Execute given MySQL queries on a unit.
-
-    Args:
-        unit_address: The public IP address of the unit to execute the queries on
-        username: The MySQL username
-        password: The MySQL password
-        queries: A list of queries to execute
-        commit: A keyword arg indicating whether there are any writes queries
-        raw: Whether MySQL results are returned as is, rather than converted to Python types.
-
-    Returns:
-        A list of rows that were potentially queried
-    """
-    config = {
-        "user": username,
-        "password": password,
-        "host": unit_address,
-        "raise_on_warnings": False,
-        "raw": raw,
-    }
-
-    with MysqlConnector(config, commit) as cursor:
-        for query in queries:
-            cursor.execute(query)
-        output = list(itertools.chain(*cursor.fetchall()))
-
-    return output
 
 
 def check_mysql_instances_online(
@@ -617,7 +578,7 @@ def wait_for_unit_message(app_name: str, unit_name: str, unit_message: str) -> J
     )
 
 
-def check_keystone_users_existence(
+async def check_keystone_users_existence(
     juju: Juju,
     app_name: str,
     server_config_credentials: dict[str, str],
@@ -644,7 +605,7 @@ def check_keystone_users_existence(
     unit_address = get_unit_ip(juju, app_name, unit_name)
 
     # Retrieve all users in the database
-    output = execute_queries_on_unit_sync(
+    output = await execute_queries_on_unit(
         unit_address,
         server_config_credentials["username"],
         server_config_credentials["password"],
@@ -660,7 +621,7 @@ def check_keystone_users_existence(
         assert user not in output, "User(s) that should not exist are in the database"
 
 
-def check_successful_keystone_migration(
+async def check_successful_keystone_migration(
     juju: Juju, app_name: str, server_config_credentials: dict
 ) -> None:
     """Checks that the keystone application is successfully migrated in mysql.
@@ -678,7 +639,7 @@ def check_successful_keystone_migration(
         unit_address = get_unit_ip(juju, app_name, unit_name)
 
         # Ensure 'keystone' database exists in mysql
-        output = execute_queries_on_unit_sync(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],
@@ -687,7 +648,7 @@ def check_successful_keystone_migration(
         assert "keystone" in output, "keystone database not found in mysql"
 
         # Ensure that keystone tables exist in the 'keystone' database
-        output = execute_queries_on_unit_sync(
+        output = await execute_queries_on_unit(
             unit_address,
             server_config_credentials["username"],
             server_config_credentials["password"],

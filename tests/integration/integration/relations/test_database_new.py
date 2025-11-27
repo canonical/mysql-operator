@@ -12,6 +12,7 @@ from constants import DB_RELATION_NAME, PASSWORD_LENGTH, ROOT_USERNAME
 from utils import generate_random_password
 
 from ... import markers
+from ...helpers import execute_queries_on_unit
 from ...helpers_ha import (
     CHARM_METADATA,
     MINUTE_SECS,
@@ -25,9 +26,6 @@ from ...helpers_ha import (
     rotate_mysql_server_credentials,
     scale_app_units,
     wait_for_apps_status,
-)
-from ...helpers_ha import (
-    execute_queries_on_unit_sync as execute_queries_on_unit,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,7 +72,7 @@ def test_build_and_deploy(juju: Juju, charm):
 
 
 @pytest.mark.abort_on_fail
-def test_password_rotation(juju: Juju):
+async def test_password_rotation(juju: Juju):
     """Rotate password and confirm changes."""
     random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
 
@@ -95,7 +93,7 @@ def test_password_rotation(juju: Juju):
 
     # verify that the new password actually works by querying the db
     show_tables_sql = ["SHOW DATABASES"]
-    output = execute_queries_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],
@@ -105,7 +103,7 @@ def test_password_rotation(juju: Juju):
 
 
 @pytest.mark.abort_on_fail
-def test_password_rotation_silent(juju: Juju):
+async def test_password_rotation_silent(juju: Juju):
     """Rotate password and confirm changes."""
     random_unit = get_app_units(juju, DATABASE_APP_NAME)[-1]
 
@@ -123,7 +121,7 @@ def test_password_rotation_silent(juju: Juju):
 
     # verify that the new password actually works by querying the db
     show_tables_sql = ["SHOW DATABASES"]
-    output = execute_queries_on_unit(
+    output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
         updated_credentials["password"],

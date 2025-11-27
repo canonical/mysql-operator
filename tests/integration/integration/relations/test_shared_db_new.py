@@ -74,7 +74,7 @@ def deploy_and_relate_keystone_with_mysql(
 
 
 @pytest.mark.abort_on_fail
-def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
+async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
 
     Args:
@@ -103,7 +103,7 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
     # Deploy and test the first deployment of keystone
     deploy_and_relate_keystone_with_mysql(juju, KEYSTONE_APP_NAME, 2)
-    check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
     keystone_users = []
     for unit_name in get_app_units(juju, KEYSTONE_APP_NAME):
@@ -111,11 +111,11 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
         keystone_users.append(f"keystone@{unit_address}")
 
-    check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
+    await check_keystone_users_existence(juju, APP_NAME, server_config_credentials, keystone_users, [])
 
     # Deploy and test another deployment of keystone
     deploy_and_relate_keystone_with_mysql(juju, ANOTHER_KEYSTONE_APP_NAME, 2)
-    check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
     another_keystone_users = []
     for unit_name in get_app_units(juju, ANOTHER_KEYSTONE_APP_NAME):
@@ -123,7 +123,7 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
         another_keystone_users.append(f"keystone@{unit_address}")
 
-    check_keystone_users_existence(
+    await check_keystone_users_existence(
         juju, APP_NAME, server_config_credentials, keystone_users + another_keystone_users, []
     )
 
@@ -132,7 +132,7 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     scale_app_units(juju, ANOTHER_KEYSTONE_APP_NAME, 0)
     juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
 
-    check_keystone_users_existence(
+    await check_keystone_users_existence(
         juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
     )
 
@@ -146,7 +146,7 @@ def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
         timeout=FAST_WAIT_TIMEOUT,
     )
 
-    check_keystone_users_existence(
+    await check_keystone_users_existence(
         juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
     )
 

@@ -8,10 +8,10 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
+from ...helpers import execute_queries_on_unit
 from ...helpers_ha import (
     CHARM_METADATA,
     MINUTE_SECS,
-    execute_queries_on_unit_sync,
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,
@@ -53,7 +53,7 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
 
 
 @pytest.mark.abort_on_fail
-def test_charmed_dba_role(juju: Juju):
+async def test_charmed_dba_role(juju: Juju):
     """Test the instance-level DBA role."""
     # configure integrator and relate
     juju.config(
@@ -78,7 +78,7 @@ def test_charmed_dba_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that the instance-level DBA role can create new databases")
-    execute_queries_on_unit_sync(
+    await execute_queries_on_unit(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
@@ -92,7 +92,7 @@ def test_charmed_dba_role(juju: Juju):
     results = task.results
 
     logger.info("Checking that the instance-level DBA role can see all databases")
-    rows = execute_queries_on_unit_sync(
+    rows = await execute_queries_on_unit(
         primary_unit_address,
         results["mysql"]["username"],
         results["mysql"]["password"],
