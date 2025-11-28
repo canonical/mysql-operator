@@ -142,10 +142,11 @@ def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
         timeout=20 * MINUTE_SECS,
     )
 
-    juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
-        timeout=20 * MINUTE_SECS,
-    )
+    if num_units > 0:
+        juju.wait(
+            ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
+            timeout=20 * MINUTE_SECS,
+        )
 
 
 def get_unit_by_number(juju: Juju, app_name: str, unit_number: int) -> str:
