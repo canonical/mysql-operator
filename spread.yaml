@@ -76,10 +76,9 @@ backends:
     allocate: |
       sudo tee /etc/ssh/sshd_config.d/10-spread-github-ci.conf << 'EOF'
       PasswordAuthentication yes
-      PermitEmptyPasswords yes
       EOF
 
-      sudo passwd --delete "$USER"
+      echo "runner:$SPREAD_PASSWORD" | sudo chpasswd
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
@@ -96,7 +95,9 @@ backends:
     systems:
       - ubuntu-24.04:
           username: runner
-      - ubuntu-24.04-arm:
+      # TODO: Revert to ubuntu-24.04-arm once Kernel 6.14 issue is solved
+      # https://gitlab.com/apparmor/apparmor/-/issues/571
+      - ubuntu-22.04-arm:
           username: runner
           variants:
             - -juju29
