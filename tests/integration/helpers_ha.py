@@ -6,8 +6,10 @@ import json
 import subprocess
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
+from pathlib import Path
 
 import jubilant_backports
+import yaml
 from jubilant_backports import Juju
 from jubilant_backports.statustypes import Status
 from tenacity import (
@@ -18,9 +20,11 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import SERVER_CONFIG_USERNAME
+from constants import ROOT_USERNAME, SERVER_CONFIG_USERNAME
 
 from .helpers import execute_queries_on_unit
+
+CHARM_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 
 MINUTE_SECS = 60
 TEST_DATABASE_NAME = "testing"
@@ -92,6 +96,17 @@ def get_app_leader(juju: Juju, app_name: str) -> str:
     raise Exception("No leader unit found")
 
 
+def remove_leader_unit(juju: Juju, app_name: str) -> None:
+    """Removes the leader unit of a specified application.
+
+    Args:
+        juju: The Juju instance
+        app_name: The name of the application
+    """
+    leader_unit = get_app_leader(juju, app_name)
+    juju.remove_unit(leader_unit)
+
+
 def get_app_name(juju: Juju, charm_name: str) -> str | None:
     """Get the application name for the given charm."""
     model_status = juju.status()
@@ -126,11 +141,12 @@ def scale_app_units(juju: Juju, app_name: str, num_units: int) -> None:
         ready=lambda status: len(status.apps[app_name].units) == num_units,
         timeout=20 * MINUTE_SECS,
     )
-    juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
-        error=jubilant_backports.any_blocked,
-        timeout=20 * MINUTE_SECS,
-    )
+
+    if num_units > 0:
+        juju.wait(
+            ready=wait_for_apps_status(jubilant_backports.all_active, app_name),
+            timeout=20 * MINUTE_SECS,
+        )
 
 
 def get_unit_by_number(juju: Juju, app_name: str, unit_number: int) -> str:
@@ -268,6 +284,52 @@ def get_mysql_primary_unit(juju: Juju, app_name: str, unit_name: str | None = No
     raise Exception("No MySQL primary node found")
 
 
+def get_mysql_server_credentials(
+    juju: Juju, unit_name: str, username: str = SERVER_CONFIG_USERNAME
+) -> dict[str, str]:
+    """Helper that runs an action to retrieve credentials for given username on mysql-test-app.
+
+    Args:
+        juju: The Juju model
+        unit_name: The juju unit on which to run the get-password action for server-config credentials
+        username: The username to use
+
+    Returns:
+        A dictionary with the server config username and password
+    """
+    credentials_task = juju.run(
+        unit=unit_name,
+        action="get-password",
+        params={"username": username},
+    )
+    credentials_task.raise_on_failure()
+
+    return credentials_task.results
+
+
+def get_legacy_mysql_credentials(
+    juju: Juju, unit_name: str, username: str = ROOT_USERNAME
+) -> dict[str, str]:
+    """Helper that runs an action to retrieve legacy credentials for given username on mysql-test-app.
+
+    Args:
+        juju: The Juju model
+        unit_name: The juju unit on which to run the get-password action for server-config credentials
+        username: The username to use
+
+    Returns:
+        A dictionary with the server config username and password
+    """
+    credentials_task = juju.run(
+        unit=unit_name,
+        action="get-legacy-mysql-credentials",
+        params={"username": username},
+    )
+    credentials_task.raise_on_failure()
+
+    return credentials_task.results
+
+
 async def get_mysql_max_written_value(juju: Juju, app_name: str, unit_name: str) -> int:
     """Retrieve the max written value in the MySQL database.
 
@@ -276,17 +338,12 @@ async def get_mysql_max_written_value(juju: Juju, app_name: str, unit_name: str)
         app_name: The application name.
         unit_name: The unit name.
     """
-    credentials_task = juju.run(
-        unit=unit_name,
-        action="get-password",
-        params={"username": SERVER_CONFIG_USERNAME},
-    )
-    credentials_task.raise_on_failure()
+    credentials = get_mysql_server_credentials(juju, unit_name)
 
     output = await execute_queries_on_unit(
         get_unit_ip(juju, app_name, unit_name),
-        credentials_task.results["username"],
-        credentials_task.results["password"],
+        credentials["username"],
+        credentials["password"],
         ["SELECT MAX(number) FROM `continuous_writes`.`data`;"],
     )
     return output[0]
@@ -303,17 +360,12 @@ async def get_mysql_variable_value(
         unit_name: The unit name.
         variable_name: The variable name.
     """
-    credentials_task = juju.run(
-        unit=unit_name,
-        action="get-password",
-        params={"username": SERVER_CONFIG_USERNAME},
-    )
-    credentials_task.raise_on_failure()
+    credentials = get_mysql_server_credentials(juju, unit_name)
 
     output = await execute_queries_on_unit(
         get_unit_ip(juju, app_name, unit_name),
-        credentials_task.results["username"],
-        credentials_task.results["password"],
+        credentials["username"],
+        credentials["password"],
         [f"SELECT @@{variable_name};"],
     )
     return output[0]
@@ -372,12 +424,7 @@ async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, val
     mysql_leader = get_app_leader(juju, app_name)
     mysql_primary = get_mysql_primary_unit(juju, app_name)
 
-    credentials_task = juju.run(
-        unit=mysql_leader,
-        action="get-password",
-        params={"username": SERVER_CONFIG_USERNAME},
-    )
-    credentials_task.raise_on_failure()
+    credentials = get_mysql_server_credentials(juju, mysql_leader)
 
     insert_queries = [
         f"CREATE DATABASE IF NOT EXISTS `{TEST_DATABASE_NAME}`",
@@ -387,8 +434,8 @@ async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, val
 
     await execute_queries_on_unit(
         get_unit_ip(juju, app_name, mysql_primary),
-        credentials_task.results["username"],
-        credentials_task.results["password"],
+        credentials["username"],
+        credentials["password"],
         insert_queries,
         commit=True,
     )
@@ -405,12 +452,7 @@ async def remove_mysql_test_data(juju: Juju, app_name: str, table_name: str) -> 
     mysql_leader = get_app_leader(juju, app_name)
     mysql_primary = get_mysql_primary_unit(juju, app_name)
 
-    credentials_task = juju.run(
-        unit=mysql_leader,
-        action="get-password",
-        params={"username": SERVER_CONFIG_USERNAME},
-    )
-    credentials_task.raise_on_failure()
+    credentials = get_mysql_server_credentials(juju, mysql_leader)
 
     remove_queries = [
         f"DROP TABLE IF EXISTS `{TEST_DATABASE_NAME}`.`{table_name}`",
@@ -419,8 +461,8 @@ async def remove_mysql_test_data(juju: Juju, app_name: str, table_name: str) -> 
 
     await execute_queries_on_unit(
         get_unit_ip(juju, app_name, mysql_primary),
-        credentials_task.results["username"],
-        credentials_task.results["password"],
+        credentials["username"],
+        credentials["password"],
         remove_queries,
         commit=True,
     )
@@ -438,12 +480,7 @@ async def verify_mysql_test_data(juju: Juju, app_name: str, table_name: str, val
     mysql_app_leader = get_app_leader(juju, app_name)
     mysql_app_units = get_app_units(juju, app_name)
 
-    credentials_task = juju.run(
-        unit=mysql_app_leader,
-        action="get-password",
-        params={"username": SERVER_CONFIG_USERNAME},
-    )
-    credentials_task.raise_on_failure()
+    credentials = get_mysql_server_credentials(juju, mysql_app_leader)
 
     select_queries = [
         f"SELECT id FROM `{TEST_DATABASE_NAME}`.`{table_name}` WHERE id = '{value}'",
@@ -458,8 +495,8 @@ async def verify_mysql_test_data(juju: Juju, app_name: str, table_name: str, val
             with attempt:
                 output = await execute_queries_on_unit(
                     get_unit_ip(juju, app_name, unit_name),
-                    credentials_task.results["username"],
-                    credentials_task.results["password"],
+                    credentials["username"],
+                    credentials["password"],
                     select_queries,
                 )
                 assert output[0] == value
@@ -481,6 +518,11 @@ def wait_for_apps_status(jubilant_status_func: JujuAppsStatusFn, *apps: str) -> 
     ))
 
 
+def wait_for_app_status(app_name: str, app_status: str) -> JujuModelStatusFn:
+    """Returns whether a Juju app has a specific status."""
+    return lambda status: (status.apps[app_name].app_status.current == app_status)
+
+
 def wait_for_unit_status(app_name: str, unit_name: str, unit_status: str) -> JujuModelStatusFn:
     """Returns whether a Juju unit to have a specific status."""
     return lambda status: (
@@ -493,3 +535,82 @@ def wait_for_unit_message(app_name: str, unit_name: str, unit_message: str) -> J
     return lambda status: (
         status.apps[app_name].units[unit_name].workload_status.message == unit_message
     )
+
+
+async def check_keystone_users_existence(
+    juju: Juju,
+    app_name: str,
+    server_config_credentials: dict[str, str],
+    users_that_should_exist: list[str],
+    users_that_should_not_exist: list[str],
+) -> None:
+    """Checks that keystone users exist in the database.
+
+    Args:
+        juju: The Juju instance
+        app_name: The name of the application
+        server_config_credentials: The credentials for the server config user
+        users_that_should_exist: List of users that should exist in the database
+        users_that_should_not_exist: List of users that should not exist in the database
+    """
+    random_unit = get_app_units(juju, app_name)[0]
+    server_config_credentials = get_mysql_server_credentials(juju, random_unit)
+
+    select_users_sql = [
+        "SELECT CONCAT(user, '@', host) FROM mysql.user",
+    ]
+
+    unit_name = get_app_units(juju, app_name)[0]
+    unit_address = get_unit_ip(juju, app_name, unit_name)
+
+    # Retrieve all users in the database
+    output = await execute_queries_on_unit(
+        unit_address,
+        server_config_credentials["username"],
+        server_config_credentials["password"],
+        select_users_sql,
+    )
+
+    # Assert users that should exist
+    for user in users_that_should_exist:
+        assert user in output, "User(s) that should exist are not in the database"
+
+    # Assert users that should not exist
+    for user in users_that_should_not_exist:
+        assert user not in output, "User(s) that should not exist are in the database"
+
+
+async def check_successful_keystone_migration(
+    juju: Juju, app_name: str, server_config_credentials: dict
+) -> None:
+    """Checks that the keystone application is successfully migrated in mysql.
+
+    Args:
+        juju: The Juju instance
+        server_config_credentials: The credentials for the server config user
+    """
+    show_tables_sql = ["SHOW DATABASES"]
+    get_count_keystone_tables_sql = [
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'keystone'",
+    ]
+
+    for unit_name in get_app_units(juju, app_name):
+        unit_address = get_unit_ip(juju, app_name, unit_name)
+
+        # Ensure 'keystone' database exists in mysql
+        output = await execute_queries_on_unit(
+            unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            show_tables_sql,
+        )
+        assert "keystone" in output, "keystone database not found in mysql"
+
+        # Ensure that keystone tables exist in the 'keystone' database
+        output = await execute_queries_on_unit(
+            unit_address,
+            server_config_credentials["username"],
+            server_config_credentials["password"],
+            get_count_keystone_tables_sql,
+        )
+        assert output[0] > 0, "No keystone tables found in the 'keystone' database"
