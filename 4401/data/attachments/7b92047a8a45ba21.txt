@@ -1,0 +1,62 @@
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator1/0 [executing] blocked: Please relate the data-integrator with the desired product
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator2/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m integration.integration.roles.test_instance_roles:test_instance_roles.py:174 Checking that when no role is specified the created user can do everything
+[32mINFO    [0m integration.integration.roles.test_instance_roles:test_instance_roles.py:194 Checking that the charmed_dml role can read from an existing table
+[32mINFO    [0m integration.integration.roles.test_instance_roles:test_instance_roles.py:209 Checking that the charmed_dml role can write into an existing table
+[32mINFO    [0m integration.integration.roles.test_instance_roles:test_instance_roles.py:220 Checking that the charmed_dml role cannot create a new table
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator1/0 [idle] active: 
+  data-integrator2/0 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  18:15:15Z
+
+App               Version          Status   Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator1                   blocked      1  data-integrator  latest/stable  180  no       Please relate the data-integrator with the desired product
+data-integrator2                   blocked      1  data-integrator  latest/stable  180  no       Please relate the data-integrator with the desired product
+mysql             8.0.42-0ubun...  active       3  mysql                             0  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports           Message
+data-integrator1/0*  blocked   idle   0        10.139.46.84                    Please relate the data-integrator with the desired product
+data-integrator2/0*  blocked   idle   1        10.139.46.141                   Please relate the data-integrator with the desired product
+mysql/0*             active    idle   2        10.139.46.150   3306,33060/tcp  
+mysql/1              active    idle   3        10.139.46.24    3306,33060/tcp  
+mysql/2              active    idle   4        10.139.46.80    3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.139.46.84   juju-deab0b-0  ubuntu@24.04  runnervmg1sw1  Running
+1        started  10.139.46.141  juju-deab0b-1  ubuntu@24.04  runnervmg1sw1  Running
+2        started  10.139.46.150  juju-deab0b-2  ubuntu@22.04  runnervmg1sw1  Running
+3        started  10.139.46.24   juju-deab0b-3  ubuntu@22.04  runnervmg1sw1  Running
+4        started  10.139.46.80   juju-deab0b-4  ubuntu@22.04  runnervmg1sw1  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 18:08:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:08:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:08:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:08:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:09:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:09:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 18:10:21 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-4: 18:10:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 18:10:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 18:10:58 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 18:11:07 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 18:13:38 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "a2c650ea-a46c-4e41-881b-3a47dfdeab0b:r#5#data-integrator1": settings a2c650ea-a46c-4e41-881b-3a47dfdeab0b:r#5#data-integrator1 not found (not found)
+unit-mysql-0: 18:15:03 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "a2c650ea-a46c-4e41-881b-3a47dfdeab0b:r#6#data-integrator1": settings a2c650ea-a46c-4e41-881b-3a47dfdeab0b:r#6#data-integrator1 not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

@@ -1,0 +1,47 @@
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  data-integrator/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+  mysql/0 [idle] active: Primary
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+[32mINFO    [0m integration.integration.roles.test_instance_dba_role:test_instance_dba_role.py:68 Checking that the instance-level DBA role can create new databases
+[32mINFO    [0m integration.integration.roles.test_instance_dba_role:test_instance_dba_role.py:80 Checking that the instance-level DBA role can see all databases
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  18:13:25Z
+
+App              Version          Status  Scale  Charm            Channel        Rev  Exposed  Message
+data-integrator                   active      1  data-integrator  latest/stable  180  no       
+mysql            8.0.42-0ubun...  active      3  mysql                             0  no       
+
+Unit                Workload  Agent  Machine  Public address  Ports           Message
+data-integrator/0*  active    idle   0        10.26.32.2                      
+mysql/0*            active    idle   1        10.26.32.218    3306,33060/tcp  
+mysql/1             active    idle   2        10.26.32.60                     
+mysql/2             active    idle   3        10.26.32.15     3306,33060/tcp  
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.26.32.2    juju-36ce20-0  ubuntu@24.04  runnervmg1sw1  Running
+1        started  10.26.32.218  juju-36ce20-1  ubuntu@22.04  runnervmg1sw1  Running
+2        started  10.26.32.60   juju-36ce20-2  ubuntu@22.04  runnervmg1sw1  Running
+3        started  10.26.32.15   juju-36ce20-3  ubuntu@22.04  runnervmg1sw1  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 18:07:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:07:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:08:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:08:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 18:09:44 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-2: 18:09:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:09:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 18:10:45 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 18:10:54 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

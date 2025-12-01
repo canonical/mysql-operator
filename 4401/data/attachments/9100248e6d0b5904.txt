@@ -1,0 +1,50 @@
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+  mysql/4 [idle] active: 
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql-test-app/0 [idle] active: 
+  mysql-test-app/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  18:30:22Z
+
+App             Version          Status   Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.42-0ubun...  active       2  mysql                          0  no       
+mysql-test-app  0.0.2            waiting      2  mysql-test-app  latest/edge   85  no       
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  waiting   idle   0        10.19.134.217                   
+mysql-test-app/1   waiting   idle   1        10.19.134.234                   
+mysql/1*           active    idle   3        10.19.134.41    3306,33060/tcp  Primary
+mysql/4            active    idle   6        10.19.134.245   3306,33060/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.19.134.217  juju-f7e5a8-0  ubuntu@22.04  runnervmg1sw1  Running
+1        started  10.19.134.234  juju-f7e5a8-1  ubuntu@22.04  runnervmg1sw1  Running
+3        started  10.19.134.41   juju-f7e5a8-3  ubuntu@22.04  runnervmg1sw1  Running
+6        started  10.19.134.245  juju-f7e5a8-6  ubuntu@22.04  runnervmg1sw1  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 18:08:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:08:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:10:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:10:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 18:10:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 18:10:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:10:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:11:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:11:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 18:11:36 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-1: 18:11:47 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-0: 18:11:58 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-5: 18:16:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 18:16:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 18:18:03 ERROR unit.mysql/3.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-6: 18:25:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 18:25:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-4: 18:26:25 ERROR unit.mysql/4.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
