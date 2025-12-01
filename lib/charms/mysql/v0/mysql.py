@@ -119,8 +119,9 @@ LIBID = "8c1428f06b1b4ec8bf98b7d980a38a8c"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
+LIBPATCH = 98
 
-LIBPATCH = 97
+PYDEPS = ["mysql_shell_client ~= 0.3"]
 
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
