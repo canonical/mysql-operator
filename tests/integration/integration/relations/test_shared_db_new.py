@@ -34,49 +34,6 @@ FAST_WAIT_TIMEOUT = 15 * 60
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-def deploy_and_relate_keystone_with_mysql(
-    juju: Juju,
-    keystone_application_name: str,
-    number_of_units: int,
-) -> None:
-    """Helper function to deploy and relate keystone with mysql.
-
-    Args:
-        juju: The Juju instance
-        keystone_application_name: The name of the keystone application to deploy
-        number_of_units: The number of keystone units to deploy
-    """
-    # Deploy keystone
-    logger.info("Deploy keystone..")
-    juju.deploy(
-        "keystone",
-        keystone_application_name,
-        channel="yoga/stable",
-        base="ubuntu@22.04",
-        num_units=number_of_units,
-    )
-
-    juju.wait(
-        ready=lambda status: all((
-            wait_for_app_status(keystone_application_name, "waiting"),
-            *(
-                wait_for_unit_status(keystone_application_name, unit_name, "blocked")
-                for unit_name in status.get_units(keystone_application_name)
-            ),
-        )),
-        timeout=SLOW_WAIT_TIMEOUT,
-    )
-
-    # Relate keystone to mysql
-    logger.info("Relate keystone and mysql")
-    juju.integrate(f"{keystone_application_name}:shared-db", f"{APP_NAME}:shared-db")
-    logger.info("Wait keystone settle after relation")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_active, keystone_application_name),
-        timeout=SLOW_WAIT_TIMEOUT,
-    )
-
-
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     """Deploy the keystone bundle to test the 'shared-db' relation.
@@ -165,3 +122,46 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     # Scale down the mysql application
     scale_app_units(juju, APP_NAME, 0)
     juju.remove_application(APP_NAME)
+
+
+def deploy_and_relate_keystone_with_mysql(
+    juju: Juju,
+    keystone_application_name: str,
+    number_of_units: int,
+) -> None:
+    """Helper function to deploy and relate keystone with mysql.
+
+    Args:
+        juju: The Juju instance
+        keystone_application_name: The name of the keystone application to deploy
+        number_of_units: The number of keystone units to deploy
+    """
+    # Deploy keystone
+    logger.info("Deploy keystone..")
+    juju.deploy(
+        "keystone",
+        keystone_application_name,
+        channel="yoga/stable",
+        base="ubuntu@22.04",
+        num_units=number_of_units,
+    )
+
+    juju.wait(
+        ready=lambda status: all((
+            wait_for_app_status(keystone_application_name, "waiting"),
+            *(
+                wait_for_unit_status(keystone_application_name, unit_name, "blocked")
+                for unit_name in status.get_units(keystone_application_name)
+            ),
+        )),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )
+
+    # Relate keystone to mysql
+    logger.info("Relate keystone and mysql")
+    juju.integrate(f"{keystone_application_name}:shared-db", f"{APP_NAME}:shared-db")
+    logger.info("Wait keystone settle after relation")
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, keystone_application_name),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )

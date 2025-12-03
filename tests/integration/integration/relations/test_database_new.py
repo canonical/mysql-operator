@@ -41,52 +41,6 @@ TIMEOUT = 15 * MINUTE_SECS
 logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
-def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> bool:
-    """Checks that read-only-endpoints are correctly set.
-
-    Args:
-        juju: The Juju instance
-        app_name: The name of the application
-        relation_name: The name of the relation
-    """
-    relation_data = get_relation_data(juju=juju, app_name=app_name, rel_name=relation_name)
-    read_only_endpoint_ips = get_read_only_endpoint_ips(relation_data)
-    # check that the number of read-only-endpoints is correct
-    if len(get_app_units(juju, app_name)) - 1 != len(read_only_endpoint_ips):
-        return False
-    unit_ips = [
-        get_unit_ip(juju, app_name, unit_name) for unit_name in get_app_units(juju, app_name)
-    ]
-    # check that endpoints are the one of the application
-    return all(read_endpoint_ip in unit_ips for read_endpoint_ip in read_only_endpoint_ips)
-
-
-def rotate_mysql_server_credentials(
-    juju: Juju,
-    unit_name: str,
-    username: str = SERVER_CONFIG_USERNAME,
-    password: str | None = None,
-) -> None:
-    """Helper to run an action to rotate server config credentials.
-
-    Args:
-        juju: The Juju model
-        unit_name: The juju unit on which to run the rotate-password action for server-config credentials
-        username: The username to rotate the password for
-        password: The new password to set
-    """
-    params = {"username": username}
-    if password is not None:
-        params["password"] = password
-
-    rotate_task = juju.run(
-        unit=unit_name,
-        action="set-password",
-        params=params,
-    )
-    rotate_task.raise_on_failure()
-
-
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 def test_build_and_deploy(juju: Juju, charm):
@@ -276,3 +230,49 @@ def test_relation_broken(juju: Juju):
         error=jubilant_backports.any_blocked,
         timeout=TIMEOUT,
     )
+
+
+def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> bool:
+    """Checks that read-only-endpoints are correctly set.
+
+    Args:
+        juju: The Juju instance
+        app_name: The name of the application
+        relation_name: The name of the relation
+    """
+    relation_data = get_relation_data(juju=juju, app_name=app_name, rel_name=relation_name)
+    read_only_endpoint_ips = get_read_only_endpoint_ips(relation_data)
+    # check that the number of read-only-endpoints is correct
+    if len(get_app_units(juju, app_name)) - 1 != len(read_only_endpoint_ips):
+        return False
+    unit_ips = [
+        get_unit_ip(juju, app_name, unit_name) for unit_name in get_app_units(juju, app_name)
+    ]
+    # check that endpoints are the one of the application
+    return all(read_endpoint_ip in unit_ips for read_endpoint_ip in read_only_endpoint_ips)
+
+
+def rotate_mysql_server_credentials(
+    juju: Juju,
+    unit_name: str,
+    username: str = SERVER_CONFIG_USERNAME,
+    password: str | None = None,
+) -> None:
+    """Helper to run an action to rotate server config credentials.
+
+    Args:
+        juju: The Juju model
+        unit_name: The juju unit on which to run the rotate-password action for server-config credentials
+        username: The username to rotate the password for
+        password: The new password to set
+    """
+    params = {"username": username}
+    if password is not None:
+        params["password"] = password
+
+    rotate_task = juju.run(
+        unit=unit_name,
+        action="set-password",
+        params=params,
+    )
+    rotate_task.raise_on_failure()
