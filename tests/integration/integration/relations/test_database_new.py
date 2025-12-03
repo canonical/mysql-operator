@@ -52,11 +52,11 @@ def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> 
     # check that the number of read-only-endpoints is correct
     if len(get_app_units(juju, app_name)) - 1 != len(read_only_endpoint_ips):
         return False
-    app_ips = [
+    unit_ips = [
         get_unit_ip(juju, app_name, unit_name) for unit_name in get_app_units(juju, app_name)
     ]
     # check that endpoints are the one of the application
-    return all(read_endpoint_ip in app_ips for read_endpoint_ip in read_only_endpoint_ips)
+    return all(read_endpoint_ip in unit_ips for read_endpoint_ip in read_only_endpoint_ips)
 
 
 def rotate_mysql_server_credentials(
