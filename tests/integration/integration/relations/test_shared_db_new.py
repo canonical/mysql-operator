@@ -82,11 +82,10 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     Args:
         juju: The Juju instance
     """
-    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
     juju.deploy(
         charm,
         APP_NAME,
-        config=config,
+        config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
         num_units=3,
         base="ubuntu@22.04",
     )

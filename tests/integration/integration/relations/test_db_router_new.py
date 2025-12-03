@@ -36,12 +36,10 @@ FAST_WAIT_TIMEOUT = 30 * 60
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     """Deploy the keystone bundle to test the 'db-router' relation."""
-    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
-
     juju.deploy(
         charm,
         APP_NAME,
-        config=config,
+        config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
         num_units=1,
         base="ubuntu@22.04",
     )
