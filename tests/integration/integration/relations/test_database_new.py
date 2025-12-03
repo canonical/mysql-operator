@@ -38,6 +38,8 @@ APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "database"
 TIMEOUT = 15 * MINUTE_SECS
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> bool:
     """Checks that read-only-endpoints are correctly set.

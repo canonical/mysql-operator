@@ -31,6 +31,8 @@ ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
 SLOW_WAIT_TIMEOUT = 25 * 60
 FAST_WAIT_TIMEOUT = 15 * 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 def deploy_and_relate_keystone_with_mysql(
     juju: Juju,

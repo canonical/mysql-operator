@@ -31,6 +31,8 @@ TEST_USER = "testuser"
 TEST_DATABASE = "continuous_writes"
 TIMEOUT = 15 * 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed

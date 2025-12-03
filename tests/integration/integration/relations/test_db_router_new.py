@@ -32,6 +32,8 @@ ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME = "another-keystone-mysql-router"
 SLOW_WAIT_TIMEOUT = 45 * 60
 FAST_WAIT_TIMEOUT = 30 * 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
