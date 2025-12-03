@@ -14,7 +14,6 @@ from utils import generate_random_password
 from ... import markers
 from ...helpers import execute_queries_on_unit, get_read_only_endpoint_ips
 from ...helpers_ha import (
-    CHARM_METADATA,
     MINUTE_SECS,
     get_app_units,
     get_mysql_primary_unit,
@@ -28,7 +27,7 @@ from ...helpers_ha import (
 
 logger = logging.getLogger(__name__)
 
-DATABASE_APP_NAME = CHARM_METADATA["name"]
+DATABASE_APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
 
 APPLICATION_APP_NAME = "mysql-test-app"

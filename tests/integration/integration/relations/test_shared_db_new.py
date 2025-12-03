@@ -9,7 +9,6 @@ import pytest
 from jubilant_backports import Juju
 
 from ...helpers_ha import (
-    CHARM_METADATA,
     check_keystone_users_existence,
     check_successful_keystone_migration,
     get_app_units,
@@ -24,7 +23,7 @@ from ...helpers_ha import (
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = CHARM_METADATA["name"]
+APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
 KEYSTONE_APP_NAME = "keystone"
 ANOTHER_KEYSTONE_APP_NAME = "another-keystone"

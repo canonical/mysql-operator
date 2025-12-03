@@ -10,7 +10,6 @@ from jubilant_backports import Juju
 
 from ...helpers import execute_queries_on_unit
 from ...helpers_ha import (
-    CHARM_METADATA,
     MINUTE_SECS,
     get_app_units,
     get_mysql_primary_unit,
@@ -20,7 +19,7 @@ from ...helpers_ha import (
 
 logger = logging.getLogger(__name__)
 
-DATABASE_APP_NAME = CHARM_METADATA["name"]
+DATABASE_APP_NAME = "mysql"
 INTEGRATOR_APP_NAME = "data-integrator"
 
 TIMEOUT = 15 * MINUTE_SECS

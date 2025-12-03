@@ -12,14 +12,13 @@ from ...helpers import (
     is_connection_possible,
 )
 from ...helpers_ha import (
-    CHARM_METADATA,
     get_legacy_mysql_credentials,
     wait_for_apps_status,
 )
 
 logger = logging.getLogger(__name__)
 
-DATABASE_APP_NAME = CHARM_METADATA["name"]
+DATABASE_APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
 
 APPLICATION_APP_NAME = "mysql-test-app"
