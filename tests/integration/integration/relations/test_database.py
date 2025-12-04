@@ -2,36 +2,32 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
-from tenacity import AsyncRetrying, RetryError, stop_after_delay, wait_fixed
+from jubilant_backports import Juju
 
 from constants import DB_RELATION_NAME, PASSWORD_LENGTH, ROOT_USERNAME, SERVER_CONFIG_USERNAME
 from utils import generate_random_password
 
 from ... import markers
-from ...helpers import (
-    check_read_only_endpoints,
-    execute_queries_on_unit,
-    fetch_credentials,
-    get_primary_unit,
+from ...helpers import execute_queries_on_unit, get_read_only_endpoint_ips
+from ...helpers_ha import (
+    MINUTE_SECS,
+    get_app_units,
+    get_mysql_primary_unit,
+    get_mysql_server_credentials,
     get_relation_data,
-    is_relation_broken,
-    is_relation_joined,
+    get_unit_ip,
     remove_leader_unit,
-    rotate_credentials,
-    scale_application,
+    scale_app_units,
+    wait_for_apps_status,
 )
 
 logger = logging.getLogger(__name__)
 
-DB_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-DATABASE_APP_NAME = DB_METADATA["name"]
+DATABASE_APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
 
 APPLICATION_APP_NAME = "mysql-test-app"
@@ -39,93 +35,60 @@ APPLICATION_APP_NAME = "mysql-test-app"
 APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 
 ENDPOINT = "database"
-TIMEOUT = 15 * 60
+TIMEOUT = 15 * MINUTE_SECS
+
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
+def test_build_and_deploy(juju: Juju, charm):
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
-    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
-
-    await asyncio.gather(
-        ops_test.model.deploy(
-            charm,
-            application_name=DATABASE_APP_NAME,
-            config=config,
-            num_units=3,
-            base="ubuntu@22.04",
-        ),
-        ops_test.model.deploy(
-            APPLICATION_APP_NAME,
-            application_name=APPLICATION_APP_NAME,
-            num_units=2,
-            channel="latest/edge",
-            base="ubuntu@22.04",
-        ),
+    juju.deploy(
+        charm,
+        DATABASE_APP_NAME,
+        config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
+        num_units=3,
+        base="ubuntu@22.04",
+    )
+    juju.deploy(
+        APPLICATION_APP_NAME,
+        num_units=2,
+        channel="latest/edge",
+        base="ubuntu@22.04",
     )
 
-    # Reduce the update_status frequency until the cluster is deployed
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
-        )
-
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
-        )
-
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME],
-                status="active",
-                raise_on_blocked=True,
-                timeout=TIMEOUT,
-            ),
-            ops_test.model.wait_for_idle(
-                apps=[APPLICATION_APP_NAME],
-                status="waiting",
-                raise_on_blocked=True,
-                timeout=TIMEOUT,
-            ),
-        )
-
-    assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
-
-    for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-        assert unit.workload_status == "active"
-
-    assert len(ops_test.model.applications[APPLICATION_APP_NAME].units) == 2
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_waiting, APPLICATION_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_password_rotation(ops_test: OpsTest):
+async def test_password_rotation(juju: Juju):
     """Rotate password and confirm changes."""
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
-
-    old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
-
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
-    primary_unit_address = await primary_unit.get_public_address()
-    logger.debug(
-        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
-    )
+    primary_unit_name = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
+    primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit_name)
+    logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
+    old_credentials = get_mysql_server_credentials(juju, primary_unit_name)
     new_password = generate_random_password(PASSWORD_LENGTH)
 
-    await rotate_credentials(
-        unit=primary_unit, username=SERVER_CONFIG_USERNAME, password=new_password
-    )
+    rotate_mysql_server_credentials(juju, primary_unit_name, password=new_password)
 
-    updated_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit_name)
     assert updated_credentials["password"] != old_credentials["password"]
     assert updated_credentials["password"] == new_password
 
     # verify that the new password actually works by querying the db
-    show_tables_sql = [
-        "SHOW DATABASES",
-    ]
+    show_tables_sql = ["SHOW DATABASES"]
     output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
@@ -136,28 +99,21 @@ async def test_password_rotation(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_password_rotation_silent(ops_test: OpsTest):
+async def test_password_rotation_silent(juju: Juju):
     """Rotate password and confirm changes."""
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
-
-    old_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
-
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
-    primary_unit_address = await primary_unit.get_public_address()
-    logger.debug(
-        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
-    )
+    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
+    primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
+    logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
-    await rotate_credentials(unit=primary_unit, username=SERVER_CONFIG_USERNAME)
+    old_credentials = get_mysql_server_credentials(juju, primary_unit)
+    rotate_mysql_server_credentials(juju, primary_unit)
 
-    updated_credentials = await fetch_credentials(random_unit, SERVER_CONFIG_USERNAME)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit)
     assert updated_credentials["password"] != old_credentials["password"]
 
     # verify that the new password actually works by querying the db
-    show_tables_sql = [
-        "SHOW DATABASES",
-    ]
+    show_tables_sql = ["SHOW DATABASES"]
     output = await execute_queries_on_unit(
         primary_unit_address,
         updated_credentials["username"],
@@ -168,139 +124,154 @@ async def test_password_rotation_silent(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_password_rotation_root_user_implicit(ops_test: OpsTest):
-    """Rotate password and confirm changes."""
-    random_unit = ops_test.model.applications[DATABASE_APP_NAME].units[-1]
-
-    root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
-
-    old_credentials = await fetch_credentials(random_unit)
-    assert old_credentials["password"] == root_credentials["password"]
-
+def test_password_rotation_root_user(juju: Juju):
+    """Rotate password for root user and confirm changes."""
     # get primary unit first, need that to invoke set-password action
-    primary_unit = await get_primary_unit(ops_test, random_unit, DATABASE_APP_NAME)
-    primary_unit_address = await primary_unit.get_public_address()
-    logger.debug(
-        "Test succeeded Primary unit detected before password rotation is %s", primary_unit_address
-    )
+    primary_unit = get_mysql_primary_unit(juju, DATABASE_APP_NAME)
+    primary_unit_address = get_unit_ip(juju, DATABASE_APP_NAME, primary_unit)
+    logger.debug("Primary unit detected before password rotation is %s", primary_unit_address)
 
-    await rotate_credentials(unit=primary_unit)
+    old_credentials = get_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
+    rotate_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
 
-    updated_credentials = await fetch_credentials(random_unit)
+    updated_credentials = get_mysql_server_credentials(juju, primary_unit, ROOT_USERNAME)
     assert updated_credentials["password"] != old_credentials["password"]
-
-    updated_root_credentials = await fetch_credentials(random_unit, ROOT_USERNAME)
-    assert updated_credentials["password"] == updated_root_credentials["password"]
 
 
 @pytest.mark.abort_on_fail
 @markers.only_without_juju_secrets
-async def test_relation_creation_databag(ops_test: OpsTest):
+def test_relation_creation_databag(juju: Juju):
     """Relate charms and wait for the expected changes in status."""
-    await ops_test.model.relate(
-        f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
+    juju.integrate(f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}")
+
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, APPLICATION_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
     )
 
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
-        )
-
-        await ops_test.model.wait_for_idle(apps=APPS, status="active")
-
-    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    relation_data = get_relation_data(juju, APPLICATION_APP_NAME, DB_RELATION_NAME)
     assert {"password", "username"} <= set(relation_data[0]["application-data"])
 
 
 @pytest.mark.abort_on_fail
 @markers.only_with_juju_secrets
-async def test_relation_creation(ops_test: OpsTest):
-    """Relate charms and wait for the expected changes in status."""
-    await ops_test.model.relate(
-        f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
+def test_relation_creation(juju: Juju):
+    """Relate charms and wait for the expected changes in status (using juju secrets)."""
+    juju.integrate(f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}")
+
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, *APPS),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
     )
 
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: is_relation_joined(ops_test, ENDPOINT, ENDPOINT) == True  # noqa: E712
-        )
-
-        await ops_test.model.wait_for_idle(apps=APPS, status="active")
-
-    relation_data = await get_relation_data(ops_test, APPLICATION_APP_NAME, "database")
+    relation_data = get_relation_data(juju, APPLICATION_APP_NAME, DB_RELATION_NAME)
     assert not {"password", "username"} <= set(relation_data[0]["application-data"])
     assert "secret-user" in relation_data[0]["application-data"]
 
 
 @pytest.mark.abort_on_fail
-async def test_read_only_endpoints(ops_test: OpsTest):
+def test_read_only_endpoints(juju: Juju):
     """Check read-only-endpoints are correctly updated."""
-    relation_data = await get_relation_data(
-        ops_test=ops_test, application_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-    )
+    relation_data = get_relation_data(juju, DATABASE_APP_NAME, DB_RELATION_NAME)
     assert len(relation_data) == 1
-    await check_read_only_endpoints(
-        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-    )
+
+    check_read_only_endpoints(juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME)
 
     # increase the number of units
-    async with ops_test.fast_forward("60s"):
-        await scale_application(ops_test, DATABASE_APP_NAME, 4)
-    await check_read_only_endpoints(
-        ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-    )
+    scale_app_units(juju, DATABASE_APP_NAME, 4)
+    check_read_only_endpoints(juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME)
 
     # decrease the number of units
-    async with ops_test.fast_forward("60s"):
-        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+    scale_app_units(juju, DATABASE_APP_NAME, 2)
 
     # wait for the update of the endpoints
-    try:
-        async for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
-            with attempt:
-                # check update for read-only-endpoints
-                await check_read_only_endpoints(
-                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-                )
-    except RetryError:
-        assert False
+    juju.wait(
+        ready=lambda status: check_read_only_endpoints(
+            juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+        ),
+        timeout=5 * MINUTE_SECS,
+    )
 
     # increase the number of units
-    async with ops_test.fast_forward("60s"):
-        await scale_application(ops_test, DATABASE_APP_NAME, 3)
+    scale_app_units(juju, DATABASE_APP_NAME, 3)
 
     # remove the leader unit
-    await remove_leader_unit(ops_test=ops_test, application_name=DATABASE_APP_NAME)
+    remove_leader_unit(juju, app_name=DATABASE_APP_NAME)
 
     # wait for the update of the endpoints
-    try:
-        async for attempt in AsyncRetrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(20)):
-            with attempt:
-                # check update for read-only-endpoints
-                await check_read_only_endpoints(
-                    ops_test=ops_test, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
-                )
-    except RetryError:
-        assert False
+    juju.wait(
+        ready=lambda status: check_read_only_endpoints(
+            juju, app_name=DATABASE_APP_NAME, relation_name=DB_RELATION_NAME
+        ),
+        timeout=5 * MINUTE_SECS,
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_relation_broken(ops_test: OpsTest):
+def test_relation_broken(juju: Juju):
     """Remove relation and wait for the expected changes in status."""
-    await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
-        f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}"
+    juju.remove_relation(f"{APPLICATION_APP_NAME}:{ENDPOINT}", f"{DATABASE_APP_NAME}:{ENDPOINT}")
+
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_waiting, APPLICATION_APP_NAME),
+        error=jubilant_backports.any_blocked,
+        timeout=TIMEOUT,
     )
 
-    await ops_test.model.block_until(
-        lambda: is_relation_broken(ops_test, ENDPOINT, ENDPOINT) is True
-    )
 
-    async with ops_test.fast_forward("60s"):
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
-            ),
-            ops_test.model.wait_for_idle(
-                apps=[APPLICATION_APP_NAME], status="waiting", raise_on_blocked=True
-            ),
-        )
+def check_read_only_endpoints(juju: Juju, app_name: str, relation_name: str) -> bool:
+    """Checks that read-only-endpoints are correctly set.
+
+    Args:
+        juju: The Juju instance
+        app_name: The name of the application
+        relation_name: The name of the relation
+    """
+    relation_data = get_relation_data(juju=juju, app_name=app_name, rel_name=relation_name)
+    read_only_endpoint_ips = get_read_only_endpoint_ips(relation_data)
+    # check that the number of read-only-endpoints is correct
+    if len(get_app_units(juju, app_name)) - 1 != len(read_only_endpoint_ips):
+        return False
+    unit_ips = [
+        get_unit_ip(juju, app_name, unit_name) for unit_name in get_app_units(juju, app_name)
+    ]
+    # check that endpoints are the one of the application
+    return all(read_endpoint_ip in unit_ips for read_endpoint_ip in read_only_endpoint_ips)
+
+
+def rotate_mysql_server_credentials(
+    juju: Juju,
+    unit_name: str,
+    username: str = SERVER_CONFIG_USERNAME,
+    password: str | None = None,
+) -> None:
+    """Helper to run an action to rotate server config credentials.
+
+    Args:
+        juju: The Juju model
+        unit_name: The juju unit on which to run the rotate-password action for server-config credentials
+        username: The username to rotate the password for
+        password: The new password to set
+    """
+    params = {"username": username}
+    if password is not None:
+        params["password"] = password
+
+    rotate_task = juju.run(
+        unit=unit_name,
+        action="set-password",
+        params=params,
+    )
+    rotate_task.raise_on_failure()
