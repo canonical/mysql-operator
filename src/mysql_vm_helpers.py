@@ -241,7 +241,7 @@ class MySQL(MySQLBase):
             # make 3 tries to uninstall MySQL
             try:
                 logger.debug("Uninstalling MySQL")
-                subprocess.run(["/usr/sbin/pkill", "-9", "mysql"])
+                subprocess.run(["/usr/bin/pkill", "-9", "mysql"])
                 subprocess.run(
                     ["/usr/bin/snap", "remove", "charmed-mysql"],
                     check=True,
