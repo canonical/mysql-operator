@@ -13,21 +13,21 @@ from parameterized import parameterized
 SHORT_CLUSTER_TOPOLOGY = {
     "mysql-0": {
         "address": "mysql-0.mysql-endpoints:3306",
-        "memberrole": "secondary",
+        "memberRole": "secondary",
         "mode": "r/o",
-        "status": "online",
+        "status": "ONLINE",
     },
     "mysql-1": {
         "address": "mysql-1.mysql-endpoints:3306",
-        "memberrole": "primary",
+        "memberRole": "primary",
         "mode": "r/w",
-        "status": "online",
+        "status": "ONLINE",
     },
     "mysql-2": {
         "address": "mysql-2.mysql-endpoints:3306",
-        "memberrole": "",
+        "memberRole": "",
         "mode": "r/o",
-        "status": "offline",
+        "status": "OFFLINE",
     },
 }
 

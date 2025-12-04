@@ -130,8 +130,8 @@ class MySQLTLS(Object):
                 require_tls=True,
             )
 
-            # kill any unencrypted sessions to force clients to reconnect
-            self.charm._mysql.kill_unencrypted_sessions()
+            # kill all sessions to force clients to reconnect
+            self.charm._mysql.kill_client_sessions()
         except MySQLTLSSetupError:
             logger.error("Failed to set custom TLS configuration.")
             self.charm.unit.status = BlockedStatus("Failed to set TLS configuration.")

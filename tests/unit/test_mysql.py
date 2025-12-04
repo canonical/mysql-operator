@@ -4,9 +4,11 @@
 """Unit test for MySQL shared library."""
 
 import unittest
-from unittest.mock import call, patch
+from unittest.mock import call, patch, MagicMock
 
 import tenacity
+from mysql_shell import ExecutionError
+
 from charms.mysql.v0.mysql import (
     LEGACY_ROLE_ROUTER,
     MODERN_ROLE_ROUTER,
@@ -20,7 +22,6 @@ from charms.mysql.v0.mysql import (
     MySQLAddInstanceToClusterError,
     MySQLBase,
     MySQLCheckUserExistenceError,
-    MySQLClientError,
     MySQLClusterMetadataExistsError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLRolesError,
@@ -43,16 +44,13 @@ from charms.mysql.v0.mysql import (
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
-    MySQLGetVariableError,
     MySQLInitializeJujuOperationsTableError,
-    MySQLMemberState,
     MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPluginInstallError,
     MySQLPrepareBackupForRestoreError,
     MySQLPromoteClusterToPrimaryError,
     MySQLRemoveInstanceError,
-    MySQLRemoveInstanceRetryError,
     MySQLRemoveReplicaClusterError,
     MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
@@ -67,25 +65,25 @@ from charms.mysql.v0.mysql import (
 from constants import MYSQLD_SOCK_FILE, ROOT_USERNAME
 
 SHORT_CLUSTER_STATUS = {
-    "defaultreplicaset": {
+    "defaultReplicaSet": {
         "topology": {
             "mysql-k8s-0": {
                 "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
-                "memberrole": "secondary",
+                "memberRole": "SECONDARY",
                 "mode": "r/o",
-                "status": "online",
+                "status": "ONLINE",
             },
             "mysql-k8s-1": {
                 "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
-                "memberrole": "primary",
+                "memberRole": "PRIMARY",
                 "mode": "r/w",
-                "status": "online",
+                "status": "ONLINE",
             },
             "mysql-k8s-2": {
                 "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
-                "memberrole": "",
+                "memberRole": "",
                 "mode": "r/o",
-                "status": "offline",
+                "status": "OFFLINE",
             },
         }
     }
@@ -94,21 +92,21 @@ SHORT_CLUSTER_STATUS = {
 CLUSTER_SET_STATUS = {
     "clusters": {
         "test_cluster": {
-            "clusterrole": "replica",
-            "clustersetreplicationstatus": "ok",
-            "globalstatus": "ok",
+            "clusterRole": "REPLICA",
+            "clusterSetReplicationStatus": "OK",
+            "globalStatus": "OK",
         },
         "lisbon": {
-            "clusterrole": "primary",
-            "globalstatus": "ok",
+            "clusterRole": "PRIMARY",
+            "globalStatus": "OK",
             "primary": "juju-3f9f94-1.lxd:3306",
         },
     },
     "domainname": "test_cluster_set",
-    "globalprimaryinstance": "juju-3f9f94-1.lxd:3306",
-    "primarycluster": "lisbon",
-    "status": "healthy",
-    "statustext": "all clusters available.",
+    "globalPrimaryInstance": "juju-3f9f94-1.lxd:3306",
+    "primaryCluster": "lisbon",
+    "status": "HEALTHY",
+    "statusText": "all clusters available.",
 }
 
 
@@ -117,6 +115,8 @@ class TestMySQLBase(unittest.TestCase):
     # possible to instantiate abstract class.
     @patch.multiple(MySQLBase, __abstractmethods__=set())
     def setUp(self):
+        self.mock_executor_cls = MagicMock()
+        self.mock_executor = self.mock_executor_cls.return_value
         self.mysql = MySQLBase(
             "127.0.0.1",
             MYSQLD_SOCK_FILE,
@@ -131,85 +131,44 @@ class TestMySQLBase(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
+            self.mock_executor_cls,
         )  # pyright: ignore
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_router_roles(self, _run_mysqlcli_script, _list_mysql_roles):
+    @patch("charms.mysql.v0.mysql.MySQLInstanceClient")
+    def test_configure_mysql_router_roles(self, _instance_client):
         """Test successful configuration of MySQL router role."""
         router_roles = (LEGACY_ROLE_ROUTER, MODERN_ROLE_ROUTER)
 
         for role in router_roles:
-            _list_mysql_roles.return_value = {next(r for r in router_roles if r != role)}
-            _run_mysqlcli_script.reset_mock()
-            _run_mysqlcli_script.return_value = b""
+            _instance_client.search_instance_roles.return_value = {next(r for r in router_roles if r != role)}
+            self.mock_executor.execute_sql.reset_mock()
+            self.mock_executor.execute_sql.return_value = b""
 
-            _expected_configure_role_commands = [
+            _expected_configure_role_commands = ";".join([
                 f"CREATE ROLE {role}",
                 f"GRANT CREATE ON *.* TO {role}",
                 f"GRANT CREATE USER ON *.* TO {role}",
                 f"GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
-            ]
+            ])
 
             self.mysql.configure_mysql_router_roles()
 
-            _run_mysqlcli_script.assert_called_once_with(
-                _expected_configure_role_commands,
-                user=ROOT_USERNAME,
-                password="password",
-            )
+            self.mock_executor.execute_sql.assert_called_with(_expected_configure_role_commands)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_router_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+    @patch("charms.mysql.v0.mysql.MySQLInstanceClient")
+    def test_configure_mysql_router_roles_fail(self, _instance_client):
         """Test failure to configure the MySQL router role."""
-        _list_mysql_roles.return_value = set()
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        _instance_client.search_instance_roles.return_value = []
+        self.mock_executor.execute_sql.side_effect = ExecutionError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureMySQLRolesError):
             self.mysql.configure_mysql_router_roles()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_roles(self, _run_mysqlcli_script, _list_mysql_roles):
-        """Test successful configuration of MySQL system roles."""
-        _list_mysql_roles.return_value = {ROLE_DBA}
-        _run_mysqlcli_script.return_value = b""
-
-        _expected_configure_roles_commands = [
-            # Charmed read queries
-            f"CREATE ROLE {ROLE_READ}",
-            # Charmed DML queries
-            f"CREATE ROLE {ROLE_DML}",
-            # Charmed stats queries
-            f"CREATE ROLE {ROLE_STATS}",
-            f"GRANT SELECT ON performance_schema.* TO {ROLE_STATS}",
-            f"GRANT PROCESS, RELOAD, REPLICATION CLIENT ON *.* TO {ROLE_STATS}",
-            # Charmed backup queries
-            f"CREATE ROLE {ROLE_BACKUP}",
-            f"GRANT charmed_stats TO {ROLE_BACKUP}",
-            f"GRANT EXECUTE, LOCK TABLES, PROCESS, RELOAD ON *.* TO {ROLE_BACKUP}",
-            f"GRANT BACKUP_ADMIN, CONNECTION_ADMIN ON *.* TO {ROLE_BACKUP}",
-            # Charmed DDL queries
-            f"CREATE ROLE {ROLE_DDL}",
-            f"GRANT charmed_dml TO {ROLE_DDL}",
-            f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, SHOW_ROUTINE, SHOW VIEW, TRIGGER ON *.* TO {ROLE_DDL}",
-        ]
-
-        self.mysql.configure_mysql_system_roles()
-
-        _run_mysqlcli_script.assert_called_once_with(
-            _expected_configure_roles_commands,
-            user=ROOT_USERNAME,
-            password="password",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+    @patch("charms.mysql.v0.mysql.MySQLInstanceClient")
+    def test_configure_mysql_system_roles_fail(self, _instance_client):
         """Test failure to configure the MySQL system roles."""
-        _list_mysql_roles.return_value = set()
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        _instance_client.search_instance_roles.return_value = []
+        self.mock_executor.execute_sql.side_effect = ExecutionError("Error on subprocess")
 
         with self.assertRaises(MySQLConfigureMySQLRolesError):
             self.mysql.configure_mysql_system_roles()
@@ -2078,19 +2037,6 @@ class TestMySQLBase(unittest.TestCase):
             self.mysql.set_dynamic_variable(variable="variable", value="value")
 
     @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_variable_value(self, _run_mysqlsh_script):
-        """Test get_variable_value."""
-        _run_mysqlsh_script.return_value = '[["super_read_only", "OFF"]]'
-
-        self.assertEqual(self.mysql.get_variable_value("super_read_only"), "OFF")
-
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
-
-        with self.assertRaises(MySQLGetVariableError):
-            self.mysql.get_variable_value("variable")
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_set_cluster_primary(self, _run_mysqlsh_script):
         """Test set_cluster_primary."""
         commands = (
@@ -2541,19 +2487,6 @@ class TestMySQLBase(unittest.TestCase):
         with self.assertRaises(MySQLPluginInstallError):
             self.mysql.uninstall_plugins(["audit_log"])
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_get_installed_plugins(self, _run_mysqlcli_script):
-        """Test get_installed_plugins."""
-        _run_mysqlcli_script.return_value = [["audit_log", "clone", "group_replication"]]
-        self.mysql._run_mysqlcli_script = _run_mysqlcli_script
-
-        plugins = self.mysql._get_installed_plugins()
-        self.assertEqual(plugins, {"audit_log"})
-
-        _run_mysqlcli_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLClientError):
-            self.mysql._get_installed_plugins()
-
     def test_strip_off_password(self):
         _input = """
 ("Traceback (most recent call last):",
@@ -2569,25 +2502,8 @@ sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes`.* TO `relation-21_ff73
         output = self.mysql.strip_off_passwords(_input)
         self.assertTrue("s1ffxPedAmX58aOdCRSzxEpm" not in output)
 
-    def test_strip_off_passwords_from_exception(self):
-        # Simulate an exception with a password in the message
-        original_exception = Exception("The error")
-        original_exception.cmd = [
-            "CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY 's1ffxPedAmX58aOdCRSzxEpm' ATTRIBUTE '{}';",
-        ]
-
-        self.mysql.strip_off_passwords_from_exception(original_exception)
-
-        self.assertNotIn("s1ffxPedAmX58aOdCRSzxEpm", original_exception.cmd[0])
-
     def test_abstract_methods(self):
         """Test abstract methods."""
-        with self.assertRaises(NotImplementedError):
-            self.mysql._run_mysqlsh_script("", "", "", "")
-
-        with self.assertRaises(NotImplementedError):
-            self.mysql._run_mysqlcli_script(("",), "", "")
-
         with self.assertRaises(NotImplementedError):
             self.mysql._execute_commands([])
 

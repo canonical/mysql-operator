@@ -45,7 +45,7 @@ def check_mysql_instances_online(
         app_units = get_app_units(juju, app_name)
 
     mysql_cluster_status = get_mysql_cluster_status(juju, app_units[0])
-    mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
+    mysql_cluster_topology = mysql_cluster_status["defaultReplicaSet"]["topology"]
 
     for unit_name in app_units:
         unit_label = get_mysql_instance_label(unit_name)
@@ -259,7 +259,7 @@ def get_mysql_primary_unit(juju: Juju, app_name: str, unit_name: str | None = No
         unit_name = get_app_leader(juju, app_name)
 
     mysql_cluster_status = get_mysql_cluster_status(juju, unit_name)
-    mysql_cluster_topology = mysql_cluster_status["defaultreplicaset"]["topology"]
+    mysql_cluster_topology = mysql_cluster_status["defaultReplicaSet"]["topology"]
 
     for label, value in mysql_cluster_topology.items():
         if value["memberrole"] == "primary":

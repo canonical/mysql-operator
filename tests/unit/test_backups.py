@@ -337,7 +337,7 @@ Juju Version: 0.0.0
     @patch("mysql_vm_helpers.MySQL.get_cluster_status")
     def test_can_cluster_perform_backup(self, _get_cluster_status):
         """Test _can_cluster_perform_backup()."""
-        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "ok"}}
+        _get_cluster_status.return_value = {"defaultReplicaSet": {"status": "OK"}}
 
         success, error_message = self.mysql_backups._can_cluster_perform_backup()
         self.assertTrue(success)
@@ -354,14 +354,14 @@ Juju Version: 0.0.0
         self.assertEqual(error_message, "Cluster status unknown")
 
         # test error state
-        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "error"}}
+        _get_cluster_status.return_value = {"defaultReplicaSet": {"status": "ERROR"}}
 
         success, error_message = self.mysql_backups._can_cluster_perform_backup()
         self.assertFalse(success)
         self.assertEqual(error_message, "Cluster is not in a healthy state")
 
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
+    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("ONLINE", "REPLICA"))
     def test_can_unit_perform_backup(
         self,
         _get_member_state,
@@ -385,11 +385,11 @@ Juju Version: 0.0.0
     ):
         """Test failure of _can_unit_perform_backup()."""
         # test non-online state
-        _get_member_state.return_value = ("recovering", "replica")
+        _get_member_state.return_value = ("RECOVERING", "REPLICA")
 
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertFalse(success)
-        self.assertEqual(error_message, "Unit cannot perform backups as its state is recovering")
+        self.assertEqual(error_message, "Unit cannot perform backups as its state is RECOVERING")
 
         # test more than one unit and backup on primary
         _get_member_state.return_value = ("online", "primary")

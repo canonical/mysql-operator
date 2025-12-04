@@ -28,6 +28,7 @@ from charms.mysql.v0.async_replication import (
 )
 from charms.mysql.v0.backups import S3_INTEGRATOR_RELATION_NAME, MySQLBackups
 from charms.mysql.v0.mysql import (
+    UNIT_ADD_LOCKNAME,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLCharmBase,
@@ -398,7 +399,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 if self.peers.data[unit]["leader"] == "true":
                     return unit
 
-        if self._mysql.get_primary_label() == self.unit_label and not self.unit.is_leader():
+        if self._mysql.is_unit_primary(self.unit_label) and not self.unit.is_leader():
             # Preemptively switch primary to unit leader
             logger.info("Switching primary to the leader unit")
             if leader_unit := _get_leader_unit():
@@ -493,9 +494,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         if not self._mysql.instance_belongs_to_cluster(self.unit_label):
             logger.warning("Instance does not belong to the cluster. Cannot perform manual rejoin")
             return
-
-        cluster_primary = self._get_primary_from_online_peer()
-        if not cluster_primary:
+        if not self._get_primary_from_online_peer():
             logger.warning("Instance does not have ONLINE peers. Cannot perform manual rejoin")
             return
 
@@ -504,14 +503,13 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         # Not used for cryptographic purpose
         sleep(random.uniform(0, 1.5))  # noqa: S311
 
-        if self._mysql.are_locks_acquired(from_instance=cluster_primary):
+        if self._mysql.are_locks_acquired(task_name=UNIT_ADD_LOCKNAME):
             logger.info("waiting: cluster lock is held")
             return
         try:
             self._mysql.rejoin_instance_to_cluster(
                 unit_address=self.unit_fqdn,
                 unit_label=self.unit_label,
-                from_instance=cluster_primary,
             )
             return
         except MySQLRejoinInstanceToClusterError:
@@ -524,7 +522,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.add_instance_to_cluster(
             instance_address=self.unit_address,
             instance_unit_label=self.unit_label,
-            from_instance=cluster_primary,
         )
 
     def _on_update_status(self, _) -> None:  # noqa: C901
@@ -795,8 +792,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self._mysql.wait_until_mysql_connection()
 
         self.unit_peer_data["instance-hostname"] = f"{instance_hostname()}:3306"
-        if workload_version := self._mysql.get_mysql_version():
-            self.unit.set_workload_version(workload_version)
+        self.unit.set_workload_version(self._mysql.get_mysql_version())
 
     def get_unit_address(self, unit: Unit, relation_name: str) -> str:
         """Get the IP address of a specific unit."""
@@ -892,7 +888,7 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             if self.peers.data[unit].get("member-state") == "online":
                 try:
                     return self._mysql.get_cluster_primary_address(
-                        connect_instance_address=self.get_unit_address(unit, PEER)
+                        connect_instance_host=self.get_unit_address(unit, PEER)
                     )
                 except MySQLGetClusterPrimaryAddressError:
                     # try next unit
@@ -927,20 +923,12 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                     )
                     return
 
-                # If instance is part of a replica cluster, locks are managed by the
-                # the primary cluster primary (i.e. cluster set global primary)
-                lock_instance = None
-                if self._mysql.is_cluster_replica(from_instance=cluster_primary):
-                    lock_instance = self._mysql.get_cluster_set_global_primary_address(
-                        connect_instance_address=cluster_primary
-                    )
-
                 # add random delay to mitigate collisions when multiple units are joining
                 # due the difference between the time we test for locks and acquire them
                 # Not used for cryptographic purpose
                 sleep(random.uniform(0, 1.5))  # noqa: S311
 
-                if self._mysql.are_locks_acquired(from_instance=lock_instance or cluster_primary):
+                if self._mysql.are_locks_acquired(task_name=UNIT_ADD_LOCKNAME):
                     self.unit.status = WaitingStatus("waiting to join the cluster.")
                     logger.info("waiting: cluster lock is held")
                     return
@@ -956,8 +944,6 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
                 self._mysql.add_instance_to_cluster(
                     instance_address=instance_address,
                     instance_unit_label=instance_label,
-                    from_instance=cluster_primary,
-                    lock_instance=lock_instance,
                 )
             except MySQLAddInstanceToClusterError:
                 logger.info(f"Unable to add instance {instance_address} to cluster.")

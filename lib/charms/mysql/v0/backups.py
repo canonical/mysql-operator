@@ -57,7 +57,8 @@ from charms.data_platform_libs.v0.s3 import (
     S3Requirer,
 )
 from charms.mysql.v0.mysql import (
-    MySQLClusterState,
+    ClusterStatus,
+    InstanceStatus,
     MySQLConfigureInstanceError,
     MySQLCreateClusterError,
     MySQLCreateClusterSetError,
@@ -67,7 +68,6 @@ from charms.mysql.v0.mysql import (
     MySQLExecuteBackupCommandsError,
     MySQLInitializeJujuOperationsTableError,
     MySQLKillSessionError,
-    MySQLMemberState,
     MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
@@ -113,7 +113,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 18
 
 ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE = "S3 repository claimed by another cluster"
 MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
@@ -374,8 +374,8 @@ class MySQLBackups(Object):
         if not cluster_status:
             return False, "Cluster status unknown"
 
-        cluster_status = cluster_status["defaultreplicaset"]["status"]
-        if cluster_status not in [MySQLClusterState.OK, MySQLClusterState.OK_PARTIAL]:
+        cluster_status = cluster_status["defaultReplicaSet"]["status"]
+        if cluster_status not in [ClusterStatus.OK, ClusterStatus.OK_PARTIAL]:
             return False, "Cluster is not in a healthy state"
 
         return True, None
@@ -406,7 +406,7 @@ class MySQLBackups(Object):
         if role == "primary" and self.charm.app.planned_units() > 1:
             return False, "Unit cannot perform backups as it is the cluster primary"
 
-        if state not in [MySQLMemberState.ONLINE]:
+        if state not in [InstanceStatus.ONLINE]:
             return False, f"Unit cannot perform backups as its state is {state}"
 
         return True, None
@@ -766,7 +766,7 @@ class MySQLBackups(Object):
 
         try:
             logger.info("Creating cluster on restored node")
-            self.charm._mysql.create_cluster(self.charm.unit_label)
+            self.charm._mysql.create_cluster()
             self.charm._mysql.create_cluster_set()
             self.charm._mysql.initialize_juju_units_operations_table()
 

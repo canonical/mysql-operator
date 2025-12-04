@@ -48,7 +48,7 @@ def test_get_cluster_status_action_success(harness):
     harness.update_relation_data(relation, harness.charm.app.name, {"cluster-name": "my-cluster"})
 
     # Patch out the MySQL backend to return a known dict
-    sample = {"clusterrole": "primary", "status": "ok"}
+    sample = {"clusterRole": "PRIMARY", "status": "OK"}
     fake = FakeMySQLBackend(response=sample)
     with patch.object(MySQLOperatorCharm, "_mysql", new_callable=PropertyMock, return_value=fake):
         event = make_event()
