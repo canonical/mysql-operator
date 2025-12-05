@@ -121,6 +121,10 @@ from utils import compare_dictionaries, generate_random_password
 logger = logging.getLogger(__name__)
 
 
+class StorageUnavailableError(Exception):
+    """Cannot find storage mountpoint."""
+
+
 class MySQLDNotRestartedError(Error):
     """Exception raised when MySQLD is not restarted after configuring instance."""
 
@@ -223,11 +227,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
         self.unit.status = MaintenanceStatus("Installing MySQL")
 
         if not is_volume_mounted():
-            # persistent data directory not mounted, reboot unit
-            logger.warning("Data directory not attached. Will reboot unit.")
-            self.unit.status = WaitingStatus("Data directory not attached. Rebooting...")
-            # immediate reboot will make juju re-run the hook
-            self.unit.reboot(now=True)
+            # https://github.com/juju/juju/issues/21135
+            logger.error("Data directory not attached.")
+            raise StorageUnavailableError
 
         if self.install_workload():
             self.unit.status = WaitingStatus("Waiting to start MySQL")
@@ -832,11 +834,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             return False
 
         # Safeguard against storage not attached
+        # https://github.com/juju/juju/issues/21135
         if not is_volume_mounted():
-            logger.error("Data directory not attached. Will reboot unit.")
-            self.unit.status = WaitingStatus("Data directory not attached. Rebooting...")
-            # immediate reboot will make juju re-run the hook
-            self.unit.reboot(now=True)
+            logger.error("Data directory not attached.")
+            raise StorageUnavailableError
 
         if not self.mysql_config.custom_config:
             # empty config mean start never ran, skip next checks
