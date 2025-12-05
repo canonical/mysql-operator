@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+from time import sleep
 
 import jubilant_backports
 import pytest
@@ -47,6 +48,9 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
         num_units=3,
         base="ubuntu@22.04",
     )
+    # workaround transitory issue with juju-2.9
+    # https://github.com/tonyandrewmeyer/jubilant-backports/issues/14
+    sleep(30)
 
     # Wait until the mysql charm is successfully deployed
     juju.wait(
