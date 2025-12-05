@@ -2,24 +2,27 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
-from pathlib import Path
 
+import jubilant_backports
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
-from ...helpers import (
-    execute_queries_on_unit,
-    get_server_config_credentials,
-    scale_application,
+from ...helpers_ha import (
+    check_keystone_users_existence,
+    check_successful_keystone_migration,
+    get_app_units,
+    get_mysql_server_credentials,
+    get_unit_ip,
+    scale_app_units,
+    wait_for_app_status,
+    wait_for_apps_status,
+    wait_for_unit_status,
 )
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
+APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
 KEYSTONE_APP_NAME = "keystone"
 KEYSTONE_MYSQLROUTER_APP_NAME = "keystone-mysql-router"
@@ -28,230 +31,136 @@ ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME = "another-keystone-mysql-router"
 SLOW_WAIT_TIMEOUT = 45 * 60
 FAST_WAIT_TIMEOUT = 30 * 60
 
-
-async def check_successful_keystone_migration(
-    ops_test: OpsTest, server_config_credentials: dict
-) -> None:
-    """Checks that the keystone application is successfully migrated in mysql.
-
-    Args:
-        ops_test: The ops test framework
-        server_config_credentials: The credentials for the server config user
-    """
-    show_tables_sql = [
-        "SHOW DATABASES",
-    ]
-    get_count_keystone_tables_sql = [
-        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'keystone'",
-    ]
-
-    for unit in ops_test.model.applications[APP_NAME].units:
-        unit_address = await unit.get_public_address()
-
-        # Ensure 'keystone' database exists in mysql
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            show_tables_sql,
-        )
-        assert "keystone" in output, "keystone database not found in mysql"
-
-        # Ensure that keystone tables exist in the 'keystone' database
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            get_count_keystone_tables_sql,
-        )
-        assert output[0] > 0, "No keystone tables found in the 'keystone' database"
-
-
-async def check_keystone_users_existence(
-    ops_test: OpsTest,
-    server_config_credentials: dict[str, str],
-    users_that_should_exist: list[str],
-    users_that_should_not_exist: list[str],
-) -> None:
-    """Checks that keystone users exist in the database.
-
-    Args:
-        ops_test: The ops test framework
-        server_config_credentials: The credentials for the server config user
-        users_that_should_exist: List of users that should exist in the database
-        users_that_should_not_exist: List of users that should not exist in the database
-    """
-    random_unit = ops_test.model.applications[APP_NAME].units[0]
-    server_config_credentials = await get_server_config_credentials(random_unit)
-
-    select_users_sql = [
-        "SELECT CONCAT(user, '@', host) FROM mysql.user",
-    ]
-
-    unit = ops_test.model.applications[APP_NAME].units[0]
-    unit_address = await unit.get_public_address()
-
-    # Retrieve all users in the database
-    output = await execute_queries_on_unit(
-        unit_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-        select_users_sql,
-    )
-
-    # Assert users that should exist
-    for user in users_that_should_exist:
-        assert user in output, "User(s) that should exist are not in the database"
-
-    # Assert users that should not exist
-    for user in users_that_should_not_exist:
-        assert user not in output, "User(s) that should not exist are in the database"
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-async def test_keystone_bundle_db_router(ops_test: OpsTest, charm) -> None:
-    """Deploy the keystone bundle to test the 'db-router' relation.
-
-    Args:
-        ops_test: The ops test framework
-    """
-    config = {"cluster-name": CLUSTER_NAME, "profile": "testing"}
-
-    mysql_app = await ops_test.model.deploy(
-        charm, application_name=APP_NAME, config=config, num_units=1, base="ubuntu@22.04"
+async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
+    """Deploy the keystone bundle to test the 'db-router' relation."""
+    juju.deploy(
+        charm,
+        APP_NAME,
+        config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
+        num_units=1,
+        base="ubuntu@22.04",
     )
 
     # Deploy keystone
-    # Explicitly setting the series to 'focal' as it defaults to 'xenial'
-    keystone_app = await ops_test.model.deploy(
+    juju.deploy(
         "keystone",
-        series="focal",
-        application_name=KEYSTONE_APP_NAME,
+        KEYSTONE_APP_NAME,
+        base="ubuntu@20.04",
         num_units=2,
         channel="yoga/stable",
     )
 
     # Deploy mysqlrouter and relate it to keystone
-    keystone_mysqlrouter_app = await ops_test.model.deploy(
+    juju.deploy(
         "mysql-router",
-        channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
-        application_name=KEYSTONE_MYSQLROUTER_APP_NAME,
+        KEYSTONE_MYSQLROUTER_APP_NAME,
+        channel="8.0/stable",
     )
 
-    await ops_test.model.relate(
-        f"{KEYSTONE_APP_NAME}:shared-db",
-        f"{KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
+    juju.integrate(f"{KEYSTONE_APP_NAME}:shared-db", f"{KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db")
+
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, APP_NAME),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )
+    juju.wait(
+        ready=lambda status: all((
+            wait_for_app_status(KEYSTONE_APP_NAME, "waiting"),
+            *(
+                wait_for_unit_status(KEYSTONE_APP_NAME, unit_name, "blocked")
+                for unit_name in status.get_units(KEYSTONE_APP_NAME)
+            ),
+        )),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_blocked, KEYSTONE_MYSQLROUTER_APP_NAME),
+        timeout=SLOW_WAIT_TIMEOUT,
     )
 
-    # Reduce the update_status frequency for the duration of the test
-    async with ops_test.fast_forward("60s"):
-        await asyncio.gather(
-            ops_test.model.block_until(
-                lambda: mysql_app.status in ("active", "error"), timeout=SLOW_WAIT_TIMEOUT
-            ),
-            ops_test.model.block_until(
-                lambda: keystone_app.status in ("waiting", "error"), timeout=SLOW_WAIT_TIMEOUT
-            ),
-            ops_test.model.block_until(
-                lambda: keystone_mysqlrouter_app.status in ("blocked", "error"),
-                timeout=SLOW_WAIT_TIMEOUT,
-            ),
-        )
-        assert (
-            mysql_app.status == "active"
-            and keystone_app.status == "waiting"
-            and keystone_mysqlrouter_app.status == "blocked"
-        )
+    juju.integrate(f"{KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router")
 
-        # Relate mysqlrouter to mysql
-        await ops_test.model.relate(
-            f"{KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router"
-        )
-        await ops_test.model.block_until(
-            lambda: keystone_app.status in ("active", "error")
-            and keystone_mysqlrouter_app.status in ("active", "error"),
-            timeout=SLOW_WAIT_TIMEOUT,
-        )
-        assert keystone_app.status == "active" and keystone_mysqlrouter_app.status == "active"
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active, KEYSTONE_APP_NAME, KEYSTONE_MYSQLROUTER_APP_NAME
+        ),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )
 
-        # Get the server config credentials
-        db_unit = ops_test.model.applications[APP_NAME].units[0]
-        server_config_credentials = await get_server_config_credentials(db_unit)
+    # Get the server config credentials
+    db_unit = get_app_units(juju, APP_NAME)[0]
+    server_config_credentials = get_mysql_server_credentials(juju, db_unit)
 
-        await check_successful_keystone_migration(ops_test, server_config_credentials)
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
-        keystone_users = []
-        for unit in ops_test.model.applications[KEYSTONE_APP_NAME].units:
-            unit_address = await unit.get_public_address()
+    keystone_users = []
+    for unit_name in get_app_units(juju, KEYSTONE_APP_NAME):
+        unit_address = get_unit_ip(juju, KEYSTONE_APP_NAME, unit_name)
 
-            keystone_users.append(f"keystone@{unit_address}")
-            keystone_users.append(f"mysqlrouteruser@{unit_address}")
+        keystone_users.append(f"keystone@{unit_address}")
+        keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-        await check_keystone_users_existence(
-            ops_test, server_config_credentials, keystone_users, []
-        )
+    await check_keystone_users_existence(
+        juju, APP_NAME, server_config_credentials, keystone_users, []
+    )
 
-        # Deploy and test another deployment of keystone
-        # Deploy keystone
-        # Explicitly setting the series to 'focal' as it defaults to 'xenial'
-        another_keystone_app = await ops_test.model.deploy(
-            "keystone",
-            series="focal",
-            application_name=ANOTHER_KEYSTONE_APP_NAME,
-            num_units=2,
-            channel="yoga/stable",
-        )
+    # Deploy and test another deployment of keystone
+    juju.deploy(
+        "keystone",
+        ANOTHER_KEYSTONE_APP_NAME,
+        base="ubuntu@20.04",
+        num_units=2,
+        channel="yoga/stable",
+    )
 
-        # Deploy mysqlrouter and relate it to keystone
-        another_keystone_mysqlrouter_app = await ops_test.model.deploy(
-            "mysql-router",
-            channel="8.0/stable",  # pin to channel as it contains a fix to https://bugs.launchpad.net/charm-mysql-router/+bug/1927981
-            application_name=ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
-        )
+    # Deploy mysqlrouter and relate it to keystone
+    juju.deploy(
+        "mysql-router",
+        ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
+        channel="8.0/stable",
+    )
 
-        await ops_test.model.relate(
-            f"{ANOTHER_KEYSTONE_APP_NAME}:shared-db",
-            f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
-        )
+    juju.integrate(
+        f"{ANOTHER_KEYSTONE_APP_NAME}:shared-db",
+        f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:shared-db",
+    )
 
-        # Relate mysqlrouter to mysql
-        await ops_test.model.relate(
-            f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router"
-        )
-        await ops_test.model.block_until(
-            lambda: another_keystone_app.status in ("active", "error")
-            and another_keystone_mysqlrouter_app.status in ("active", "error"),
-            timeout=SLOW_WAIT_TIMEOUT,
-        )
-        assert (
-            another_keystone_app.status == "active"
-            and another_keystone_mysqlrouter_app.status == "active"
-        )
+    # Relate mysqlrouter to mysql
+    juju.integrate(f"{ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME}:db-router", f"{APP_NAME}:db-router")
 
-        await check_successful_keystone_migration(ops_test, server_config_credentials)
+    juju.wait(
+        ready=wait_for_apps_status(
+            jubilant_backports.all_active,
+            ANOTHER_KEYSTONE_APP_NAME,
+            ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME,
+        ),
+        timeout=SLOW_WAIT_TIMEOUT,
+    )
 
-        another_keystone_users = []
-        for unit in ops_test.model.applications[ANOTHER_KEYSTONE_APP_NAME].units:
-            unit_address = await unit.get_public_address()
+    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
 
-            another_keystone_users.append(f"keystone@{unit_address}")
-            another_keystone_users.append(f"mysqlrouteruser@{unit_address}")
+    another_keystone_users = []
+    for unit_name in get_app_units(juju, ANOTHER_KEYSTONE_APP_NAME):
+        unit_address = get_unit_ip(juju, ANOTHER_KEYSTONE_APP_NAME, unit_name)
 
-        await check_keystone_users_existence(
-            ops_test, server_config_credentials, keystone_users + another_keystone_users, []
-        )
+        another_keystone_users.append(f"keystone@{unit_address}")
+        another_keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-        # Scale down the second deployment of keystone and confirm that the first deployment
-        # is still active
-        await scale_application(ops_test, ANOTHER_KEYSTONE_APP_NAME, 0)
+    await check_keystone_users_existence(
+        juju, APP_NAME, server_config_credentials, keystone_users + another_keystone_users, []
+    )
 
-        await asyncio.gather(
-            ops_test.model.remove_application(ANOTHER_KEYSTONE_APP_NAME, block_until_done=True),
-            ops_test.model.remove_application(
-                ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME, block_until_done=True
-            ),
-        )
+    # Scale down the second deployment of keystone and confirm that the first deployment
+    # is still active
+    scale_app_units(juju, ANOTHER_KEYSTONE_APP_NAME, 0)
 
-        await check_keystone_users_existence(
-            ops_test, server_config_credentials, keystone_users, another_keystone_users
-        )
+    juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
+    juju.remove_application(ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME)
+
+    await check_keystone_users_existence(
+        juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
+    )
