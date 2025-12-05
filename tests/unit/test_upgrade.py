@@ -221,12 +221,12 @@ class TestUpgrade(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm._get_primary_from_online_peer")
     @patch("charm.MySQLOperatorCharm.workload_initialise")
     @patch("mysql_vm_helpers.MySQL.install_and_configure_mysql_dependencies")
-    @patch("mysql_vm_helpers.MySQL.uninstall_mysql")
+    @patch("subprocess.check_call")
     @patch("mysql_vm_helpers.MySQL.reset_data_dir")
     def test_reset_on_unsupported_downgrade(
         self,
         mock_reset_data_dir,
-        mock_uninstall_workload,
+        mock_check_call,
         mock_install_workload,
         mock_init_workload,
         mock_get_primary,

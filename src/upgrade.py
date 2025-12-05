@@ -30,7 +30,7 @@ from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
 from typing_extensions import override
 
-from constants import CHARMED_MYSQL_COMMON_DIRECTORY, PEER
+from constants import CHARMED_MYSQL_COMMON_DIRECTORY, MYSQL_DATA_DIR, MYSQL_SYSTEM_USER, PEER
 
 if TYPE_CHECKING:
     from charm import MySQLOperatorCharm
@@ -299,9 +299,17 @@ class MySQLVMUpgrade(DataUpgrade):
     def _reset_on_unsupported_downgrade(self) -> None:
         """Reset the server if unsupported downgrade is detected."""
         self.charm._mysql.reset_data_dir()
-        # remove/install so initial setup can be done
-        self.charm._mysql.uninstall_mysql()
-        self.charm._mysql.install_and_configure_mysql_dependencies()
+        logger.debug("Initialize datadir after resetting it")
+        subprocess.check_call(  # noqa: S603
+            [
+                "/usr/bin/snap",
+                "run",
+                "charmed-mysql.mysqld",
+                "--initialize",
+                f"--datadir={MYSQL_DATA_DIR}",
+                f"--user={MYSQL_SYSTEM_USER}",
+            ],
+        )
         self.charm.workload_initialise()
         # reset flags
         self.charm.unit_peer_data["member-role"] = "secondary"
