@@ -380,8 +380,8 @@ class TestMySQLBase(unittest.TestCase):
             'session.run_sql("CREATE DATABASE `test_database`;")',
             'session.run_sql("GRANT SELECT ON `test_database`.* TO charmed_read;")',
             'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO charmed_dml;")',
-            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO charmed_dba_test_database_00;")',
-            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO charmed_dba_test_database_00;")',
+            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO `charmed_dba_test_database_00`;")',
+            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO `charmed_dba_test_database_00`;")',
         ))
 
         self.mysql.create_database("test_database")
