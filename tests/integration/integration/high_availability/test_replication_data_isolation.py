@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+from time import sleep
 
 import jubilant_backports
 import pytest
@@ -76,6 +77,9 @@ async def test_cluster_data_isolation(juju: Juju, charm: str) -> None:
     )
 
     logging.info("Wait for application to become active")
+    # workaround transitory issue with juju-2.9
+    # https://github.com/tonyandrewmeyer/jubilant-backports/issues/14
+    sleep(30)
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, mysql_other_app_name),
         error=jubilant_backports.any_blocked,
