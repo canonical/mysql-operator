@@ -121,7 +121,7 @@ class MySQLRelation(Object):
                 )
                 return
 
-            primary_address_ip = socket.gethostbyname(primary_address.split(":")[0])
+            primary_address_ip = socket.gethostbyname(primary_address)
 
             relation_databag[self.charm.unit]["host"] = primary_address_ip
 
@@ -218,7 +218,7 @@ class MySQLRelation(Object):
             self.charm.unit.status = BlockedStatus("Failed to retrieve cluster primary address")
             return
 
-        primary_address_ip = socket.gethostbyname(primary_address.split(":")[0])
+        primary_address_ip = socket.gethostbyname(primary_address)
 
         updates = {
             "database": database,
