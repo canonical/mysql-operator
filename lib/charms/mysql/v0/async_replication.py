@@ -53,6 +53,8 @@ LIBID = "4de21f1a022c4e2c87ac8e672ec16f6a"
 LIBAPI = 0
 LIBPATCH = 11
 
+PYDEPS = ["mysql_shell_client ~= 0.6"]
+
 RELATION_OFFER = "replication-offer"
 RELATION_CONSUMER = "replication"
 

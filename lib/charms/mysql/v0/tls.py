@@ -51,6 +51,8 @@ LIBID = "eb73947deedd4380a3a90d527e0878eb"
 LIBAPI = 0
 LIBPATCH = 10
 
+PYDEPS = ["mysql_shell_client ~= 0.6"]
+
 SCOPE = "unit"
 
 if typing.TYPE_CHECKING:
