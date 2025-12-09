@@ -13,15 +13,12 @@ import subprocess
 import tempfile
 import typing
 from collections.abc import Iterable
-from typing import Any
 
 import jinja2
-import pexpect
 from charms.mysql.v0.mysql import (
     BYTES_1MB,
     Error,
     MySQLBase,
-    MySQLClientError,
     MySQLExecError,
     MySQLGetAutoTuningParametersError,
     MySQLGetAvailableMemoryError,
@@ -32,11 +29,12 @@ from charms.mysql.v0.mysql import (
     MySQLStopMySQLDError,
 )
 from charms.operator_libs_linux.v2 import snap
+from mysql_shell.executors import LocalExecutor
+from mysql_shell.executors.errors import ExecutionError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 from typing_extensions import override
 
 from constants import (
-    CHARMED_MYSQL,
     CHARMED_MYSQL_BINLOGS_COLLECTOR_SERVICE,
     CHARMED_MYSQL_COMMON_DIRECTORY,
     CHARMED_MYSQL_SNAP_NAME,
@@ -53,7 +51,6 @@ from constants import (
     MYSQLD_DEFAULTS_CONFIG_FILE,
     MYSQLD_SOCK_FILE,
     ROOT_SYSTEM_USER,
-    ROOT_USERNAME,
     XTRABACKUP_PLUGIN_DIR,
 )
 
@@ -147,6 +144,8 @@ class MySQL(MySQLBase):
             monitoring_password=monitoring_password,
             backups_user=backups_user,
             backups_password=backups_password,
+            mysqlsh_path=CHARMED_MYSQLSH,
+            executor_class=LocalExecutor,
         )
 
         self.charm = charm
@@ -415,8 +414,8 @@ class MySQL(MySQLBase):
         if not os.path.exists(MYSQLD_SOCK_FILE):
             raise MySQLServiceNotRunningError("MySQL socket file not found")
 
-        if check_port and not self.check_mysqlcli_connection():
-            raise MySQLServiceNotRunningError("Connection with mysqlcli not possible")
+        if check_port and not self.check_mysqlsh_connection():
+            raise MySQLServiceNotRunningError("Connection with mysqlsh not possible")
 
         logger.debug("MySQL connection possible")
 
@@ -630,6 +629,10 @@ class MySQL(MySQLBase):
 
         return (stdout.strip(), stderr.strip())
 
+    def _file_exists(self, path: str) -> bool:
+        """Check if file exists."""
+        return os.path.exists(path)
+
     def is_mysqld_running(self) -> bool:
         """Returns whether mysqld is running."""
         return os.path.exists(MYSQLD_SOCK_FILE)
@@ -678,18 +681,15 @@ class MySQL(MySQLBase):
         if not self.is_mysqld_running():
             logger.warning("mysqld is not running, skipping flush host cache")
             return
-        flush_host_cache_command = ("TRUNCATE TABLE performance_schema.host_cache",)
+
+        executor = self._build_instance_tcp_executor(self.instance_address)
 
         try:
             logger.debug("Truncating the MySQL host cache")
-            self._run_mysqlcli_script(
-                flush_host_cache_command,
-                user=self.server_config_user,
-                password=self.server_config_password,
-            )
-        except MySQLClientError as e:
+            executor.execute_sql("TRUNCATE TABLE performance_schema.host_cache")
+        except ExecutionError as e:
             logger.error("Failed to truncate the MySQL host cache")
-            raise MySQLFlushHostCacheError from e
+            raise MySQLFlushHostCacheError() from e
 
     def connect_mysql_exporter(self) -> None:
         """Set up mysqld-exporter config options.
@@ -728,149 +728,6 @@ class MySQL(MySQLBase):
         self.stop_mysql_exporter()
         self.connect_mysql_exporter()
 
-    def _run_mysqlsh_script(
-        self,
-        script: str,
-        user: str,
-        host: str,
-        password: str,
-        timeout=None,
-        exception_as_warning: bool = False,
-    ) -> str:
-        """Execute a MySQL shell script.
-
-        Raises:
-            MySQLClientError if the script gets a non-zero return code.
-            TimeoutError if the script times out.
-
-        Args:
-            script: Mysqlsh script string
-            user: User to invoke the mysqlsh script with
-            host: Host to run the script on
-            password: Password to invoke the mysqlsh script
-            timeout: (optional) Timeout for the script
-            exception_as_warning: (optional) whether the exception should be treated as warning
-
-        Returns:
-            String representing the output of the mysqlsh command
-        """
-        # prepend every shell command with
-        # - set wizard to false. cannot be set on cmd line option as it conflicts with --passwords-from-stdin
-        # - a separator to ease output parsing, as password prompt get printed to stdout
-        prepend_cmd = "shell.options.set('useWizards', False)\nprint('###')\n"
-        script = prepend_cmd + script  # prepend output separator to script
-
-        command = [
-            CHARMED_MYSQLSH,
-            "--passwords-from-stdin",
-            f"--uri={user}@{host}",
-            "--python",
-            "-c",
-            script,
-        ]
-
-        try:
-            # Input generaated by the charm
-            output = subprocess.check_output(  # noqa: S603
-                command,
-                stderr=subprocess.PIPE,
-                timeout=timeout,
-                input=password,
-                text=True,
-            )
-            # split output to clean mysqlsh garbage
-            return output.split("###")[1].strip()
-        except subprocess.CalledProcessError as e:
-            self.strip_off_passwords_from_exception(e)
-            if exception_as_warning:
-                logger.warning("Failed to execute mysql-shell command")
-            else:
-                logger.exception("Failed to execute mysql-shell command")
-            raise MySQLClientError from e
-        except subprocess.TimeoutExpired as e:
-            self.strip_off_passwords_from_exception(e)
-            if exception_as_warning:
-                logger.warning("MySQL shell command timed out")
-            else:
-                logger.exception("MySQL shell command timed out")
-            raise TimeoutError from e
-
-    def _run_mysqlcli_script(
-        self,
-        script: tuple[Any, ...] | list[Any],
-        user: str = ROOT_USERNAME,
-        password: str | None = None,
-        timeout: int | None = None,
-        exception_as_warning: bool = False,
-        log_errors: bool = True,
-    ) -> list:
-        """Execute a MySQL script.
-
-        Execute SQL script as instance root user.
-
-        Raises:
-            MySQLClientError if the script gets a non-zero return code.
-            TimeoutError if the script times out.
-
-        Args:
-            script: raw SQL script string or string Iterable
-            user: (optional) user to invoke the mysql cli script with (default is "root")
-            password: (optional) password to invoke the mysql cli script with
-            timeout: (optional) time before the query should timeout
-            exception_as_warning: (optional) whether the exception should be treated as warning
-            log_errors: (optional) whether errors in the output should be logged
-        """
-        command = [
-            CHARMED_MYSQL,
-            "-u",
-            user,
-            "-N",
-            "-B",
-            f"--socket={MYSQLD_SOCK_FILE}",
-            "-e",
-            ";".join(script),
-        ]
-
-        try:
-            if password:
-                command.insert(3, "-p")
-                # need to contain SQL in quotes for pexpect
-                command[-1] = f'"{command[-1]}"'
-                process = pexpect.spawnu(" ".join(command), timeout=timeout)
-                process.expect("Enter password:")
-                process.sendline(password)
-
-                stdout = process.readlines()
-
-                if len(stdout) > 1 and "ERROR" in stdout[1]:
-                    # some errors will not bubble up from spawned process
-                    # but are reported in the stdout
-                    if log_errors:
-                        logger.error(stdout[1].strip())
-                    raise MySQLClientError
-
-                # index 0 contains empty \r\n
-                return [line.strip().split() for line in stdout[1:]] if stdout else []
-            else:
-                # Input generated by the charm
-                stdout = subprocess.check_output(command, timeout=timeout, text=True)  # noqa: S603
-                return [line.split() for line in stdout.strip().split("\n")] if stdout else []
-
-        except (pexpect.TIMEOUT, subprocess.TimeoutExpired) as e:
-            if exception_as_warning:
-                logger.warning("MySQL cli command timed out")
-            else:
-                self.strip_off_passwords_from_exception(e)
-                logger.exception("MySQL cli command timed out")
-            raise TimeoutError from e
-        except (pexpect.exceptions.ExceptionPexpect, subprocess.CalledProcessError) as e:
-            if exception_as_warning:
-                logger.warning("Failed to execute MySQL cli command")
-            else:
-                self.strip_off_passwords_from_exception(e)
-                logger.exception("Failed to execute MySQL cli command")
-            raise MySQLClientError from e
-
     def is_data_dir_initialised(self) -> bool:
         """Check if data dir is initialised.
 
@@ -905,10 +762,6 @@ class MySQL(MySQLBase):
             return expected_content <= set(content)
         except FileNotFoundError:
             return False
-
-    def _file_exists(self, path: str) -> bool:
-        """Check if file exists."""
-        return os.path.exists(path)
 
     def reconcile_binlogs_collection(
         self, force_restart: bool = False, ignore_inactive_error: bool = False
