@@ -238,6 +238,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("charms.mysql.v0.mysql.MySQLCharmBase.active_status_message", return_value="")
     @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("mysql_vm_helpers.MySQL.get_member_role")
     @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address")
     @patch("charm.is_volume_mounted", return_value=True)
     @patch("mysql_vm_helpers.MySQL.reboot_from_complete_outage")
@@ -258,6 +259,7 @@ class TestCharm(unittest.TestCase):
         _reboot_from_complete_outage,
         _is_volume_mounted,
         _get_cluster_primary_address,
+        _get_member_role,
         _get_member_state,
         _active_status_message,
         _unit_initialized,
@@ -282,9 +284,11 @@ class TestCharm(unittest.TestCase):
                 "member-state": "online",
             },
         )
-        _get_member_state.return_value = ("online", "primary")
+        _get_member_role.return_value = "PRIMARY"
+        _get_member_state.return_value = "ONLINE"
 
         self.charm.on.update_status.emit()
+        _get_member_role.assert_called_once()
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_not_called()
@@ -294,10 +298,12 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.model.unit.status, ActiveStatus))
 
         # test instance state = offline
+        _get_member_role.reset_mock()
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
 
-        _get_member_state.return_value = ("offline", "primary")
+        _get_member_role.return_value = "PRIMARY"
+        _get_member_state.return_value = "OFFLINE"
         self.harness.update_relation_data(
             self.peer_relation_id,
             self.charm.unit.name,
@@ -307,6 +313,7 @@ class TestCharm(unittest.TestCase):
         )
 
         self.charm.on.update_status.emit()
+        _get_member_role.assert_called_once()
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_called_once()
         _snap_service_operation.assert_called()
@@ -314,15 +321,18 @@ class TestCharm(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.model.unit.status, MaintenanceStatus))
         # test instance state = unreachable
+        _get_member_role.reset_mock()
         _get_member_state.reset_mock()
         _get_cluster_primary_address.reset_mock()
         _snap_service_operation.reset_mock()
 
         _reboot_from_complete_outage.reset_mock()
         _snap_service_operation.return_value = False
-        _get_member_state.return_value = ("unreachable", "primary")
+        _get_member_role.return_value = "PRIMARY"
+        _get_member_state.return_value = "UNREACHABLE"
 
         self.charm.on.update_status.emit()
+        _get_member_role.assert_called_once()
         _get_member_state.assert_called_once()
         _reboot_from_complete_outage.assert_not_called()
         _snap_service_operation.assert_called_once()

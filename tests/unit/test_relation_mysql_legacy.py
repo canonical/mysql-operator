@@ -24,7 +24,7 @@ class TestMariaDBRelation(unittest.TestCase):
     @pytest.mark.usefixtures("without_juju_secrets")
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0:3306")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0")
     @patch(
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
@@ -86,7 +86,7 @@ class TestMariaDBRelation(unittest.TestCase):
 
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0:3306")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0")
     @patch(
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",
         return_value="super_secure_password",
@@ -150,7 +150,7 @@ class TestMariaDBRelation(unittest.TestCase):
 
     @patch("charm.MySQLOperatorCharm.unit_initialized", return_value=True)
     @patch("mysql_vm_helpers.MySQL.does_mysql_user_exist", return_value=False)
-    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0:3306")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_primary_address", return_value="192.0.2.0")
     @patch("mysql_vm_helpers.MySQL.delete_users_for_unit")
     @patch(
         "relations.mysql.MySQLRelation._get_or_set_password_in_peer_secrets",

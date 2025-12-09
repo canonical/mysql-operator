@@ -500,7 +500,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.add_instance('127.0.0.2:3306', {'recoveryMethod': 'auto', 'password': 'clusteradminpassword', 'label': 'mysql-1'})",
+            "cluster.add_instance('127.0.0.2:3306', {'recoveryMethod': 'auto', 'label': 'mysql-1'})",
         ]
 
         self.mysql.add_instance_to_cluster(
@@ -558,21 +558,26 @@ class TestMySQLBase(unittest.TestCase):
         self.assertFalse(result)
         self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     def test_remove_primary_instance(
         self,
         _release_lock,
         _acquire_lock,
+        _get_cluster_member_addresses,
         _get_cluster_node_count,
+        _get_cluster_primary_address,
     ):
         """Test with no exceptions while running the remove_instance() method."""
+        _get_cluster_member_addresses.return_value = ["1.1.1.1", "2.2.2.2"]
         _get_cluster_node_count.return_value = 2
 
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+            "cluster.remove_instance('127.0.0.1:3306', {'force': 'true'})",
         ]
 
         self.mysql.remove_instance("mysql-0")
@@ -590,17 +595,22 @@ class TestMySQLBase(unittest.TestCase):
 
         self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     def test_remove_primary_instance_error_acquiring_lock(
         self,
         _release_lock,
         _acquire_lock,
+        _get_cluster_member_addresses,
         _get_cluster_node_count,
+        _get_cluster_primary_address,
     ):
         """Test an issue acquiring lock while running the remove_instance() method."""
         _get_cluster_node_count.return_value = 2
+        _get_cluster_member_addresses.return_value = ["1.1.1.1", "2.2.2.2"]
         _acquire_lock.return_value = False
 
         with self.assertRaises(MySQLLockAcquisitionError):
@@ -613,22 +623,27 @@ class TestMySQLBase(unittest.TestCase):
         )
         _release_lock.assert_not_called()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
+    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     def test_remove_primary_instance_error(
         self,
         _release_lock,
         _acquire_lock,
+        _get_cluster_member_addresses,
         _get_cluster_node_count,
+        _get_cluster_primary_address,
     ):
         """Test an issue releasing locks while running the remove_instance() method."""
         _get_cluster_node_count.return_value = 2
+        _get_cluster_member_addresses.return_value = ["1.1.1.1", "2.2.2.2"]
         self.mock_executor.execute_py.side_effect = ExecutionError
 
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+            "cluster.remove_instance('127.0.0.1:3306', {'force': 'true'})",
         ]
 
         # Disable tenacity retry
@@ -1547,7 +1562,10 @@ class TestMySQLBase(unittest.TestCase):
         search_query = (
             "SELECT processlist_id "
             "FROM performance_schema.threads "
-            "WHERE connection_type IS NOT NULL AND name LIKE '%'"
+            "WHERE "
+            "   processlist_id != CONNECTION_ID() AND "
+            "   connection_type IS NOT NULL AND "
+            "   name LIKE '%'"
         )
         stop_query = "KILL CONNECTION '123'"
 
