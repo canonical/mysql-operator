@@ -3,8 +3,9 @@
 
 """Unit test for MySQL shared library."""
 
+import copy
 import unittest
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 import tenacity
 from charms.mysql.v0.mysql import (
@@ -16,11 +17,11 @@ from charms.mysql.v0.mysql import (
     ROLE_DML,
     ROLE_READ,
     ROLE_STATS,
+    UNIT_ADD_LOCKNAME,
     Error,
     MySQLAddInstanceToClusterError,
     MySQLBase,
     MySQLCheckUserExistenceError,
-    MySQLClientError,
     MySQLClusterMetadataExistsError,
     MySQLConfigureInstanceError,
     MySQLConfigureMySQLRolesError,
@@ -43,16 +44,12 @@ from charms.mysql.v0.mysql import (
     MySQLGetClusterPrimaryAddressError,
     MySQLGetMySQLVersionError,
     MySQLGetRouterUsersError,
-    MySQLGetVariableError,
     MySQLInitializeJujuOperationsTableError,
-    MySQLMemberState,
-    MySQLNoMemberStateError,
+    MySQLLockAcquisitionError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
-    MySQLPluginInstallError,
     MySQLPrepareBackupForRestoreError,
     MySQLPromoteClusterToPrimaryError,
     MySQLRemoveInstanceError,
-    MySQLRemoveInstanceRetryError,
     MySQLRemoveReplicaClusterError,
     MySQLRemoveRouterFromMetadataError,
     MySQLRescanClusterError,
@@ -62,30 +59,38 @@ from charms.mysql.v0.mysql import (
     MySQLSetInstanceOfflineModeError,
     MySQLSetInstanceOptionError,
     MySQLSetVariableError,
+    MySQLUnableToGetMemberStateError,
+)
+from mysql_shell.builders import CharmAuthorizationQueryBuilder
+from mysql_shell.executors.errors import ExecutionError
+from mysql_shell.models import (
+    ClusterGlobalStatus,
+    InstanceRole,
+    InstanceState,
 )
 
-from constants import MYSQLD_SOCK_FILE, ROOT_USERNAME
+from constants import CHARMED_MYSQLSH, MYSQLD_SOCK_FILE
 
 SHORT_CLUSTER_STATUS = {
-    "defaultreplicaset": {
+    "defaultReplicaSet": {
         "topology": {
             "mysql-k8s-0": {
                 "address": "mysql-k8s-0.mysql-k8s-endpoints:3306",
-                "memberrole": "secondary",
-                "mode": "r/o",
-                "status": "online",
+                "memberRole": "SECONDARY",
+                "mode": "R/O",
+                "status": "ONLINE",
             },
             "mysql-k8s-1": {
                 "address": "mysql-k8s-1.mysql-k8s-endpoints:3306",
-                "memberrole": "primary",
-                "mode": "r/w",
-                "status": "online",
+                "memberRole": "PRIMARY",
+                "mode": "R/W",
+                "status": "ONLINE",
             },
             "mysql-k8s-2": {
                 "address": "mysql-k8s-2.mysql-k8s-endpoints:3306",
-                "memberrole": "",
-                "mode": "r/o",
-                "status": "offline",
+                "memberRole": "",
+                "mode": "R/O",
+                "status": "OFFLINE",
             },
         }
     }
@@ -94,21 +99,21 @@ SHORT_CLUSTER_STATUS = {
 CLUSTER_SET_STATUS = {
     "clusters": {
         "test_cluster": {
-            "clusterrole": "replica",
-            "clustersetreplicationstatus": "ok",
-            "globalstatus": "ok",
+            "clusterRole": "REPLICA",
+            "clusterSetReplicationStatus": "OK",
+            "globalStatus": "OK",
         },
         "lisbon": {
-            "clusterrole": "primary",
-            "globalstatus": "ok",
+            "clusterRole": "PRIMARY",
+            "globalStatus": "OK",
             "primary": "juju-3f9f94-1.lxd:3306",
         },
     },
-    "domainname": "test_cluster_set",
-    "globalprimaryinstance": "juju-3f9f94-1.lxd:3306",
-    "primarycluster": "lisbon",
-    "status": "healthy",
-    "statustext": "all clusters available.",
+    "domainName": "test_cluster_set",
+    "globalPrimaryInstance": "juju-3f9f94-1.lxd:3306",
+    "primaryCluster": "lisbon",
+    "status": "HEALTHY",
+    "statusText": "all clusters available.",
 }
 
 
@@ -117,6 +122,8 @@ class TestMySQLBase(unittest.TestCase):
     # possible to instantiate abstract class.
     @patch.multiple(MySQLBase, __abstractmethods__=set())
     def setUp(self):
+        self.mock_executor_cls = MagicMock()
+        self.mock_executor = self.mock_executor_cls.return_value
         self.mysql = MySQLBase(
             "127.0.0.1",
             MYSQLD_SOCK_FILE,
@@ -131,95 +138,78 @@ class TestMySQLBase(unittest.TestCase):
             "monitoringpassword",
             "backups",
             "backupspassword",
+            CHARMED_MYSQLSH,
+            self.mock_executor_cls,
         )  # pyright: ignore
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_router_roles(self, _run_mysqlcli_script, _list_mysql_roles):
+    def test_configure_mysql_router_roles(self):
         """Test successful configuration of MySQL router role."""
-        router_roles = (LEGACY_ROLE_ROUTER, MODERN_ROLE_ROUTER)
+        self.mock_executor.execute_sql.return_value = []
 
-        for role in router_roles:
-            _list_mysql_roles.return_value = {next(r for r in router_roles if r != role)}
-            _run_mysqlcli_script.reset_mock()
-            _run_mysqlcli_script.return_value = b""
+        search_query = (
+            "SELECT user, host "
+            "FROM mysql.user "
+            "WHERE user LIKE '{role}' AND authentication_string=''"
+        )
+        create_query = ";".join((
+            "CREATE ROLE {role}",
+            "GRANT CREATE ON *.* TO {role}",
+            "GRANT CREATE USER ON *.* TO {role}",
+            "GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
+        ))
 
-            _expected_configure_role_commands = [
-                f"CREATE ROLE {role}",
-                f"GRANT CREATE ON *.* TO {role}",
-                f"GRANT CREATE USER ON *.* TO {role}",
-                f"GRANT ALL ON *.* TO {role} WITH GRANT OPTION",
-            ]
+        self.mysql.configure_mysql_router_roles()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call(search_query.format(role="%router")),
+            call(create_query.format(role=LEGACY_ROLE_ROUTER)),
+            call(create_query.format(role=MODERN_ROLE_ROUTER)),
+        ])
 
-            self.mysql.configure_mysql_router_roles()
-
-            _run_mysqlcli_script.assert_called_once_with(
-                _expected_configure_role_commands,
-                user=ROOT_USERNAME,
-                password="password",
-            )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_router_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+    def test_configure_mysql_router_roles_fail(self):
         """Test failure to configure the MySQL router role."""
-        _list_mysql_roles.return_value = set()
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLConfigureMySQLRolesError):
             self.mysql.configure_mysql_router_roles()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_roles(self, _run_mysqlcli_script, _list_mysql_roles):
+    def test_configure_mysql_system_roles(self):
         """Test successful configuration of MySQL system roles."""
-        _list_mysql_roles.return_value = {ROLE_DBA}
-        _run_mysqlcli_script.return_value = b""
+        self.mock_executor.execute_sql.return_value = []
 
-        _expected_configure_roles_commands = [
-            # Charmed read queries
-            f"CREATE ROLE {ROLE_READ}",
-            # Charmed DML queries
-            f"CREATE ROLE {ROLE_DML}",
-            # Charmed stats queries
-            f"CREATE ROLE {ROLE_STATS}",
-            f"GRANT SELECT ON performance_schema.* TO {ROLE_STATS}",
-            f"GRANT PROCESS, RELOAD, REPLICATION CLIENT ON *.* TO {ROLE_STATS}",
-            # Charmed backup queries
-            f"CREATE ROLE {ROLE_BACKUP}",
-            f"GRANT charmed_stats TO {ROLE_BACKUP}",
-            f"GRANT EXECUTE, LOCK TABLES, PROCESS, RELOAD ON *.* TO {ROLE_BACKUP}",
-            f"GRANT BACKUP_ADMIN, CONNECTION_ADMIN ON *.* TO {ROLE_BACKUP}",
-            # Charmed DDL queries
-            f"CREATE ROLE {ROLE_DDL}",
-            f"GRANT charmed_dml TO {ROLE_DDL}",
-            f"GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE TABLESPACE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, SHOW_ROUTINE, SHOW VIEW, TRIGGER ON *.* TO {ROLE_DDL}",
-        ]
-
-        self.mysql.configure_mysql_system_roles()
-
-        _run_mysqlcli_script.assert_called_once_with(
-            _expected_configure_roles_commands,
-            user=ROOT_USERNAME,
-            password="password",
+        search_query = (
+            "SELECT user, host "
+            "FROM mysql.user "
+            "WHERE user LIKE 'charmed_%' AND authentication_string=''"
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_roles_fail(self, _run_mysqlcli_script, _list_mysql_roles):
+        builder = CharmAuthorizationQueryBuilder(
+            role_admin=ROLE_DBA,
+            role_backup=ROLE_BACKUP,
+            role_ddl=ROLE_DDL,
+            role_stats=ROLE_STATS,
+            role_reader=ROLE_READ,
+            role_writer=ROLE_DML,
+        )
+        create_query = builder.build_instance_auth_roles_query()
+
+        self.mysql.configure_mysql_system_roles()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call(search_query),
+            call(create_query),
+        ])
+
+    def test_configure_mysql_system_roles_fail(self):
         """Test failure to configure the MySQL system roles."""
-        _list_mysql_roles.return_value = set()
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLConfigureMySQLRolesError):
             self.mysql.configure_mysql_system_roles()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_users(self, _run_mysqlcli_script):
+    def test_configure_mysql_system_users(self):
         """Test successful configuration of MySQL system users."""
-        _run_mysqlcli_script.return_value = b""
+        self.mock_executor.execute_sql.return_value = []
 
-        _expected_configure_user_commands = [
+        queries = ";".join([
             "UPDATE mysql.user SET authentication_string=null WHERE User='root' and Host='localhost'",
             "ALTER USER 'root'@'localhost' IDENTIFIED BY 'password'",
             "CREATE USER 'serverconfig'@'%' IDENTIFIED BY 'serverconfigpassword'",
@@ -230,199 +220,127 @@ class TestMySQLBase(unittest.TestCase):
             "GRANT charmed_backup TO 'backups'@'%'",
             "REVOKE BINLOG_ADMIN, CONNECTION_ADMIN, ENCRYPTION_KEY_ADMIN, GROUP_REPLICATION_ADMIN, REPLICATION_SLAVE_ADMIN, SET_USER_ID, SUPER, SYSTEM_USER, SYSTEM_VARIABLES_ADMIN, VERSION_TOKEN_ADMIN ON *.* FROM 'root'@'localhost'",
             "FLUSH PRIVILEGES",
-        ]
+        ])
 
         self.mysql.configure_mysql_system_users()
+        self.mock_executor.execute_sql.assert_called_once_with(queries)
 
-        _run_mysqlcli_script.assert_called_once_with(
-            _expected_configure_user_commands,
-            user=ROOT_USERNAME,
-            password="password",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_configure_mysql_system_users_fail(self, _run_mysqlcli_script):
+    def test_configure_mysql_system_users_fail(self):
         """Test failure to configure the MySQL system users."""
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLConfigureMySQLUsersError):
             self.mysql.configure_mysql_system_users()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_list_mysql_roles(self, _run_mysqlcli_script):
-        """Test successful listing of MySQL roles."""
-        _run_mysqlcli_script.return_value = []
-
-        _expected_list_roles_commands = (
-            "SELECT User FROM mysql.user WHERE User LIKE 'charmed_%'",
-        )
-
-        self.mysql.list_mysql_roles("charmed_%")
-
-        _run_mysqlcli_script.assert_called_once_with(
-            _expected_list_roles_commands,
-            user=ROOT_USERNAME,
-            password="password",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_does_mysql_user_exist(self, _run_mysqlcli_script):
+    def test_does_mysql_user_exist(self):
         """Test successful execution of does_mysql_user_exist."""
         # Test passing in a custom hostname
-        user_existence_command = (
-            "select user from mysql.user where user = 'test_username' and host = '1.1.1.1'",
+        query = (
+            "SELECT user, host, attribute "
+            "FROM information_schema.user_attributes "
+            "WHERE user LIKE 'test_username' AND attribute LIKE '%'"
         )
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
-        _run_mysqlcli_script.assert_called_once_with(
-            user_existence_command, user="serverconfig", password="serverconfigpassword"
-        )
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
         # Reset the mock
-        _run_mysqlcli_script.reset_mock()
-
-        # Test default hostname
-        user_existence_command = (
-            "select user from mysql.user where user = 'test_username' and host = '1.1.1.2'",
-        )
+        self.mock_executor.execute_sql.reset_mock()
 
         self.mysql.does_mysql_user_exist("test_username", "1.1.1.2")
-        _run_mysqlcli_script.assert_called_once_with(
-            user_existence_command, user="serverconfig", password="serverconfigpassword"
-        )
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_does_mysql_user_exist_failure(self, _run_mysqlcli_script):
+    def test_does_mysql_user_exist_failure(self):
         """Test failure in execution of does_mysql_user_exist."""
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLCheckUserExistenceError):
             self.mysql.does_mysql_user_exist("test_username", "1.1.1.1")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_configure_mysqlrouter_user(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_configure_mysqlrouter_user(self, _get_cluster_primary_address):
         """Test the successful execution of configure_mysqlrouter_user."""
-        _run_mysqlsh_script.return_value = ""
-
-        _expected_create_mysqlrouter_user_commands = "\n".join((
-            "shell.connect_to_primary()",
-            "session.run_sql(\"CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}';\")",
-        ))
-
-        _expected_mysqlrouter_user_grant_commands = "\n".join((
-            "shell.connect_to_primary()",
-            "session.run_sql(\"GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION;\")",
-            "session.run_sql(\"GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1';\")",
-            "session.run_sql(\"GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1';\")",
-            "session.run_sql(\"GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'1.1.1.1';\")",
-            "session.run_sql(\"GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'1.1.1.1';\")",
-            "session.run_sql(\"GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'1.1.1.1';\")",
+        commands = ";".join((
+            "CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}'",
+            "GRANT CREATE USER ON *.* TO 'test_username'@'1.1.1.1' WITH GRANT OPTION",
+            "GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON mysql_innodb_cluster_metadata.* TO 'test_username'@'1.1.1.1'",
+            "GRANT SELECT ON mysql.user TO 'test_username'@'1.1.1.1'",
+            "GRANT SELECT ON performance_schema.replication_group_members TO 'test_username'@'1.1.1.1'",
+            "GRANT SELECT ON performance_schema.replication_group_member_stats TO 'test_username'@'1.1.1.1'",
+            "GRANT SELECT ON performance_schema.global_variables TO 'test_username'@'1.1.1.1'",
         ))
 
         self.mysql.configure_mysqlrouter_user("test_username", "test_password", "1.1.1.1", "app/0")
-
-        self.assertEqual(_run_mysqlsh_script.call_count, 2)
-
-        self.assertEqual(
-            sorted(_run_mysqlsh_script.mock_calls),
-            sorted([
-                call(
-                    _expected_create_mysqlrouter_user_commands,
-                    user="serverconfig",
-                    password="serverconfigpassword",
-                    host="127.0.0.1:33062",
-                ),
-                call(
-                    _expected_mysqlrouter_user_grant_commands,
-                    user="serverconfig",
-                    password="serverconfigpassword",
-                    host="127.0.0.1:33062",
-                ),
-            ]),
-        )
+        self.mock_executor.execute_sql.assert_called_once_with(commands)
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_configure_mysqlrouter_user_failure(
-        self, _run_mysqlsh_script, _get_cluster_primary_address
-    ):
+    def test_configure_mysqlrouter_user_failure(self, _get_cluster_primary_address):
         """Test failure to configure the MySQLRouter user."""
-        _get_cluster_primary_address.return_value = "2.2.2.2"
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLConfigureRouterUserError):
             self.mysql.configure_mysqlrouter_user(
-                "test_username", "test_password", "1.1.1.1", "app/0"
+                "test_username",
+                "test_password",
+                "1.1.1.1",
+                "app/0",
             )
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_non_system_databases")
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    @patch("charms.mysql.v0.mysql.MySQLBase._build_mysql_database_dba_role")
     def test_create_application_database(
-        self, _run_mysqlsh_script, _list_mysql_roles, _get_non_system_databases
+        self,
+        _build_mysql_database_dba_role,
+        _get_non_system_databases,
+        _get_cluster_primary_address,
     ):
         """Test the successful execution of create_application_database."""
+        _build_mysql_database_dba_role.return_value = "test_database_00"
         _get_non_system_databases.return_value = {"test_database"}
-        _list_mysql_roles.return_value = set()
-        _run_mysqlsh_script.return_value = ""
 
         self.mysql.create_database("test_database")
-
-        self.assertEqual(_run_mysqlsh_script.call_count, 0)
+        self.mock_executor.execute_sql.assert_not_called()
 
         _get_non_system_databases.return_value = set()
-        _list_mysql_roles.return_value = set()
-        _run_mysqlsh_script.return_value = ""
-
-        _expected_create_scoped_user_commands = "\n".join((
-            "shell.connect_to_primary()",
-            'session.run_sql("CREATE ROLE `charmed_dba_test_database_00`;")',
-            'session.run_sql("CREATE DATABASE `test_database`;")',
-            'session.run_sql("GRANT SELECT ON `test_database`.* TO charmed_read;")',
-            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO charmed_dml;")',
-            'session.run_sql("GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON `test_database`.* TO `charmed_dba_test_database_00`;")',
-            'session.run_sql("GRANT ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO `charmed_dba_test_database_00`;")',
-        ))
+        query = ";".join([
+            "CREATE DATABASE `test_database`",
+            "GRANT SELECT ON `test_database`.* TO 'charmed_read'",
+            "GRANT SELECT, INSERT, DELETE, UPDATE ON `test_database`.* TO 'charmed_dml'",
+            "CREATE ROLE 'test_database_00'",
+            "GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE, ALTER, ALTER ROUTINE, CREATE, CREATE ROUTINE, CREATE VIEW, DROP, INDEX, LOCK TABLES, REFERENCES, TRIGGER ON `test_database`.* TO 'test_database_00'",
+        ])
 
         self.mysql.create_database("test_database")
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-        self.assertEqual(_run_mysqlsh_script.call_count, 1)
-        self.assertEqual(
-            _run_mysqlsh_script.mock_calls,
-            [
-                call(
-                    _expected_create_scoped_user_commands,
-                    user="serverconfig",
-                    password="serverconfigpassword",
-                    host="127.0.0.1:33062",
-                )
-            ],
-        )
-
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase.get_non_system_databases")
-    @patch("charms.mysql.v0.mysql.MySQLBase.list_mysql_roles")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
+    @patch("charms.mysql.v0.mysql.MySQLBase._build_mysql_database_dba_role")
     def test_create_application_database_failure(
-        self, _run_mysqlsh_script, _list_mysql_roles, _get_non_system_databases
+        self,
+        _build_mysql_database_dba_role,
+        _get_non_system_databases,
+        _get_cluster_primary_address,
     ):
         """Test failure to create application database and scoped user."""
+        _build_mysql_database_dba_role.return_value = "test_database_00"
         _get_non_system_databases.return_value = set()
-        _list_mysql_roles.return_value = set()
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLCreateApplicationDatabaseError):
             self.mysql.create_database("test_database")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_scoped_user(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_create_application_scoped_user(self, _get_cluster_primary_address):
         """Test the successful execution of create_application_scoped_user."""
-        _run_mysqlsh_script.return_value = ""
-
-        _expected_create_scoped_user_commands = "\n".join((
-            "shell.connect_to_primary()",
-            'session.run_sql("CREATE USER `test_username`@`1.1.1.1` IDENTIFIED BY \'test_password\' ATTRIBUTE \'{\\"unit_name\\": \\"app/0\\"}\';")',
-            'session.run_sql("GRANT USAGE ON *.* TO `test_username`@`1.1.1.1`;")',
-            'session.run_sql("GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`;")',
+        create_commands = ";".join((
+            "CREATE USER 'test_username'@'1.1.1.1' IDENTIFIED BY 'test_password' ATTRIBUTE '{\\\"unit_name\\\": \\\"app/0\\\"}'",
+            "",
+        ))
+        grant_commands = ";".join((
+            "GRANT USAGE ON *.* TO `test_username`@`1.1.1.1`",
+            "GRANT ALL PRIVILEGES ON `test_database`.* TO `test_username`@`1.1.1.1`",
         ))
 
         self.mysql.create_scoped_user(
@@ -433,23 +351,15 @@ class TestMySQLBase(unittest.TestCase):
             unit_name="app/0",
         )
 
-        self.assertEqual(_run_mysqlsh_script.call_count, 1)
-        self.assertEqual(
-            _run_mysqlsh_script.mock_calls,
-            [
-                call(
-                    _expected_create_scoped_user_commands,
-                    user="serverconfig",
-                    password="serverconfigpassword",
-                    host="127.0.0.1:33062",
-                )
-            ],
-        )
+        self.mock_executor.execute_sql.assert_has_calls([
+            call(create_commands),
+            call(grant_commands),
+        ])
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_scoped_user_failure(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_create_application_scoped_user_failure(self, _get_cluster_primary_address):
         """Test failure to create application scoped user."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLCreateApplicationScopedUserError):
             self.mysql.create_scoped_user(
@@ -460,8 +370,8 @@ class TestMySQLBase(unittest.TestCase):
                 unit_name="app/0",
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_application_scoped_user_invalid(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_create_application_scoped_user_invalid(self, _get_cluster_primary_address):
         """Test failure to create an invalid application scoped user."""
         with self.assertRaises(MySQLCreateApplicationScopedUserError):
             self.mysql.create_scoped_user(
@@ -473,662 +383,434 @@ class TestMySQLBase(unittest.TestCase):
                 extra_roles=[ROLE_BACKUP],
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_configure_instance(self, _run_mysqlsh_script):
+    def test_configure_instance(self):
         """Test a successful execution of configure_instance."""
         # Test with create_cluster_admin=False
-        configure_instance_commands = [
-            "dba.configure_instance(options=",
-            "{'restart': 'true'})",
+        commands = [
+            "dba.configure_instance(options={'restart': 'true'})",
         ]
 
         self.mysql.configure_instance(create_cluster_admin=False)
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-        _run_mysqlsh_script.assert_called_once_with(
-            "".join(configure_instance_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-        _run_mysqlsh_script.reset_mock()
+        self.mock_executor.reset_mock()
 
         # Test with create_cluster_admin=True
-        configure_instance_commands[1] = (
-            "{'restart': 'true', "
-            "'clusterAdmin': 'clusteradmin', 'clusterAdminPassword': 'clusteradminpassword'})"
-        )
+        commands = [
+            "dba.configure_instance(options={'restart': 'true', 'clusterAdmin': 'clusteradmin', 'clusterAdminPassword': 'clusteradminpassword'})",
+        ]
+
         self.mysql.configure_instance(create_cluster_admin=True)
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-        _run_mysqlsh_script.assert_called_once_with(
-            "".join(configure_instance_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-        # Test an issue with _run_mysqlsh_script
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.reset_mock()
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLConfigureInstanceError):
             self.mysql.configure_instance()
 
-        # Reset mocks
-        _run_mysqlsh_script.reset_mock()
-
-        with self.assertRaises(MySQLConfigureInstanceError):
-            self.mysql.configure_instance()
-
-        _run_mysqlsh_script.assert_called_once()
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_initialize_juju_units_operations_table(self, _run_mysqlcli_script):
+    def test_initialize_juju_units_operations_table(self):
         """Test a successful initialization of the mysql.juju_units_operations table."""
-        expected_initialize_table_commands = (
-            "DROP TABLE IF EXISTS mysql.juju_units_operations",
-            "CREATE TABLE mysql.juju_units_operations (task varchar(20), executor varchar(20), "
-            "status varchar(20), primary key(task))",
-            "INSERT INTO mysql.juju_units_operations values ('unit-teardown', '', 'not-started') "
-            "ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
-            "INSERT INTO mysql.juju_units_operations values ('unit-add', '', 'not-started') "
-            "ON DUPLICATE KEY UPDATE executor = '', status = 'not-started'",
-        )
+        queries = ";".join((
+            (
+                "CREATE TABLE IF NOT EXISTS `mysql`.`juju_units_operations` ( "
+                "    task VARCHAR(20), "
+                "    executor VARCHAR(20), "
+                "    status VARCHAR(20), "
+                "    PRIMARY KEY(task) "
+                ")"
+            ),
+            (
+                "INSERT INTO `mysql`.`juju_units_operations` (task, executor, status) "
+                "VALUES ('unit-add', '', 'not-started') "
+                "ON DUPLICATE KEY UPDATE "
+                "    executor = '', "
+                "    status = 'not-started'"
+            ),
+            (
+                "INSERT INTO `mysql`.`juju_units_operations` (task, executor, status) "
+                "VALUES ('unit-teardown', '', 'not-started') "
+                "ON DUPLICATE KEY UPDATE "
+                "    executor = '', "
+                "    status = 'not-started'"
+            ),
+        ))
 
         self.mysql.initialize_juju_units_operations_table()
+        self.mock_executor.execute_sql.assert_called_once_with(queries)
 
-        _run_mysqlcli_script.assert_called_once_with(
-            expected_initialize_table_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_initialize_juju_units_operations_table_exception(self, _run_mysqlcli_script):
+    def test_initialize_juju_units_operations_table_exception(self):
         """Test an exception initialization of the mysql.juju_units_operations table."""
-        _run_mysqlcli_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLInitializeJujuOperationsTableError):
             self.mysql.initialize_juju_units_operations_table()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_cluster(self, _run_mysqlsh_script):
+    def test_create_cluster(self):
         """Test a successful execution of create_cluster."""
-        create_cluster_commands = (
-            "cluster = dba.create_cluster('test_cluster', {'communicationStack': 'MySQL'})",
-            "cluster.set_instance_option('127.0.0.1', 'label', 'mysql-0')",
-        )
+        create_commands = [
+            "dba.create_cluster('test_cluster', {'communicationStack': 'MySQL'})",
+        ]
+        update_commands = [
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.set_instance_option('127.0.0.1:3306', 'label', 'mysql-0')",
+        ]
 
         self.mysql.create_cluster("mysql-0")
 
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(create_cluster_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_py.assert_has_calls([
+            call("\n".join(create_commands)),
+            call("\n".join(update_commands)),
+        ])
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_cluster_exceptions(self, _run_mysqlsh_script):
+    def test_create_cluster_exceptions(self):
         """Test exceptions raised while running create_cluster."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLCreateClusterError):
             self.mysql.create_cluster("mysql-0")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_cluster_set(self, _run_mysqlsh_script):
+    def test_create_cluster_set(self):
         """Test a successful execution of create_cluster."""
-        create_cluster_commands = (
+        commands = [
             "shell.connect_to_primary()",
             "cluster = dba.get_cluster('test_cluster')",
             "cluster.create_cluster_set('test_cluster_set')",
-        )
+        ]
 
         self.mysql.create_cluster_set()
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(create_cluster_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_cluster_set_exceptions(self, _run_mysqlsh_script):
+    def test_create_cluster_set_exceptions(self):
         """Test exceptions raised while running create_cluster."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLCreateClusterSetError):
             self.mysql.create_cluster_set()
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_add_instance_to_cluster(self, _run_mysqlsh_script, _acquire_lock, _release_lock):
+    def test_add_instance_to_cluster(
+        self,
+        _acquire_lock,
+        _release_lock,
+        _get_cluster_primary_address,
+    ):
         """Test a successful execution of create_cluster."""
-        add_instance_to_cluster_commands = (
-            "cluster = dba.get_cluster('test_cluster')\n"
-            "shell.options['dba.restartWaitTimeout'] = 3600\n"
-            "cluster.add_instance('clusteradmin@127.0.0.2', {'password': 'clusteradminpassword',"
-            " 'label': 'mysql-1', 'recoveryMethod': 'auto'})"
-        )
+        commands = [
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.add_instance('127.0.0.2:3306', {'recoveryMethod': 'auto', 'password': 'clusteradminpassword', 'label': 'mysql-1'})",
+        ]
 
         self.mysql.add_instance_to_cluster(
-            instance_address="127.0.0.2", instance_unit_label="mysql-1"
+            instance_address="127.0.0.2",
+            instance_unit_label="mysql-1",
         )
 
-        _run_mysqlsh_script.assert_called_once_with(
-            add_instance_to_cluster_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-            exception_as_warning=True,
-        )
         _acquire_lock.assert_called_once()
         _release_lock.assert_called_once()
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock", return_value=True)
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     def test_add_instance_to_cluster_exception(
-        self, _run_mysqlsh_script, _acquire_lock, _release_lock
+        self,
+        _acquire_lock,
+        _release_lock,
+        _get_cluster_primary_address,
     ):
         """Test exceptions raised while running add_instance_to_cluster."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLAddInstanceToClusterError):
             self.mysql.add_instance_to_cluster(
-                instance_address="127.0.0.2", instance_unit_label="mysql-1"
+                instance_address="127.0.0.2",
+                instance_unit_label="mysql-1",
             )
             _acquire_lock.assert_called_once()
             _release_lock.assert_called_once()
-            _run_mysqlsh_script.assert_called()
 
-    @patch(
-        "charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script", return_value="INSTANCE_CONFIGURED"
-    )
-    def test_is_instance_configured_for_innodb(self, _run_mysqlsh_script):
+    def test_is_instance_configured_for_innodb(self):
         """Test with no exceptions while calling the is_instance_configured_for_innodb method."""
-        # test successfully configured instance
-        check_instance_configuration_commands = (
-            "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
-            'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
-        )
+        self.mock_executor.execute_py.return_value = '{"status": "ok"}'
 
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
-            "127.0.0.2", "mysql-1"
-        )
+        commands = [
+            "result = dba.check_instance_configuration(options=None)",
+            "print(result)",
+        ]
 
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(check_instance_configuration_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.2:33062",
-        )
-        self.assertTrue(is_instance_configured)
+        result = self.mysql.is_instance_configured_for_innodb("127.0.0.2")
+        self.assertTrue(result)
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-        # reset mocks
-        _run_mysqlsh_script.reset_mock()
-
-        # test instance not configured for innodb
-        _run_mysqlsh_script.return_value = "INSTANCE_NOT_CONFIGURED"
-
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
-            "127.0.0.2", "mysql-1"
-        )
-
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(check_instance_configuration_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.2:33062",
-        )
-        self.assertFalse(is_instance_configured)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_drop_group_replication_metadata_schema(self, _run_mysqlsh_script):
-        """Test with no exceptions while calling the drop_group_replication_metadata_schema method."""
-        self.mysql.drop_group_replication_metadata_schema()
-
-        _run_mysqlsh_script.assert_called_once_with(
-            "dba.drop_metadata_schema()",
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_instance_configured_for_innodb_exceptions(self, _run_mysqlsh_script):
+    def test_is_instance_configured_for_innodb_exceptions(self):
         """Test an exception while calling the is_instance_configured_for_innodb method."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
-        check_instance_configuration_commands = (
-            "instance_configured = dba.check_instance_configuration()['status'] == 'ok'",
-            'print("INSTANCE_CONFIGURED" if instance_configured else "INSTANCE_NOT_CONFIGURED")',
-        )
+        commands = [
+            "result = dba.check_instance_configuration(options=None)",
+            "print(result)",
+        ]
 
-        is_instance_configured = self.mysql.is_instance_configured_for_innodb(
-            "127.0.0.2", "mysql-1"
-        )
-
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(check_instance_configuration_commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.2:33062",
-        )
-        self.assertFalse(is_instance_configured)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_execute_remove_instance(self, _run_mysqlsh_script):
-        expected_remove_instance_commands = (
-            "cluster = dba.get_cluster('test_cluster')\n"
-            "cluster.remove_instance('clusteradmin@127.0.0.1', "
-            "{'password': 'clusteradminpassword', 'force': 'false'})"
-        )
-
-        self.mysql.execute_remove_instance(connect_instance="1.2.3.4", force=False)
-
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_remove_instance_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="1.2.3.4:33062",
-        )
+        result = self.mysql.is_instance_configured_for_innodb("127.0.0.2")
+        self.assertFalse(result)
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     def test_remove_primary_instance(
         self,
         _release_lock,
-        _run_mysqlsh_script,
-        _get_cluster_member_addresses,
         _acquire_lock,
-        _get_cluster_primary_address,
         _get_cluster_node_count,
     ):
         """Test with no exceptions while running the remove_instance() method."""
-        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
-        _acquire_lock.return_value = True
-        _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
         _get_cluster_node_count.return_value = 2
+
+        commands = [
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+        ]
 
         self.mysql.remove_instance("mysql-0")
 
-        expected_remove_instance_commands = (
-            "cluster = dba.get_cluster('test_cluster')\n"
-            "cluster.remove_instance('clusteradmin@127.0.0.1', "
-            "{'password': 'clusteradminpassword', 'force': 'true'})"
+        _acquire_lock.assert_called_once_with(
+            executor=self.mock_executor,
+            unit_label="mysql-0",
+            unit_task="unit-teardown",
+        )
+        _release_lock.assert_called_once_with(
+            executor=self.mock_executor,
+            unit_label="mysql-0",
+            unit_task="unit-teardown",
         )
 
-        self.assertEqual(_get_cluster_primary_address.call_count, 2)
-        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
-        _get_cluster_member_addresses.assert_called_once_with(exclude_unit_labels=["mysql-0"])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_remove_instance_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-        _release_lock.assert_called_once_with("2.2.2.2", "mysql-0", "unit-teardown")
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
     def test_remove_primary_instance_error_acquiring_lock(
         self,
         _release_lock,
-        _run_mysqlsh_script,
-        _get_cluster_member_addresses,
         _acquire_lock,
-        _get_cluster_primary_address,
+        _get_cluster_node_count,
     ):
         """Test an issue acquiring lock while running the remove_instance() method."""
-        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
+        _get_cluster_node_count.return_value = 2
         _acquire_lock.return_value = False
 
-        # disable tenacity retry
-        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda _: True)
-
-        with self.assertRaises(MySQLRemoveInstanceRetryError):
+        with self.assertRaises(MySQLLockAcquisitionError):
             self.mysql.remove_instance("mysql-0")
 
-        self.assertEqual(_get_cluster_primary_address.call_count, 1)
-        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
-        _get_cluster_member_addresses.assert_not_called()
-        _run_mysqlsh_script.assert_not_called()
+        _acquire_lock.assert_called_once_with(
+            executor=self.mock_executor,
+            unit_label="mysql-0",
+            unit_task="unit-teardown",
+        )
         _release_lock.assert_not_called()
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_node_count")
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
     @patch("charms.mysql.v0.mysql.MySQLBase._acquire_lock")
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_cluster_member_addresses")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
     @patch("charms.mysql.v0.mysql.MySQLBase._release_lock")
-    def test_remove_primary_instance_error_releasing_lock(
+    def test_remove_primary_instance_error(
         self,
         _release_lock,
-        _run_mysqlsh_script,
-        _get_cluster_member_addresses,
         _acquire_lock,
-        _get_cluster_primary_address,
         _get_cluster_node_count,
     ):
         """Test an issue releasing locks while running the remove_instance() method."""
-        _get_cluster_primary_address.side_effect = ["1.1.1.1", "2.2.2.2"]
-        _acquire_lock.return_value = True
-        _get_cluster_member_addresses.return_value = ("2.2.2.2", True)
-        _release_lock.side_effect = MySQLClientError("Error on subprocess")
         _get_cluster_node_count.return_value = 2
+        self.mock_executor.execute_py.side_effect = ExecutionError
+
+        commands = [
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+        ]
+
+        # Disable tenacity retry
+        self.mysql.remove_instance.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
         with self.assertRaises(MySQLRemoveInstanceError):
             self.mysql.remove_instance("mysql-0")
 
-        expected_remove_instance_commands = (
-            "cluster = dba.get_cluster('test_cluster')\n"
-            "cluster.remove_instance('clusteradmin@127.0.0.1', "
-            "{'password': 'clusteradminpassword', 'force': 'true'})"
+        _acquire_lock.assert_called_once_with(
+            executor=self.mock_executor,
+            unit_label="mysql-0",
+            unit_task="unit-teardown",
+        )
+        _release_lock.assert_called_once_with(
+            executor=self.mock_executor,
+            unit_label="mysql-0",
+            unit_task="unit-teardown",
         )
 
-        self.assertEqual(_get_cluster_primary_address.call_count, 2)
-        _acquire_lock.assert_called_once_with("1.1.1.1", "mysql-0", "unit-teardown")
-        _get_cluster_member_addresses.assert_called_once_with(exclude_unit_labels=["mysql-0"])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_remove_instance_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-        _release_lock.assert_called_once_with("2.2.2.2", "mysql-0", "unit-teardown")
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_acquire_lock(self, _run_mysqlsh_script):
+    def test_acquire_lock(self):
         """Test a successful execution of _acquire_lock()."""
-        _run_mysqlsh_script.return_value = "<ACQUIRED_LOCK>1</ACQUIRED_LOCK>"
+        query = (
+            "UPDATE `mysql`.`juju_units_operations` "
+            "SET status = 'in-progress', executor = 'mysql-0' "
+            "WHERE task = 'unit-teardown' AND executor = ''"
+        )
 
-        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
+        self.mock_executor.execute_sql.return_value = [{"executor": "mysql-0"}]
 
+        acquired_lock = self.mysql._acquire_lock(self.mock_executor, "mysql-0", "unit-teardown")
+        self.mock_executor.execute_sql.assert_has_calls([call(query)])
         self.assertTrue(acquired_lock)
 
-        expected_acquire_lock_commands = "\n".join([
-            "session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='mysql-0', status='in-progress' WHERE task='unit-teardown' AND executor='';\")",
-            "acquired_lock = session.run_sql(\"SELECT count(*) FROM mysql.juju_units_operations WHERE task='unit-teardown' AND executor='mysql-0';\").fetch_one()[0]",
-            "print(f'<ACQUIRED_LOCK>{acquired_lock}</ACQUIRED_LOCK>')",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_acquire_lock_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="1.1.1.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_unable_to_acquire_lock(self, _run_mysqlsh_script):
-        """Test a successful execution of _acquire_lock() but failure to acquire lock."""
-        _run_mysqlsh_script.return_value = "<ACQUIRED_LOCK>0</ACQUIRED_LOCK>"
-
-        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
-
-        self.assertFalse(acquired_lock)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_issue_with_acquire_lock(self, _run_mysqlsh_script):
+    def test_issue_with_acquire_lock(self):
         """Test an issue while executing _acquire_lock()."""
-        _run_mysqlsh_script.return_value = ""
+        query = (
+            "UPDATE `mysql`.`juju_units_operations` "
+            "SET status = 'in-progress', executor = 'mysql-0' "
+            "WHERE task = 'unit-teardown' AND executor = ''"
+        )
 
-        acquired_lock = self.mysql._acquire_lock("1.1.1.1", "mysql-0", "unit-teardown")
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
+        acquired_lock = self.mysql._acquire_lock(self.mock_executor, "mysql-0", "unit-teardown")
+        self.mock_executor.execute_sql.assert_called_once_with(query)
         self.assertFalse(acquired_lock)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_release_lock(self, _run_mysqlsh_script):
+    def test_release_lock(self):
         """Test a successful execution of _acquire_lock()."""
-        self.mysql._release_lock("2.2.2.2", "mysql-0", "unit-teardown")
-
-        expected_release_lock_commands = "\n".join([
-            "r = session.run_sql(\"UPDATE mysql.juju_units_operations SET executor='', status='not-started' WHERE task='unit-teardown' AND executor='mysql-0';\")",
-            "print(r.get_affected_items_count())",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_release_lock_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="2.2.2.2:33062",
+        query = (
+            "UPDATE `mysql`.`juju_units_operations` "
+            "SET status = 'not-started', executor = '' "
+            "WHERE task = 'unit-teardown' AND executor = 'mysql-0'"
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_member_addresses(self, _run_mysqlsh_script):
-        """Test a successful execution of _get_cluster_member_addresses()."""
-        _run_mysqlsh_script.return_value = "<MEMBER_ADDRESSES>1.1.1.1,2.2.2.2</MEMBER_ADDRESSES>"
+        self.mysql._release_lock(self.mock_executor, "mysql-0", "unit-teardown")
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-        cluster_members, valid = self.mysql._get_cluster_member_addresses(
-            exclude_unit_labels=["mysql-0"]
-        )
-
-        self.assertEqual(cluster_members, ["1.1.1.1", "2.2.2.2"])
-        self.assertTrue(valid)
-
-        expected_commands = "\n".join([
-            "cluster = dba.get_cluster('test_cluster')",
-            "member_addresses = ','.join([member['address'] for label, member in cluster.status()['defaultReplicaSet']['topology'].items() if label not in ['mysql-0']])",
-            "print(f'<MEMBER_ADDRESSES>{member_addresses}</MEMBER_ADDRESSES>')",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_empty_get_cluster_member_addresses(self, _run_mysqlsh_script):
-        """Test successful execution of _get_cluster_member_addresses() with empty return value."""
-        _run_mysqlsh_script.return_value = "<MEMBER_ADDRESSES></MEMBER_ADDRESSES>"
-
-        cluster_members, valid = self.mysql._get_cluster_member_addresses(
-            exclude_unit_labels=["mysql-0"]
-        )
-
-        self.assertEqual(cluster_members, [])
-        self.assertTrue(valid)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_error_get_cluster_member_addresses(self, _run_mysqlsh_script):
-        """Test an issue executing _get_cluster_member_addresses()."""
-        _run_mysqlsh_script.return_value = ""
-
-        cluster_members, valid = self.mysql._get_cluster_member_addresses(
-            exclude_unit_labels=["mysql-0"]
-        )
-
-        self.assertEqual(cluster_members, [])
-        self.assertFalse(valid)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_primary_address(self, _run_mysqlsh_script):
+    def test_get_cluster_primary_address(self):
         """Test a successful execution of _get_cluster_primary_address()."""
-        _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>1.1.1.1</PRIMARY_ADDRESS>"
+        self.mock_executor.execute_py.return_value = (
+            '{"defaultReplicaSet": {"status": "OK", "primary": "1.1.1.1:3306"}}'
+        )
 
         primary_address = self.mysql.get_cluster_primary_address()
-
         self.assertEqual(primary_address, "1.1.1.1")
 
-        expected_commands = "\n".join([
-            "shell.connect_to_primary()",
-            "primary_address = shell.parse_uri(session.uri)['host']",
-            "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
+        self.mock_executor.execute_py.return_value = (
+            '{"defaultReplicaSet": {"status": "NO_QUORUM", "primary": "1.1.1.1:3306"}}'
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_no_match_cluster_primary_address_with_connect_instance_address(
-        self, _run_mysqlsh_script
-    ):
-        """Test an issue executing _get_cluster_primary_address()."""
-        _run_mysqlsh_script.return_value = ""
-
-        primary_address = self.mysql.get_cluster_primary_address(
-            connect_instance_address="127.0.0.2"
-        )
-
-        self.assertIsNone(primary_address)
-
-        expected_commands = "\n".join([
-            "shell.connect_to_primary()",
-            "primary_address = shell.parse_uri(session.uri)['host']",
-            "print(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.2:33062",
-        )
+        with self.assertRaises(MySQLGetClusterPrimaryAddressError):
+            self.mysql.get_cluster_primary_address()
 
     @patch("charms.mysql.v0.mysql.MySQLBase.cluster_metadata_exists", return_value=True)
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_instance_in_cluster(self, _run_mysqlsh_script, _cluster_metadata_exists):
+    def test_is_instance_in_cluster(self, _cluster_metadata_exists):
         """Test a successful execution of is_instance_in_cluster() method."""
-        _run_mysqlsh_script.return_value = "ONLINE"
-
-        result = self.mysql.is_instance_in_cluster("mysql-0")
-        self.assertTrue(result)
-
-        expected_commands = "\n".join([
-            "cluster = dba.get_cluster('test_cluster')",
-            "print(cluster.status()['defaultReplicaSet']['topology'].get('mysql-0', {}).get('status', 'NOT_A_MEMBER'))",
-        ])
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-            exception_as_warning=True,
+        self.mock_executor.execute_py.return_value = (
+            '{"defaultReplicaSet": {"topology": {"mysql-0": {"status": "ONLINE"}}}}'
         )
+        self.assertTrue(self.mysql.is_instance_in_cluster("mysql-0"))
 
-        _run_mysqlsh_script.return_value = "NOT_A_MEMBER"
+        self.mock_executor.execute_py.return_value = (
+            '{"defaultReplicaSet": {"topology": {"mysql-0": {"status": "NOT_A_MEMBER"}}}}'
+        )
+        self.assertFalse(self.mysql.is_instance_in_cluster("mysql-0"))
 
-        result = self.mysql.is_instance_in_cluster("mysql-0")
-        self.assertFalse(result)
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_instance_in_cluster_exception(self, _run_mysqlsh_script):
+    def test_is_instance_in_cluster_exception(self):
         """Test an exception executing is_instance_in_cluster() method."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         result = self.mysql.is_instance_in_cluster("mysql-0")
         self.assertFalse(result)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_status(self, _run_mysqlsh_script):
+    def test_get_cluster_status(self):
         """Test a successful execution of get_cluster_status() method."""
-        _run_mysqlsh_script.return_value = '{"status":"online"}'
-
-        self.mysql.get_cluster_status()
-        expected_commands = "\n".join((
+        commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "print(cluster.status({'extended': False}))",
-        ))
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
+            "status = cluster.status({'extended': False})",
+            "print(status)",
+        ]
+
+        self.mock_executor.execute_py.return_value = '{"status": "ONLINE"}'
+        self.mysql.get_cluster_status()
+        self.mock_executor.execute_py.assert_called_once_with(
+            "\n".join(commands),
             timeout=30,
         )
 
     @patch("json.loads")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_status_failure(self, _run_mysqlsh_script, _json_loads):
+    def test_get_cluster_status_failure(self, _json_loads):
         """Test an exception executing get_cluster_status() method."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         self.mysql.get_cluster_status()
         _json_loads.assert_not_called()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_rescan_cluster(self, _run_mysqlsh_script):
+    def test_rescan_cluster(self):
         """Test a successful execution of rescan_cluster()."""
-        self.mysql.rescan_cluster()
-        expected_commands = "\n".join((
+        commands = [
             "cluster = dba.get_cluster('test_cluster')",
             "cluster.rescan({})",
-        ))
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        ]
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_set_instance_option(self, _run_mysqlsh_script):
+        self.mysql.rescan_cluster()
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
+
+    def test_set_instance_option(self):
         """Test execution of set_instance_option()."""
-        expected_commands = "\n".join((
+        commands = [
             f"cluster = dba.get_cluster('{self.mysql.cluster_name}')",
-            f"cluster.set_instance_option('{self.mysql.instance_address}', 'label', 'label-0')",
-        ))
-        self.mysql.set_instance_option("label", "label-0")
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+            f"cluster.set_instance_option('{self.mysql.instance_address}:3306', 'label', 'label-0')",
+        ]
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mysql.set_instance_option("label", "label-0")
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
+
+        self.mock_executor.execute_py.reset_mock()
+
+        self.mock_executor.execute_py.side_effect = ExecutionError
         with self.assertRaises(MySQLSetInstanceOptionError):
             self.mysql.set_instance_option("label", "label-0")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_get_member_state(self, _run_mysqlcli_script):
-        """Test execution of get_member_state()."""
-        _run_mysqlcli_script.return_value = [
-            ("ONLINE", "SECONDARY", "<uuid>", "<notuuid>"),
-            ("ONLINE", "PRIMARY", "<uuid>", "<uuid>"),
-        ]
+    def test_get_member_role(self):
+        """Test execution of get_member_role()."""
+        # Disable tenacity retry
+        self.mysql.get_member_role.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
-        # disable tenacity retry
+        self.mock_executor.execute_sql.return_value = [{"member_role": "PRIMARY"}]
+        role = self.mysql.get_member_role()
+        self.assertEqual(role, InstanceRole.PRIMARY)
+
+        self.mock_executor.execute_sql.return_value = [{"member_role": "SECONDARY"}]
+        role = self.mysql.get_member_role()
+        self.assertEqual(role, InstanceRole.SECONDARY)
+
+        self.mock_executor.execute_sql.side_effect = ExecutionError
+        with self.assertRaises(MySQLUnableToGetMemberStateError):
+            self.mysql.get_member_role()
+
+    def test_get_member_state(self):
+        """Test execution of get_member_state()."""
+        # Disable tenacity retry
         self.mysql.get_member_state.retry.retry = tenacity.retry_if_not_result(lambda _: True)
 
+        self.mock_executor.execute_sql.return_value = [{"member_state": "ONLINE"}]
         state = self.mysql.get_member_state()
-        self.assertEqual(state, ("online", "primary"))
-        _run_mysqlcli_script.return_value = [
-            ("ONLINE", "SECONDARY", "<uuid>", "<uuid>"),
-            ("ONLINE", "PRIMARY", "<uuid>", "<notuuid>"),
-        ]
+        self.assertEqual(state, InstanceState.ONLINE)
 
+        self.mock_executor.execute_sql.return_value = [{"member_state": "OFFLINE"}]
         state = self.mysql.get_member_state()
-        self.assertEqual(state, ("online", "secondary"))
+        self.assertEqual(state, InstanceState.OFFLINE)
 
-        _run_mysqlcli_script.return_value = [
-            ("OFFLINE", "", "", "<uuid>"),
-        ]
-
-        state = self.mysql.get_member_state()
-        self.assertEqual(state, ("offline", "unknown"))
-
-        _run_mysqlcli_script.return_value = []
-
-        with self.assertRaises(MySQLNoMemberStateError):
+        self.mock_executor.execute_sql.side_effect = ExecutionError
+        with self.assertRaises(MySQLUnableToGetMemberStateError):
             self.mysql.get_member_state()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_rescan_cluster_failure(self, _run_mysqlsh_script):
+    def test_rescan_cluster_failure(self):
         """Test an exception executing rescan_cluster()."""
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLRescanClusterError):
             self.mysql.rescan_cluster()
@@ -1141,200 +823,132 @@ class TestMySQLBase(unittest.TestCase):
         self.assertEqual(error.name, "<charms.mysql.v0.mysql.Error>")
         self.assertEqual(error.message, "Error message")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_users_for_unit_failure(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_delete_users_for_unit_failure(self, _get_cluster_primary_address):
         """Test failure to delete users for unit."""
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLDeleteUsersForUnitError):
             self.mysql.delete_users_for_unit("foouser")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_users_for_relation_failure(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_delete_users_for_relation_failure(self, _get_cluster_primary_address):
         """Test failure to delete users for relation."""
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.side_effect = ExecutionError
 
         with self.assertRaises(MySQLDeleteUsersForRelationError):
             self.mysql.delete_users_for_relation("foouser")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_delete_user(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_primary_address")
+    def test_delete_user(self, _get_cluster_primary_address):
         """Test delete_user() method."""
-        expected_commands = "\n".join((
-            "shell.connect_to_primary()",
-            "session.run_sql(\"DROP USER `testuser`@'%'\")",
-        ))
-        self.mysql.delete_user("testuser")
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        query = "DROP USER IF EXISTS 'testuser'@'%'"
 
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mysql.delete_user("testuser")
+        self.mock_executor.execute_sql.assert_called_once_with(query)
+
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLDeleteUserError):
             self.mysql.delete_user("testuser")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_promote_cluster_to_primary(self, _run_mysqlsh_script):
+    def test_promote_cluster_to_primary(self):
         """Test promote_cluster_to_primary() method."""
-        self.mysql.promote_cluster_to_primary("test_cluster")
-        expected_commands = "\n".join((
+        commands = [
             "shell.connect_to_primary()",
-            "cs = dba.get_cluster_set()",
-            "cs.set_primary_cluster('test_cluster')",
-        ))
+            "cluster_set = dba.get_cluster_set()",
+            "cluster_set.set_primary_cluster('test_cluster')",
+        ]
 
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mysql.promote_cluster_to_primary("test_cluster")
+        self.mock_executor.execute_py.assert_called_once_with("\n".join(commands))
 
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_py.side_effect = ExecutionError
         with self.assertRaises(MySQLPromoteClusterToPrimaryError):
             self.mysql.promote_cluster_to_primary("test_cluster")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_mysql_version(self, _run_mysqlsh_script):
+    def test_get_mysql_version(self):
         """Test get_mysql_version() method."""
-        _run_mysqlsh_script.return_value = "<VERSION>8.0.29-0ubuntu0.20.04.3</VERSION>"
+        self.mock_executor.execute_sql.return_value = [
+            {"version": "8.0.29-0ubuntu0.20.04.3"},
+        ]
+
+        query = "SELECT @@GLOBAL.`version` AS `version`"
 
         version = self.mysql.get_mysql_version()
-        expected_commands = "\n".join((
-            'result = session.run_sql("SELECT version()")',
-            'print(f"<VERSION>{result.fetch_one()[0]}</VERSION>")',
-        ))
+        self.assertEqual(version, "8.0.29")
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-        _run_mysqlsh_script.assert_called_once_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_sql.reset_mock()
 
-        self.assertEqual(version, "8.0.29-0ubuntu0.20.04.3")
-
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLGetMySQLVersionError):
             self.mysql.get_mysql_version()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_update_user_password(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_global_primary_address")
+    def test_update_user_password(self, _get_cluster_global_primary_address):
         """Test the successful execution of update_user_password."""
-        _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>1.1.1.1</PRIMARY_ADDRESS>"
+        _get_cluster_global_primary_address.return_value = "1.1.1.1"
+
+        query = "ALTER USER 'test_user'@'%' IDENTIFIED BY 'test_password'"
 
         self.mysql.update_user_password("test_user", "test_password")
-        expected_commands = "\n".join((
-            "session.run_sql(\"ALTER USER 'test_user'@'%' IDENTIFIED BY 'test_password';\")",
-            'session.run_sql("FLUSH PRIVILEGES;")',
-        ))
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-        _run_mysqlsh_script.assert_called_with(
-            expected_commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="1.1.1.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_cluster_metadata_exists(self, _run_mysqlcli_script, _run_mysqlsh_script):
+    def test_cluster_metadata_exists(self):
         """Test cluster_metadata_exists method."""
-        query = (
-            "SELECT cluster_name "
-            "FROM mysql_innodb_cluster_metadata.clusters "
-            "WHERE EXISTS ("
-            "SELECT * "
-            "FROM information_schema.schemata "
-            "WHERE schema_name = 'mysql_innodb_cluster_metadata'"
-            ")"
-        )
-        commands = "\n".join((
-            f'cursor = session.run_sql("{query}")',
-            "print(cursor.fetch_all())",
-        ))
+        query = "SELECT cluster_name FROM mysql_innodb_cluster_metadata.clusters"
 
-        _run_mysqlsh_script.return_value = f"[{self.mysql.cluster_name}]\n"
-
+        self.mock_executor.execute_sql.return_value = [{"cluster_name": self.mysql.cluster_name}]
         self.assertTrue(self.mysql.cluster_metadata_exists("1.2.3.4"))
-        _run_mysqlsh_script.assert_called_once_with(
-            commands,
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="1.2.3.4:33062",
-            timeout=60,
-            exception_as_warning=True,
-        )
-        _run_mysqlcli_script.assert_not_called()
+        self.mock_executor.execute_sql.assert_called_once_with(query)
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.reset_mock()
+
+        self.mock_executor.execute_sql.return_value = [{"cluster_name": self.mysql.cluster_name}]
+        self.assertTrue(self.mysql.cluster_metadata_exists())
+        self.mock_executor.execute_sql.assert_called_once_with(query)
+
+        self.mock_executor.execute_sql.reset_mock()
+
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLClusterMetadataExistsError):
             self.mysql.cluster_metadata_exists("1.2.3.4")
 
-        _run_mysqlsh_script.reset_mock()
-
-        _run_mysqlcli_script.return_value = [[self.mysql.cluster_name]]
-
-        self.assertTrue(self.mysql.cluster_metadata_exists())
-        _run_mysqlsh_script.assert_not_called()
-        _run_mysqlcli_script.assert_called_once_with(
-            (query,),
-            user="root",
-            password="password",
-            timeout=60,
-            exception_as_warning=True,
-            log_errors=False,
-        )
-
-        _run_mysqlcli_script.reset_mock()
-        _run_mysqlcli_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLClusterMetadataExistsError):
             self.mysql.cluster_metadata_exists()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_offline_mode_and_hidden_instance_exists(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_topology")
+    def test_offline_mode_and_hidden_instance_exists(self, _get_cluster_topology):
         """Test the offline_mode_and_hidden_instance_exists() method."""
-        commands = (
-            "cluster_topology = dba.get_cluster('test_cluster').status()['defaultReplicaSet']['topology']",
-            "selected_instances = [label for label, member in cluster_topology.items() if 'Instance has offline_mode enabled' in member.get('instanceErrors', '') and member.get('hiddenFromRouter')]",
-            "print(f'<OFFLINE_MODE_INSTANCES>{len(selected_instances)}</OFFLINE_MODE_INSTANCES>')",
-        )
-
-        _run_mysqlsh_script.return_value = "<OFFLINE_MODE_INSTANCES>1</OFFLINE_MODE_INSTANCES>"
+        _get_cluster_topology.return_value = {
+            "cluster-1": {
+                "hiddenFromRouter": True,
+                "instanceErrors": "Instance has offline_mode enabled",
+            },
+        }
 
         exists = self.mysql.offline_mode_and_hidden_instance_exists()
         self.assertTrue(exists)
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.return_value = "<OFFLINE_MODE_INSTANCES>0</OFFLINE_MODE_INSTANCES>"
+        _get_cluster_topology.reset_mock()
+        _get_cluster_topology.return_value = {
+            "cluster-1": {
+                "hiddenFromRouter": False,
+            },
+        }
 
         exists = self.mysql.offline_mode_and_hidden_instance_exists()
         self.assertFalse(exists)
-        _run_mysqlsh_script.assert_called_once_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError()
+        _get_cluster_topology.reset_mock()
+        _get_cluster_topology.side_effect = ExecutionError()
 
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.return_value = "garbage"
+        _get_cluster_topology.reset_mock()
+        _get_cluster_topology.return_value = "garbage"
 
         with self.assertRaises(MySQLOfflineModeAndHiddenInstanceExistsError):
             self.mysql.offline_mode_and_hidden_instance_exists()
@@ -1631,10 +1245,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_retrieve_backup_with_xbcloud_failure(
-        self,
-        _execute_commands,
-    ):
+    def test_retrieve_backup_with_xbcloud_failure(self, _execute_commands):
         """Test a failure of retrieve_backup_with_xbcloud()."""
         _execute_commands.side_effect = [
             ("16", None),
@@ -1785,10 +1396,7 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_empty_data_files(
-        self,
-        _execute_commands,
-    ):
+    def test_empty_data_files(self, _execute_commands):
         """Test successful execution of empty_data_files()."""
         self.mysql.empty_data_files(
             "mysql/data/directory",
@@ -1815,10 +1423,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_empty_data_files_failure(
-        self,
-        _execute_commands,
-    ):
+    def test_empty_data_files_failure(self, _execute_commands):
         """Test failure of empty_data_files()."""
         _execute_commands.side_effect = MySQLExecError("failure")
 
@@ -1830,10 +1435,7 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_restore_backup(
-        self,
-        _execute_commands,
-    ):
+    def test_restore_backup(self, _execute_commands):
         """Test successful execution of restore_backup()."""
         self.mysql.restore_backup(
             "backup/location",
@@ -1864,10 +1466,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_restore_backup_failure(
-        self,
-        _execute_commands,
-    ):
+    def test_restore_backup_failure(self, _execute_commands):
         """Test failure of restore_backup()."""
         _execute_commands.side_effect = MySQLExecError("failure")
 
@@ -1883,10 +1482,7 @@ class TestMySQLBase(unittest.TestCase):
             )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_delete_temp_restore_directory(
-        self,
-        _execute_commands,
-    ):
+    def test_delete_temp_restore_directory(self, _execute_commands):
         """Test successful execution of delete_temp_restore_directory()."""
         self.mysql.delete_temp_restore_directory(
             "mysql/data/directory",
@@ -1909,10 +1505,7 @@ class TestMySQLBase(unittest.TestCase):
         )
 
     @patch("charms.mysql.v0.mysql.MySQLBase._execute_commands")
-    def test_delete_temp_restore_directory_failure(
-        self,
-        _execute_commands,
-    ):
+    def test_delete_temp_restore_directory_failure(self, _execute_commands):
         """Test failure of delete_temp_restore_directory()."""
         _execute_commands.side_effect = MySQLExecError("failure")
 
@@ -1923,193 +1516,142 @@ class TestMySQLBase(unittest.TestCase):
                 group="test-group",
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_tls_set_custom(self, _run_mysqlcli_script):
+    def test_tls_set_custom(self):
         """Test the successful execution of tls_set_custom."""
-        commands = (
-            "SET PERSIST ssl_ca='ca_path'",
-            "SET PERSIST ssl_key='key_path'",
-            "SET PERSIST ssl_cert='cert_path'",
-            "SET PERSIST require_secure_transport=on",
+        queries = [
+            "SET @@PERSIST.`ssl_ca` = 'ca_path'",
+            "SET @@PERSIST.`ssl_key` = 'key_path'",
+            "SET @@PERSIST.`ssl_cert` = 'cert_path'",
+            "SET @@PERSIST.`require_secure_transport` = 'ON'",
             "ALTER INSTANCE RELOAD TLS",
-        )
+        ]
 
         self.mysql.tls_setup("ca_path", "key_path", "cert_path", True)
+        self.mock_executor.execute_sql.assert_has_calls([call(query) for query in queries])
 
-        _run_mysqlcli_script.assert_called_with(
-            commands,
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_tls_restore_default(self, _run_mysqlcli_script):
+    def test_tls_restore_default(self):
         """Test the successful execution of tls_set_custom."""
-        commands = (
-            "SET PERSIST ssl_ca='ca.pem'",
-            "SET PERSIST ssl_key='server-key.pem'",
-            "SET PERSIST ssl_cert='server-cert.pem'",
-            "SET PERSIST require_secure_transport=off",
+        queries = [
+            "SET @@PERSIST.`ssl_ca` = 'ca.pem'",
+            "SET @@PERSIST.`ssl_key` = 'server-key.pem'",
+            "SET @@PERSIST.`ssl_cert` = 'server-cert.pem'",
+            "SET @@PERSIST.`require_secure_transport` = 'OFF'",
             "ALTER INSTANCE RELOAD TLS",
-        )
+        ]
 
         self.mysql.tls_setup()
+        self.mock_executor.execute_sql.assert_has_calls([call(query) for query in queries])
 
-        _run_mysqlcli_script.assert_called_with(
-            commands,
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
+    def test_kill_client_sessions(self):
+        """Test kill_client_sessions."""
+        search_query = (
+            "SELECT processlist_id "
+            "FROM performance_schema.threads "
+            "WHERE connection_type IS NOT NULL AND name LIKE '%'"
         )
+        stop_query = "KILL CONNECTION '123'"
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_kill_unencrypted_sessions(self, _run_mysqlsh_script):
-        """Test kill non TLS connections."""
-        commands = (
-            (
-                'processes = session.run_sql("'
-                "SELECT processlist_id FROM performance_schema.threads WHERE "
-                "connection_type = 'TCP/IP' AND type = 'FOREGROUND';"
-                '")'
-            ),
-            "process_id_list = [id[0] for id in processes.fetch_all()]",
-            'for process_id in process_id_list:\n  session.run_sql(f"KILL CONNECTION {process_id}")',
-        )
+        self.mock_executor.execute_sql.return_value = [{"processlist_id": 123}]
+        self.mysql.kill_client_sessions()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call(search_query),
+            call(stop_query),
+        ])
 
-        self.mysql.kill_unencrypted_sessions()
-
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_are_locks_acquired(self, _run_mysqlsh_script):
+    def test_are_locks_acquired(self):
         """Test are_locks_acquired."""
-        commands = (
-            "result = session.run_sql(\"SELECT COUNT(*) FROM mysql.juju_units_operations WHERE status='in-progress';\")",
-            "print(f'<LOCKS>{result.fetch_one()[0]}</LOCKS>')",
-        )
-        _run_mysqlsh_script.return_value = "<LOCKS>0</LOCKS>"
-        assert self.mysql.are_locks_acquired() is False
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
+        query = (
+            "SELECT executor "
+            "FROM `mysql`.`juju_units_operations` "
+            f"WHERE task = '{UNIT_ADD_LOCKNAME}' AND status = 'in-progress'"
         )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_mysql_user_for_unit(self, _run_mysqlsh_script):
+        self.mock_executor.execute_sql.return_value = []
+        assert self.mysql.are_locks_acquired("0.0.0.0", UNIT_ADD_LOCKNAME) is False
+        self.mock_executor.execute_sql.assert_called_with(query)
+
+    def test_get_mysql_user_for_unit(self):
         """Test get_mysql_user_for_unit."""
-        commands = (
-            "result = session.run_sql(\"SELECT USER, ATTRIBUTE->>'$.router_id' FROM "
-            "INFORMATION_SCHEMA.USER_ATTRIBUTES WHERE ATTRIBUTE->'$.created_by_user'='relation-1' AND"
-            " ATTRIBUTE->'$.created_by_juju_unit'='mysql-router-k8s/0'\")",
-            "print(result.fetch_all())",
+        query = (
+            "SELECT user, host, attribute "
+            "FROM information_schema.user_attributes "
+            "WHERE user LIKE '%' "
+            'AND attribute LIKE \'%\\"created_by_user\\": \\"relation-1\\"%\' '
+            'AND attribute LIKE \'%\\"created_by_juju_unit\\": \\"mysql-router-k8s/0\\"%\''
         )
-        _run_mysqlsh_script.return_value = (
-            '[["mysql_router1_znpcqeg7zp2v",'
-            ' "mysql-router-k8s-0.mysql-router-k8s-endpoints.novo.svc.cluster.local::system"]]'
-        )
+
+        self.mock_executor.execute_sql.return_value = [
+            {
+                "USER": "mysql_router1",
+                "HOST": "0.0.0.0",
+                "ATTRIBUTE": (
+                    "{"
+                    '"created_by_user": "relation-1",'
+                    '"created_by_juju_unit": "mysql-router-k8s/0"'
+                    "}"
+                ),
+            },
+        ]
         self.mysql.get_mysql_router_users_for_unit(
-            relation_id=1, mysql_router_unit_name="mysql-router-k8s/0"
+            relation_id=1,
+            mysql_router_unit_name="mysql-router-k8s/0",
         )
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
+
+        self.mock_executor.execute_sql.assert_called_with(query)
+
+        self.mock_executor.execute_sql.reset_mock()
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLGetRouterUsersError):
             self.mysql.get_mysql_router_users_for_unit(
-                relation_id=1, mysql_router_unit_name="mysql-router-k8s/0"
+                relation_id=1,
+                mysql_router_unit_name="mysql-router-k8s/0",
             )
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_remove_router_from_cluster_metadata(self, _run_mysqlsh_script):
+    def test_remove_router_from_cluster_metadata(self):
         """Test remove_user_from_cluster_metadata."""
-        commands = (
-            "cluster = dba.get_cluster()",
-            'cluster.remove_router_metadata("1")',
-        )
+        commands = [
+            "cluster = dba.get_cluster('test_cluster')",
+            "cluster.remove_router_metadata('1::system')",
+        ]
 
-        self.mysql.remove_router_from_cluster_metadata(router_id="1")
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mysql.remove_router_from_cluster_metadata(router_id="1::system")
+        self.mock_executor.execute_py.assert_called_with("\n".join(commands))
+
+        self.mock_executor.execute_py.reset_mock()
+        self.mock_executor.execute_py.side_effect = ExecutionError
 
         with self.assertRaises(MySQLRemoveRouterFromMetadataError):
-            self.mysql.remove_router_from_cluster_metadata(router_id="1")
+            self.mysql.remove_router_from_cluster_metadata(router_id="1::system")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_set_dynamic_variables(self, _run_mysqlsh_script):
+    def test_set_dynamic_variables(self):
         """Test dynamic_variables."""
-        commands = ('session.run_sql("SET GLOBAL variable=value")',)
+        commands = ["SET @@GLOBAL.`variable` = 'value'"]
         self.mysql.set_dynamic_variable(variable="variable", value="value")
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_sql.assert_called_with("\n".join(commands))
 
-        commands = ('session.run_sql("SET GLOBAL variable=`/a/path/value`")',)
+        commands = ["SET @@GLOBAL.`variable` = '/a/path/value'"]
         self.mysql.set_dynamic_variable(variable="variable", value="/a/path/value")
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_sql.assert_called_with("\n".join(commands))
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
-
+        self.mock_executor.execute_sql.reset_mock()
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         with self.assertRaises(MySQLSetVariableError):
             self.mysql.set_dynamic_variable(variable="variable", value="value")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_variable_value(self, _run_mysqlsh_script):
-        """Test get_variable_value."""
-        _run_mysqlsh_script.return_value = '[["super_read_only", "OFF"]]'
-
-        self.assertEqual(self.mysql.get_variable_value("super_read_only"), "OFF")
-
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
-
-        with self.assertRaises(MySQLGetVariableError):
-            self.mysql.get_variable_value("variable")
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_set_cluster_primary(self, _run_mysqlsh_script):
+    def test_set_cluster_primary(self):
         """Test set_cluster_primary."""
-        commands = (
-            "shell.connect_to_primary()",
+        commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.set_primary_instance('test')",
-        )
-        self.mysql.set_cluster_primary("test")
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+            "cluster.set_primary_instance('10.0.0.2:3306')",
+        ]
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error")
+        self.mysql.set_cluster_primary("10.0.0.2")
+        self.mock_executor.execute_py.assert_called_with("\n".join(commands))
+
+        self.mock_executor.execute_py.reset_mock()
+        self.mock_executor.execute_py.side_effect = ExecutionError()
         with self.assertRaises(MySQLSetClusterPrimaryError):
-            self.mysql.set_cluster_primary(new_primary_address="10.0.0.2")
+            self.mysql.set_cluster_primary("10.0.0.2")
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
     def test_get_primary_label(self, _get_cluster_status):
@@ -2118,36 +1660,24 @@ class TestMySQLBase(unittest.TestCase):
 
         self.assertEqual(self.mysql.get_primary_label(), "mysql-k8s-1")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_status")
-    def test_is_unit_primary(self, _get_cluster_status):
-        """Test is_unit_primary."""
-        _get_cluster_status.return_value = SHORT_CLUSTER_STATUS
-
-        self.assertTrue(self.mysql.is_unit_primary("mysql-k8s-1"))
-        self.assertFalse(self.mysql.is_unit_primary("mysql-k8s-2"))
-
     @patch("charms.mysql.v0.mysql.RECOVERY_CHECK_TIME", 0.1)
     @patch("charms.mysql.v0.mysql.MySQLBase.get_member_state")
     def test_hold_if_recovering(self, mock_get_member_state):
         """Test hold_if_recovering."""
-        mock_get_member_state.return_value = ("online", "primary")
+        mock_get_member_state.return_value = "ONLINE"
         self.mysql.hold_if_recovering()
         self.assertEqual(mock_get_member_state.call_count, 1)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_set_instance_offline_mode(self, _run_mysqlsh_script):
+    def test_set_instance_offline_mode(self):
         """Test execution of set_instance_offline_mode()."""
         self.mysql.set_instance_offline_mode(True)
-
-        _run_mysqlsh_script.assert_called_once_with(
-            ("SET @@GLOBAL.offline_mode = ON",),
-            user="serverconfig",
-            password="serverconfigpassword",
+        self.mock_executor.execute_sql.assert_called_once_with(
+            "SET @@GLOBAL.`offline_mode` = 'ON'",
         )
 
-        _run_mysqlsh_script.reset_mock()
+        self.mock_executor.execute_sql.reset_mock()
 
-        _run_mysqlsh_script.side_effect = MySQLClientError("Error on subprocess")
+        self.mock_executor.execute_sql.side_effect = ExecutionError()
         with self.assertRaises(MySQLSetInstanceOfflineModeError):
             self.mysql.set_instance_offline_mode(True)
 
@@ -2253,175 +1783,138 @@ class TestMySQLBase(unittest.TestCase):
 
         self.assertEqual(rendered_config["max_connections"], "800")
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_create_replica_cluster(self, _run_mysqlsh_script):
+    def test_create_replica_cluster(self):
         """Test create_replica_cluster."""
         endpoint = "address:3306"
         replica_cluster_name = "replica_cluster"
         instance_label = "label"
-        method = "auto"
         options = {
             "recoveryProgress": 0,
-            "recoveryMethod": method,
+            "recoveryMethod": "",
             "timeout": 0,
             "communicationStack": "MySQL",
         }
-        commands = (
+
+        creation_commands = [
             "shell.connect_to_primary()",
-            "cs = dba.get_cluster_set()",
-            f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
-            f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
-        )
-        self.mysql.create_replica_cluster(
-            endpoint,
-            replica_cluster_name,
-            instance_label,
-        )
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-            exception_as_warning=True,
-        )
+            "cluster_set = dba.get_cluster_set()",
+            f"cluster_set.create_replica_cluster('{endpoint}', '{replica_cluster_name}', {{options}})",
+        ]
+        updating_commands = [
+            f"cluster = dba.get_cluster('{replica_cluster_name}')",
+            f"cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
+        ]
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        auto_options = copy.copy(options)
+        auto_options["recoveryMethod"] = "auto"
 
-        with self.assertRaises(MySQLCreateReplicaClusterError):
-            self.mysql.create_replica_cluster(
-                endpoint,
-                replica_cluster_name,
-                instance_label,
-            )
-
-        options["recoveryMethod"] = "clone"
-        commands2 = (
-            "shell.connect_to_primary()",
-            "cs = dba.get_cluster_set()",
-            f"repl_cluster = cs.create_replica_cluster('{endpoint}','{replica_cluster_name}', {options})",
-            f"repl_cluster.set_instance_option('{endpoint}', 'label', '{instance_label}')",
-        )
-        _run_mysqlsh_script.assert_has_calls([
-            call(
-                "\n".join(commands),
-                user="serverconfig",
-                password="serverconfigpassword",
-                host="127.0.0.1:33062",
-                exception_as_warning=True,
-            ),
-            call(
-                "\n".join(commands2),
-                user="serverconfig",
-                password="serverconfigpassword",
-                host="127.0.0.1:33062",
-                exception_as_warning=False,
-            ),
+        self.mysql.create_replica_cluster(endpoint, replica_cluster_name, instance_label)
+        self.mock_executor.execute_py.assert_has_calls([
+            call("\n".join(creation_commands).format(options=auto_options)),
+            call("\n".join(updating_commands)),
         ])
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_remove_replica_cluster(self, _run_mysqlsh_script):
+        clone_options = copy.copy(options)
+        clone_options["recoveryMethod"] = "clone"
+
+        self.mock_executor.execute_py.reset_mock()
+        self.mock_executor.execute_py.side_effect = ExecutionError
+        with self.assertRaises(MySQLCreateReplicaClusterError):
+            self.mysql.create_replica_cluster(endpoint, replica_cluster_name, instance_label)
+            self.mock_executor.execute_py.assert_has_calls([
+                call("\n".join(creation_commands).format(options=auto_options)),
+                call("\n".join(updating_commands)),
+                call("\n".join(creation_commands).format(options=clone_options)),
+                call("\n".join(updating_commands)),
+            ])
+
+    def test_remove_replica_cluster(self):
         """Test remove_replica_cluster."""
         replica_cluster_name = "replica_cluster"
         commands = [
             "shell.connect_to_primary()",
-            "cs = dba.get_cluster_set()",
-            f"cs.remove_cluster('{replica_cluster_name}')",
+            "cluster_set = dba.get_cluster_set()",
+            f"cluster_set.remove_cluster('{replica_cluster_name}', {{'force': 'False'}})",
         ]
         self.mysql.remove_replica_cluster(replica_cluster_name)
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_py.assert_called_with("\n".join(commands))
+        self.mock_executor.execute_py.reset_mock()
 
-        _run_mysqlsh_script.reset_mock()
-        commands[2] = f"cs.remove_cluster('{replica_cluster_name}', {{'force': True}})"
+        commands = [
+            "shell.connect_to_primary()",
+            "cluster_set = dba.get_cluster_set()",
+            f"cluster_set.remove_cluster('{replica_cluster_name}', {{'force': 'True'}})",
+        ]
         self.mysql.remove_replica_cluster(replica_cluster_name, force=True)
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-        )
+        self.mock_executor.execute_py.assert_called_with("\n".join(commands))
+        self.mock_executor.execute_py.reset_mock()
 
-        _run_mysqlsh_script.reset_mock()
-        _run_mysqlsh_script.side_effect = MySQLClientError
-
+        self.mock_executor.execute_py.side_effect = ExecutionError
         with self.assertRaises(MySQLRemoveReplicaClusterError):
             self.mysql.remove_replica_cluster(replica_cluster_name)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_replica_cluster_status(self, _run_mysqlsh_script):
+    @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
+    def test_get_replica_cluster_status(self, _get_cluster_set_status):
         """Test get_replica_cluster_status."""
         replica_cluster_name = "replica_cluster"
-        _run_mysqlsh_script.return_value = "OK "
-        status = self.mysql.get_replica_cluster_status(replica_cluster_name)
-        self.assertEqual(status, "ok")
+        replica_cluster_status = ClusterGlobalStatus.OK
 
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        _get_cluster_set_status.return_value = {
+            "clusters": {
+                replica_cluster_name: {
+                    "globalStatus": replica_cluster_status,
+                }
+            }
+        }
         status = self.mysql.get_replica_cluster_status(replica_cluster_name)
-        self.assertEqual(status, "unknown")
+        self.assertEqual(status, replica_cluster_status)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_node_count(self, _run_mysqlsh_script):
+        _get_cluster_set_status.return_value = None
+        status = self.mysql.get_replica_cluster_status(replica_cluster_name)
+        self.assertEqual(status, ClusterGlobalStatus.UNKNOWN)
+
+    def test_get_cluster_node_count(self):
         """Test get_cluster_node_count."""
-        _run_mysqlsh_script.return_value = "<NODES>2</NODES>"
-        count = self.mysql.get_cluster_node_count()
+        self.mock_executor.execute_sql.return_value = [
+            {"member_id": "1"},
+            {"member_id": "2"},
+        ]
+
+        count = self.mysql.get_cluster_node_count(node_status=InstanceState.ONLINE)
         self.assertEqual(count, 2)
 
-        _run_mysqlsh_script.side_effect = MySQLClientError
+        self.mock_executor.execute_sql.side_effect = ExecutionError
         count = self.mysql.get_cluster_node_count()
         self.assertEqual(count, 0)
 
-        query = (
-            "SELECT COUNT(*) FROM performance_schema.replication_group_members"
-            " WHERE member_state = 'ONLINE'"
-        )
-        commands = (
-            f'result = session.run_sql("{query}")',
-            'print(f"<NODES>{result.fetch_one()[0]}</NODES>")',
-        )
-        self.mysql.get_cluster_node_count(node_status=MySQLMemberState.ONLINE)
-        _run_mysqlsh_script.assert_called_with(
-            "\n".join(commands),
-            user="serverconfig",
-            password="serverconfigpassword",
-            host="127.0.0.1:33062",
-            timeout=30,
-            exception_as_warning=True,
-        )
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_get_cluster_set_global_primary(self, _run_mysqlsh_script):
+    def test_get_cluster_global_primary_address(self):
         """Test get_cluster_set_global_primary."""
-        _run_mysqlsh_script.return_value = "<PRIMARY_ADDRESS>mysql-k8s-1</PRIMARY_ADDRESS>"
-        primary = self.mysql.get_cluster_set_global_primary_address()
+        self.mock_executor.execute_py.return_value = (
+            "{"
+            '   "clusters": {"db1": {"globalStatus": "OK", "primary": "mysql-k8s-1"}},'
+            '   "primaryCluster": "db1"'
+            "}"
+        )
+        primary = self.mysql.get_cluster_global_primary_address()
         self.assertEqual(primary, "mysql-k8s-1")
 
-        _run_mysqlsh_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLGetClusterPrimaryAddressError):
-            self.mysql.get_cluster_set_global_primary_address()
+        self.mock_executor.execute_py.reset_mock()
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlsh_script")
-    def test_is_cluster_auto_rejoin_ongoing(self, _run_mysqlsh_script):
+        self.mock_executor.execute_py.side_effect = ExecutionError
+        with self.assertRaises(MySQLGetClusterPrimaryAddressError):
+            self.mysql.get_cluster_global_primary_address()
+
+    def test_is_cluster_auto_rejoin_ongoing(self):
         """Test is_cluster_auto_rejoin_ongoing."""
-        _run_mysqlsh_script.return_value = (
-            "<COMPLETED_ATTEMPTS>1</COMPLETED_ATTEMPTS>\n"
-            "<ESTIMATED_ATTEMPTS>3</ESTIMATED_ATTEMPTS>\n"
-        )
+        self.mock_executor.execute_sql.return_value = [{"work_completed": 1, "work_estimated": 3}]
         assert self.mysql.is_cluster_auto_rejoin_ongoing() is True
 
-        _run_mysqlsh_script.return_value = (
-            "<COMPLETED_ATTEMPTS>3</COMPLETED_ATTEMPTS>\n"
-            "<ESTIMATED_ATTEMPTS>3</ESTIMATED_ATTEMPTS>\n"
-        )
+        self.mock_executor.execute_sql.return_value = [{"work_completed": 3, "work_estimated": 3}]
         assert self.mysql.is_cluster_auto_rejoin_ongoing() is False
 
-        _run_mysqlsh_script.return_value = ""
-        _run_mysqlsh_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLClientError):
+        self.mock_executor.execute_sql.return_value = []
+        self.mock_executor.execute_sql.side_effect = ExecutionError
+        with self.assertRaises(ExecutionError):
             self.mysql.is_cluster_auto_rejoin_ongoing()
 
     @patch("charms.mysql.v0.mysql.MySQLBase.get_cluster_set_status")
@@ -2438,122 +1931,53 @@ class TestMySQLBase(unittest.TestCase):
 
         self.assertEqual(self.mysql.get_cluster_set_name(), self.mysql.cluster_set_name)
 
-    @patch("charms.mysql.v0.mysql.MySQLBase._file_exists", return_value=True)
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_install_plugin(
-        self,
-        _run_mysqlcli_script,
-        _get_installed_plugins,
-        _get_variable_value,
-        _file_exists,
-    ):
+    @patch("charms.mysql.v0.mysql.MySQLBase._plugin_file_exists", return_value=True)
+    @patch("charms.mysql.v0.mysql.MySQLBase._read_only_disabled")
+    def test_install_plugin(self, _read_only_disabled, _plugin_file_exists):
         """Test install_plugin."""
-        _get_variable_value.return_value = "ON"
-
         # ensure no install if already installed
-        _get_installed_plugins.return_value = {"plugin1"}
+        self.mock_executor.execute_sql.return_value = [{"name": "plugin1"}]
         self.mysql.install_plugins(["plugin1"])
-        _run_mysqlcli_script.assert_not_called()
-        _run_mysqlcli_script.reset_mock()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call("SELECT name FROM mysql.plugin WHERE name LIKE '%'"),
+        ])
+        self.mock_executor.execute_sql.reset_mock()
 
         # ensure not installed if unsupported
-        _get_installed_plugins.return_value = set()
+        self.mock_executor.execute_sql.return_value = []
         self.mysql.install_plugins(["plugin1"])
-        _run_mysqlcli_script.assert_not_called()
-        _run_mysqlcli_script.reset_mock()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call("SELECT name FROM mysql.plugin WHERE name LIKE '%'"),
+        ])
+        self.mock_executor.execute_sql.reset_mock()
 
         # ensure installed
-        _get_installed_plugins.return_value = set()
+        self.mock_executor.execute_sql.return_value = []
         self.mysql.install_plugins(["audit_log"])
-        _run_mysqlcli_script.assert_called_once_with(
-            (
-                "SET GLOBAL super_read_only=OFF",
-                "INSTALL PLUGIN audit_log SONAME 'audit_log.so';",
-                "SET GLOBAL super_read_only=ON",
-            ),
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
-        )
-        _run_mysqlcli_script.reset_mock()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call("SELECT name FROM mysql.plugin WHERE name LIKE '%'"),
+            call("INSTALL PLUGIN `audit_log` SONAME 'audit_log.so'"),
+        ])
 
-        # ensure installed with super_read_only already off
-        _get_variable_value.return_value = "OFF"
-        self.mysql.install_plugins(["audit_log"])
-        _run_mysqlcli_script.assert_called_once_with(
-            ("INSTALL PLUGIN audit_log SONAME 'audit_log.so';",),
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
-        )
-
-        # ensure raise exception
-        _get_installed_plugins.return_value = set()
-        self.mysql.install_plugins(["audit_log"])
-        _run_mysqlcli_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLPluginInstallError):
-            self.mysql.install_plugins(["audit_log"])
-
-    @patch("charms.mysql.v0.mysql.MySQLBase.get_variable_value")
-    @patch("charms.mysql.v0.mysql.MySQLBase._get_installed_plugins")
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_uninstall_plugin(
-        self,
-        _run_mysqlcli_script,
-        _get_installed_plugins,
-        _get_variable_value,
-    ):
+    @patch("charms.mysql.v0.mysql.MySQLBase._read_only_disabled")
+    def test_uninstall_plugin(self, _read_only_disabled):
         """Test uninstall_plugin."""
         # ensure not uninstalled if not installed
-        _get_installed_plugins.return_value = set()
+        self.mock_executor.execute_sql.return_value = []
         self.mysql.uninstall_plugins(["plugin1"])
-        _run_mysqlcli_script.assert_not_called()
-        _run_mysqlcli_script.reset_mock()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call("SELECT name FROM mysql.plugin WHERE name LIKE '%'"),
+        ])
+
+        self.mock_executor.execute_sql.reset_mock()
 
         # ensure uninstalled
-        _get_variable_value.return_value = "ON"
-        _get_installed_plugins.return_value = {"audit_log"}
+        self.mock_executor.execute_sql.return_value = [{"name": "audit_log"}]
         self.mysql.uninstall_plugins(["audit_log"])
-        _run_mysqlcli_script.assert_called_once_with(
-            (
-                "SET GLOBAL super_read_only=OFF",
-                "UNINSTALL PLUGIN audit_log;",
-                "SET GLOBAL super_read_only=ON",
-            ),
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
-        )
-        _run_mysqlcli_script.reset_mock()
-
-        # ensure uninstalled with super_read_only already off
-        _get_variable_value.return_value = "OFF"
-        _get_installed_plugins.return_value = {"audit_log"}
-        self.mysql.uninstall_plugins(["audit_log"])
-        _run_mysqlcli_script.assert_called_once_with(
-            ("UNINSTALL PLUGIN audit_log;",),
-            user=self.mysql.server_config_user,
-            password=self.mysql.server_config_password,
-        )
-
-        # ensure raise exception
-        _get_installed_plugins.return_value = {"audit_log"}
-        self.mysql.uninstall_plugins(["audit_log"])
-        _run_mysqlcli_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLPluginInstallError):
-            self.mysql.uninstall_plugins(["audit_log"])
-
-    @patch("charms.mysql.v0.mysql.MySQLBase._run_mysqlcli_script")
-    def test_get_installed_plugins(self, _run_mysqlcli_script):
-        """Test get_installed_plugins."""
-        _run_mysqlcli_script.return_value = [["audit_log", "clone", "group_replication"]]
-        self.mysql._run_mysqlcli_script = _run_mysqlcli_script
-
-        plugins = self.mysql._get_installed_plugins()
-        self.assertEqual(plugins, {"audit_log"})
-
-        _run_mysqlcli_script.side_effect = MySQLClientError
-        with self.assertRaises(MySQLClientError):
-            self.mysql._get_installed_plugins()
+        self.mock_executor.execute_sql.assert_has_calls([
+            call("SELECT name FROM mysql.plugin WHERE name LIKE '%'"),
+            call("UNINSTALL PLUGIN `audit_log`"),
+        ])
 
     def test_strip_off_password(self):
         _input = """
@@ -2570,25 +1994,8 @@ sion.run_sql("GRANT ALL PRIVILEGES ON `continuous_writes`.* TO `relation-21_ff73
         output = self.mysql.strip_off_passwords(_input)
         self.assertTrue("s1ffxPedAmX58aOdCRSzxEpm" not in output)
 
-    def test_strip_off_passwords_from_exception(self):
-        # Simulate an exception with a password in the message
-        original_exception = Exception("The error")
-        original_exception.cmd = [
-            "CREATE USER `relation-21_ff7306c7454f44`@`%` IDENTIFIED BY 's1ffxPedAmX58aOdCRSzxEpm' ATTRIBUTE '{}';",
-        ]
-
-        self.mysql.strip_off_passwords_from_exception(original_exception)
-
-        self.assertNotIn("s1ffxPedAmX58aOdCRSzxEpm", original_exception.cmd[0])
-
     def test_abstract_methods(self):
         """Test abstract methods."""
-        with self.assertRaises(NotImplementedError):
-            self.mysql._run_mysqlsh_script("", "", "", "")
-
-        with self.assertRaises(NotImplementedError):
-            self.mysql._run_mysqlcli_script(("",), "", "")
-
         with self.assertRaises(NotImplementedError):
             self.mysql._execute_commands([])
 
