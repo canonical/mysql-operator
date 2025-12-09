@@ -115,6 +115,8 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 18
 
+PYDEPS = ["mysql_shell_client ~= 0.6"]
+
 ANOTHER_S3_CLUSTER_REPOSITORY_ERROR_MESSAGE = "S3 repository claimed by another cluster"
 MOVE_RESTORED_CLUSTER_TO_ANOTHER_S3_REPOSITORY_ERROR = (
     "Move restored cluster to another S3 repository"

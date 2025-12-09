@@ -122,6 +122,8 @@ LIBAPI = 0
 
 LIBPATCH = 99
 
+PYDEPS = ["mysql_shell_client ~= 0.6"]
+
 UNIT_TEARDOWN_LOCKNAME = "unit-teardown"
 UNIT_ADD_LOCKNAME = "unit-add"
 
