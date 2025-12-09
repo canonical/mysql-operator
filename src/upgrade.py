@@ -25,6 +25,7 @@ from charms.mysql.v0.mysql import (
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
 )
+from mysql_shell import InstanceStatus
 from ops import RelationDataContent
 from ops.model import BlockedStatus, MaintenanceStatus, Unit
 from pydantic import BaseModel
@@ -106,30 +107,13 @@ class MySQLVMUpgrade(DataUpgrade):
         """Run pre-upgrade checks."""
         fail_message = "Pre-upgrade check failed. Cannot upgrade."
 
-        def _online_instances(status_dict: dict) -> int:
-            """Return the number of online instances from status dict."""
-            return [
-                item["status"]
-                for item in status_dict["defaultreplicaset"]["topology"].values()
-                if not item.get("instanceerrors", [])
-            ].count("online")
-
-        if cluster_status := self.charm._mysql.get_cluster_status(extended=True):
-            if _online_instances(cluster_status) < self.charm.app.planned_units():
-                # case any not fully online unit is found
-                raise ClusterNotReadyError(
-                    message=fail_message,
-                    cause="Not all units are online",
-                    resolution="Ensure all units are online in the cluster",
-                )
-        else:
-            # case cluster status is not available
-            # it may be due to the refresh being ran before
-            # the pre-upgrade-check action
+        num_online = self.charm._mysql.get_cluster_node_count(node_status=InstanceStatus.ONLINE)
+        if num_online < self.charm.app.planned_units():
+            # case any not fully online unit is found
             raise ClusterNotReadyError(
                 message=fail_message,
-                cause="Failed to retrieve cluster status",
-                resolution="Ensure that mysqld is running for this unit",
+                cause="Not all units are online",
+                resolution="Ensure all units are online in the cluster",
             )
 
         try:
