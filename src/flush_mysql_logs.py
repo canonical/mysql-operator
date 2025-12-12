@@ -7,7 +7,7 @@ import logging
 import os
 import typing
 
-from charms.mysql.v0.mysql import MySQLTextLogs
+from mysql_shell import LogType
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 
@@ -54,7 +54,7 @@ class MySQLLogs(Object):
         logs_type = os.environ.get("LOGS_TYPE", "")
 
         try:
-            text_logs = MySQLTextLogs[logs_type]
+            text_logs = LogType(logs_type)
         except KeyError:
             logger.debug(f"Invalid flush of logs type: {logs_type}")
             return

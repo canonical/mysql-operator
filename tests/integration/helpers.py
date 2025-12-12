@@ -117,8 +117,8 @@ async def get_primary_unit(
     results = await juju_.run_action(unit, "get-cluster-status")
 
     primary_unit = None
-    for k, v in results["status"]["defaultreplicaset"]["topology"].items():
-        if v["memberrole"] == "primary" and v["status"] == "online":
+    for k, v in results["status"]["defaultReplicaSet"]["topology"].items():
+        if v["memberRole"] == "PRIMARY" and v["status"] == "ONLINE":
             unit_name = f"{app_name}/{k.split('-')[-1]}"
             primary_unit = next(unit for unit in units if unit.name == unit_name)
             break
