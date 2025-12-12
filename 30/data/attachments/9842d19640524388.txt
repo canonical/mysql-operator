@@ -1,0 +1,39 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing ./mysql_ubuntu@22.04-amd64.charm mysql --base ubuntu@22.04 --config cluster-name=test_cluster --config profile=testing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing keystone keystone --base ubuntu@20.04 --channel yoga/stable --num-units 2
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing mysql-router keystone-mysql-router --channel 8.0/stable
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing keystone:shared-db keystone-mysql-router:shared-db
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing keystone-mysql-router:db-router mysql:db-router
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpiasi4a4e
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpzk86e_s6
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing keystone another-keystone --base ubuntu@20.04 --channel yoga/stable --num-units 2
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing mysql-router another-keystone-mysql-router --channel 8.0/stable
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing another-keystone:shared-db another-keystone-mysql-router:shared-db
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing another-keystone-mysql-router:db-router mysql:db-router
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmp87rbhzu0
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju remove-unit --model testing --no-prompt another-keystone/0 another-keystone/1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju remove-application --model testing --no-prompt another-keystone
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju remove-application --model testing --no-prompt another-keystone-mysql-router
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpleweg208
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
