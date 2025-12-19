@@ -2287,7 +2287,7 @@ class MySQLBase(ABC):
         """Wrapper for reboot_cluster_from_complete_outage command."""
         try:
             # NOTE: This operation used to be done by the server-config user
-            self._cluster_client_tcp.reboot_cluster(self.cluster_name)
+            self._cluster_client_tcp.reboot_cluster(self.cluster_name, {"force": "true"})
         except ExecutionError as e:
             raise MySQLRebootFromCompleteOutageError() from e
 

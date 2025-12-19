@@ -440,9 +440,9 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             all_states = {
                 self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
             }
-            all_states.add(InstanceState.OFFLINE)
+            all_states.add(InstanceState.OFFLINE.lower())
 
-            if all_states == {InstanceState.OFFLINE} and self.unit.is_leader():
+            if all_states == {InstanceState.OFFLINE.lower()} and self.unit.is_leader():
                 loopback_entry_exists = self.hostname_resolution.update_etc_hosts(None)
                 if loopback_entry_exists and not snap_service_operation(
                     CHARMED_MYSQL_SNAP_NAME, CHARMED_MYSQLD_SERVICE, "restart"
