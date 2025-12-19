@@ -171,6 +171,10 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
         config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
         num_units=3,
     )
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    # but it is enough to deploy another application in the meantime
+    juju.deploy(S3_INTEGRATOR, channel="stable", base="ubuntu@22.04")
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
@@ -189,12 +193,8 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
     )
     rotate_mysql_server_credentials(juju, primary_unit_name, ROOT_USERNAME, ROOT_PASSWORD)
 
-    logger.info("Deploying s3 integrator")
-
-    juju.deploy(S3_INTEGRATOR, channel="stable", base="ubuntu@22.04")
-    juju.integrate(DATABASE_APP_NAME, S3_INTEGRATOR)
-
     logger.info("Configuring s3 integrator and integrating it with mysql")
+    juju.integrate(DATABASE_APP_NAME, S3_INTEGRATOR)
     juju.wait(
         ready=lambda status: all((
             *(

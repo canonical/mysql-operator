@@ -62,14 +62,6 @@ def build_and_deploy_operations(
     cloud_credentials: dict[str, str],
 ) -> None:
     """Simple test to ensure that the mysql charm gets deployed."""
-    logger.info("Deploying s3 integrator")
-    juju.deploy(
-        S3_INTEGRATOR,
-        S3_INTEGRATOR,
-        channel=S3_INTEGRATOR_CHANNEL,
-        base="ubuntu@22.04",
-    )
-
     logger.info("Deploying mysql")
     juju.deploy(
         charm,
@@ -77,6 +69,16 @@ def build_and_deploy_operations(
         base="ubuntu@22.04",
         config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
         num_units=3,
+    )
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    # but it is enough to deploy another application in the meantime
+    logger.info("Deploying s3 integrator")
+    juju.deploy(
+        S3_INTEGRATOR,
+        S3_INTEGRATOR,
+        channel=S3_INTEGRATOR_CHANNEL,
+        base="ubuntu@22.04",
     )
 
     juju.wait(
