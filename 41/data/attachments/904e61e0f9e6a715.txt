@@ -1,0 +1,199 @@
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/jammy/mysql-test-app-85
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  isolated-test-app/0 [idle] waiting: 
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: 
+  mysql/1 [idle] active: 
+  mysql/2 [idle] active: 
+  isolated-test-app/0 [idle] waiting: 
+[32mINFO    [0m integration.integration.spaces.test_spaced_db:test_spaced_db.py:134 Flush default routes on client
+[32mINFO    [0m integration.integration.spaces.test_spaced_db:test_spaced_db.py:137 Starting continuous writes
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:253 Ensure continuous writes are incrementing
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m integration.integration.high_availability.high_availability_helpers:high_availability_helpers.py:278 max_written_value=2197 on unit mysql/0
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:52:12Z
+
+App    Version          Status  Scale  Charm  Channel  Rev  Exposed  Message
+mysql  8.0.44-0ubun...  active      3  mysql             0  no       
+
+Unit      Workload  Agent  Machine  Public address  Ports           Message
+mysql/0   active    idle   1        10.0.0.78       3306,33060/tcp  
+mysql/1*  active    idle   2        10.0.0.250      3306,33060/tcp  Primary
+mysql/2   active    idle   3        10.0.0.175      3306,33060/tcp  
+
+Machine  State    Address     Inst id        Base          AZ             Message
+1        started  10.0.0.78   juju-c0417c-1  ubuntu@22.04  runnervmh13bl  Running
+2        started  10.0.0.250  juju-c0417c-2  ubuntu@22.04  runnervmh13bl  Running
+3        started  10.0.0.175  juju-c0417c-3  ubuntu@22.04  runnervmh13bl  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:36:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:38:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:38:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:38:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:38:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:38:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:39:19 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 01:39:25 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-0: 01:39:36 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 01:40:21 ERROR unit.mysql/2.juju-log database-peers:1: Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.10.10.156:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-faba0ab1656d6a80a18170e447a6c104')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.10.10.172', {'password': '*****', 'label': 'mysql-2', 'recoveryMethod': 'auto'})"]' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/mysql/v0/mysql.py", line 2118, in add_instance_to_cluster
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 789, in _run_mysqlsh_script
+    raise MySQLClientError from e
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.10.10.156:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-faba0ab1656d6a80a18170e447a6c104')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.10.10.172', {'password': '*****', 'label': 'mysql-2', 'recoveryMethod': 'clone'})"]' returned non-zero exit status 1.
+unit-mysql-2: 01:40:21 ERROR unit.mysql/2.juju-log database-peers:1: Failed to add instance_address='10.10.10.172' to self.cluster_name='cluster-faba0ab1656d6a80a18170e447a6c104' on self.instance_address='juju-c0417c-3'
+unit-mysql-0: 01:40:26 ERROR unit.mysql/0.juju-log database-peers:1: Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.10.10.156:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-faba0ab1656d6a80a18170e447a6c104')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.10.10.132', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'auto'})"]' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 2118, in add_instance_to_cluster
+    self._run_mysqlsh_script(
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 789, in _run_mysqlsh_script
+    raise MySQLClientError from e
+charms.mysql.v0.mysql.MySQLClientError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.10.10.156:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('cluster-faba0ab1656d6a80a18170e447a6c104')\nshell.options['dba.restartWaitTimeout'] = 3600\ncluster.add_instance('clusteradmin@10.10.10.132', {'password': '*****', 'label': 'mysql-0', 'recoveryMethod': 'clone'})"]' returned non-zero exit status 1.
+unit-mysql-0: 01:40:26 ERROR unit.mysql/0.juju-log database-peers:1: Failed to add instance_address='10.10.10.132' to self.cluster_name='cluster-faba0ab1656d6a80a18170e447a6c104' on self.instance_address='juju-c0417c-1'
+machine-4: 01:45:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:45:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-isolated-test-app-0: 01:46:55 ERROR unit.isolated-test-app/0.juju-log Unable to query the database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/network.py", line 795, in open_connection
+    self.sock.connect(sockaddr)
+OSError: [Errno 101] Network is unreachable
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/src/charm.py", line 229, in _stop_continuous_writes
+    last_written_value = self._max_written_value()
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/src/charm.py", line 240, in _max_written_value
+    with MySQLConnector(self._database_config) as cursor:
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/src/connector.py", line 42, in __enter__
+    self.connection = connector.connect(**self.config)
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/pooling.py", line 323, in connect
+    return MySQLConnection(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/connection.py", line 185, in __init__
+    self.connect(**kwargs)
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/abstracts.py", line 1604, in connect
+    self._open_connection()
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/connection.py", line 411, in _open_connection
+    raise err
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/connection.py", line 382, in _open_connection
+    self._socket.open_connection()
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/mysql/connector/network.py", line 806, in open_connection
+    raise InterfaceError(
+mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '10.0.0.250:3306' (Errno 101: Network is unreachable)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/src/charm.py", line 227, in _stop_continuous_writes
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 443, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 376, in iter
+    result = action(retry_state)
+  File "/var/lib/juju/agents/unit-isolated-test-app-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 419, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7fcc40055630 state=finished raised InterfaceError>]
+unit-mysql-1: 01:52:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mysql-0: 01:52:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mysql-2: 01:52:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
