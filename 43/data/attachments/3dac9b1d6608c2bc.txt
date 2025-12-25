@@ -1,0 +1,5 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:40 Deploying mysql charm with 3 units, and mysql-test-app with 1 units
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing ./mysql_ubuntu@22.04-amd64.charm mysql --base ubuntu@22.04 --config cluster-name=test_cluster --config profile=testing --num-units 3
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing mysql-test-app --base ubuntu@22.04 --channel latest/edge
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:58 Awaiting until both applications are correctly deployed
