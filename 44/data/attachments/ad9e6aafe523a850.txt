@@ -1,0 +1,43 @@
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:258 Scaling mysql application to 1 unit
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:270 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:286 Restoring backup backup_id='2025-12-26T01:40:52Z'
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:291 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:304 Inserting value after restore
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:311 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:322 Scaling mysql application to 3 units
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [allocating] waiting: waiting for machine
+  mysql/4 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/3 [executing] maintenance: Installing MySQL
+  mysql/4 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [executing] maintenance: Setting up cluster node
+  mysql/4 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [executing] waiting: Waiting to join the cluster
+  mysql/4 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/3 [executing] active: 
+  mysql/4 [executing] waiting: waiting to join the cluster.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql/3 [idle] active: 
+  mysql/4 [idle] active: 
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:330 Ensuring inserted values before backup and after restore exist on all units
