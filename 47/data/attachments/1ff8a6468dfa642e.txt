@@ -1,0 +1,41 @@
+[32mINFO    [0m juju.model:model.py:2284 Deploying ch:amd64/noble/landscape-client-73
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [idle] active: Primary
+  mysql-test-app/0 [idle] active: Last written value=1603
+  landscape-client/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  landscape-client/0 [executing] maintenance: Adding client PPA..
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  landscape-client/0 [idle] active: Client registered!
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:40:23Z
+
+App               Version          Status  Scale  Charm             Channel        Rev  Exposed  Message
+landscape-client                   active      1  landscape-client  latest/edge     73  no       Client registered!
+mysql             8.0.44-0ubun...  active      1  mysql                              0  no       
+mysql-test-app    0.0.2            active      1  mysql-test-app    latest/edge     85  no       Last written value=10781
+ubuntu-advantage                   active      1  ubuntu-advantage  latest/stable  137  no       Attached (esm-apps,esm-infra)
+
+Unit                   Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*      active    idle   0        10.114.214.5                    Last written value=10781
+mysql/0*               active    idle   1        10.114.214.223  3306,33060/tcp  Primary
+  landscape-client/0*  active    idle            10.114.214.223                  Client registered!
+  ubuntu-advantage/0*  active    idle            10.114.214.223                  Attached (esm-apps,esm-infra)
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.114.214.5    juju-8e6f88-0  ubuntu@22.04  runnervmh13bl  Running
+1        started  10.114.214.223  juju-8e6f88-1  ubuntu@22.04  runnervmh13bl  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:35:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:35:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:37:53 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-landscape-client-0: 01:39:01 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: preparing operation "install ch:amd64/landscape-client-73" for landscape-client/0: failed to download charm "ch:amd64/landscape-client-73" from API server: download request with archiveSha256 length 0 not valid
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
