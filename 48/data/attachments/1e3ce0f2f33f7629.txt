@@ -1,0 +1,14 @@
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:197 Inserting value before backup
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:205 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/0 [executing] active: Primary
+  mysql/1 [executing] active: 
+  mysql/2 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:221 Listing existing backup ids
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:228 Creating backup
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:234 Listing backup ids post backup
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:243 Inserting value after backup
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit

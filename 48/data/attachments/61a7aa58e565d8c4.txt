@@ -1,0 +1,77 @@
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:363 Deploying a new mysql cluster
+[32mINFO    [0m juju.model:model.py:2284 Deploying local:mysql-1
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] maintenance: Installing MySQL
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] maintenance: Setting up cluster node
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] active: Primary
+[33mWARNING [0m juju.model:model.py:1666 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [idle] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:382 Rotating all mysql credentials
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:400 Syncing credentials
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  another-mysql/0 [executing] active: Primary
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:414 Waiting for blocked application status with another cluster S3 repository
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:422 Restoring backup_id='2025-12-30T01:41:22Z'
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:427 Ensuring that the pre-backup inserted value exists in database, while post-backup inserted value does not
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:440 Inserting value after restore
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:448 Ensuring that pre-backup and post-restore values exist in the database
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:459 Waiting for blocked application status after restore
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:56:57Z
+
+App            Version          Status   Scale  Charm          Channel   Rev  Exposed  Message
+another-mysql  8.0.44-0ubun...  blocked      1  mysql                      1  no       Move restored cluster to another S3 repository
+mysql                           blocked      0  mysql                      0  no       Move restored cluster to another S3 repository
+s3-integrator                   active       1  s3-integrator  1/stable  145  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports           Message
+another-mysql/0*  active    idle   6        10.100.66.140   3306,33060/tcp  Primary
+s3-integrator/0*  active    idle   3        10.100.66.44                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+3        started  10.100.66.44   juju-4852fa-3  ubuntu@22.04  runnervmh13bl  Running
+6        started  10.100.66.140  juju-4852fa-6  ubuntu@22.04  runnervmh13bl  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:35:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:35:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:36:11 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-2: 01:36:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:37:19 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-1: 01:37:24 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-3: 01:40:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:40:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 01:40:58 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector is enabled but not running
+unit-mysql-0: 01:40:58 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector will be restarted due to force_restart option
+unit-mysql-0: 01:41:37 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector is enabled but not running
+unit-mysql-0: 01:41:37 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector will be restarted due to force_restart option
+unit-mysql-0: 01:41:39 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector is enabled but not running
+unit-mysql-0: 01:41:39 ERROR unit.mysql/0.juju-log database-peers:0: Binlogs collector will be restarted due to force_restart option
+machine-4: 01:44:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:44:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:44:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-3: 01:45:23 ERROR unit.mysql/3.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-4: 01:45:26 ERROR unit.mysql/4.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-6: 01:49:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:49:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-another-mysql-0: 01:49:40 ERROR unit.another-mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m integration.integration.test_backup_ceph:test_backup_ceph.py:135 Cleaning backups from cloud buckets
