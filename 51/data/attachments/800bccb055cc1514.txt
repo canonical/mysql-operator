@@ -1,0 +1,114 @@
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.backups:backups.py:116 Creating backup
+[32mINFO    [0m integration.integration.backups:backups.py:120 Creating test data 1
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.backups:backups.py:136 Creating test data 2
+[32mINFO    [0m integration.helpers:helpers.py:348 Retrieving primary unit
+[32mINFO    [0m integration.integration.backups:backups.py:148 Scaling down to 1 unit
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 3)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] active: Primary
+[32mINFO    [0m integration.integration.backups:backups.py:158 Restoring backup 2026-01-02T01:39:33Z with bad restore-to-time parameter
+[32mINFO    [0m integration.integration.backups:backups.py:167 Restoring backup 2026-01-02T01:39:33Z with year_before restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [executing] blocked: Failed to restore point-in-time-recovery to the 2025-01-02 01:39:46
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.backups:backups.py:179 Restoring backup 2026-01-02T01:39:33Z with year_after restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] blocked: Failed to restore point-in-time-recovery to the 2027-01-02 01:39:46
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.backups:backups.py:191 Restoring backup 2026-01-02T01:39:33Z with actual restore-to-time parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [idle] blocked: Failed to restore point-in-time-recovery to the 2026-01-02 01:39:46
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.backups:backups.py:203 Restoring backup 2026-01-02T01:39:33Z with restore-to-time=latest parameter
+[32mINFO    [0m juju.model:model.py:3211 Waiting for model:
+  mysql/1 [executing] blocked: Failed to restore point-in-time-recovery to the latest
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.integration.backups:backups.py:38 Cleaning backups from cloud buckets
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:43:45Z
+
+App            Version          Status  Scale  Charm          Channel   Rev  Exposed  Message
+mysql          8.0.44-0ubun...  active      1  mysql                      0  no       
+s3-integrator                   active      1  s3-integrator  1/stable  145  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports           Message
+mysql/1*          blocked   idle   2        10.43.220.121   3306,33060/tcp  Failed to restore point-in-time-recovery to the latest
+s3-integrator/0*  active    idle   0        10.43.220.33                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.43.220.33   juju-35b155-0  ubuntu@22.04  runnervmh13bl  Running
+2        started  10.43.220.121  juju-35b155-2  ubuntu@22.04  runnervmh13bl  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 01:33:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:33:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:35:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:35:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:35:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:36:07 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-2: 01:36:15 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-0: 01:36:21 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-1: 01:39:14 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector is enabled but not running
+unit-mysql-1: 01:39:14 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector will be restarted due to force_restart option
+unit-mysql-1: 01:39:51 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector is enabled but not running
+unit-mysql-1: 01:39:51 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector will be restarted due to force_restart option
+unit-mysql-1: 01:39:53 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector is enabled but not running
+unit-mysql-1: 01:39:53 ERROR unit.mysql/1.juju-log database-peers:1: Binlogs collector will be restarted due to force_restart option
+unit-mysql-1: 01:40:51 ERROR unit.mysql/1.juju-log Restore failed: Bad restore-to-time format
+unit-mysql-1: 01:41:16 ERROR unit.mysql/1.juju-log Failed command: charmed-mysql.mysql-pitr-helper recover; user=None; group=None
+unit-mysql-1: 01:41:16 ERROR unit.mysql/1.juju-log Failed to restore pitr
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 3468, in restore_pitr
+    return self._execute_commands(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 624, in _execute_commands
+    raise MySQLExecError from None
+charms.mysql.v0.mysql.MySQLExecError
+unit-mysql-1: 01:41:16 ERROR unit.mysql/1.juju-log Restore failed: Failed to restore point-in-time-recovery to the 2025-01-02 01:39:46
+unit-mysql-1: 01:41:53 ERROR unit.mysql/1.juju-log Failed command: charmed-mysql.mysql-pitr-helper recover; user=None; group=None
+unit-mysql-1: 01:41:53 ERROR unit.mysql/1.juju-log Failed to restore pitr
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 3468, in restore_pitr
+    return self._execute_commands(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 624, in _execute_commands
+    raise MySQLExecError from None
+charms.mysql.v0.mysql.MySQLExecError
+unit-mysql-1: 01:41:53 ERROR unit.mysql/1.juju-log Restore failed: Failed to restore point-in-time-recovery to the 2027-01-02 01:39:46
+unit-mysql-1: 01:42:39 ERROR unit.mysql/1.juju-log Failed command: charmed-mysql.mysql-pitr-helper recover; user=None; group=None
+unit-mysql-1: 01:42:39 ERROR unit.mysql/1.juju-log Failed to restore pitr
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 3468, in restore_pitr
+    return self._execute_commands(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 624, in _execute_commands
+    raise MySQLExecError from None
+charms.mysql.v0.mysql.MySQLExecError
+unit-mysql-1: 01:42:39 ERROR unit.mysql/1.juju-log Restore failed: Failed to restore point-in-time-recovery to the 2026-01-02 01:39:46
+unit-mysql-1: 01:43:13 ERROR unit.mysql/1.juju-log Failed command: charmed-mysql.mysql-pitr-helper recover; user=None; group=None
+unit-mysql-1: 01:43:13 ERROR unit.mysql/1.juju-log Failed to restore pitr
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/mysql/v0/mysql.py", line 3468, in restore_pitr
+    return self._execute_commands(
+  File "/var/lib/juju/agents/unit-mysql-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-1/charm/src/mysql_vm_helpers.py", line 624, in _execute_commands
+    raise MySQLExecError from None
+charms.mysql.v0.mysql.MySQLExecError
+unit-mysql-1: 01:43:13 ERROR unit.mysql/1.juju-log Restore failed: Failed to restore point-in-time-recovery to the latest
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
