@@ -1,0 +1,7 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql-test-app/0 get-legacy-mysql-credentials --params /root/snap/juju/common/tmphsryeqnp
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:104 Asserting that a connection to the database is still possible with application credentials
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:110 Removing relation mysql:mysql with mysql-test-app:mysql
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju remove-relation --model testing mysql-test-app:mysql mysql:mysql
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:116 Waiting till mysql is active and mysql-test-app is waiting
+[32mINFO    [0m integration.integration.relations.test_relation_mysql_legacy:test_relation_mysql_legacy.py:131 Asserting that a connection to the database is not possible with application credentials
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
