@@ -20,9 +20,10 @@ from ..helpers_ha import (
     get_mysql_primary_unit,
     get_mysql_server_credentials,
     get_unit_ip,
-    insert_mysql_data_and_validate_replication,
+    insert_mysql_test_data,
     rotate_mysql_server_credentials,
     scale_app_units,
+    verify_mysql_test_data,
     wait_for_apps_status,
     wait_for_unit_status,
 )
@@ -131,9 +132,17 @@ async def test_backup(juju: Juju, cloud_configs_aws) -> None:
     # insert data into cluster before backup
     logger.info("Inserting value before backup")
     value_before_backup = generate_random_string(255)
-    credentials = get_mysql_server_credentials(juju, primary_unit_name)
-    await insert_mysql_data_and_validate_replication(
-        juju, DATABASE_APP_NAME, DATABASE_NAME, TABLE_NAME, value_before_backup, credentials
+    await insert_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_before_backup,
+    )
+    await verify_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_before_backup,
     )
 
     logger.info("Setting s3 config")
@@ -178,8 +187,17 @@ async def test_backup(juju: Juju, cloud_configs_aws) -> None:
     # insert data into cluster after backup
     logger.info("Inserting value after backup")
     value_after_backup = generate_random_string(255)
-    await insert_mysql_data_and_validate_replication(
-        juju, DATABASE_APP_NAME, DATABASE_NAME, TABLE_NAME, value_after_backup, credentials
+    await insert_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_after_backup,
+    )
+    await verify_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_after_backup,
     )
 
 
@@ -238,8 +256,17 @@ async def test_restore_on_same_cluster(juju: Juju, cloud_configs_aws) -> None:
     # insert data into cluster after restore
     logger.info("Inserting value after restore")
     value_after_restore = generate_random_string(255)
-    await insert_mysql_data_and_validate_replication(
-        juju, DATABASE_APP_NAME, DATABASE_NAME, TABLE_NAME, value_after_restore, credentials
+    await insert_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_after_restore,
+    )
+    await verify_mysql_test_data(
+        juju,
+        DATABASE_APP_NAME,
+        TABLE_NAME,
+        value_after_restore,
     )
 
     logger.info("Ensuring that pre-backup and post-restore values exist in the database")
@@ -383,13 +410,17 @@ async def test_restore_on_new_cluster(juju: Juju, charm, cloud_configs_aws) -> N
     # insert data into cluster after restore
     logger.info("Inserting value after restore")
     value_after_restore = generate_random_string(255)
-    await insert_mysql_data_and_validate_replication(
+    await insert_mysql_test_data(
         juju,
         new_mysql_application_name,
-        DATABASE_NAME,
         TABLE_NAME,
         value_after_restore,
-        server_config_credentials,
+    )
+    await verify_mysql_test_data(
+        juju,
+        new_mysql_application_name,
+        TABLE_NAME,
+        value_after_restore,
     )
 
     logger.info("Ensuring that pre-backup and post-restore values exist in the database")

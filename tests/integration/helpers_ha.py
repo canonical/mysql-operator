@@ -13,7 +13,6 @@ import yaml
 from jubilant_backports import Juju
 from jubilant_backports.statustypes import Status
 from tenacity import (
-    RetryError,
     Retrying,
     retry,
     stop_after_attempt,
@@ -466,61 +465,6 @@ async def insert_mysql_test_data(juju: Juju, app_name: str, table_name: str, val
         insert_queries,
         commit=True,
     )
-
-
-async def insert_mysql_data_and_validate_replication(
-    juju: Juju,
-    app_name: str,
-    database_name: str,
-    table_name: str,
-    value: str,
-    credentials: dict,
-) -> None:
-    """Inserts data into the mysql cluster and validates its replication.
-
-    Args:
-        juju: The Juju model.
-        app_name: The application name.
-        database_name: The database name.
-        table_name: The table name.
-        value: The value to insert.
-        credentials: The credentials to authenticate.
-    """
-    primary_unit_name = get_mysql_primary_unit(juju, app_name)
-
-    insert_value_sql = [
-        f"CREATE DATABASE IF NOT EXISTS `{database_name}`",
-        f"CREATE TABLE IF NOT EXISTS `{database_name}`.`{table_name}` (id varchar(255), primary key (id))",
-        f"INSERT INTO `{database_name}`.`{table_name}` (id) VALUES ('{value}')",
-    ]
-
-    await execute_queries_on_unit(
-        get_unit_ip(juju, app_name, primary_unit_name),
-        credentials["username"],
-        credentials["password"],
-        insert_value_sql,
-        commit=True,
-    )
-
-    select_value_sql = [
-        f"SELECT id FROM `{database_name}`.`{table_name}` WHERE id = '{value}'",
-    ]
-
-    try:
-        for attempt in Retrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
-            with attempt:
-                for unit_name in get_app_units(juju, app_name):
-                    unit_address = get_unit_ip(juju, app_name, unit_name)
-
-                    output = await execute_queries_on_unit(
-                        unit_address,
-                        credentials["username"],
-                        credentials["password"],
-                        select_value_sql,
-                    )
-                    assert output[0] == value
-    except RetryError as exc:
-        raise RuntimeError("Cannot query inserted data from all units") from exc
 
 
 async def remove_mysql_test_data(juju: Juju, app_name: str, table_name: str) -> None:

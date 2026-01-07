@@ -16,8 +16,9 @@ from ..helpers_ha import (
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,
-    insert_mysql_data_and_validate_replication,
+    insert_mysql_test_data,
     scale_app_units,
+    verify_mysql_test_data,
     wait_for_apps_status,
     wait_for_unit_status,
 )
@@ -140,8 +141,6 @@ async def pitr_operations(
     non_primary_unit_names = [unit for unit in app_units if unit != primary_unit_name]
     primary_ip = get_unit_ip(juju, MYSQL_APPLICATION_NAME, primary_unit_name)
 
-    credentials = {"username": SERVER_CONFIG_USER, "password": SERVER_CONFIG_PASSWORD}
-
     logger.info("Creating backup")
     results = juju.run(
         non_primary_unit_names[0],
@@ -152,8 +151,17 @@ async def pitr_operations(
 
     logger.info("Creating test data 1")
     td1 = generate_random_string(255)
-    await insert_mysql_data_and_validate_replication(
-        juju, MYSQL_APPLICATION_NAME, DATABASE_NAME, TABLE_NAME, td1, credentials
+    await insert_mysql_test_data(
+        juju,
+        MYSQL_APPLICATION_NAME,
+        TABLE_NAME,
+        td1,
+    )
+    await verify_mysql_test_data(
+        juju,
+        MYSQL_APPLICATION_NAME,
+        TABLE_NAME,
+        td1,
     )
 
     ts = await execute_queries_on_unit(
@@ -170,8 +178,17 @@ async def pitr_operations(
 
     logger.info("Creating test data 2")
     td2 = generate_random_string(255)
-    await insert_mysql_data_and_validate_replication(
-        juju, MYSQL_APPLICATION_NAME, DATABASE_NAME, TABLE_NAME, td2, credentials
+    await insert_mysql_test_data(
+        juju,
+        MYSQL_APPLICATION_NAME,
+        TABLE_NAME,
+        td2,
+    )
+    await verify_mysql_test_data(
+        juju,
+        MYSQL_APPLICATION_NAME,
+        TABLE_NAME,
+        td2,
     )
 
     await execute_queries_on_unit(
