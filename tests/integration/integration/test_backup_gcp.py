@@ -4,6 +4,7 @@
 
 import logging
 from pathlib import Path
+from time import sleep
 
 import boto3
 import jubilant_backports
@@ -338,6 +339,10 @@ async def test_restore_on_new_cluster(juju: Juju, charm, cloud_configs_gcp) -> N
         ready=wait_for_apps_status(jubilant_backports.all_active, new_mysql_application_name),
         timeout=TIMEOUT,
     )
+
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    sleep(5)
 
     # relate to S3 integrator
     juju.integrate(new_mysql_application_name, S3_INTEGRATOR)

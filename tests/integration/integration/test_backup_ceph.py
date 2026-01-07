@@ -10,6 +10,7 @@ import socket
 import subprocess
 import time
 from pathlib import Path
+from time import sleep
 
 import boto3
 import botocore.exceptions
@@ -424,6 +425,10 @@ async def test_restore_on_new_cluster(juju: Juju, charm, cloud_configs_ceph) -> 
         config={"cluster-name": CLUSTER_NAME, "profile": "testing"},
         num_units=1,
     )
+
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    sleep(5)
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, new_mysql_application_name),
