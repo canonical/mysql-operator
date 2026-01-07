@@ -30,7 +30,6 @@ S3_INTEGRATOR_CHANNEL = "1/stable"
 MYSQL_APPLICATION_NAME = "mysql"
 TIMEOUT = 10 * MINUTE_SECS
 CLUSTER_NAME = "test_cluster"
-SERVER_CONFIG_USER = "serverconfig"
 SERVER_CONFIG_PASSWORD = "serverconfigpassword"
 DATABASE_NAME = "backup-database"
 TABLE_NAME = "backup-table"
@@ -92,7 +91,7 @@ def build_and_deploy_operations(
     credentials_task = juju.run(
         unit=primary_unit_name,
         action="set-password",
-        params={"username": SERVER_CONFIG_USER, "password": SERVER_CONFIG_PASSWORD},
+        params={"username": SERVER_CONFIG_USERNAME, "password": SERVER_CONFIG_PASSWORD},
     )
     credentials_task.raise_on_failure()
 
