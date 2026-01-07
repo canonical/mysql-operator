@@ -175,7 +175,7 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
     # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
     # (filesystem for storage instance "database/X" not found)
     # but it is enough to deploy another application in the meantime
-    juju.deploy(S3_INTEGRATOR, channel="stable", base="ubuntu@22.04")
+    juju.deploy(S3_INTEGRATOR, channel="1/stable", base="ubuntu@22.04")
 
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
