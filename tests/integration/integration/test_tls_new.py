@@ -44,6 +44,8 @@ else:
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
     tls_base = "ubuntu@22.04"
 
+config = {}
+
 
 @pytest.mark.skip_if_deployed
 @pytest.mark.abort_on_fail
