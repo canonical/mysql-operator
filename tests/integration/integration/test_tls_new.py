@@ -74,9 +74,10 @@ def test_connection_before_tls(juju: Juju) -> None:
 
     # set global config dict once
     global config
+    password = get_mysql_server_credentials(juju, app_units[0], CLUSTER_ADMIN_USERNAME)["password"]
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
-        "password": get_mysql_server_credentials(juju, app_units[0], CLUSTER_ADMIN_USERNAME)["password"],
+        "password": password,
     }
 
     # Before relating to TLS charm both encrypted and unencrypted connection should be possible
