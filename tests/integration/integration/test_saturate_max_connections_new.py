@@ -9,7 +9,7 @@ from jubilant_backports import Juju
 from mysql.connector.errors import OperationalError
 
 from ..connector import create_db_connections
-from ..helpers_ha import MINUTE_SECS, get_app_units, get_unit_address
+from ..helpers_ha import MINUTE_SECS, get_app_units, get_unit_ip
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +61,7 @@ def test_saturate_max_connections(juju: Juju) -> None:
     app_unit_name = get_app_units(juju, TEST_APP_NAME)[0]
     mysql_unit_name = get_app_units(juju, MYSQL_APP_NAME)[0]
 
-    host_ip = get_unit_address(juju, MYSQL_APP_NAME, mysql_unit_name)
-
+    host_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_unit_name)
     logger.info("Running action to get app connection data")
     credentials = juju.run(app_unit_name, "get-client-connection-data").results
     if "return-code" in credentials:

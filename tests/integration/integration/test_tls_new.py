@@ -19,8 +19,8 @@ from ..helpers_ha import (
     MINUTE_SECS,
     get_app_units,
     get_mysql_server_credentials,
-    get_unit_address,
     get_unit_info,
+    get_unit_ip,
     wait_for_apps_status,
 )
 
@@ -81,7 +81,7 @@ def test_connection_before_tls(juju: Juju) -> None:
     # Before relating to TLS charm both encrypted and unencrypted connection should be possible
     logger.info("Asserting connections before relation")
     for unit_name in app_units:
-        unit_ip = get_unit_address(juju, APP_NAME, unit_name)
+        unit_ip = get_unit_ip(juju, APP_NAME, unit_name)
         config["host"] = unit_ip
 
         assert is_connection_possible(config, **{"ssl_disabled": False}), (
@@ -123,7 +123,7 @@ def test_enable_tls(juju: Juju) -> None:
     # After relating to only encrypted connection should be possible
     logger.info("Asserting connections after relation")
     for unit_name in app_units:
-        unit_ip = get_unit_address(juju, APP_NAME, unit_name)
+        unit_ip = get_unit_ip(juju, APP_NAME, unit_name)
         config["host"] = unit_ip
         assert is_connection_possible(config, **{"ssl_disabled": False}), (
             f"❌ Encrypted connection not possible to unit {unit_name} with enabled TLS"
@@ -181,7 +181,7 @@ def test_rotate_tls_key(juju: Juju) -> None:
     # Asserting only encrypted connection should be possible
     logger.info("Asserting connections after relation")
     for unit_name in app_units:
-        unit_ip = get_unit_address(juju, APP_NAME, unit_name)
+        unit_ip = get_unit_ip(juju, APP_NAME, unit_name)
         config["host"] = unit_ip
         assert is_connection_possible(config, **{"ssl_disabled": False}), (
             f"❌ Encrypted connection not possible to unit {unit_name} with enabled TLS"
@@ -205,7 +205,7 @@ def test_disable_tls(juju: Juju) -> None:
 
     # After relation removal both encrypted and unencrypted connection should be possible
     for unit_name in app_units:
-        unit_ip = get_unit_address(juju, APP_NAME, unit_name)
+        unit_ip = get_unit_ip(juju, APP_NAME, unit_name)
         config["host"] = unit_ip
         assert is_connection_possible(config, **{"ssl_disabled": False}), (
             f"❌ Encrypted connection not possible to unit {unit_name} after relation removal"
