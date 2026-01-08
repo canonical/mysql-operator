@@ -72,12 +72,11 @@ def test_connection_before_tls(juju: Juju) -> None:
     """Ensure connections (with and without ssl) are possible before relating with TLS operator."""
     app_units = get_app_units(juju, APP_NAME)
 
-    password_result = get_mysql_server_credentials(juju, app_units[0], CLUSTER_ADMIN_USERNAME)
     # set global config dict once
     global config
     config = {
         "username": CLUSTER_ADMIN_USERNAME,
-        "password": password_result["password"],
+        "password": get_mysql_server_credentials(juju, app_units[0], CLUSTER_ADMIN_USERNAME)["password"],
     }
 
     # Before relating to TLS charm both encrypted and unencrypted connection should be possible
@@ -122,6 +121,11 @@ def test_enable_tls(juju: Juju) -> None:
     # due tls setup running too briefly
     sleep(TLS_SETUP_SLEEP_TIME)
 
+    juju.wait(
+        jubilant_backports.all_active,
+        timeout=TIMEOUT,
+    )
+
     # After relating to only encrypted connection should be possible
     logger.info("Asserting connections after relation")
     for unit_name in app_units:
@@ -157,6 +161,7 @@ def test_rotate_tls_key(juju: Juju) -> None:
         )
 
     # set key using auto-generated key for each unit
+    # not asserting actions run due false positives on CI
     for unit_name in app_units:
         task = juju.run(
             unit=unit_name,
@@ -254,9 +259,10 @@ def unit_file_md5(juju: Juju, unit_name: str, file_path: str) -> str | None:
     """
     try:
         md5sum_raw = juju.ssh(
-            command=f"md5sum {file_path}",
             target=unit_name,
+            command=f"sudo md5sum {file_path}",
         )
         return md5sum_raw.strip().split()[0]
-    except Exception:
+    except Exception as exc:
+        logger.exception("Exception while calculating md5 hash for file", exc_info=exc)
         return
