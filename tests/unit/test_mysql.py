@@ -2179,6 +2179,7 @@ class TestMySQLBase(unittest.TestCase):
             "gtid_mode": "ON",
             "enforce_gtid_consistency": "ON",
             "activate_all_roles_on_login": "ON",
+            "max_connect_errors": "10000",
         }
         self.maxDiff = None
 

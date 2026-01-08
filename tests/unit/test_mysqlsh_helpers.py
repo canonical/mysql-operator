@@ -335,6 +335,7 @@ class TestMySQL(unittest.TestCase):
             "gtid_mode = ON",
             "enforce_gtid_consistency = ON",
             "activate_all_roles_on_login = ON",
+            "max_connect_errors = 10000",
             "loose-audit_log_format = JSON",
             "loose-audit_log_strategy = ASYNCHRONOUS",
             "innodb_buffer_pool_chunk_size = 5678",
