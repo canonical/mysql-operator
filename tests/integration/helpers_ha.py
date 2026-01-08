@@ -181,6 +181,16 @@ def get_unit_info(juju: Juju, unit_name: str) -> dict:
     return json.loads(output)
 
 
+def get_machine_info(juju: Juju, machine_id: str) -> dict:
+    """Return a dictionary with the show-machine data."""
+    output = subprocess.check_output(
+        ["juju", "show-machine", f"--model={juju.model}", "--format=json", machine_id],
+        text=True,
+    )
+
+    return json.loads(output)
+
+
 def get_unit_process_id(juju: Juju, unit_name: str, process_name: str) -> int | None:
     """Return the pid of a process running in a given unit."""
     try:
