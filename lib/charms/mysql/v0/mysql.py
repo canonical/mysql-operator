@@ -2871,9 +2871,9 @@ class MySQLBase(ABC):
     def kill_client_sessions(self) -> None:
         """Kill all open client session connections."""
         try:
-            self._instance_client_tcp.stop_instance_processes(
-                self._instance_client_tcp.search_instance_connection_processes("%"),
-            )
+            processes = self._instance_client_tcp.search_instance_connection_processes("%")
+            if processes:
+                self._instance_client_tcp.stop_instance_processes(processes)
         except ExecutionError as e:
             raise MySQLKillSessionError() from e
 
@@ -2916,8 +2916,16 @@ class MySQLBase(ABC):
         if not isinstance(log_types, list):
             log_types = [log_types]
 
+        executor = self._build_instance_tcp_executor(self.instance_address)
+
         with suppress(ExecutionError):
-            self._instance_client_tcp.flush_instance_logs(log_types)
+            executor.execute_sql(
+                ";".join((
+                    "SET sql_log_bin = 'OFF'",
+                    "FLUSH ERROR LOGS",
+                    "SET sql_log_bin = 'ON'",
+                ))
+            )
 
     def flush_mysql_audit_log(self) -> None:
         """Flushes the audit log type."""
