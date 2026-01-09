@@ -440,6 +440,10 @@ class MySQLOperatorCharm(MySQLCharmBase, TypedCharmBase[CharmConfig]):
             all_states = {
                 self.peers.data[unit].get("member-state", "unknown") for unit in self.peers.units
             }
+
+            # TODO:
+            #  Remove `.lower()` when migrating to MySQL 8.4
+            #  (when breaking changes are allowed)
             all_states.add(InstanceState.OFFLINE.lower())
 
             if all_states == {InstanceState.OFFLINE.lower()} and self.unit.is_leader():

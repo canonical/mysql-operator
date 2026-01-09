@@ -1827,7 +1827,7 @@ class MySQLBase(ABC):
             from_instance: The instance from which to rejoin the cluster.
         """
         if not from_instance:
-            from_instance = self.get_cluster_primary_address()
+            from_instance = self.instance_address
 
         options = {
             "password": self.cluster_admin_password,
