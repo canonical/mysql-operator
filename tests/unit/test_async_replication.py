@@ -38,7 +38,8 @@ class TestAsyncRelation(unittest.TestCase):
     @patch("charm.MySQLOperatorCharm._mysql")
     def test_role(self, _mysql, _):
         _mysql.is_cluster_replica.return_value = True
-        _mysql.get_member_state.return_value = (None, "primary")
+        _mysql.get_member_role.return_value = "PRIMARY"
+        _mysql.get_member_state.return_value = None
         self.async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
 
         self.assertEqual(
@@ -48,7 +49,8 @@ class TestAsyncRelation(unittest.TestCase):
         # reset cached value
         del self.async_primary.role
         _mysql.is_cluster_replica.return_value = False
-        _mysql.get_member_state.return_value = (None, "secondary")
+        _mysql.get_member_role.return_value = "SECONDARY"
+        _mysql.get_member_state.return_value = None
         self.assertEqual(
             self.async_primary.role,
             ClusterSetInstanceState("primary", "secondary", "replication-offer"),
@@ -91,9 +93,9 @@ class TestAsyncRelation(unittest.TestCase):
         self.charm.on.config_changed.emit()
         async_primary_relation_id = self.harness.add_relation(RELATION_OFFER, "db2")
         _mysql.is_cluster_replica.return_value = True
-        _mysql.get_member_state.return_value = (None, "primary")
+        _mysql.get_member_state.return_value = (None, "PRIMARY")
         _mysql.is_instance_in_cluster.return_value = False
-        _mysql.get_replica_cluster_status.return_value = "ok"
+        _mysql.get_replica_cluster_status.return_value = "OK"
 
         self.harness.remove_relation(async_primary_relation_id)
 
@@ -123,13 +125,13 @@ class TestAsyncRelation(unittest.TestCase):
             "db2",
             {"endpoint": "db2-endpoint", "cluster-name": "other-cluster"},
         )
-        _mysql.get_replica_cluster_status.return_value = "ok"
+        _mysql.get_replica_cluster_status.return_value = "OK"
         self.assertEqual(self.async_primary.state, States.READY)
 
-        _mysql.get_replica_cluster_status.return_value = "unknown"
+        _mysql.get_replica_cluster_status.return_value = "UNKNOWN"
         self.assertEqual(self.async_primary.state, States.INITIALIZING)
 
-        _mysql.get_replica_cluster_status.return_value = "recovering"
+        _mysql.get_replica_cluster_status.return_value = "RECOVERING"
         self.assertEqual(self.async_primary.state, States.RECOVERING)
 
     @pytest.mark.usefixtures("with_juju_secrets")
@@ -144,7 +146,7 @@ class TestAsyncRelation(unittest.TestCase):
 
         _mysql.is_cluster_replica.return_value = False
         _mysql.get_mysql_version.return_value = "8.0.36-0ubuntu0.22.04.1"
-        _mysql.get_member_state.return_value = ("online", "primary")
+        _mysql.get_member_state.return_value = ("ONLINE", "PRIMARY")
 
         async_primary_relation_id = self.harness.add_relation(
             RELATION_OFFER, "db2", app_data={"is-replica": "true"}
@@ -308,7 +310,8 @@ class TestAsyncRelation(unittest.TestCase):
         # 1. returning cluster
         _state.return_value = States.SYNCING
         _returning_cluster.return_value = True
-        _mysql.get_member_state.return_value = ("online", "primary")
+        _mysql.get_member_role.return_value = "PRIMARY"
+        _mysql.get_member_state.return_value = "ONLINE"
 
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
@@ -490,7 +493,7 @@ class TestAsyncRelation(unittest.TestCase):
             )
 
         _mysql.is_cluster_in_cluster_set.return_value = True
-        _mysql.get_replica_cluster_status.return_value = "ok"
+        _mysql.get_replica_cluster_status.return_value = "OK"
         with self.assertRaises(ActionFailed):
             self.harness.run_action(
                 "rejoin-cluster", {"cluster-name": self.charm.app_peer_data["cluster-name"]}
@@ -498,7 +501,7 @@ class TestAsyncRelation(unittest.TestCase):
 
         # happy path
         _mysql.is_cluster_in_cluster_set.return_value = True
-        _mysql.get_replica_cluster_status.return_value = "invalidated"
+        _mysql.get_replica_cluster_status.return_value = "INVALIDATED"
 
         self.harness.run_action(
             "rejoin-cluster", {"cluster-name": self.charm.app_peer_data["cluster-name"]}

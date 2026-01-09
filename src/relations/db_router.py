@@ -178,7 +178,7 @@ class DBRouterRelation(Object):
             return
 
         try:
-            primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+            primary_address = self.charm._mysql.get_cluster_primary_address()
         except MySQLGetClusterPrimaryAddressError:
             logger.error("Can't get primary address. Deferring")
             event.defer()
@@ -252,7 +252,7 @@ class DBRouterRelation(Object):
                 " ".join(application_allowed_units)
             )
 
-        primary_address = self.charm._mysql.get_cluster_primary_address().split(":")[0]
+        primary_address = self.charm._mysql.get_cluster_primary_address()
         databag_updates["db_host"] = json.dumps(primary_address)
 
         # Copy the databag_updates to both the leader unit databag
