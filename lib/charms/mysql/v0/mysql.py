@@ -616,6 +616,7 @@ class MySQLCharmBase(CharmBase, ABC):
             except MySQLForceQuorumFromInstanceError:
                 logger.exception("Failed to force quorum from instance")
                 event.fail("Failed to force quorum from instance. See logs for more information.")
+                return
         else:
             # Switchover
             logger.info("Setting unit as cluster primary")
@@ -624,6 +625,7 @@ class MySQLCharmBase(CharmBase, ABC):
             except MySQLSetClusterPrimaryError:
                 logger.exception("Failed to set cluster primary")
                 event.fail("Failed to change cluster primary. See logs for more information.")
+                return
 
         # Use peer relation to trigger endpoint update
         # refer to mysql_provider.py
@@ -1770,7 +1772,6 @@ class MySQLBase(ABC):
 
         options = {
             "recoveryMethod": method,
-            "password": self.cluster_admin_password,
             "label": instance_unit_label,
         }
 
@@ -1829,10 +1830,6 @@ class MySQLBase(ABC):
         if not from_instance:
             from_instance = self.instance_address
 
-        options = {
-            "password": self.cluster_admin_password,
-        }
-
         executor = self._build_cluster_tcp_executor(from_instance)
         client = MySQLClusterClient(executor)
 
@@ -1849,7 +1846,6 @@ class MySQLBase(ABC):
                 cluster_name=self.cluster_name,
                 instance_host=unit_address,
                 instance_port=str(3306),
-                options=options,
             )
         except ExecutionError as e:
             raise MySQLRejoinInstanceToClusterError() from e
@@ -2072,7 +2068,6 @@ class MySQLBase(ABC):
             lock_instance = from_instance
 
         options = {
-            "password": self.cluster_admin_password,
             "force": "true",
         }
 
@@ -2321,11 +2316,18 @@ class MySQLBase(ABC):
 
         Recovery for cases where majority loss put the cluster in defunct state.
         """
+        # This is the ONLY operation in MySQL Shell 8.0 that requires
+        # an explicit username + password in the instance definition string.
+        # Otherwise, the `ubuntu` user is used.
+        instance_def = (
+            f"{self.cluster_admin_user}:{self.cluster_admin_password}@{self.instance_address}"
+        )
+
         try:
             # NOTE: This operation used to be done by the server-config user
             self._cluster_client_tcp.force_instance_quorum_into_cluster(
                 cluster_name=self.cluster_name,
-                instance_host=self.instance_address,
+                instance_host=instance_def,
                 instance_port=str(3306),
             )
         except ExecutionError as e:

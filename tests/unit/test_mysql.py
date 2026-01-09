@@ -500,7 +500,7 @@ class TestMySQLBase(unittest.TestCase):
         """Test a successful execution of create_cluster."""
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.add_instance('127.0.0.2:3306', {'recoveryMethod': 'auto', 'password': 'clusteradminpassword', 'label': 'mysql-1'})",
+            "cluster.add_instance('127.0.0.2:3306', {'recoveryMethod': 'auto', 'label': 'mysql-1'})",
         ]
 
         self.mysql.add_instance_to_cluster(
@@ -572,7 +572,7 @@ class TestMySQLBase(unittest.TestCase):
 
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+            "cluster.remove_instance('127.0.0.1:3306', {'force': 'true'})",
         ]
 
         self.mysql.remove_instance("mysql-0")
@@ -628,7 +628,7 @@ class TestMySQLBase(unittest.TestCase):
 
         commands = [
             "cluster = dba.get_cluster('test_cluster')",
-            "cluster.remove_instance('127.0.0.1:3306', {'password': 'clusteradminpassword', 'force': 'true'})",
+            "cluster.remove_instance('127.0.0.1:3306', {'force': 'true'})",
         ]
 
         # Disable tenacity retry
