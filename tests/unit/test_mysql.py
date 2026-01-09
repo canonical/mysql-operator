@@ -1540,7 +1540,10 @@ class TestMySQLBase(unittest.TestCase):
         search_query = (
             "SELECT processlist_id "
             "FROM performance_schema.threads "
-            "WHERE connection_type IS NOT NULL AND name LIKE '%'"
+            "WHERE "
+            "   processlist_id != CONNECTION_ID() AND "
+            "   connection_type IS NOT NULL AND "
+            "   name LIKE '%'"
         )
         stop_query = "KILL CONNECTION '123'"
 

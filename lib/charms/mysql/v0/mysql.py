@@ -2870,8 +2870,20 @@ class MySQLBase(ABC):
 
     def kill_client_sessions(self) -> None:
         """Kill all open client session connections."""
+        executor = self._build_instance_tcp_executor(self.instance_address)
+
+        query = (
+            "SELECT processlist_id "
+            "FROM performance_schema.threads "
+            "WHERE "
+            "   processlist_id != CONNECTION_ID() AND "
+            "   connection_type IS NOT NULL AND "
+            "   name LIKE '%'"
+        )
+
         try:
-            processes = self._instance_client_tcp.search_instance_connection_processes("%")
+            rows = executor.execute_sql(query)
+            processes = [row["processlist_id"] for row in rows]
             if processes:
                 self._instance_client_tcp.stop_instance_processes(processes)
         except ExecutionError as e:
