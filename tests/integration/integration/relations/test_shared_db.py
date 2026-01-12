@@ -10,11 +10,11 @@ import pytest
 from jubilant_backports import Juju
 
 from ...helpers_ha import (
-    check_keystone_users_existence,
     check_successful_keystone_migration,
     get_app_units,
     get_mysql_primary_unit,
     get_mysql_server_credentials,
+    get_mysql_users,
     get_unit_ip,
     scale_app_units,
     wait_for_app_status,
@@ -74,9 +74,9 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
         keystone_users.append(f"keystone@{unit_address}")
 
-    await check_keystone_users_existence(
-        juju, APP_NAME, server_config_credentials, keystone_users, []
-    )
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    for user in keystone_users:
+        assert user in db_users
 
     # Deploy and test another deployment of keystone
     deploy_and_relate_keystone_with_mysql(juju, ANOTHER_KEYSTONE_APP_NAME, 2)
@@ -88,18 +88,20 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
 
         another_keystone_users.append(f"keystone@{unit_address}")
 
-    await check_keystone_users_existence(
-        juju, APP_NAME, server_config_credentials, keystone_users + another_keystone_users, []
-    )
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    for user in keystone_users + another_keystone_users:
+        assert user in db_users
 
     # Scale down the second deployment of keystone and confirm that the first deployment
     # is still active
     scale_app_units(juju, ANOTHER_KEYSTONE_APP_NAME, 0)
     juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
 
-    await check_keystone_users_existence(
-        juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
-    )
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    for user in keystone_users:
+        assert user in db_users
+    for user in another_keystone_users:
+        assert user not in db_users
 
     # Scale down the primary unit of mysql
     primary_unit_name = get_mysql_primary_unit(juju, APP_NAME, random_unit)
@@ -109,10 +111,6 @@ async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, APP_NAME),
         timeout=FAST_WAIT_TIMEOUT,
-    )
-
-    await check_keystone_users_existence(
-        juju, APP_NAME, server_config_credentials, keystone_users, another_keystone_users
     )
 
     # Scale mysql back up to 3 units

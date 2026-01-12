@@ -375,6 +375,24 @@ async def get_mysql_max_written_value(juju: Juju, app_name: str, unit_name: str)
     return output[0]
 
 
+async def get_mysql_users(juju: Juju, app_name: str, unit_name: str) -> list:
+    """Retrieve the users within the MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        unit_name: The unit name.
+    """
+    credentials = get_mysql_server_credentials(juju, unit_name)
+
+    return await execute_queries_on_unit(
+        get_unit_ip(juju, app_name, unit_name),
+        credentials["username"],
+        credentials["password"],
+        ["SELECT CONCAT(user, '@', host) FROM mysql.user"],
+    )
+
+
 async def get_mysql_variable_value(
     juju: Juju, app_name: str, unit_name: str, variable_name: str
 ) -> str:
@@ -561,49 +579,6 @@ def wait_for_unit_message(app_name: str, unit_name: str, unit_message: str) -> J
     return lambda status: (
         status.apps[app_name].units[unit_name].workload_status.message == unit_message
     )
-
-
-async def check_keystone_users_existence(
-    juju: Juju,
-    app_name: str,
-    server_config_credentials: dict[str, str],
-    users_that_should_exist: list[str],
-    users_that_should_not_exist: list[str],
-) -> None:
-    """Checks that keystone users exist in the database.
-
-    Args:
-        juju: The Juju instance
-        app_name: The name of the application
-        server_config_credentials: The credentials for the server config user
-        users_that_should_exist: List of users that should exist in the database
-        users_that_should_not_exist: List of users that should not exist in the database
-    """
-    random_unit = get_app_units(juju, app_name)[0]
-    server_config_credentials = get_mysql_server_credentials(juju, random_unit)
-
-    select_users_sql = [
-        "SELECT CONCAT(user, '@', host) FROM mysql.user",
-    ]
-
-    unit_name = get_app_units(juju, app_name)[0]
-    unit_address = get_unit_ip(juju, app_name, unit_name)
-
-    # Retrieve all users in the database
-    output = await execute_queries_on_unit(
-        unit_address,
-        server_config_credentials["username"],
-        server_config_credentials["password"],
-        select_users_sql,
-    )
-
-    # Assert users that should exist
-    for user in users_that_should_exist:
-        assert user in output, "User(s) that should exist are not in the database"
-
-    # Assert users that should not exist
-    for user in users_that_should_not_exist:
-        assert user not in output, "User(s) that should not exist are in the database"
 
 
 async def check_successful_keystone_migration(
