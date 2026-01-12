@@ -375,6 +375,25 @@ async def get_mysql_max_written_value(juju: Juju, app_name: str, unit_name: str)
     return output[0]
 
 
+async def get_mysql_tables(juju: Juju, app_name: str, unit_name: str, db_name: str) -> list:
+    """Retrieve the tables within a specific MySQL database.
+
+    Args:
+        juju: The Juju model.
+        app_name: The application name.
+        unit_name: The unit name.
+        db_name: The database name.
+    """
+    credentials = get_mysql_server_credentials(juju, unit_name)
+
+    return await execute_queries_on_unit(
+        get_unit_ip(juju, app_name, unit_name),
+        credentials["username"],
+        credentials["password"],
+        [f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{db_name}'"],
+    )
+
+
 async def get_mysql_users(juju: Juju, app_name: str, unit_name: str) -> list:
     """Retrieve the users within the MySQL database.
 
@@ -579,39 +598,3 @@ def wait_for_unit_message(app_name: str, unit_name: str, unit_message: str) -> J
     return lambda status: (
         status.apps[app_name].units[unit_name].workload_status.message == unit_message
     )
-
-
-async def check_successful_keystone_migration(
-    juju: Juju, app_name: str, server_config_credentials: dict
-) -> None:
-    """Checks that the keystone application is successfully migrated in mysql.
-
-    Args:
-        juju: The Juju instance
-        server_config_credentials: The credentials for the server config user
-    """
-    show_tables_sql = ["SHOW DATABASES"]
-    get_count_keystone_tables_sql = [
-        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'keystone'",
-    ]
-
-    for unit_name in get_app_units(juju, app_name):
-        unit_address = get_unit_ip(juju, app_name, unit_name)
-
-        # Ensure 'keystone' database exists in mysql
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            show_tables_sql,
-        )
-        assert "keystone" in output, "keystone database not found in mysql"
-
-        # Ensure that keystone tables exist in the 'keystone' database
-        output = await execute_queries_on_unit(
-            unit_address,
-            server_config_credentials["username"],
-            server_config_credentials["password"],
-            get_count_keystone_tables_sql,
-        )
-        assert output[0] > 0, "No keystone tables found in the 'keystone' database"

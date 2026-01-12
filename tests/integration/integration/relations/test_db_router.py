@@ -3,15 +3,15 @@
 # See LICENSE file for licensing details.
 
 import logging
+import random
 
 import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
 from ...helpers_ha import (
-    check_successful_keystone_migration,
     get_app_units,
-    get_mysql_server_credentials,
+    get_mysql_tables,
     get_mysql_users,
     get_unit_ip,
     scale_app_units,
@@ -91,11 +91,12 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
-    # Get the server config credentials
-    db_unit = get_app_units(juju, APP_NAME)[0]
-    server_config_credentials = get_mysql_server_credentials(juju, db_unit)
+    mysql_units = get_app_units(juju, APP_NAME)
+    random_unit = random.choice(mysql_units)
 
-    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    for unit_name in mysql_units:
+        unit_tables = await get_mysql_tables(juju, APP_NAME, unit_name, "keystone")
+        assert len(unit_tables) > 0
 
     keystone_users = []
     for unit_name in get_app_units(juju, KEYSTONE_APP_NAME):
@@ -104,7 +105,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         keystone_users.append(f"keystone@{unit_address}")
         keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    db_users = get_mysql_users(juju, APP_NAME, db_unit)
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users:
         assert user in db_users
 
@@ -141,7 +142,9 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         timeout=SLOW_WAIT_TIMEOUT,
     )
 
-    await check_successful_keystone_migration(juju, APP_NAME, server_config_credentials)
+    for unit_name in mysql_units:
+        unit_tables = await get_mysql_tables(juju, APP_NAME, unit_name, "keystone")
+        assert len(unit_tables) > 0
 
     another_keystone_users = []
     for unit_name in get_app_units(juju, ANOTHER_KEYSTONE_APP_NAME):
@@ -150,7 +153,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         another_keystone_users.append(f"keystone@{unit_address}")
         another_keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    db_users = get_mysql_users(juju, APP_NAME, db_unit)
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users + another_keystone_users:
         assert user in db_users
 
@@ -161,7 +164,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
     juju.remove_application(ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME)
 
-    db_users = get_mysql_users(juju, APP_NAME, db_unit)
+    db_users = get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users:
         assert user in db_users
     for user in another_keystone_users:
