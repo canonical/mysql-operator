@@ -105,7 +105,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         keystone_users.append(f"keystone@{unit_address}")
         keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    db_users = await get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users:
         assert user in db_users
 
@@ -153,7 +153,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
         another_keystone_users.append(f"keystone@{unit_address}")
         another_keystone_users.append(f"mysqlrouteruser@{unit_address}")
 
-    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    db_users = await get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users + another_keystone_users:
         assert user in db_users
 
@@ -164,7 +164,7 @@ async def test_keystone_bundle_db_router(juju: Juju, charm) -> None:
     juju.remove_application(ANOTHER_KEYSTONE_APP_NAME)
     juju.remove_application(ANOTHER_KEYSTONE_MYSQLROUTER_APP_NAME)
 
-    db_users = get_mysql_users(juju, APP_NAME, random_unit)
+    db_users = await get_mysql_users(juju, APP_NAME, random_unit)
     for user in keystone_users:
         assert user in db_users
     for user in another_keystone_users:
