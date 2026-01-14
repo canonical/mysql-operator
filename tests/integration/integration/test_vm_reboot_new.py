@@ -9,7 +9,7 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from ..helpers_ha import MINUTE_SECS, get_app_units, get_machine_info, get_unit_info
+from ..helpers_ha import MINUTE_SECS, get_app_units, get_unit_machine
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,8 @@ def test_reboot_1_of_3_units(juju: Juju) -> None:
     unit_name = app_units[0]
 
     logger.info(f"Rebooting single {unit_name}")
-    machine_hostname = get_unit_hostname(juju, unit_name)
-    machine_restart(machine_hostname)
+    machine_name = get_unit_machine(juju, APP_NAME, unit_name)
+    machine_restart(machine_name)
 
     logger.info("Sleep to allow juju status change")
     sleep(SLEEP_WAIT)
@@ -67,8 +67,8 @@ def test_reboot_2_of_3_units(juju: Juju) -> None:
 
     for unit_name in app_units[:2]:
         logger.info(f"Rebooting {unit_name}")
-        machine_hostname = get_unit_hostname(juju, unit_name)
-        machine_restart(machine_hostname)
+        machine_name = get_unit_machine(juju, APP_NAME, unit_name)
+        machine_restart(machine_name)
 
     logger.info("Sleep to allow juju status change")
     sleep(SLEEP_WAIT)
@@ -86,8 +86,8 @@ def test_reboot_3_of_3_units(juju: Juju) -> None:
 
     for unit_name in app_units:
         logger.info(f"Rebooting {unit_name}")
-        machine_hostname = get_unit_hostname(juju, unit_name)
-        machine_restart(machine_hostname)
+        machine_name = get_unit_machine(juju, APP_NAME, unit_name)
+        machine_restart(machine_name)
 
     logger.info("Sleep to allow juju status change")
     sleep(SLEEP_WAIT)
@@ -101,11 +101,3 @@ def test_reboot_3_of_3_units(juju: Juju) -> None:
 def machine_restart(machine_name: str) -> None:
     """Restart the machine."""
     run(["lxc", "restart", machine_name], check=True)
-
-
-def get_unit_hostname(juju: Juju, unit_name: str) -> str:
-    """Get the machine hostname for a unit."""
-    unit_info = get_unit_info(juju, unit_name)
-    machine_id = unit_info[unit_name]["machine"]
-    machine_info = get_machine_info(juju, machine_id)
-    return machine_info["machines"][machine_id]["hostname"]
