@@ -181,16 +181,6 @@ def get_unit_info(juju: Juju, unit_name: str) -> dict:
     return json.loads(output)
 
 
-def get_machine_info(juju: Juju, machine_id: str) -> dict:
-    """Return a dictionary with the show-machine data."""
-    output = subprocess.check_output(
-        ["juju", "show-machine", f"--model={juju.model}", "--format=json", machine_id],
-        text=True,
-    )
-
-    return json.loads(output)
-
-
 def get_unit_machine(juju: Juju, app_name: str, unit_name: str) -> str:
     """Get the machine name for the given unit."""
     status = juju.status()
