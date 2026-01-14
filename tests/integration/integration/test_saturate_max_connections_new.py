@@ -64,11 +64,6 @@ def test_saturate_max_connections(juju: Juju) -> None:
     host_ip = get_unit_ip(juju, MYSQL_APP_NAME, mysql_unit_name)
     logger.info("Running action to get app connection data")
     credentials = juju.run(app_unit_name, "get-client-connection-data").results
-    if "return-code" in credentials:
-        # juju 2.9 dont have the return-code key
-        del credentials["return-code"]
-    if "Code" in credentials:
-        del credentials["Code"]
     credentials["host"] = host_ip
 
     logger.info(f"Creating {CONNECTIONS} connections")
