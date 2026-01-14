@@ -51,7 +51,7 @@ def test_deploy_and_relate_test_app(juju: Juju) -> None:
 
     logger.info("Waiting all to be active")
     juju.wait(
-        jubilant_backports.all_active,  # TODO: before, all(unit.workload_status == "active", careful
+        jubilant_backports.all_active,
         timeout=10 * MINUTE_SECS,
     )
 
