@@ -521,6 +521,7 @@ async def check_read_only_endpoints(ops_test: OpsTest, app_name: str, relation_n
         assert read_endpoint_ip in app_ips
 
 
+# TODO: Delete before merging
 async def get_tls_ca(ops_test: OpsTest, unit_name: str) -> str:
     """Returns the TLS CA used by the unit.
 
@@ -544,6 +545,7 @@ async def get_tls_ca(ops_test: OpsTest, unit_name: str) -> str:
     return json.loads(relation_data[0]["application-data"]["certificates"])[0].get("ca")
 
 
+# TODO: Delete before merging
 async def unit_file_md5(ops_test: OpsTest, unit_name: str, file_path: str) -> str:
     """Return md5 hash for given file.
 
