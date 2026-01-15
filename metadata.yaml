@@ -36,14 +36,18 @@ provides:
     interface: mysql
   db-router:
     interface: mysql-router
+    optional: true
   shared-db:
     interface: mysql-shared
+    optional: true
   cos-agent:
     interface: cos_agent
     limit: 1
+    optional: true
   replication-offer:
     interface: mysql_async
     limit: 1
+    optional: true
 
 requires:
   certificates:
