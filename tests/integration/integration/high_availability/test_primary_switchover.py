@@ -15,8 +15,6 @@ from ...helpers_ha import (
     wait_for_unit_status,
 )
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 def test_cluster_switchover(juju: Juju, highly_available_cluster) -> None:

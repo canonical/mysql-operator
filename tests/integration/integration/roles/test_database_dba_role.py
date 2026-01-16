@@ -25,8 +25,6 @@ INTEGRATOR_APP_NAME = "data-integrator"
 
 TIMEOUT = 15 * MINUTE_SECS
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed

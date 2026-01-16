@@ -37,8 +37,6 @@ APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "database"
 TIMEOUT = 15 * MINUTE_SECS
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
