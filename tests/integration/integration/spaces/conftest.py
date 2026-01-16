@@ -87,7 +87,7 @@ def pytest_sessionfinish(session, exitstatus):
     _lxd_network_down("isolated")
 
     subprocess.run(
-        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode=none"],
+        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode"],
         check=True,
     )
 
