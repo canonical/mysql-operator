@@ -32,8 +32,10 @@ peers:
 provides:
   database:
     interface: mysql_client
+    optional: false
   mysql:
     interface: mysql
+    optional: false
   db-router:
     interface: mysql-router
     optional: true
