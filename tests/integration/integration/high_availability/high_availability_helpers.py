@@ -242,6 +242,7 @@ async def insert_data_into_mysql_and_validate_replication(
     return value
 
 
+# TODO: Remove before merging
 async def ensure_all_units_continuous_writes_incrementing(
     ops_test: OpsTest, mysql_units: list[Unit] | None = None
 ) -> None:
