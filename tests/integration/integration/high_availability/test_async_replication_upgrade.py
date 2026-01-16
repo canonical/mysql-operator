@@ -171,12 +171,11 @@ def test_create_replication(first_model: str, second_model: str) -> None:
     model_2 = Juju(model=second_model)
 
     logging.info("Running create replication action")
-    task = model_1.run(
+    model_1.run(
         unit=get_app_leader(model_1, MYSQL_APP_1),
         action="create-replication",
         wait=5 * MINUTE_SECS,
     )
-    task.raise_on_failure()
 
     logging.info("Waiting for the applications to settle")
     model_1.wait(
@@ -223,12 +222,11 @@ async def get_mysql_max_written_values(first_model: str, second_model: str) -> l
     model_2 = Juju(model=second_model)
 
     logging.info("Stopping continuous writes")
-    stopping_task = model_1.run(
+    model_1.run(
         unit=get_app_leader(model_1, MYSQL_TEST_APP_NAME),
         action="stop-continuous-writes",
         params={},
     )
-    stopping_task.raise_on_failure()
 
     time.sleep(5)
     results = []
@@ -252,8 +250,7 @@ async def run_pre_upgrade_checks(juju: Juju, app_name: str) -> None:
     app_units = get_app_units(juju, app_name)
 
     logging.info("Run pre-upgrade-check action")
-    task = juju.run(unit=app_leader, action="pre-upgrade-check")
-    task.raise_on_failure()
+    juju.run(unit=app_leader, action="pre-upgrade-check")
 
     logging.info("Assert slow shutdown is enabled")
     for unit_name in app_units:

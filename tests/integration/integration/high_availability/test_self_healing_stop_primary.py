@@ -87,7 +87,6 @@ async def test_replicate_data_on_restart(juju: Juju, continuous_writes) -> None:
         action="get-password",
         params={"username": CLUSTER_ADMIN_USERNAME},
     )
-    credentials_task.raise_on_failure()
 
     config = {
         "username": credentials_task.results["username"],
@@ -151,7 +150,6 @@ async def insert_mysql_test_data(
         action="get-password",
         params={"username": SERVER_CONFIG_USERNAME},
     )
-    credentials_task.raise_on_failure()
 
     insert_queries = [
         f"CREATE DATABASE IF NOT EXISTS `{TEST_DATABASE_NAME}`",

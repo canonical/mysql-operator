@@ -78,7 +78,6 @@ def test_exporter_endpoints(juju: Juju) -> None:
 
     for unit_name in get_app_units(juju, MYSQL_APP_NAME):
         task = juju.exec(f"sudo snap services {service_name}", unit=unit_name)
-        task.raise_on_failure()
 
         assert task.stdout.split("\n")[1].split()[2] == "inactive"
 
@@ -87,7 +86,6 @@ def test_exporter_endpoints(juju: Juju) -> None:
             action="get-password",
             params={"username": MONITORING_USERNAME},
         )
-        credentials_task.raise_on_failure()
 
         username = credentials_task.results["username"]
         password = credentials_task.results["password"]
@@ -99,7 +97,6 @@ def test_exporter_endpoints(juju: Juju) -> None:
         for attempt in Retrying(stop=stop_after_attempt(45), wait=wait_fixed(2)):
             with attempt:
                 task = juju.exec(f"sudo snap services {service_name}", unit=unit_name)
-                task.raise_on_failure()
 
         assert task.stdout.split("\n")[1].split()[2] == "active"
 

@@ -146,8 +146,7 @@ def delete_unit_file(juju: Juju, unit_name: str, file_path: str) -> None:
     if file_path.strip() in ["/", "."]:
         return
 
-    task = juju.exec(f"sudo find {file_path} -maxdepth 1 -delete", unit=unit_name)
-    task.raise_on_failure()
+    juju.exec(f"sudo find {file_path} -maxdepth 1 -delete", unit=unit_name)
 
 
 def list_unit_files(juju: Juju, unit_name: str, file_path: str) -> list[str]:
@@ -159,8 +158,6 @@ def list_unit_files(juju: Juju, unit_name: str, file_path: str) -> list[str]:
         file_path: The path at which to list the files
     """
     task = juju.exec(f"sudo ls -la {file_path}", unit=unit_name)
-    task.raise_on_failure()
-
     output = task.stdout.split("\n")[1:]
 
     return [

@@ -81,7 +81,6 @@ async def test_cluster_manual_rejoin(juju: Juju, continuous_writes) -> None:
         action="get-password",
         params={"username": SERVER_CONFIG_USERNAME},
     )
-    credentials_task.raise_on_failure()
 
     config = {
         "username": credentials_task.results["username"],

@@ -99,14 +99,12 @@ async def test_charmed_read_role(juju: Juju):
 
     data_integrator_unit = get_app_units(juju, f"{INTEGRATOR_APP_NAME}1")[0]
     task = juju.run(unit=data_integrator_unit, action="get-credentials")
-    task.raise_on_failure()
-    results = task.results
 
     logger.info("Checking that the charmed_read role can read from an existing table")
     rows = await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         [
             "SELECT `data` FROM charmed_read_db.test_table",
         ],
@@ -120,8 +118,8 @@ async def test_charmed_read_role(juju: Juju):
     with pytest.raises(ProgrammingError):
         await execute_queries_on_unit(
             primary_unit_address,
-            results["mysql"]["username"],
-            results["mysql"]["password"],
+            task.results["mysql"]["username"],
+            task.results["mysql"]["password"],
             [
                 "INSERT INTO charmed_read_db.test_table (`data`) VALUES ('test_data_3')",
             ],
@@ -132,8 +130,8 @@ async def test_charmed_read_role(juju: Juju):
     with pytest.raises(ProgrammingError):
         await execute_queries_on_unit(
             primary_unit_address,
-            results["mysql"]["username"],
-            results["mysql"]["password"],
+            task.results["mysql"]["username"],
+            task.results["mysql"]["password"],
             [
                 "CREATE TABLE charmed_read_db.new_table (`id` SERIAL PRIMARY KEY, `data` TEXT)",
             ],
@@ -179,14 +177,12 @@ async def test_charmed_dml_role(juju: Juju):
 
     data_integrator_1_unit = get_app_units(juju, f"{INTEGRATOR_APP_NAME}1")[0]
     task = juju.run(unit=data_integrator_1_unit, action="get-credentials")
-    task.raise_on_failure()
-    results = task.results
 
     logger.info("Checking that when no role is specified the created user can do everything")
     rows = await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         [
             "CREATE TABLE charmed_dml_db.test_table (`id` SERIAL PRIMARY KEY, `data` TEXT)",
             "INSERT INTO charmed_dml_db.test_table (`data`) VALUES ('test_data_1'), ('test_data_2')",
@@ -199,15 +195,13 @@ async def test_charmed_dml_role(juju: Juju):
     )
 
     data_integrator_2_unit = get_app_units(juju, f"{INTEGRATOR_APP_NAME}2")[0]
-    task = juju.run(unit=data_integrator_2_unit, action="get-credentials")
-    task.raise_on_failure()
-    results2 = task.results
+    task2 = juju.run(unit=data_integrator_2_unit, action="get-credentials")
 
     logger.info("Checking that the charmed_dml role can read from an existing table")
     rows = await execute_queries_on_unit(
         primary_unit_address,
-        results2["mysql"]["username"],
-        results2["mysql"]["password"],
+        task2.results["mysql"]["username"],
+        task2.results["mysql"]["password"],
         [
             "SELECT `data` FROM charmed_dml_db.test_table",
         ],
@@ -220,8 +214,8 @@ async def test_charmed_dml_role(juju: Juju):
     logger.info("Checking that the charmed_dml role can write into an existing table")
     await execute_queries_on_unit(
         primary_unit_address,
-        results2["mysql"]["username"],
-        results2["mysql"]["password"],
+        task2.results["mysql"]["username"],
+        task2.results["mysql"]["password"],
         [
             "INSERT INTO charmed_dml_db.test_table (`data`) VALUES ('test_data_3')",
         ],
@@ -232,8 +226,8 @@ async def test_charmed_dml_role(juju: Juju):
     with pytest.raises(ProgrammingError):
         await execute_queries_on_unit(
             primary_unit_address,
-            results2["mysql"]["username"],
-            results2["mysql"]["password"],
+            task2.results["mysql"]["username"],
+            task2.results["mysql"]["password"],
             [
                 "CREATE TABLE charmed_dml_db.new_table (`id` SERIAL PRIMARY KEY, `data` TEXT)",
             ],

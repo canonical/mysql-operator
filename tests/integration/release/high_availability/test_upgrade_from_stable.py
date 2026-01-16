@@ -113,8 +113,7 @@ async def run_upgrade_check(juju: Juju) -> None:
     mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
-    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
-    task.raise_on_failure()
+    juju.run(unit=mysql_leader, action="pre-upgrade-check")
 
     logging.info("Assert primary is set to leader")
     mysql_primary = get_mysql_primary_unit(juju, MYSQL_APP_NAME)

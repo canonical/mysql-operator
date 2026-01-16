@@ -269,9 +269,8 @@ def rotate_mysql_server_credentials(
     if password is not None:
         params["password"] = password
 
-    rotate_task = juju.run(
+    juju.run(
         unit=unit_name,
         action="set-password",
         params=params,
     )
-    rotate_task.raise_on_failure()
