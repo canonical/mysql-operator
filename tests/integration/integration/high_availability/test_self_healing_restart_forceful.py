@@ -32,8 +32,6 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 
 MINUTE_SECS = 60
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
@@ -142,7 +140,6 @@ async def purge_mysql_binary_logs(juju: Juju, app_name: str, unit_name: str) -> 
         action="get-password",
         params={"username": SERVER_CONFIG_USERNAME},
     )
-    credentials_task.raise_on_failure()
 
     await execute_queries_on_unit(
         unit_address=get_unit_ip(juju, app_name, unit_name),

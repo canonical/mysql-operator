@@ -185,8 +185,6 @@ def get_unit_process_id(juju: Juju, unit_name: str, process_name: str) -> int | 
     """Return the pid of a process running in a given unit."""
     try:
         task = juju.exec(f"pgrep -x {process_name}", unit=unit_name)
-        task.raise_on_failure()
-
         return int(task.stdout.strip())
     except Exception:
         return None
@@ -254,7 +252,6 @@ def get_mysql_cluster_status(juju: Juju, unit: str, cluster_set: bool = False) -
         params={"cluster-set": cluster_set},
         wait=5 * MINUTE_SECS,
     )
-    task.raise_on_failure()
 
     return task.results["status"]
 
@@ -302,7 +299,6 @@ def get_mysql_server_credentials(
         action="get-password",
         params={"username": username},
     )
-    credentials_task.raise_on_failure()
 
     return credentials_task.results
 
@@ -325,12 +321,11 @@ def rotate_mysql_server_credentials(
     if password is not None:
         params["password"] = password
 
-    rotate_task = juju.run(
+    juju.run(
         unit=unit_name,
         action="set-password",
         params=params,
     )
-    rotate_task.raise_on_failure()
 
 
 def get_legacy_mysql_credentials(
@@ -351,7 +346,6 @@ def get_legacy_mysql_credentials(
         action="get-legacy-mysql-credentials",
         params={"username": username},
     )
-    credentials_task.raise_on_failure()
 
     return credentials_task.results
 
