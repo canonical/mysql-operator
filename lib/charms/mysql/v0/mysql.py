@@ -110,7 +110,7 @@ from mysql_shell.clients import (
 from mysql_shell.executors import BaseExecutor
 from mysql_shell.executors.errors import ExecutionError
 from mysql_shell.models.account import User
-from mysql_shell.models.cluster import ClusterGlobalStatus, ClusterRole
+from mysql_shell.models.cluster import ClusterGlobalStatus, ClusterRole, ClusterStatus
 from mysql_shell.models.connection import ConnectionDetails
 from mysql_shell.models.instance import InstanceRole, InstanceState
 from mysql_shell.models.statement import LogType
@@ -2025,13 +2025,22 @@ class MySQLBase(ABC):
         from_instance = from_instance if from_instance else self.instance_address
         node_statuses = [node_status] if node_status else list(InstanceState)
 
-        client = MySQLInstanceClient(
-            executor=self._build_instance_tcp_executor(from_instance),
-            quoter=self._quoter,
+        # TODO:
+        #   Use InstanceClient.search_instance_replication_members
+        #   when mysql-shell-client PR #29 gets merged and released
+        executor = self._build_instance_tcp_executor(from_instance)
+
+        query = (
+            "SELECT member_id "
+            "FROM performance_schema.replication_group_members "
+            "WHERE member_state IN ({states}) OR member_state IS NULL"
+        )
+        query = query.format(
+            states=", ".join([self._quoter.quote_value(state) for state in node_statuses]),
         )
 
         try:
-            status = client.search_instance_replication_members(states=node_statuses)
+            status = executor.execute_sql(query)
         except ExecutionError:
             logger.warning("Failed to get node count")
             return 0
@@ -2188,12 +2197,15 @@ class MySQLBase(ABC):
             logger.debug("Getting cluster primary address")
             status = client.fetch_cluster_status(self.cluster_name)
         except ExecutionError as e:
-            logger.warning("Failed to get cluster primary address")
             raise MySQLGetClusterPrimaryAddressError() from e
-        else:
-            address = status["defaultReplicaSet"]["primary"]
-            address = address.split(":")[0]
-            return address
+
+        cluster_status = status["defaultReplicaSet"]["status"]
+        cluster_address = status["defaultReplicaSet"]["primary"]
+
+        if cluster_status == ClusterStatus.NO_QUORUM:
+            raise MySQLGetClusterPrimaryAddressError()
+
+        return cluster_address.split(":")[0]
 
     def get_cluster_global_primary_address(self, from_instance: str | None = None) -> str | None:
         """Get the cluster set global primary's address."""
@@ -2205,13 +2217,19 @@ class MySQLBase(ABC):
         )
 
         try:
+            logger.debug("Getting cluster set primary address")
             status = client.fetch_cluster_set_status()
         except ExecutionError as e:
             raise MySQLGetClusterPrimaryAddressError() from e
-        else:
-            address = status["globalPrimaryInstance"]
-            address = address.split(":")[0]
-            return address
+
+        primary_cluster = status["primaryCluster"]
+        primary_cluster_status = status["clusters"][primary_cluster]["globalStatus"]
+        primary_cluster_address = status["clusters"][primary_cluster]["primary"]
+
+        if primary_cluster_status == ClusterGlobalStatus.INVALIDATED:
+            raise MySQLGetClusterPrimaryAddressError()
+
+        return primary_cluster_address.split(":")[0]
 
     def get_cluster_topology(self) -> dict | None:
         """Get the cluster topology."""

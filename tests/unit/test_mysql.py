@@ -707,11 +707,18 @@ class TestMySQLBase(unittest.TestCase):
     def test_get_cluster_primary_address(self):
         """Test a successful execution of _get_cluster_primary_address()."""
         self.mock_executor.execute_py.return_value = (
-            '{"defaultReplicaSet": {"primary": "1.1.1.1:3306"}}'
+            '{"defaultReplicaSet": {"status": "OK", "primary": "1.1.1.1:3306"}}'
         )
 
         primary_address = self.mysql.get_cluster_primary_address()
         self.assertEqual(primary_address, "1.1.1.1")
+
+        self.mock_executor.execute_py.return_value = (
+            '{"defaultReplicaSet": {"status": "NO_QUORUM", "primary": "1.1.1.1:3306"}}'
+        )
+
+        with self.assertRaises(MySQLGetClusterPrimaryAddressError):
+            self.mysql.get_cluster_primary_address()
 
     @patch("charms.mysql.v0.mysql.MySQLBase.cluster_metadata_exists", return_value=True)
     def test_is_instance_in_cluster(self, _cluster_metadata_exists):
@@ -1900,7 +1907,12 @@ class TestMySQLBase(unittest.TestCase):
 
     def test_get_cluster_global_primary_address(self):
         """Test get_cluster_set_global_primary."""
-        self.mock_executor.execute_py.return_value = '{"globalPrimaryInstance": "mysql-k8s-1"}'
+        self.mock_executor.execute_py.return_value = (
+            "{"
+            '   "clusters": {"db1": {"globalStatus": "OK", "primary": "mysql-k8s-1"}},'
+            '   "primaryCluster": "db1"'
+            "}"
+        )
         primary = self.mysql.get_cluster_global_primary_address()
         self.assertEqual(primary, "mysql-k8s-1")
 
