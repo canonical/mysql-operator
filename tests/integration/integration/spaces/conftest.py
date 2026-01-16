@@ -79,7 +79,7 @@ def pytest_sessionstart(session):
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
     # Nothing to do, as this is a temp runner only
-    if os.environ.get("CI").lower() == "true":
+    if os.environ.get("CI", "").lower() == "true":
         return
 
     _lxd_network_down("client")
@@ -92,6 +92,7 @@ def pytest_sessionfinish(session, exitstatus):
     )
 
 
+# TODO: Delete before merging
 @pytest.fixture(scope="module")
 async def lxd_spaces(ops_test: OpsTest):
     await ops_test.juju("reload-spaces")
