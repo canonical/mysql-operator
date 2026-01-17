@@ -181,6 +181,13 @@ def get_unit_info(juju: Juju, unit_name: str) -> dict:
     return json.loads(output)
 
 
+def get_unit_machine(juju: Juju, app_name: str, unit_name: str) -> str:
+    """Get the machine name for the given unit."""
+    status = juju.status()
+    machine_id = status.apps[app_name].units[unit_name].machine
+    return status.machines[machine_id].instance_id
+
+
 def get_unit_process_id(juju: Juju, unit_name: str, process_name: str) -> int | None:
     """Return the pid of a process running in a given unit."""
     try:

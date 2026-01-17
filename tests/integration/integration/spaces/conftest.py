@@ -79,7 +79,7 @@ def pytest_sessionstart(session):
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
     # Nothing to do, as this is a temp runner only
-    if os.environ.get("CI").lower() == "true":
+    if os.environ.get("CI", "").lower() == "true":
         return
 
     _lxd_network_down("client")
@@ -87,11 +87,12 @@ def pytest_sessionfinish(session, exitstatus):
     _lxd_network_down("isolated")
 
     subprocess.run(
-        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode=none"],
+        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode"],
         check=True,
     )
 
 
+# TODO: Delete before merging
 @pytest.fixture(scope="module")
 async def lxd_spaces(ops_test: OpsTest):
     await ops_test.juju("reload-spaces")
