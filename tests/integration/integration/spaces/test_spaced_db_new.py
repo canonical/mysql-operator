@@ -9,6 +9,7 @@ from jubilant_backports import Juju
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ...helpers_ha import (
+    MINUTE_SECS,
     get_app_units,
     get_mysql_max_written_value,
     get_mysql_primary_unit,
@@ -18,7 +19,7 @@ from ...helpers_ha import (
 DATABASE_APP_NAME = "mysql"
 APPLICATION_APP_NAME = "mysql-test-app"
 
-TIMEOUT = 15 * 60
+TIMEOUT = 15 * MINUTE_SECS
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,6 @@ async def lxd_spaces(juju: Juju):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
 def test_build_and_deploy(juju: Juju, lxd_spaces, charm) -> None:
     """Build the charm and deploy 3 units to ensure a cluster is formed."""
     juju.deploy(
