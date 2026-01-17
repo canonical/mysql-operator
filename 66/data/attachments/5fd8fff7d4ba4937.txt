@@ -1,0 +1,157 @@
+[32mINFO    [0m integration.integration.high_availability.conftest:conftest.py:48 Deploying mysql and scaling to 3 units
+[32mINFO    [0m integration.integration.high_availability.conftest:conftest.py:51 Deploying mysql-test-app
+[32mINFO    [0m integration.integration.high_availability.conftest:conftest.py:54 Relating mysql with mysql-test-app
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmph2un7whx
+[32mINFO    [0m root:test_primary_switchover.py:57 Current primary unit: mysql/2
+[32mINFO    [0m root:test_primary_switchover.py:63 Unit selected for promotion: mysql/1
+[32mINFO    [0m root:test_primary_switchover.py:65 Kill all but one unit to simulate majority loss...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=45s
+[32mINFO    [0m root:test_primary_switchover.py:74 Waiting to settle in error state
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 promote-to-primary --wait 600s --params /root/snap/juju/common/tmpagm0yxfu
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju model-config --model testing update-status-hook-interval=15s
+[32mINFO    [0m root:test_primary_switchover.py:95 Waiting for all units to become active after switchover...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpedpfo6wa
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  02:15:19Z
+
+App             Version          Status  Scale  Charm           Channel      Rev  Exposed  Message
+mysql           8.0.44-0ubun...  active      3  mysql                          0  no       
+mysql-test-app  0.0.2            active      1  mysql-test-app  latest/edge   85  no       Last written value=117
+
+Unit               Workload  Agent  Machine  Public address  Ports           Message
+mysql-test-app/0*  active    idle   3        10.27.46.80                     Last written value=117
+mysql/0*           active    idle   0        10.27.46.132    3306,33060/tcp  
+mysql/1            active    idle   1        10.27.46.235    3306,33060/tcp  Primary
+mysql/2            active    idle   2        10.27.46.42     3306,33060/tcp  
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.27.46.132  juju-a1494c-0  ubuntu@22.04  runnervmmtnos  Running
+1        started  10.27.46.235  juju-a1494c-1  ubuntu@22.04  runnervmmtnos  Running
+2        started  10.27.46.42   juju-a1494c-2  ubuntu@22.04  runnervmmtnos  Running
+3        started  10.27.46.80   juju-a1494c-3  ubuntu@22.04  runnervmmtnos  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-0: 02:05:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:05:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:06:34 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-2: 02:06:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:06:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:06:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:06:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 02:07:43 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-1: 02:07:46 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-3: 02:10:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:10:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-0: 02:12:32 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.42:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-0: 02:12:33 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.235:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-2: 02:12:35 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.132:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-2: 02:12:36 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.235:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-0: 02:12:39 ERROR unit.mysql/0.juju-log database-peers:1: Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a1494c-0.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-0: 02:12:39 ERROR unit.mysql/0.juju-log database-peers:1: Failed to get cluster status for test_cluster
+unit-mysql-0: 02:12:40 ERROR unit.mysql/0.juju-log database-peers:1: Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 877, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-0: 02:12:42 ERROR unit.mysql/0.juju-log database-peers:1: Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.235:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-0: 02:13:03 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.235:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+unit-mysql-0: 02:13:04 ERROR unit.mysql/0.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@juju-a1494c-0.lxd:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\ncluster = dba.get_cluster('test_cluster')\nprint(cluster.status({'extended': False}))"]' returned non-zero exit status 1.
+unit-mysql-0: 02:13:04 ERROR unit.mysql/0.juju-log Failed to get cluster status for test_cluster
+unit-mysql-0: 02:13:05 ERROR unit.mysql/0.juju-log Failed to get cluster members
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-0/charm/src/relations/mysql_provider.py", line 165, in _update_endpoints
+    rw_endpoints, ro_endpoints, _ = self.charm.get_cluster_endpoints(DB_RELATION_NAME)
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-mysql-0/charm/lib/charms/mysql/v0/mysql.py", line 877, in get_cluster_endpoints
+    raise MySQLGetClusterEndpointsError("Failed to get endpoints from cluster topology")
+charms.mysql.v0.mysql.MySQLGetClusterEndpointsError: Failed to get endpoints from cluster topology
+unit-mysql-2: 02:13:08 ERROR unit.mysql/2.juju-log Failed to execute mysql-shell command
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mysql-2/charm/src/mysql_vm_helpers.py", line 774, in _run_mysqlsh_script
+    output = subprocess.check_output(  # noqa: S603
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['charmed-mysql.mysqlsh', '--passwords-from-stdin', '--uri=serverconfig@10.27.46.235:33062', '--python', '-c', "shell.options.set('useWizards', False)\nprint('###')\nshell.connect_to_primary()\nprimary_address = shell.parse_uri(session.uri)['host']\nprint(f'<PRIMARY_ADDRESS>{primary_address}</PRIMARY_ADDRESS>')"]' returned non-zero exit status 1.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
