@@ -131,7 +131,12 @@ async def test_integrate_with_isolated_space(juju: Juju):
     juju.ssh(unit, "sudo ip route flush default")
 
     logger.info("Starting continuous writes")
-    juju.run(unit, "start-continuous-writes")
+    # The charm will first try to stop the continuous writes,
+    # which first queries the database to retrieve the last value.
+    # OpsTest supported just enqueuing the action, but Jubilant doesn't,
+    # so we need to acknowledge the timeout error resulting from the new network topology.
+    with pytest.raises(TimeoutError):
+        juju.run(unit, "start-continuous-writes")
 
     # Ensure continuous writes do not increment for all units
     with pytest.raises(AssertionError):
