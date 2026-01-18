@@ -1,0 +1,53 @@
+[32mINFO    [0m integration.integration.test_tls:test_tls.py:185 Removing relation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.12   unsupported  01:42:40Z
+
+App                       Version          Status  Scale  Charm                     Channel   Rev  Exposed  Message
+mysql                     8.0.44-0ubun...  active      3  mysql                                 0  no       
+self-signed-certificates                   active      1  self-signed-certificates  1/stable  317  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports           Message
+mysql/0                      active    idle   0        10.97.251.22    3306,33060/tcp  
+mysql/1*                     active    idle   1        10.97.251.129   3306,33060/tcp  
+mysql/2                      active    idle   2        10.97.251.14    3306,33060/tcp  
+self-signed-certificates/0*  active    idle   3        10.97.251.46                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.97.251.22   juju-caa15c-0  ubuntu@22.04  runnervmmtnos  Running
+1        started  10.97.251.129  juju-caa15c-1  ubuntu@22.04  runnervmmtnos  Running
+2        started  10.97.251.14   juju-caa15c-2  ubuntu@22.04  runnervmmtnos  Running
+3        started  10.97.251.46   juju-caa15c-3  ubuntu@24.04  runnervmmtnos  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+machine-1: 01:35:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:35:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-1: 01:36:27 ERROR unit.mysql/1.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-2: 01:36:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mysql-2: 01:37:34 ERROR unit.mysql/2.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+unit-mysql-0: 01:37:38 ERROR unit.mysql/0.juju-log Failed command: fuser 3306/tcp; user=None; group=None
+machine-3: 01:40:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:40:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 01:40:44 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:46 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:49 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:50 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:31 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-mysql-0: 01:41:32 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-self-signed-certificates-0: 01:41:35 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-mysql-1: 01:41:36 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 01:41:37 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-self-signed-certificates-0: 01:41:38 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-mysql-2: 01:41:39 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-1: 01:41:41 ERROR unit.mysql/1.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-0: 01:41:41 ERROR unit.mysql/0.juju-log certificates:3: An unknown certificate expiring.
+unit-mysql-2: 01:41:44 ERROR unit.mysql/2.juju-log certificates:3: An unknown certificate expiring.
+unit-self-signed-certificates-0: 01:42:14 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "73b2e55c-14d2-45c8-8f16-86aad2caa15c:r#3#mysql": settings 73b2e55c-14d2-45c8-8f16-86aad2caa15c:r#3#mysql not found (not found)
+unit-mysql-0: 01:42:16 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "73b2e55c-14d2-45c8-8f16-86aad2caa15c:r#3#self-signed-certificates": settings 73b2e55c-14d2-45c8-8f16-86aad2caa15c:r#3#self-signed-certificates not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
