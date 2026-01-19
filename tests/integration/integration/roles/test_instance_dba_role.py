@@ -24,8 +24,6 @@ INTEGRATOR_APP_NAME = "data-integrator"
 
 TIMEOUT = 15 * MINUTE_SECS
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -76,28 +74,24 @@ async def test_charmed_dba_role(juju: Juju):
 
     data_integrator_unit = get_app_units(juju, INTEGRATOR_APP_NAME)[0]
     task = juju.run(unit=data_integrator_unit, action="get-credentials")
-    task.raise_on_failure()
-    results = task.results
 
     logger.info("Checking that the instance-level DBA role can create new databases")
     await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         ["CREATE DATABASE IF NOT EXISTS test"],
         commit=True,
     )
 
     data_integrator_unit = get_app_units(juju, INTEGRATOR_APP_NAME)[0]
     task = juju.run(unit=data_integrator_unit, action="get-credentials")
-    task.raise_on_failure()
-    results = task.results
 
     logger.info("Checking that the instance-level DBA role can see all databases")
     rows = await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         ["SHOW DATABASES"],
         commit=True,
     )

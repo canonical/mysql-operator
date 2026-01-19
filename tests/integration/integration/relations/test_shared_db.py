@@ -31,8 +31,6 @@ ANOTHER_KEYSTONE_APP_NAME = "another-keystone"
 SLOW_WAIT_TIMEOUT = 25 * 60
 FAST_WAIT_TIMEOUT = 15 * 60
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 async def test_keystone_bundle_shared_db(juju: Juju, charm) -> None:

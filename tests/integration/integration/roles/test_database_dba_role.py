@@ -25,8 +25,6 @@ INTEGRATOR_APP_NAME = "data-integrator"
 
 TIMEOUT = 15 * MINUTE_SECS
 
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
-
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -94,15 +92,13 @@ async def test_charmed_dba_role(juju: Juju):
 
     data_integrator_2_unit = get_app_units(juju, f"{INTEGRATOR_APP_NAME}2")[0]
     task = juju.run(unit=data_integrator_2_unit, action="get-credentials")
-    task.raise_on_failure()
-    results = task.results
 
     logger.info("Checking that the database-level DBA role cannot create new databases")
     with pytest.raises(ProgrammingError):
         await execute_queries_on_unit(
             primary_unit_address,
-            results["mysql"]["username"],
-            results["mysql"]["password"],
+            task.results["mysql"]["username"],
+            task.results["mysql"]["password"],
             ["CREATE DATABASE IF NOT EXISTS test"],
             commit=True,
         )
@@ -110,8 +106,8 @@ async def test_charmed_dba_role(juju: Juju):
     logger.info("Checking that the database-level DBA role can see all databases")
     await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         ["SHOW DATABASES"],
         commit=True,
     )
@@ -119,8 +115,8 @@ async def test_charmed_dba_role(juju: Juju):
     logger.info("Checking that the database-level DBA role can create a new table")
     await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         [
             "CREATE TABLE preserved.test_table (`id` SERIAL PRIMARY KEY, `data` TEXT)",
         ],
@@ -130,8 +126,8 @@ async def test_charmed_dba_role(juju: Juju):
     logger.info("Checking that the database-level DBA role can write into an existing table")
     await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         [
             "INSERT INTO preserved.test_table (`data`) VALUES ('test_data_1'), ('test_data_2')",
         ],
@@ -141,8 +137,8 @@ async def test_charmed_dba_role(juju: Juju):
     logger.info("Checking that the database-level DBA role can read from an existing table")
     rows = await execute_queries_on_unit(
         primary_unit_address,
-        results["mysql"]["username"],
-        results["mysql"]["password"],
+        task.results["mysql"]["username"],
+        task.results["mysql"]["password"],
         [
             "SELECT `data` FROM preserved.test_table",
         ],
