@@ -1239,14 +1239,14 @@ telemetry = ["opentelemetry-api (==1.18.0)", "opentelemetry-exporter-otlp-proto-
 
 [[package]]
 name = "mysql-shell-client"
-version = "0.6.0"
+version = "0.6.1"
 description = "Python client for MySQL Shell"
 optional = false
 python-versions = ">=3.10"
 groups = ["charm-libs"]
 files = [
-    {file = "mysql_shell_client-0.6.0-py3-none-any.whl", hash = "sha256:89d850ed78caef601e7801785105414f75d03495524c8f38e014f564c246d3e8"},
-    {file = "mysql_shell_client-0.6.0.tar.gz", hash = "sha256:e03543a383bc3890d77ff8fe9b235f874da1acc4549bcf9e446dec326406f57d"},
+    {file = "mysql_shell_client-0.6.1-py3-none-any.whl", hash = "sha256:364bfddb6003aeaf4599057f29d0e2d76f4463e998adf397c7ca1918f97485b2"},
+    {file = "mysql_shell_client-0.6.1.tar.gz", hash = "sha256:4d67003aaf049c3003b931b95bd1f6ceb3fa129f252d4f7c6c41646869404dff"},
 ]
 
 [package.extras]

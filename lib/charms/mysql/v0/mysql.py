@@ -2023,24 +2023,15 @@ class MySQLBase(ABC):
     ) -> int:
         """Retrieve current count of cluster nodes, optionally filtered by status."""
         from_instance = from_instance if from_instance else self.instance_address
-        node_statuses = [node_status] if node_status else list(InstanceState)
+        node_statuses = [node_status] if node_status else None
 
-        # TODO:
-        #   Use InstanceClient.search_instance_replication_members
-        #   when mysql-shell-client PR #29 gets merged and released
-        executor = self._build_instance_tcp_executor(from_instance)
-
-        query = (
-            "SELECT member_id "
-            "FROM performance_schema.replication_group_members "
-            "WHERE member_state IN ({states}) OR member_state IS NULL"
-        )
-        query = query.format(
-            states=", ".join([self._quoter.quote_value(state) for state in node_statuses]),
+        client = MySQLInstanceClient(
+            executor=self._build_instance_tcp_executor(from_instance),
+            quoter=self._quoter,
         )
 
         try:
-            status = executor.execute_sql(query)
+            status = client.search_instance_replication_members(states=node_statuses)
         except ExecutionError:
             logger.warning("Failed to get node count")
             return 0
@@ -2114,8 +2105,10 @@ class MySQLBase(ABC):
             raise MySQLRemoveInstanceError() from e
         finally:
             # Retrieve the cluster primary's address again (in case the old primary is scaled down)
-            primary_address = self.get_cluster_primary_address(member_addresses[0])
-            locking_executor = self._build_instance_tcp_executor(primary_address)
+            if member_addresses:
+                primary_address = self.get_cluster_primary_address(member_addresses[0])
+                locking_executor = self._build_instance_tcp_executor(primary_address)
+
             self._release_lock(
                 executor=locking_executor,
                 unit_label=unit_label,
