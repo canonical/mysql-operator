@@ -6,13 +6,11 @@ import logging
 import jubilant_backports
 import pytest
 from jubilant_backports import Juju
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ...helpers_ha import (
     MINUTE_SECS,
+    check_mysql_units_writes_increment,
     get_app_units,
-    get_mysql_max_written_value,
-    get_mysql_primary_unit,
     wait_for_apps_status,
 )
 
@@ -87,7 +85,7 @@ async def test_integrate_with_spaces(juju: Juju):
     juju.run(unit, "start-continuous-writes")
 
     # Ensure continuous writes still incrementing for all units
-    await ensure_all_units_continuous_writes_incrementing(juju, DATABASE_APP_NAME)
+    await check_mysql_units_writes_increment(juju, DATABASE_APP_NAME)
 
     juju.remove_application(APPLICATION_APP_NAME)
     juju.wait(
@@ -144,45 +142,10 @@ async def test_integrate_with_isolated_space(juju: Juju):
 
     # Ensure continuous writes do not increment for all units
     with pytest.raises(AssertionError):
-        await ensure_all_units_continuous_writes_incrementing(juju, DATABASE_APP_NAME)
+        await check_mysql_units_writes_increment(juju, DATABASE_APP_NAME)
 
     juju.remove_application(isolated_app_name)
     juju.wait(
         ready=lambda status: isolated_app_name not in status.apps,
         timeout=TIMEOUT,
     )
-
-
-async def ensure_all_units_continuous_writes_incrementing(
-    juju: Juju,
-    mysql_application_name: str,
-) -> None:
-    """Ensure that continuous writes is incrementing on all units.
-
-    Also, ensure that all continuous writes up to the max written value is available
-    on all units (ensure that no committed data is lost).
-    """
-    logger.info("Ensure continuous writes are incrementing")
-
-    mysql_units = get_app_units(juju, mysql_application_name)
-    primary = get_mysql_primary_unit(juju, mysql_application_name)
-
-    last_max_written_value = await get_mysql_max_written_value(
-        juju, mysql_application_name, primary
-    )
-
-    for unit in mysql_units:
-        for attempt in Retrying(reraise=True, stop=stop_after_delay(5 * 60), wait=wait_fixed(10)):
-            with attempt:
-                # ensure the max written value is incrementing (continuous writes is active)
-                max_written_value = await get_mysql_max_written_value(
-                    juju,
-                    mysql_application_name,
-                    unit,
-                )
-                logger.info(f"{max_written_value=} on unit {unit}")
-                assert max_written_value > last_max_written_value, (
-                    "Continuous writes not incrementing"
-                )
-
-                last_max_written_value = max_written_value
