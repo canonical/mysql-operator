@@ -2,65 +2,24 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
+from subprocess import run
 
-import jubilant_backports
 import pytest
-from jubilant_backports import Juju
+from jubilant_backports import Juju, all_active
 
 from ...helpers_ha import (
     get_app_name,
     get_app_units,
     get_mysql_primary_unit,
-    update_interval,
-    wait_for_apps_status,
     wait_for_unit_message,
     wait_for_unit_status,
 )
 
-MYSQL_APP_NAME = "mysql"
-MYSQL_TEST_APP_NAME = "mysql-test-app"
-
-MINUTE_SECS = 60
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.mark.abort_on_fail
-def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
-    """Simple test to ensure that the MySQL and application charms get deployed."""
-    logging.info("Deploying MySQL cluster")
-    juju.deploy(
-        charm=charm,
-        app=MYSQL_APP_NAME,
-        base="ubuntu@22.04",
-        config={"profile": "testing"},
-        num_units=3,
-    )
-    juju.deploy(
-        charm=MYSQL_TEST_APP_NAME,
-        app=MYSQL_TEST_APP_NAME,
-        base="ubuntu@22.04",
-        channel="latest/edge",
-        config={"sleep_interval": 500},
-        num_units=1,
-    )
-
-    juju.integrate(
-        f"{MYSQL_APP_NAME}:database",
-        f"{MYSQL_TEST_APP_NAME}:database",
-    )
-
-    logging.info("Wait for applications to become active")
-    juju.wait(
-        ready=wait_for_apps_status(
-            jubilant_backports.all_active, MYSQL_APP_NAME, MYSQL_TEST_APP_NAME
-        ),
-        error=jubilant_backports.any_blocked,
-        timeout=20 * MINUTE_SECS,
-    )
-
-
-@pytest.mark.abort_on_fail
-def test_cluster_switchover(juju: Juju) -> None:
+def test_cluster_switchover(juju: Juju, highly_available_cluster) -> None:
     """Test that the primary node can be switched over."""
     logging.info("Testing cluster switchover...")
     app_name = get_app_name(juju, "mysql")
@@ -78,17 +37,14 @@ def test_cluster_switchover(juju: Juju) -> None:
     new_primary_unit = app_units.pop()
     logging.info(f"New primary unit selected: {new_primary_unit}")
 
-    juju.run(
-        unit=new_primary_unit,
-        action="promote-to-primary",
-        params={"scope": "unit"},
-    )
+    switchover_task = juju.run(new_primary_unit, "promote-to-primary", {"scope": "unit"})
+    assert switchover_task.status == "completed", "Switchover failed"
 
     assert get_mysql_primary_unit(juju, app_name) == new_primary_unit, "Switchover failed"
 
 
 @pytest.mark.abort_on_fail
-def test_cluster_failover_after_majority_loss(juju: Juju) -> None:
+def test_cluster_failover_after_majority_loss(juju: Juju, highly_available_cluster) -> None:
     """Test the promote-to-primary command after losing the majority of nodes, with force flag."""
     app_name = get_app_name(juju, "mysql")
     assert app_name, "MySQL application not found in the cluster"
@@ -112,34 +68,32 @@ def test_cluster_failover_after_majority_loss(juju: Juju) -> None:
     for unit in units_to_kill:
         machine_name.append(get_unit_machine(juju, app_name, unit))
 
-    subprocess.run(["lxc", "restart", "--force", machine_name[0], machine_name[1]], check=True)
+    run(["lxc", "restart", "--force", machine_name[0], machine_name[1]], check=True)
 
-    with update_interval(juju, "45s"):
-        logging.info("Waiting to settle in error state")
-        juju.wait(
-            ready=lambda status: all((
-                wait_for_unit_status(app_name, unit_to_promote, "active")(status),
-                wait_for_unit_message(app_name, units_to_kill[0], "offline")(status),
-                wait_for_unit_message(app_name, units_to_kill[1], "offline")(status),
-            )),
-            timeout=15 * MINUTE_SECS,
-            delay=15,
-        )
+    juju.model_config({"update-status-hook-interval": "45s"})
+    logging.info("Waiting to settle in error state")
+    juju.wait(
+        ready=lambda status: all((
+            wait_for_unit_status(app_name, unit_to_promote, "active")(status),
+            wait_for_unit_message(app_name, units_to_kill[0], "offline")(status),
+            wait_for_unit_message(app_name, units_to_kill[1], "offline")(status),
+        )),
+        timeout=60 * 15,
+        delay=15,
+    )
 
-    juju.run(
-        unit=unit_to_promote,
-        action="promote-to-primary",
-        params={"scope": "unit", "force": True},
+    failover_task = juju.run(
+        unit_to_promote,
+        "promote-to-primary",
+        {"scope": "unit", "force": True},
         wait=600,
     )
 
-    with update_interval(juju, "15s"):
-        logging.info("Waiting for all units to become active after switchover...")
-        juju.wait(
-            ready=jubilant_backports.all_active,
-            timeout=10 * MINUTE_SECS,
-            delay=5,
-        )
+    juju.model_config({"update-status-hook-interval": "15s"})
+
+    assert failover_task.status == "completed", "Switchover failed"
+    logging.info("Waiting for all units to become active after switchover...")
+    juju.wait(all_active, timeout=60 * 10, delay=5)
 
     assert get_mysql_primary_unit(juju, app_name) == unit_to_promote, "Failover failed"
 

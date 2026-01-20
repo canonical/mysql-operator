@@ -1,7 +1,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import logging
 import os
 import uuid
 
@@ -9,8 +8,6 @@ import jubilant_backports
 import pytest
 
 from . import architecture
-
-logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
 
 
 @pytest.fixture(scope="session")

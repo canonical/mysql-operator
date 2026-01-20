@@ -38,6 +38,8 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 
 MINUTE_SECS = 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @pytest.mark.abort_on_fail
 def test_deploy_highly_available_cluster(juju: Juju, charm: str) -> None:
@@ -93,6 +95,7 @@ async def test_network_cut(juju: Juju, continuous_writes) -> None:
         action="get-password",
         params={"username": CLUSTER_ADMIN_USERNAME},
     )
+    credentials_task.raise_on_failure()
 
     config = {
         "username": credentials_task.results["username"],
@@ -195,9 +198,9 @@ def get_controller_hostname(juju: Juju) -> str:
 def get_unit_hostname(juju: Juju, app_name: str, unit_name: str) -> str:
     """Get hostname for a unit."""
     task = juju.exec("hostname", unit=unit_name)
-    output = task.stdout.strip()
+    task.raise_on_failure()
 
-    return output
+    return task.stdout.strip()
 
 
 @retry(stop=stop_after_attempt(20), wait=wait_fixed(15))
@@ -210,8 +213,8 @@ def wait_for_unit_network(juju: Juju, app_name: str, unit_name: str) -> None:
         unit_name: The name of the unit
     """
     task = juju.exec("ip address", unit=unit_name)
-    output = task.stdout.strip()
+    task.raise_on_failure()
 
     unit_ip = get_unit_ip(juju, app_name, unit_name)
-    if unit_ip in output:
+    if unit_ip in task.stdout:
         raise Exception()

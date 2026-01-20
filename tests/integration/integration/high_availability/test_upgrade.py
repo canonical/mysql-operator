@@ -26,6 +26,8 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 
 MINUTE_SECS = 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @pytest.mark.abort_on_fail
 def test_deploy_latest(juju: Juju) -> None:
@@ -69,7 +71,8 @@ async def test_pre_upgrade_check(juju: Juju) -> None:
     mysql_units = get_app_units(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
     logging.info("Assert slow shutdown is enabled")
     for unit_name in mysql_units:
@@ -115,7 +118,8 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
     mysql_app_units = get_app_units(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=mysql_app_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_app_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
     tmp_folder = Path("tmp")
     tmp_folder.mkdir(exist_ok=True)
@@ -139,7 +143,8 @@ async def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> N
     await check_mysql_units_writes_increment(juju, MYSQL_APP_NAME, mysql_app_units)
 
     logging.info("Re-run pre-upgrade-check action")
-    juju.run(unit=mysql_app_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_app_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
     logging.info("Re-refresh the charm")
     juju.refresh(app=MYSQL_APP_NAME, path=charm)

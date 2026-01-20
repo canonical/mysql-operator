@@ -87,11 +87,13 @@ def build_and_deploy_operations(
     )
 
     logger.info("Rotating mysql credentials")
-    juju.run(
-        unit=get_mysql_primary_unit(juju, MYSQL_APPLICATION_NAME),
+    primary_unit_name = get_mysql_primary_unit(juju, MYSQL_APPLICATION_NAME)
+    credentials_task = juju.run(
+        unit=primary_unit_name,
         action="set-password",
         params={"username": SERVER_CONFIG_USERNAME, "password": SERVER_CONFIG_PASSWORD},
     )
+    credentials_task.raise_on_failure()
 
     logger.info("Configuring s3 integrator and integrating it with mysql")
     juju.wait(

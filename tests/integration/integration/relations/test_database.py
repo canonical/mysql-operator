@@ -37,6 +37,8 @@ APPS = [DATABASE_APP_NAME, APPLICATION_APP_NAME]
 ENDPOINT = "database"
 TIMEOUT = 15 * MINUTE_SECS
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
@@ -267,8 +269,9 @@ def rotate_mysql_server_credentials(
     if password is not None:
         params["password"] = password
 
-    juju.run(
+    rotate_task = juju.run(
         unit=unit_name,
         action="set-password",
         params=params,
     )
+    rotate_task.raise_on_failure()

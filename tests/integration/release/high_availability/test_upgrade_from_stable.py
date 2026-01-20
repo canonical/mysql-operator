@@ -23,6 +23,8 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 
 MINUTE_SECS = 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 @contextmanager
 def continuous_writes(juju: Juju) -> Generator:
@@ -111,7 +113,8 @@ async def run_upgrade_check(juju: Juju) -> None:
     mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
     logging.info("Assert primary is set to leader")
     mysql_primary = get_mysql_primary_unit(juju, MYSQL_APP_NAME)

@@ -29,6 +29,8 @@ MYSQL_TEST_APP_NAME = "mysql-test-app"
 
 MINUTE_SECS = 60
 
+logging.getLogger("jubilant.wait").setLevel(logging.WARNING)
+
 
 # TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
 # (details: https://github.com/canonical/mysql-operator/pull/472#discussion_r1659300069)
@@ -92,7 +94,8 @@ async def test_pre_upgrade_check(juju: Juju) -> None:
     mysql_leader = get_app_leader(juju, MYSQL_APP_NAME)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
 
 # TODO: remove AMD64 marker after next incompatible MySQL server version is released in our snap
@@ -159,7 +162,8 @@ async def test_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     time.sleep(10)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task = juju.run(unit=mysql_leader, action="pre-upgrade-check")
+    task.raise_on_failure()
 
     time.sleep(20)
 
