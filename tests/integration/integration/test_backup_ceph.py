@@ -20,10 +20,10 @@ from jubilant_backports import Juju
 
 from constants import CLUSTER_ADMIN_USERNAME, ROOT_USERNAME, SERVER_CONFIG_USERNAME
 
-from ..helpers import generate_random_string
 from ..helpers_ha import (
     MINUTE_SECS,
     execute_queries_on_unit,
+    generate_random_string,
     get_app_units,
     get_mysql_primary_unit,
     get_mysql_server_credentials,

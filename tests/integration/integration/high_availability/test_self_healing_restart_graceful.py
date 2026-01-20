@@ -9,12 +9,12 @@ from jubilant_backports import Juju
 
 from constants import SERVER_CONFIG_USERNAME
 
-from ...helpers import is_connection_possible
 from ...helpers_ha import (
     check_mysql_units_writes_increment,
     execute_queries_on_unit,
     get_mysql_primary_unit,
     get_unit_ip,
+    is_connection_possible,
     start_mysql_process_gracefully,
     stop_mysql_process_gracefully,
     wait_for_apps_status,

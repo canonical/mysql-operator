@@ -8,9 +8,9 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from ...helpers import execute_queries_on_unit
 from ...helpers_ha import (
     MINUTE_SECS,
+    execute_queries_on_unit,
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,

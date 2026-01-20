@@ -12,12 +12,13 @@ from constants import DB_RELATION_NAME, PASSWORD_LENGTH, ROOT_USERNAME, SERVER_C
 from utils import generate_random_password
 
 from ... import markers
-from ...helpers import execute_queries_on_unit, get_read_only_endpoint_ips
 from ...helpers_ha import (
     MINUTE_SECS,
+    execute_queries_on_unit,
     get_app_units,
     get_mysql_primary_unit,
     get_mysql_server_credentials,
+    get_read_only_endpoint_ips,
     get_relation_data,
     get_unit_ip,
     remove_leader_unit,

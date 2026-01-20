@@ -12,15 +12,13 @@ from jubilant_backports import Juju
 from constants import CLUSTER_ADMIN_USERNAME, TLS_SSL_CERT_FILE
 
 from .. import architecture, juju_
-from ..helpers import (
-    is_connection_possible,
-)
 from ..helpers_ha import (
     MINUTE_SECS,
     get_app_units,
     get_mysql_server_credentials,
     get_unit_info,
     get_unit_ip,
+    is_connection_possible,
     wait_for_apps_status,
 )
 

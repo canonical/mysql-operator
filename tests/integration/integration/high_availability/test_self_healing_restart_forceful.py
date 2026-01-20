@@ -9,11 +9,11 @@ from jubilant_backports import Juju
 
 from constants import SERVER_CONFIG_USERNAME
 
-from ...helpers import generate_random_string
 from ...helpers_ha import (
     check_mysql_instances_online,
     check_mysql_units_writes_increment,
     execute_queries_on_unit,
+    generate_random_string,
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,

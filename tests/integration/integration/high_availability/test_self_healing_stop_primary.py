@@ -10,17 +10,15 @@ from jubilant_backports import Juju
 
 from constants import CLUSTER_ADMIN_USERNAME, SERVER_CONFIG_USERNAME
 
-from ...helpers import (
-    execute_queries_on_unit,
-    generate_random_string,
-    is_connection_possible,
-)
 from ...helpers_ha import (
     TEST_DATABASE_NAME,
     check_mysql_units_writes_increment,
+    execute_queries_on_unit,
+    generate_random_string,
     get_app_units,
     get_mysql_primary_unit,
     get_unit_ip,
+    is_connection_possible,
     remove_mysql_test_data,
     start_mysql_process_gracefully,
     stop_mysql_process_gracefully,

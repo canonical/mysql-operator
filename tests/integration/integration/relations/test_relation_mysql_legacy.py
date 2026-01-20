@@ -8,11 +8,9 @@ import jubilant_backports
 import pytest
 from jubilant_backports import Juju
 
-from ...helpers import (
-    is_connection_possible,
-)
 from ...helpers_ha import (
     get_legacy_mysql_credentials,
+    is_connection_possible,
     wait_for_apps_status,
 )
 
