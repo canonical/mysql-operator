@@ -44,11 +44,9 @@ def test_build_and_deploy(juju: Juju, lxd_spaces, charm) -> None:
         num_units=3,
         base="ubuntu@22.04",
     )
-    juju.wait(
-        ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
-        timeout=TIMEOUT,
-    )
-
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    # but it is enough to deploy another application in the meantime
     juju.deploy(
         APPLICATION_APP_NAME,
         APPLICATION_APP_NAME,
@@ -57,6 +55,11 @@ def test_build_and_deploy(juju: Juju, lxd_spaces, charm) -> None:
         num_units=1,
         base="ubuntu@22.04",
         channel="latest/edge",
+    )
+
+    juju.wait(
+        ready=wait_for_apps_status(jubilant_backports.all_active, DATABASE_APP_NAME),
+        timeout=TIMEOUT,
     )
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_waiting, APPLICATION_APP_NAME),
