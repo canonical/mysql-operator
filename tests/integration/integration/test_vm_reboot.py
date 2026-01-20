@@ -33,6 +33,9 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
         trust=True,
     )
 
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    sleep(SLEEP_WAIT)
     juju.wait(
         jubilant_backports.all_active,
         timeout=TIMEOUT,

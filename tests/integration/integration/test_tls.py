@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "mysql"
 CLUSTER_NAME = "test_cluster"
+SLEEP_WAIT = 5
 TLS_SETUP_SLEEP_TIME = 30
 TIMEOUT = 15 * MINUTE_SECS
 
@@ -59,6 +60,9 @@ def test_build_and_deploy(juju: Juju, charm) -> None:
         trust=True,
     )
 
+    # A race condition in Juju 2.9 makes `juju.wait` fail if called too early
+    # (filesystem for storage instance "database/X" not found)
+    sleep(SLEEP_WAIT)
     juju.wait(
         ready=wait_for_apps_status(jubilant_backports.all_active, APP_NAME),
         timeout=TIMEOUT,
