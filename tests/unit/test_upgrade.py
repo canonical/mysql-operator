@@ -17,18 +17,18 @@ from tenacity import RetryError
 from charm import MySQLOperatorCharm
 
 MOCK_STATUS_ONLINE = {
-    "defaultreplicaset": {
+    "defaultReplicaSet": {
         "topology": {
-            "0": {"status": "online"},
-            "1": {"status": "online"},
+            "0": {"status": "ONLINE"},
+            "1": {"status": "ONLINE"},
         },
     }
 }
 MOCK_STATUS_OFFLINE = {
-    "defaultreplicaset": {
+    "defaultReplicaSet": {
         "topology": {
-            "0": {"status": "online"},
-            "1": {"status": "online", "instanceerrors": ["some error"]},
+            "0": {"status": "OFFLINE"},
+            "1": {"status": "OFFLINE"},
         },
     }
 }
@@ -63,17 +63,26 @@ class TestUpgrade(unittest.TestCase):
     @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks")
     @patch("charm.MySQLOperatorCharm.get_unit_address", return_value="10.0.1.1")
     @patch("upgrade.MySQLVMUpgrade._pre_upgrade_prepare")
-    @patch("mysql_vm_helpers.MySQL.get_cluster_status", return_value=MOCK_STATUS_ONLINE)
+    @patch("mysql_vm_helpers.MySQL.get_cluster_status")
+    @patch("mysql_vm_helpers.MySQL.get_cluster_node_count")
     def test_pre_upgrade_check(
-        self, mock_get_cluster_status, mock_pre_upgrade_prepare, mock_get_unit_address, _
+        self,
+        mock_get_cluster_node_count,
+        mock_get_cluster_status,
+        mock_pre_upgrade_prepare,
+        mock_get_unit_address,
+        _,
     ):
         """Test the pre upgrade check."""
         self.harness.set_leader(True)
         self.charm.on.config_changed.emit()
 
+        mock_get_cluster_status.return_value = MOCK_STATUS_ONLINE
+        mock_get_cluster_node_count.return_value = self.charm.app.planned_units()
+
         self.charm.upgrade.pre_upgrade_check()
         mock_pre_upgrade_prepare.assert_called_once()
-        mock_get_cluster_status.assert_called_once()
+        mock_get_cluster_node_count.assert_called_once()
 
         self.assertEqual(
             self.harness.get_relation_data(self.upgrade_relation_id, "mysql/0")["state"],
@@ -81,11 +90,12 @@ class TestUpgrade(unittest.TestCase):
         )
 
         mock_get_cluster_status.return_value = MOCK_STATUS_OFFLINE
+        mock_get_cluster_node_count.return_value = 0
 
         with self.assertRaises(ClusterNotReadyError):
             self.charm.upgrade.pre_upgrade_check()
 
-        mock_get_cluster_status.return_value = MOCK_STATUS_ONLINE
+        mock_get_cluster_node_count.return_value = self.charm.app.planned_units()
 
         mock_pre_upgrade_prepare.side_effect = MySQLSetClusterPrimaryError
         with self.assertRaises(ClusterNotReadyError):

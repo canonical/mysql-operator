@@ -12,7 +12,6 @@ from charms.mysql.v0.mysql import (
     MySQLEmptyDataDirectoryError,
     MySQLExecuteBackupCommandsError,
     MySQLInitializeJujuOperationsTableError,
-    MySQLNoMemberStateError,
     MySQLOfflineModeAndHiddenInstanceExistsError,
     MySQLPrepareBackupForRestoreError,
     MySQLRescanClusterError,
@@ -23,6 +22,7 @@ from charms.mysql.v0.mysql import (
     MySQLSetInstanceOptionError,
     MySQLStartMySQLDError,
     MySQLStopMySQLDError,
+    MySQLUnableToGetMemberStateError,
 )
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.testing import Harness
@@ -337,7 +337,7 @@ Juju Version: 0.0.0
     @patch("mysql_vm_helpers.MySQL.get_cluster_status")
     def test_can_cluster_perform_backup(self, _get_cluster_status):
         """Test _can_cluster_perform_backup()."""
-        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "ok"}}
+        _get_cluster_status.return_value = {"defaultReplicaSet": {"status": "OK"}}
 
         success, error_message = self.mysql_backups._can_cluster_perform_backup()
         self.assertTrue(success)
@@ -354,16 +354,18 @@ Juju Version: 0.0.0
         self.assertEqual(error_message, "Cluster status unknown")
 
         # test error state
-        _get_cluster_status.return_value = {"defaultreplicaset": {"status": "error"}}
+        _get_cluster_status.return_value = {"defaultReplicaSet": {"status": "ERROR"}}
 
         success, error_message = self.mysql_backups._can_cluster_perform_backup()
         self.assertFalse(success)
         self.assertEqual(error_message, "Cluster is not in a healthy state")
 
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
-    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value=("online", "replica"))
+    @patch("mysql_vm_helpers.MySQL.get_member_state", return_value="ONLINE")
+    @patch("mysql_vm_helpers.MySQL.get_member_role", return_value="SECONDARY")
     def test_can_unit_perform_backup(
         self,
+        _get_member_role,
         _get_member_state,
         _offline_mode_and_hidden_instance_exists,
     ):
@@ -374,25 +376,29 @@ Juju Version: 0.0.0
 
     @patch("mysql_vm_helpers.MySQL.offline_mode_and_hidden_instance_exists", return_value=False)
     @patch("mysql_vm_helpers.MySQL.get_member_state")
+    @patch("mysql_vm_helpers.MySQL.get_member_role")
     @patch("mysql_vm_helpers.MySQL.reconcile_binlogs_collection", return_value=True)
     @patch("python_hosts.Hosts.write")
     def test_can_unit_perform_backup_failure(
         self,
         _,
         __,
+        _get_member_role,
         _get_member_state,
         _offline_mode_and_hidden_instance_exists,
     ):
         """Test failure of _can_unit_perform_backup()."""
         # test non-online state
-        _get_member_state.return_value = ("recovering", "replica")
+        _get_member_role.return_value = "SECONDARY"
+        _get_member_state.return_value = "RECOVERING"
 
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertFalse(success)
-        self.assertEqual(error_message, "Unit cannot perform backups as its state is recovering")
+        self.assertEqual(error_message, "Unit cannot perform backups as its state is RECOVERING")
 
         # test more than one unit and backup on primary
-        _get_member_state.return_value = ("online", "primary")
+        _get_member_role.return_value = "PRIMARY"
+        _get_member_state.return_value = "ONLINE"
 
         self.harness.add_relation_unit(self.peer_relation_id, "mysql/1")
 
@@ -403,7 +409,7 @@ Juju Version: 0.0.0
         self.harness.remove_relation_unit(self.peer_relation_id, "mysql/1")
 
         # test error getting member state
-        _get_member_state.side_effect = MySQLNoMemberStateError
+        _get_member_state.side_effect = MySQLUnableToGetMemberStateError
 
         success, error_message = self.mysql_backups._can_unit_perform_backup()
         self.assertFalse(success)

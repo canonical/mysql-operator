@@ -80,7 +80,7 @@ class SharedDBRelation(Object):
             return
 
         try:
-            db_host = self._charm._mysql.get_cluster_primary_address().split(":")[0]
+            db_host = self._charm._mysql.get_cluster_primary_address()
         except MySQLGetClusterPrimaryAddressError:
             logger.error("Can't get primary address. Deferring")
             event.defer()
@@ -166,7 +166,7 @@ class SharedDBRelation(Object):
             # set the relation data for consumption
             cluster_primary = self._charm._mysql.get_cluster_primary_address()
 
-            local_app_data["db_host"] = local_unit_data["db_host"] = cluster_primary.split(":")[0]
+            local_app_data["db_host"] = local_unit_data["db_host"] = cluster_primary
 
             # Database port is static in legacy charm
             local_app_data["db_port"] = local_unit_data["db_port"] = "3306"

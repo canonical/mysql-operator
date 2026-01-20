@@ -250,7 +250,7 @@ def test_failover(first_model: str, second_model: str) -> None:
 
     # Simulating a failure on the primary cluster
     for unit_name in model_2_mysql_units:
-        model_2.exec("sudo pkill -x mysqld --signal SIGSTOP", unit=unit_name)
+        model_2.ssh(command="sudo pkill -x mysqld --signal SIGSTOP", target=unit_name)
 
     logging.info("Promoting standby cluster to primary with force flag")
     model_1 = Juju(model=first_model)
@@ -266,7 +266,7 @@ def test_failover(first_model: str, second_model: str) -> None:
     # Restore mysqld process
     logging.info("Unfreezing mysqld on primary cluster units")
     for unit_name in model_2_mysql_units:
-        model_2.exec("sudo pkill -x mysqld --signal SIGCONT", unit=unit_name)
+        model_2.ssh(command="sudo pkill -x mysqld --signal SIGCONT", target=unit_name)
 
     logging.info("Checking clusters statuses")
     cluster_set_status = get_mysql_cluster_status(
