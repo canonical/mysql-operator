@@ -12,6 +12,7 @@ from ...helpers_ha import (
     get_app_name,
     get_app_units,
     get_mysql_primary_unit,
+    get_unit_machine,
     update_interval,
     wait_for_apps_status,
     wait_for_unit_message,
@@ -142,10 +143,3 @@ def test_cluster_failover_after_majority_loss(juju: Juju) -> None:
         )
 
     assert get_mysql_primary_unit(juju, app_name) == unit_to_promote, "Failover failed"
-
-
-def get_unit_machine(juju: Juju, app_name: str, unit_name: str) -> str:
-    """Get the machine name for the given unit."""
-    status = juju.status()
-    machine_id = status.apps[app_name].units[unit_name].machine
-    return status.machines[machine_id].instance_id

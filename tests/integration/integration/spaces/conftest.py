@@ -6,7 +6,7 @@ import os
 import subprocess
 
 import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_backports import Juju
 
 DEFAULT_LXD_NETWORK = "lxdbr0"
 RAW_DNSMASQ = """
@@ -79,7 +79,7 @@ def pytest_sessionstart(session):
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
     # Nothing to do, as this is a temp runner only
-    if os.environ.get("CI").lower() == "true":
+    if os.environ.get("CI", "").lower() == "true":
         return
 
     _lxd_network_down("client")
@@ -87,14 +87,14 @@ def pytest_sessionfinish(session, exitstatus):
     _lxd_network_down("isolated")
 
     subprocess.run(
-        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode=none"],
+        ["sudo", "lxc", "network", "unset", DEFAULT_LXD_NETWORK, "dns.mode"],
         check=True,
     )
 
 
 @pytest.fixture(scope="module")
-async def lxd_spaces(ops_test: OpsTest):
-    await ops_test.juju("reload-spaces")
-    await ops_test.model.add_space("client", cidrs=["10.0.0.0/24"])
-    await ops_test.model.add_space("peers", cidrs=["10.10.10.0/24"])
-    await ops_test.model.add_space("isolated", cidrs=["10.20.20.0/24"])
+async def lxd_spaces(juju: Juju):
+    juju.cli("reload-spaces")
+    juju.cli("add-space", "client", "10.0.0.0/24")
+    juju.cli("add-space", "peers", "10.10.10.0/24")
+    juju.cli("add-space", "isolated", "10.20.20.0/24")
