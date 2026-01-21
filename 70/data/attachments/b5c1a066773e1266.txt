@@ -1,0 +1,10 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.test_vm_reboot:test_vm_reboot.py:89 Rebooting mysql/0
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.test_vm_reboot:test_vm_reboot.py:89 Rebooting mysql/1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.test_vm_reboot:test_vm_reboot.py:89 Rebooting mysql/2
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.test_vm_reboot:test_vm_reboot.py:93 Sleep to allow juju status change
+[32mINFO    [0m integration.integration.test_vm_reboot:test_vm_reboot.py:95 Waiting for the application to become idle
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
