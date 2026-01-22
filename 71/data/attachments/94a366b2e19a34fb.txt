@@ -1,0 +1,46 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpu2qvh_r9
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:141 Creating backup
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 create-backup --wait 300s
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:149 Creating test data 1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp5zq63cbp
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmp5xwo8x5h
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmp65cn3k62
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:176 Creating test data 2
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpk1t2qhir
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpo6f6fkw6
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-password --params /root/snap/juju/common/tmpl86w8rfr
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:198 Scaling down to 1 unit
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju remove-unit --model testing --no-prompt mysql/1 mysql/2
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:204 Restoring backup 2026-01-22T02:11:29Z with bad restore-to-time parameter
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 restore --params /root/snap/juju/common/tmpq8sjpe5g
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:212 Restoring backup 2026-01-22T02:11:29Z with year_before restore-to-time parameter
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 restore --params /root/snap/juju/common/tmp2zq7brik
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:228 Restoring backup 2026-01-22T02:11:29Z with year_after restore-to-time parameter
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 restore --params /root/snap/juju/common/tmpny5q89om
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:244 Restoring backup 2026-01-22T02:11:29Z with actual restore-to-time parameter
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 restore --params /root/snap/juju/common/tmpbtiiocsn
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:260 Restoring backup 2026-01-22T02:11:29Z with restore-to-time=latest parameter
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 restore --params /root/snap/juju/common/tmp2gkth9ji
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:43 Cleaning backups from cloud buckets
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000

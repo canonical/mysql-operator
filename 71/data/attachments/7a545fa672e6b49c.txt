@@ -1,0 +1,14 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:65 Deploying mysql
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing ./mysql_ubuntu@22.04-amd64.charm mysql --base ubuntu@22.04 --config cluster-name=test_cluster --config profile=testing --num-units 3
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:76 Deploying s3 integrator
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing s3-integrator s3-integrator --base ubuntu@22.04 --channel 1/stable
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:89 Rotating mysql credentials
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmparo8ndr2
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 set-password --params /root/snap/juju/common/tmpk8i_bqnk
+[32mINFO    [0m integration.integration.helpers_backups:helpers_backups.py:96 Configuring s3 integrator and integrating it with mysql
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju config --model testing s3-integrator endpoint=https://s3.amazonaws.com bucket=data-charms-testing path=mysql/48242945-411b-4944-a204-7c17804fdf0f region=us-east-1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json s3-integrator/0 sync-s3-credentials --params /root/snap/juju/common/tmpzj10kfu7
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing mysql s3-integrator

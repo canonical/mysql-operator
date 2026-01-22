@@ -1,0 +1,37 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpu7_fq65x
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:134 Inserting value before backup
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp1njhbume
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmpbwmnvuob
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmp453uf_sd
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:149 Setting s3 config
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju config --model testing s3-integrator endpoint=https://s3.amazonaws.com bucket=data-charms-testing path=mysql/ec18ce25-ab76-48bc-ac5d-a6933c11827a region=us-east-1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json s3-integrator/0 sync-s3-credentials --params /root/snap/juju/common/tmps1hdhxp4
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:167 Listing existing backup ids
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 list-backups
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:174 Creating backup
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 create-backup --wait 300s
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:180 Listing backup ids post backup
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/0 list-backups
+[32mINFO    [0m integration.integration.test_backup_aws:test_backup_aws.py:189 Inserting value after backup
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp1kve9sjf
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmpfl4i0spf
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql/1 get-password --params /root/snap/juju/common/tmp_73cg7ce
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json

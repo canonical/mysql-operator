@@ -1,0 +1,108 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:60 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql-test-app/0 clear-continuous-writes
+[32mINFO    [0m root:test_async_replication_upgrade.py:62 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql-test-app/0 start-continuous-writes
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:250 Run pre-upgrade-check action
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 pre-upgrade-check
+[32mINFO    [0m root:test_async_replication_upgrade.py:253 Assert slow shutdown is enabled
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpanis1gt4
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/1 get-password --params /root/snap/juju/common/tmpzg844q81
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/2 get-password --params /root/snap/juju/common/tmpys9lwv_o
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:258 Assert primary is set to leader
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpw4ky5fdg
+[32mINFO    [0m root:test_async_replication_upgrade.py:265 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpr3q9kti6
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpmstfi46o
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpzecqznsi
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/1 get-password --params /root/snap/juju/common/tmpmeaj0nlm
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/2 get-password --params /root/snap/juju/common/tmptcjebfru
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:268 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju refresh --model testing db1 --path ./mysql_ubuntu@22.04-amd64.charm
+[32mINFO    [0m root:test_async_replication_upgrade.py:271 Wait for upgrade to start
+[32mINFO    [0m root:test_async_replication_upgrade.py:277 Wait for upgrade to complete
+[32mINFO    [0m root:test_async_replication_upgrade.py:283 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpjdpc_hdh
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/2 get-password --params /root/snap/juju/common/tmpgnof7ecp
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpn_9on0qc
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpgxgyhzkq
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmp0fxbvsoq
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmppm8g719u
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpcc1ah_t0
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpjpwabmds
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpml1c51s6
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpir3lwe9n
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpztu_d_km
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/0 get-password --params /root/snap/juju/common/tmpbp8ielc3
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/1 get-password --params /root/snap/juju/common/tmpiyifhs8o
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json db1/2 get-password --params /root/snap/juju/common/tmpc6v3p07j
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:250 Run pre-upgrade-check action
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 pre-upgrade-check
+[32mINFO    [0m root:test_async_replication_upgrade.py:253 Assert slow shutdown is enabled
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-password --params /root/snap/juju/common/tmprg21r0pm
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/1 get-password --params /root/snap/juju/common/tmpi60rkyxg
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 get-password --params /root/snap/juju/common/tmpmdqj1rh1
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:258 Assert primary is set to leader
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpufwqy3br
+[32mINFO    [0m root:test_async_replication_upgrade.py:265 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmp3mhboaei
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 get-password --params /root/snap/juju/common/tmplu2mg_ga
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-password --params /root/snap/juju/common/tmp63bg80rd
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/1 get-password --params /root/snap/juju/common/tmpso2h7r11
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 get-password --params /root/snap/juju/common/tmp2gxtytz7
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:268 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju refresh --model testing-other db2 --path ./mysql_ubuntu@22.04-amd64.charm
+[32mINFO    [0m root:test_async_replication_upgrade.py:271 Wait for upgrade to start
+[32mINFO    [0m root:test_async_replication_upgrade.py:277 Wait for upgrade to complete
+[32mINFO    [0m root:test_async_replication_upgrade.py:283 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-cluster-status --wait 300s --params /root/snap/juju/common/tmpfbst4knr
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-password --params /root/snap/juju/common/tmp5zm9_hym
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/0 get-password --params /root/snap/juju/common/tmpescew153
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/1 get-password --params /root/snap/juju/common/tmpsqo6b909
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing-other --format json db2/2 get-password --params /root/snap/juju/common/tmp67g_0vcp
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:67 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju run --model testing --format json mysql-test-app/0 clear-continuous-writes
