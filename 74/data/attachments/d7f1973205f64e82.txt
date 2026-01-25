@@ -1,0 +1,5 @@
+[32mINFO    [0m root:test_upgrade_skip_pre_upgrade_check.py:82 Refresh the charm to stable channel
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju refresh --model testing --channel=8.0/stable --switch=mysql mysql
+[32mINFO    [0m root:test_upgrade_skip_pre_upgrade_check.py:85 Wait for rolling restart
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000

@@ -1,0 +1,6 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju version --format json
+[32mINFO    [0m root:test_replication_data_consistency.py:28 Deploying MySQL cluster
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing ./mysql_ubuntu@22.04-amd64.charm mysql --base ubuntu@22.04 --config profile=testing --num-units 3
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing mysql-test-app mysql-test-app --base ubuntu@22.04 --channel latest/edge --config sleep_interval=500
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing mysql:database mysql-test-app:database
+[32mINFO    [0m root:test_replication_data_consistency.py:50 Wait for applications to become active
