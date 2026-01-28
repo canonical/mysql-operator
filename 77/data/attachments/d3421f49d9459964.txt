@@ -1,0 +1,3 @@
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju deploy --model testing landscape-client landscape-client --base ubuntu@22.04 --channel latest/edge --config account-name=canonical-data-platform --config registration-key=KHssaskjjdiO978asdfoSlJKJJokjf203utagsdloi3 --config ppa=ppa:landscape/self-hosted-beta
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju integrate --model testing mysql landscape-client
+[32mINFO    [0m jubilant:_juju.py:316 cli: juju debug-log --model testing --limit 1000
